@@ -56,12 +56,12 @@ interface SettingsSection {
 
 export default function ProfilePage() {
     const { locale, setLocale, t } = useLocale();
-    const hasLoadedRef = React.useRef(false);
     const [notifications, setNotifications] = useState(true);
     const [darkMode, setDarkMode] = useState(false);
     const [emailNotif, setEmailNotif] = useState(true);
     const [openLanguage, setOpenLanguage] = useState(false);
-    const [loading, setLoading] = useState(!hasLoadedRef.current);
+    const [loading, setLoading] = useState(true);
+    const [mounted, setMounted] = useState(false);
     const languageOptions: Array<{ code: 'th' | 'en' | 'my'; label: string }> = [
         { code: 'th', label: localeLabel.th },
         { code: 'en', label: localeLabel.en },
@@ -69,14 +69,24 @@ export default function ProfilePage() {
     ];
 
     useEffect(() => {
-        if (!hasLoadedRef.current) {
+        setMounted(true);
+        const hasLoaded = sessionStorage.getItem('profile_loaded') === 'true';
+        
+        if (hasLoaded) {
+            // Already loaded before, skip loading animation
+            setLoading(false);
+        } else {
+            // First time load, show loading animation
             const timer = setTimeout(() => {
                 setLoading(false);
-                hasLoadedRef.current = true;
+                sessionStorage.setItem('profile_loaded', 'true');
             }, 600);
             return () => clearTimeout(timer);
         }
     }, []);
+    
+    // Prevent hydration mismatch by always showing loading state until mounted
+    const showLoading = !mounted || loading;
 
     const settingsSections: SettingsSection[] = [
         {
@@ -174,7 +184,7 @@ export default function ProfilePage() {
                         border: '1px solid rgba(0, 0, 0, 0.05)',
                     }}
                 >
-                    {loading ? (
+                    {showLoading ? (
                         <>
                             <Box sx={{ display: 'flex', alignItems: 'center', mb: 3, gap: 2 }}>
                                 <Skeleton variant="circular" width={80} height={80} />
@@ -379,7 +389,7 @@ export default function ProfilePage() {
                                     overflow: 'hidden',
                                 }}
                             >
-                                {loading ? (
+                                {showLoading ? (
                                     <Box sx={{ p: 2 }}>
                                         {[1,2,3].map((i) => (
                                             <Box key={i}>
@@ -482,7 +492,7 @@ export default function ProfilePage() {
                             mb: 3,
                         }}
                     >
-                        {loading ? (
+                        {showLoading ? (
                             <Box sx={{ p: 2, display: 'flex', alignItems: 'center', gap: 2 }}>
                                 <Skeleton variant="rounded" width={40} height={40} sx={{ borderRadius: 1.5 }} />
                                 <Skeleton variant="text" width={120} height={20} />
@@ -520,7 +530,7 @@ export default function ProfilePage() {
                     </Paper>
 
                     {/* Version Info */}
-                    {loading ? (
+                    {showLoading ? (
                         <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
                             <Skeleton variant="text" width={100} height={16} />
                         </Box>

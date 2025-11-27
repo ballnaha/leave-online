@@ -1,5 +1,5 @@
 'use client';
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Box, Typography, Button, Card, CardContent, Skeleton } from '@mui/material';
 import Header from './components/Header';
 import LeaveTypeCard from './components/LeaveTypeCard';
@@ -12,18 +12,28 @@ import { useLocale } from './providers/LocaleProvider';
 
 export default function Home() {
   const { t } = useLocale();
-  const hasLoadedRef = useRef(false);
-  const [loading, setLoading] = useState(!hasLoadedRef.current);
+  const [loading, setLoading] = useState(true);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    if (!hasLoadedRef.current) {
+    setMounted(true);
+    const hasLoaded = sessionStorage.getItem('home_loaded') === 'true';
+    
+    if (hasLoaded) {
+      // Already loaded before, skip loading animation
+      setLoading(false);
+    } else {
+      // First time load, show loading animation
       const timer = setTimeout(() => {
         setLoading(false);
-        hasLoadedRef.current = true;
+        sessionStorage.setItem('home_loaded', 'true');
       }, 600);
       return () => clearTimeout(timer);
     }
   }, []);
+  
+  // Prevent hydration mismatch by always showing loading state until mounted
+  const showLoading = !mounted || loading;
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: 'background.default', pb: 10 }}>
       <Box component="main" sx={{ px: 2.5 }}>
@@ -32,7 +42,7 @@ export default function Home() {
         {/* Leave Balance Section */}
         <Box sx={{ mt: 1.5, mb: 3 }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', mb: 1.5 }}>
-            {loading ? (
+            {showLoading ? (
               <>
                 <Skeleton variant="text" width={140} height={28} />
                 <Skeleton variant="rounded" width={64} height={24} />
@@ -50,7 +60,7 @@ export default function Home() {
           </Box>
 
           <Box sx={{ mx: -2.5, px: 2.5 }}>
-            {loading ? (
+            {showLoading ? (
               <Box sx={{ display: 'flex', gap: 1.5, pb: 1.5 }}>
                 {[1,2,3].map(i => (
                   <Skeleton key={i} variant="rounded" width={220} height={110} sx={{ borderRadius: 3, flexShrink: 0 }} />
@@ -96,7 +106,7 @@ export default function Home() {
         </Box>
 
         {/* Featured/Announcement Card */}
-        {loading ? (
+        {showLoading ? (
           <Skeleton variant="rounded" height={160} sx={{ borderRadius: 3, mb: 3 }} />
         ) : (
           <Card
@@ -177,7 +187,7 @@ export default function Home() {
 
         {/* Recent Requests Section */}
         <Box>
-          {loading ? (
+          {showLoading ? (
             <>
               <Skeleton variant="text" width={160} height={28} sx={{ mb: 1 }} />
               {[1,2,3].map(i => (
