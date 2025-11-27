@@ -15,15 +15,44 @@ import {
     User,
     Mail,
     Smartphone,
+    LucideIcon,
 } from 'lucide-react';
 import Link from 'next/link';
+
+interface SettingsItemBase {
+    icon: LucideIcon;
+    label: string;
+    color: string;
+    subtitle?: string;
+}
+
+interface SettingsItemWithLink extends SettingsItemBase {
+    link: string;
+    toggle?: never;
+    value?: never;
+    onChange?: never;
+}
+
+interface SettingsItemWithToggle extends SettingsItemBase {
+    toggle: true;
+    value: boolean;
+    onChange: (value: boolean) => void;
+    link?: never;
+}
+
+type SettingsItem = SettingsItemWithLink | SettingsItemWithToggle;
+
+interface SettingsSection {
+    title: string;
+    items: SettingsItem[];
+}
 
 export default function SettingsPage() {
     const [notifications, setNotifications] = useState(true);
     const [darkMode, setDarkMode] = useState(false);
     const [emailNotif, setEmailNotif] = useState(true);
 
-    const settingsSections = [
+    const settingsSections: SettingsSection[] = [
         {
             title: 'บัญชี',
             items: [
