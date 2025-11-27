@@ -5,20 +5,53 @@ import Header from './components/Header';
 import LeaveTypeCard from './components/LeaveTypeCard';
 import RecentActivityCard from './components/RecentActivityCard';
 import BottomNav from './components/BottomNav';
-import { Calendar, Activity, Briefcase } from 'lucide-react';
+import { 
+  Calendar, Activity, Briefcase, Heart, Umbrella, Sun, Baby,
+  Church, Shield, Users, Car, Clock, HelpCircle, Stethoscope
+} from 'lucide-react';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import 'swiper/css';
 import { useLocale } from './providers/LocaleProvider';
 import { useRouter } from 'next/navigation';
+
+interface LeaveType {
+  id: number;
+  code: string;
+  name: string;
+  description: string | null;
+  maxDaysPerYear: number | null;
+  isPaid: boolean;
+  isActive: boolean;
+}
+
+// กำหนด icon และสีสำหรับแต่ละประเภทการลา
+const leaveTypeConfig: Record<string, { icon: any; color: string }> = {
+  sick: { icon: Heart, color: '#EF5350' },
+  personal: { icon: Briefcase, color: '#AB47BC' },
+  vacation: { icon: Umbrella, color: '#FF7043' },
+  annual: { icon: Sun, color: '#FF7043' },
+  maternity: { icon: Baby, color: '#EC407A' },
+  ordination: { icon: Church, color: '#FFA726' },
+  military: { icon: Shield, color: '#66BB6A' },
+  marriage: { icon: Heart, color: '#EF5350' },
+  funeral: { icon: Users, color: '#78909C' },
+  paternity: { icon: Users, color: '#42A5F5' },
+  sterilization: { icon: Stethoscope, color: '#26A69A' },
+  business: { icon: Car, color: '#AB47BC' },
+  unpaid: { icon: Clock, color: '#9E9E9E' },
+  default: { icon: Calendar, color: '#5C6BC0' },
+};
 
 export default function Home() {
   const { t } = useLocale();
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [mounted, setMounted] = useState(false);
+  const [leaveTypes, setLeaveTypes] = useState<LeaveType[]>([]);
 
   useEffect(() => {
     setMounted(true);
+    fetchLeaveTypes();
     const hasLoaded = sessionStorage.getItem('home_loaded') === 'true';
     
     if (hasLoaded) {
@@ -33,6 +66,23 @@ export default function Home() {
       return () => clearTimeout(timer);
     }
   }, []);
+
+  const fetchLeaveTypes = async () => {
+    try {
+      const response = await fetch('/api/leave-types');
+      if (response.ok) {
+        const data = await response.json();
+        // แสดงเฉพาะ 3 ประเภทแรก
+        setLeaveTypes(data.slice(0, 3));
+      }
+    } catch (error) {
+      console.error('Error fetching leave types:', error);
+    }
+  };
+
+  const getLeaveTypeConfig = (code: string) => {
+    return leaveTypeConfig[code] || leaveTypeConfig.default;
+  };
   
   // Prevent hydration mismatch by always showing loading state until mounted
   const showLoading = !mounted || loading;
@@ -66,7 +116,7 @@ export default function Home() {
           </Box>
 
           <Box sx={{ mx: -2.5, px: 2.5 }}>
-            {showLoading ? (
+            {showLoading || leaveTypes.length === 0 ? (
               <Box sx={{ display: 'flex', gap: 1.5, pb: 1.5 }}>
                 {[1,2,3].map(i => (
                   <Skeleton key={i} variant="rounded" width={220} height={110} sx={{ borderRadius: 3, flexShrink: 0 }} />
@@ -79,33 +129,23 @@ export default function Home() {
                 grabCursor={true}
                 style={{ paddingBottom: 12 }}
               >
-                <SwiperSlide>
-                  <LeaveTypeCard
-                    title="ลาพักร้อน"
-                    count={10}
-                    total={15}
-                    color="secondary.main"
-                    icon={<Calendar size={24} />}
-                  />
-                </SwiperSlide>
-                <SwiperSlide>
-                  <LeaveTypeCard
-                    title="ลาป่วย"
-                    count={28}
-                    total={30}
-                    color="primary.main"
-                    icon={<Activity size={24} />}
-                  />
-                </SwiperSlide>
-                <SwiperSlide>
-                  <LeaveTypeCard
-                    title="ลากิจ"
-                    count={5}
-                    total={7}
-                    color="#AB47BC"
-                    icon={<Briefcase size={24} />}
-                  />
-                </SwiperSlide>
+                {leaveTypes.map((leaveType) => {
+                  const config = getLeaveTypeConfig(leaveType.code);
+                  const IconComponent = config.icon;
+                  return (
+                    <SwiperSlide key={leaveType.id}>
+                      <Box onClick={() => router.push(`/leave/${leaveType.code}`)} sx={{ cursor: 'pointer' }}>
+                        <LeaveTypeCard
+                          title={leaveType.name}
+                          count={leaveType.maxDaysPerYear ? Math.floor(leaveType.maxDaysPerYear * 0.8) : 0}
+                          total={leaveType.maxDaysPerYear || 0}
+                          color={config.color}
+                          icon={<IconComponent size={24} />}
+                        />
+                      </Box>
+                    </SwiperSlide>
+                  );
+                })}
               </Swiper>
             )}
           </Box>

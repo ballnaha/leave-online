@@ -8,19 +8,19 @@ async function main() {
   // Create companies
   const companies = await Promise.all([
     prisma.company.upsert({
-      where: { code: 'psc' },
+      where: { code: 'PSC' },
       update: {},
       create: {
-        code: 'psc',
+        code: 'PSC',
         name: 'บริษัท พูนทรัพย์แคน จำกัด',
         isActive: true,
       },
     }),
     prisma.company.upsert({
-      where: { code: 'pslp' },
+      where: { code: 'PS' },
       update: {},
       create: {
-        code: 'pslp',
+        code: 'PS',
         name: 'บริษัท พูนทรัพย์โลหะการพิมพ์ จำกัด',
         isActive: true,
       },
@@ -36,7 +36,7 @@ async function main() {
       create: {
         code: 'psc-production',
         name: 'ฝ่ายผลิต',
-        company: 'psc',
+        company: 'PSC',
         isActive: true,
       },
     }),
@@ -46,7 +46,7 @@ async function main() {
       create: {
         code: 'psc-qa',
         name: 'ฝ่ายควบคุมคุณภาพ',
-        company: 'psc',
+        company: 'PSC',
         isActive: true,
       },
     }),
@@ -56,7 +56,7 @@ async function main() {
       create: {
         code: 'psc-hr',
         name: 'ฝ่ายบุคคล',
-        company: 'psc',
+        company: 'PSC',
         isActive: true,
       },
     }),
@@ -66,7 +66,7 @@ async function main() {
       create: {
         code: 'psc-accounting',
         name: 'ฝ่ายบัญชี',
-        company: 'psc',
+        company: 'PSC',
         isActive: true,
       },
     }),
@@ -76,7 +76,7 @@ async function main() {
       create: {
         code: 'psc-warehouse',
         name: 'ฝ่ายคลังสินค้า',
-        company: 'psc',
+        company: 'PSC',
         isActive: true,
       },
     }),
@@ -86,7 +86,7 @@ async function main() {
       create: {
         code: 'psc-maintenance',
         name: 'ฝ่ายซ่อมบำรุง',
-        company: 'psc',
+        company: 'PSC',
         isActive: true,
       },
     }),
@@ -101,7 +101,7 @@ async function main() {
       create: {
         code: 'pslp-production',
         name: 'ฝ่ายผลิต',
-        company: 'pslp',
+        company: 'PS',
         isActive: true,
       },
     }),
@@ -111,7 +111,7 @@ async function main() {
       create: {
         code: 'pslp-printing',
         name: 'ฝ่ายพิมพ์',
-        company: 'pslp',
+        company: 'PS',
         isActive: true,
       },
     }),
@@ -121,7 +121,7 @@ async function main() {
       create: {
         code: 'pslp-qa',
         name: 'ฝ่ายควบคุมคุณภาพ',
-        company: 'pslp',
+        company: 'PS',
         isActive: true,
       },
     }),
@@ -131,7 +131,7 @@ async function main() {
       create: {
         code: 'pslp-hr',
         name: 'ฝ่ายบุคคล',
-        company: 'pslp',
+        company: 'PS',
         isActive: true,
       },
     }),
@@ -141,7 +141,7 @@ async function main() {
       create: {
         code: 'pslp-sales',
         name: 'ฝ่ายขาย',
-        company: 'pslp',
+        company: 'PS',
         isActive: true,
       },
     }),
@@ -373,6 +373,66 @@ async function main() {
         description: 'ลาโดยไม่ได้รับค่าจ้าง',
         maxDaysPerYear: null,
         isPaid: false,
+        isActive: true,
+      },
+    }),
+    prisma.leaveType.upsert({
+      where: { code: 'marriage' },
+      update: {},
+      create: {
+        code: 'marriage',
+        name: 'ลาแต่งงาน',
+        description: 'ลาเพื่อจดทะเบียนสมรส',
+        maxDaysPerYear: 3,
+        isPaid: true,
+        isActive: true,
+      },
+    }),
+    prisma.leaveType.upsert({
+      where: { code: 'funeral' },
+      update: {},
+      create: {
+        code: 'funeral',
+        name: 'ลาเพื่อทำงานศพ',
+        description: 'ลาเพื่อร่วมงานศพ',
+        maxDaysPerYear: 3,
+        isPaid: true,
+        isActive: true,
+      },
+    }),
+    prisma.leaveType.upsert({
+      where: { code: 'paternity' },
+      update: {},
+      create: {
+        code: 'paternity',
+        name: 'ลาคลอดบุตรสำหรับบิดา',
+        description: 'ลาดูแลภริยาที่คลอดบุตร',
+        maxDaysPerYear: 3,
+        isPaid: true,
+        isActive: true,
+      },
+    }),
+    prisma.leaveType.upsert({
+      where: { code: 'sterilization' },
+      update: {},
+      create: {
+        code: 'sterilization',
+        name: 'ลาทำหมัน',
+        description: 'ลาเพื่อเข้ารับการทำหมัน',
+        maxDaysPerYear: 2,
+        isPaid: true,
+        isActive: true,
+      },
+    }),
+    prisma.leaveType.upsert({
+      where: { code: 'business' },
+      update: {},
+      create: {
+        code: 'business',
+        name: 'ลาไปธุระ',
+        description: 'ลาเพื่อไปติดต่อธุระราชการ',
+        maxDaysPerYear: null,
+        isPaid: true,
         isActive: true,
       },
     }),

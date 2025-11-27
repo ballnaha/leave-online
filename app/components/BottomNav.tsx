@@ -3,11 +3,44 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Box, IconButton, Fab, Paper, Typography } from '@mui/material';
 import { useLocale } from '../providers/LocaleProvider';
-import { Home, Mail, Heart, User, Plus, Stethoscope, Umbrella, Sun, Baby, MoreHorizontal } from 'lucide-react';
+import { 
+    Home, Mail, Heart, User, Plus, 
+    Stethoscope, Umbrella, Sun, Baby, MoreHorizontal,
+    Briefcase, Calendar, Clock, Church, Shield, Users, Car, HelpCircle , History
+} from 'lucide-react';
 
 interface BottomNavProps {
-    activePage?: 'home' | 'messages' | 'favorites' | 'profile';
+    activePage?: 'home' | 'messages' | 'leave' | 'profile';
 }
+
+interface LeaveType {
+    id: number;
+    code: string;
+    name: string;
+    description: string | null;
+    maxDaysPerYear: number | null;
+    isPaid: boolean;
+    isActive: boolean;
+}
+
+// กำหนด icon และสีสำหรับแต่ละประเภทการลา (สีแบบ balloon เหมือนปฏิทิน)
+const leaveTypeConfig: Record<string, { icon: any; color: string; gradient: string }> = {
+    sick: { icon: Stethoscope, color: '#FF6B6B', gradient: 'linear-gradient(135deg, #FF6B6B 0%, #FF8E8E 100%)' },
+    personal: { icon: Umbrella, color: '#845EF7', gradient: 'linear-gradient(135deg, #845EF7 0%, #9775FA 100%)' },
+    vacation: { icon: Sun, color: '#FFD43B', gradient: 'linear-gradient(135deg, #FFD43B 0%, #FFE066 100%)' },
+    annual: { icon: Sun, color: '#FFD43B', gradient: 'linear-gradient(135deg, #FFD43B 0%, #FFE066 100%)' },
+    maternity: { icon: Baby, color: '#F783AC', gradient: 'linear-gradient(135deg, #F783AC 0%, #FAA2C1 100%)' },
+    ordination: { icon: Church, color: '#FFA726', gradient: 'linear-gradient(135deg, #FFA726 0%, #FFB74D 100%)' },
+    military: { icon: Shield, color: '#66BB6A', gradient: 'linear-gradient(135deg, #66BB6A 0%, #81C784 100%)' },
+    marriage: { icon: Heart, color: '#FF6B6B', gradient: 'linear-gradient(135deg, #FF6B6B 0%, #FF8E8E 100%)' },
+    funeral: { icon: Users, color: '#78909C', gradient: 'linear-gradient(135deg, #78909C 0%, #90A4AE 100%)' },
+    paternity: { icon: User, color: '#42A5F5', gradient: 'linear-gradient(135deg, #42A5F5 0%, #64B5F6 100%)' },
+    sterilization: { icon: Stethoscope, color: '#26A69A', gradient: 'linear-gradient(135deg, #26A69A 0%, #4DB6AC 100%)' },
+    business: { icon: Car, color: '#845EF7', gradient: 'linear-gradient(135deg, #845EF7 0%, #9775FA 100%)' },
+    unpaid: { icon: Clock, color: '#868E96', gradient: 'linear-gradient(135deg, #868E96 0%, #ADB5BD 100%)' },
+    other: { icon: HelpCircle, color: '#748FFC', gradient: 'linear-gradient(135deg, #748FFC 0%, #91A7FF 100%)' },
+    default: { icon: HelpCircle, color: '#868E96', gradient: 'linear-gradient(135deg, #868E96 0%, #ADB5BD 100%)' },
+};
 
 const BottomNav: React.FC<BottomNavProps> = ({ activePage = 'home' }) => {
     const router = useRouter();
@@ -15,15 +48,30 @@ const BottomNav: React.FC<BottomNavProps> = ({ activePage = 'home' }) => {
     const [openMenu, setOpenMenu] = useState(false);
     const [animatingOut, setAnimatingOut] = useState(false);
     const [renderMenu, setRenderMenu] = useState(false);
+    const [leaveTypes, setLeaveTypes] = useState<LeaveType[]>([]);
     const closeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-    const leaveTypes = [
-        { icon: Stethoscope, name: 'ลาป่วย', code: 'sick', color: '#FF6B6B', gradient: 'linear-gradient(135deg, #FF6B6B 0%, #FF8E8E 100%)' },
-        { icon: Umbrella, name: 'ลากิจ', code: 'personal', color: '#4ECDC4', gradient: 'linear-gradient(135deg, #4ECDC4 0%, #6FE0D7 100%)' },
-        { icon: Sun, name: 'ลาพักร้อน', code: 'vacation', color: '#FFD93D', gradient: 'linear-gradient(135deg, #FFD93D 0%, #FFE566 100%)' },
-        { icon: Baby, name: 'ลาคลอด', code: 'other', color: '#FF8ED4', gradient: 'linear-gradient(135deg, #FF8ED4 0%, #FFB3E6 100%)' },
-        { icon: MoreHorizontal, name: 'ลาอื่นๆ', code: 'other', color: '#95A5A6', gradient: 'linear-gradient(135deg, #95A5A6 0%, #B0BEC5 100%)' },
-    ];
+    // Fetch leave types from API
+    useEffect(() => {
+        fetchLeaveTypes();
+    }, []);
+
+    const fetchLeaveTypes = async () => {
+        try {
+            const response = await fetch('/api/leave-types');
+            if (response.ok) {
+                const data = await response.json();
+                // จำกัดแสดงแค่ 5 ประเภทแรก
+                setLeaveTypes(data.slice(0, 5));
+            }
+        } catch (error) {
+            console.error('Error fetching leave types:', error);
+        }
+    };
+
+    const getLeaveTypeConfig = (code: string) => {
+        return leaveTypeConfig[code] || leaveTypeConfig.default;
+    };
 
     // Control mount/unmount for exit animation
     useEffect(() => {
@@ -98,12 +146,13 @@ const BottomNav: React.FC<BottomNavProps> = ({ activePage = 'home' }) => {
                         >
                             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
                                 {leaveTypes.map((leave, index) => {
-                                    const Icon = leave.icon;
+                                    const config = getLeaveTypeConfig(leave.code);
+                                    const Icon = config.icon;
                                     const delay = index * 0.08; // seconds
                                     const reverseDelay = (leaveTypes.length - 1 - index) * 0.06; // seconds
                                     return (
                                         <Box
-                                            key={leave.name}
+                                            key={leave.id}
                                             onClick={() => handleLeaveTypeClick(leave.code)}
                                             sx={{
                                                 display: 'flex',
@@ -154,8 +203,8 @@ const BottomNav: React.FC<BottomNavProps> = ({ activePage = 'home' }) => {
                                                 },
                                                 '&:hover': {
                                                     transform: 'translateX(-6px) scale(1.05)',
-                                                    boxShadow: `0 12px 32px ${leave.color}50`,
-                                                    borderColor: leave.color,
+                                                    boxShadow: `0 12px 32px ${config.color}50`,
+                                                    borderColor: config.color,
                                                     background: 'rgba(255, 255, 255, 1)',
                                                 },
                                                 '&:active': {
@@ -168,12 +217,12 @@ const BottomNav: React.FC<BottomNavProps> = ({ activePage = 'home' }) => {
                                                     width: 42,
                                                     height: 42,
                                                     borderRadius: 2.5,
-                                                    background: leave.gradient,
+                                                    background: config.gradient,
                                                     display: 'flex',
                                                     alignItems: 'center',
                                                     justifyContent: 'center',
                                                     color: 'white',
-                                                    boxShadow: `0 4px 16px ${leave.color}40`,
+                                                    boxShadow: `0 4px 16px ${config.color}40`,
                                                     flexShrink: 0,
                                                     animation: openMenu
                                                         ? `iconPop-${index} 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) ${delay + 0.1}s both`
@@ -324,26 +373,26 @@ const BottomNav: React.FC<BottomNavProps> = ({ activePage = 'home' }) => {
                             sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.3, cursor: 'pointer', justifySelf: 'center', textAlign: 'center' }}
                             onClick={() => {
                                 setOpenMenu(false);
-                                router.push('/favorites');
+                                router.push('/leave');
                             }}
                         >
                             <IconButton sx={{ 
-                                color: activePage === 'favorites' ? 'primary.main' : 'text.disabled', 
-                                '&:hover': { color: activePage === 'favorites' ? 'primary.dark' : 'text.secondary' }, 
+                                color: activePage === 'leave' ? 'primary.main' : 'text.disabled', 
+                                '&:hover': { color: activePage === 'leave' ? 'primary.dark' : 'text.secondary' }, 
                                 p: 0.5 
                             }}>
-                                <Heart size={20} />
+                                <History size={20} />
                             </IconButton>
                             <Typography variant="caption" noWrap sx={{ 
                                 fontSize: '0.6rem', 
-                                fontWeight: activePage === 'favorites' ? 600 : 500, 
-                                color: activePage === 'favorites' ? 'primary.main' : 'text.disabled',
+                                fontWeight: activePage === 'leave' ? 600 : 500, 
+                                color: activePage === 'leave' ? 'primary.main' : 'text.disabled',
                                 maxWidth: 72,
                                 overflow: 'hidden',
                                 textOverflow: 'ellipsis',
                                 lineHeight: 1
                             }}>
-                                {t('nav_favorites', 'ชื่นชอบ')}
+                                {t('nav_leave', 'ประวัติการลา')}
                             </Typography>
                         </Box>
 

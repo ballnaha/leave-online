@@ -1,5 +1,5 @@
 'use client';
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
     Box,
     Typography,
@@ -16,6 +16,8 @@ import {
     Alert,
     InputAdornment,
     Dialog,
+    Container,
+    Divider,
 } from '@mui/material';
 import { 
     ArrowLeft,
@@ -26,7 +28,6 @@ import {
     Phone,
     MapPin,
     User,
-    Building2,
     Briefcase,
     Heart,
     Umbrella,
@@ -36,6 +37,13 @@ import {
     X,
     Paperclip,
     AlertCircle,
+    Stethoscope,
+    Sun,
+    Baby,
+    Church,
+    Shield,
+    Users,
+    Car,
 } from 'lucide-react';
 import { useRouter, useParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
@@ -47,59 +55,33 @@ import 'dayjs/locale/th';
 const PRIMARY_COLOR = '#1976d2';
 const PRIMARY_LIGHT = '#e3f2fd';
 
-// ประเภทการลา
-const leaveTypes = {
-    sick: {
-        code: 'sick',
-        name: 'ลาป่วย',
-        nameEn: 'Sick Leave',
-        icon: Heart,
-        color: PRIMARY_COLOR,
-        lightColor: PRIMARY_LIGHT,
-        description: 'ลาป่วยตามใบรับรองแพทย์',
-        maxDays: 30,
-        requiresAttachment: true,
-        attachmentNote: 'หากลาตั้งแต่ 3 วันขึ้นไป ต้องแนบใบรับรองแพทย์',
-    },
-    personal: {
-        code: 'personal',
-        name: 'ลากิจ',
-        nameEn: 'Personal Leave',
-        icon: Briefcase,
-        color: PRIMARY_COLOR,
-        lightColor: PRIMARY_LIGHT,
-        description: 'ลาเพื่อกิจธุระส่วนตัว',
-        maxDays: 7,
-        requiresAttachment: false,
-        attachmentNote: '',
-    },
-    vacation: {
-        code: 'vacation',
-        name: 'ลาพักร้อน',
-        nameEn: 'Vacation Leave',
-        icon: Umbrella,
-        color: PRIMARY_COLOR,
-        lightColor: PRIMARY_LIGHT,
-        description: 'ลาพักผ่อนประจำปี',
-        maxDays: 15,
-        requiresAttachment: false,
-        attachmentNote: '',
-    },
-    other: {
-        code: 'other',
-        name: 'ลาอื่นๆ',
-        nameEn: 'Other Leave',
-        icon: HelpCircle,
-        color: PRIMARY_COLOR,
-        lightColor: PRIMARY_LIGHT,
-        description: 'ลาประเภทอื่นๆ เช่น ลาบวช, ลาคลอด',
-        maxDays: null,
-        requiresAttachment: true,
-        attachmentNote: 'กรุณาแนบเอกสารประกอบการลา',
-    },
+// กำหนด icon และสีสำหรับแต่ละประเภทการลา
+const leaveTypeConfig: Record<string, { icon: any; color: string; lightColor: string }> = {
+    sick: { icon: Stethoscope, color: '#FF6B6B', lightColor: '#FFEBEE' },
+    personal: { icon: Briefcase, color: '#AB47BC', lightColor: '#F3E5F5' },
+    vacation: { icon: Umbrella, color: '#FF7043', lightColor: '#FBE9E7' },
+    annual: { icon: Sun, color: '#FFD93D', lightColor: '#FFF9C4' },
+    maternity: { icon: Baby, color: '#FF8ED4', lightColor: '#FCE4EC' },
+    ordination: { icon: Church, color: '#FFA726', lightColor: '#FFF3E0' },
+    military: { icon: Shield, color: '#66BB6A', lightColor: '#E8F5E9' },
+    marriage: { icon: Heart, color: '#EF5350', lightColor: '#FFEBEE' },
+    funeral: { icon: Users, color: '#78909C', lightColor: '#ECEFF1' },
+    paternity: { icon: User, color: '#42A5F5', lightColor: '#E3F2FD' },
+    sterilization: { icon: Stethoscope, color: '#26A69A', lightColor: '#E0F2F1' },
+    business: { icon: Car, color: '#7E57C2', lightColor: '#EDE7F6' },
+    unpaid: { icon: Clock, color: '#9E9E9E', lightColor: '#F5F5F5' },
+    default: { icon: HelpCircle, color: '#5C6BC0', lightColor: '#E8EAF6' },
 };
 
-type LeaveType = keyof typeof leaveTypes;
+interface LeaveTypeData {
+    id: number;
+    code: string;
+    name: string;
+    description: string | null;
+    maxDaysPerYear: number | null;
+    isPaid: boolean;
+    isActive: boolean;
+}
 
 interface UserProfile {
     id: number;
@@ -118,6 +100,18 @@ interface UserProfile {
     shift: string | null;
 }
 
+interface UploadedAttachmentMeta {
+    fileName: string;
+    filePath: string;
+    fileSize: number;
+    mimeType: string;
+}
+
+interface AttachmentItem {
+    file: File;
+    previewUrl: string;
+}
+
 interface LeaveFormData {
     startDate: string;
     startTime: string;
@@ -127,7 +121,7 @@ interface LeaveFormData {
     reason: string;
     contactPhone: string;
     contactAddress: string;
-    attachments: File[];
+    attachments: AttachmentItem[];
 }
 
 export default function LeaveFormPage() {
@@ -137,13 +131,12 @@ export default function LeaveFormPage() {
     const { data: session } = useSession();
     const fileInputRef = useRef<HTMLInputElement>(null);
 
-    const type = params.type as LeaveType;
-    const leaveType = leaveTypes[type] || leaveTypes.sick;
-    const IconComponent = leaveType.icon;
+    const leaveCode = params.type as string;
 
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
     const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+    const [leaveType, setLeaveType] = useState<LeaveTypeData | null>(null);
     const [formData, setFormData] = useState<LeaveFormData>({
         startDate: '',
         startTime: '08:00',
@@ -155,28 +148,57 @@ export default function LeaveFormPage() {
         contactAddress: '',
         attachments: [],
     });
+    const [processingAttachments, setProcessingAttachments] = useState(false);
     const [errors, setErrors] = useState<Record<string, string>>({});
     const [previewImage, setPreviewImage] = useState<string | null>(null);
-    const [showPreviewDialog, setShowPreviewDialog] = useState(false);
+    const [showConfirmDialog, setShowConfirmDialog] = useState(false);
 
-    // โหลดข้อมูลผู้ใช้
+    const maxLeaveDaysByRange = useMemo(() => {
+        if (!formData.startDate || !formData.endDate) return null;
+        const start = dayjs(formData.startDate);
+        const end = dayjs(formData.endDate);
+        if (end.isBefore(start)) {
+            return null;
+        }
+        return end.diff(start, 'day') + 1;
+    }, [formData.startDate, formData.endDate]);
+
+    const baseTotalDaysHelper = 'ระบุจำนวนวันลา เช่น 0.5 = ครึ่งวัน, 1 = เต็มวัน';
+    const totalDaysHelperText = errors.totalDays || (maxLeaveDaysByRange ? `${baseTotalDaysHelper} (สูงสุด ${maxLeaveDaysByRange} วัน)` : baseTotalDaysHelper);
+
+    // โหลดข้อมูลผู้ใช้และประเภทการลา
     useEffect(() => {
-        const fetchUserProfile = async () => {
+        const fetchData = async () => {
             try {
-                const response = await fetch('/api/profile');
-                if (response.ok) {
-                    const data = await response.json();
-                    setUserProfile(data);
+                // ดึงข้อมูลผู้ใช้
+                const profileRes = await fetch('/api/profile');
+                if (profileRes.ok) {
+                    const profileData = await profileRes.json();
+                    setUserProfile(profileData);
+                }
+
+                // ดึงข้อมูลประเภทการลา
+                const leaveTypesRes = await fetch('/api/leave-types');
+                if (leaveTypesRes.ok) {
+                    const leaveTypesData = await leaveTypesRes.json();
+                    const selectedType = leaveTypesData.find((lt: LeaveTypeData) => lt.code === leaveCode);
+                    if (selectedType) {
+                        setLeaveType(selectedType);
+                    } else {
+                        toastr.error('ไม่พบประเภทการลาที่เลือก');
+                        router.push('/leave');
+                    }
                 }
             } catch (error) {
-                console.error('Error fetching profile:', error);
+                console.error('Error fetching data:', error);
+                toastr.error('เกิดข้อผิดพลาดในการโหลดข้อมูล');
             } finally {
                 setLoading(false);
             }
         };
 
-        fetchUserProfile();
-    }, []);
+        fetchData();
+    }, [leaveCode, router, toastr]);
 
     // จัดการการเปลี่ยนแปลงฟอร์ม
     const handleFormChange = (field: keyof LeaveFormData, value: unknown) => {
@@ -198,14 +220,13 @@ export default function LeaveFormPage() {
     // จัดการการอัพโหลดไฟล์
     const MAX_FILES = 3;
     const MAX_FILE_SIZE = 15 * 1024 * 1024; // 15MB
-    const MAX_IMAGE_WIDTH = 1920; // ความกว้างสูงสุดของรูป
-    const MAX_IMAGE_HEIGHT = 1920; // ความสูงสูงสุดของรูป
-    const IMAGE_QUALITY = 0.85; // คุณภาพรูป (0.85 = 85%)
+    const MAX_IMAGE_WIDTH = 1600; // ความกว้างสูงสุดของรูป
+    const MAX_IMAGE_HEIGHT = 1600; // ความสูงสูงสุดของรูป
+    const IMAGE_QUALITY = 0.8; // คุณภาพรูป (0.8 = 80%)
 
     // ฟังก์ชัน resize รูปภาพ
     const resizeImage = (file: File): Promise<File> => {
         return new Promise((resolve) => {
-            // ถ้าไม่ใช่รูปภาพ ส่งคืนไฟล์เดิม
             if (!file.type.startsWith('image/')) {
                 resolve(file);
                 return;
@@ -214,11 +235,39 @@ export default function LeaveFormPage() {
             const img = new Image();
             const canvas = document.createElement('canvas');
             const ctx = canvas.getContext('2d');
+            const isHeic = file.type === 'image/heic' || file.type === 'image/heif';
+            const preferredMime = isHeic ? 'image/jpeg' : file.type;
+
+            const resolveWithBlob = (blob: Blob, overrideType?: string) => {
+                const effectiveType = overrideType || blob.type || preferredMime;
+                const needsJpegRename = effectiveType === 'image/jpeg' && !/\.jpe?g$/i.test(file.name);
+                const renamedFile = new File(
+                    [blob],
+                    needsJpegRename || isHeic ? file.name.replace(/\.[^/.]+$/, '.jpg') : file.name,
+                    {
+                        type: effectiveType,
+                        lastModified: Date.now(),
+                    }
+                );
+                resolve(renamedFile);
+            };
+
+            const finalize = (blob: Blob | null, overrideType?: string) => {
+                if (blob) {
+                    resolveWithBlob(blob, overrideType);
+                } else if (!isHeic && preferredMime !== 'image/jpeg') {
+                    canvas.toBlob(
+                        (fallbackBlob) => finalize(fallbackBlob, 'image/jpeg'),
+                        'image/jpeg',
+                        IMAGE_QUALITY
+                    );
+                } else {
+                    resolve(file);
+                }
+            };
 
             img.onload = () => {
                 let { width, height } = img;
-
-                // คำนวณขนาดใหม่ โดยรักษาสัดส่วน
                 if (width > MAX_IMAGE_WIDTH || height > MAX_IMAGE_HEIGHT) {
                     const ratio = Math.min(MAX_IMAGE_WIDTH / width, MAX_IMAGE_HEIGHT / height);
                     width = Math.round(width * ratio);
@@ -227,78 +276,80 @@ export default function LeaveFormPage() {
 
                 canvas.width = width;
                 canvas.height = height;
-
-                // วาดรูปลง canvas
                 ctx?.drawImage(img, 0, 0, width, height);
-
-                // แปลง canvas เป็น Blob
-                canvas.toBlob(
-                    (blob) => {
-                        if (blob) {
-                            // สร้าง File ใหม่จาก Blob
-                            const resizedFile = new File([blob], file.name, {
-                                type: file.type,
-                                lastModified: Date.now(),
-                            });
-                            resolve(resizedFile);
-                        } else {
-                            resolve(file);
-                        }
-                    },
-                    file.type,
-                    IMAGE_QUALITY
-                );
-
-                // ปล่อย memory
+                canvas.toBlob((blob) => finalize(blob), preferredMime, IMAGE_QUALITY);
                 URL.revokeObjectURL(img.src);
             };
 
-            img.onerror = () => {
-                resolve(file);
-            };
-
+            img.onerror = () => resolve(file);
             img.src = URL.createObjectURL(file);
         });
     };
 
-    const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-        const files = event.target.files;
-        if (files) {
-            const newFiles = Array.from(files);
-            
-            // ตรวจสอบจำนวนไฟล์รวม
-            const totalFiles = formData.attachments.length + newFiles.length;
-            if (totalFiles > MAX_FILES) {
-                toastr.warning(`สามารถแนบไฟล์ได้สูงสุด ${MAX_FILES} ไฟล์`);
-                return;
-            }
-            
-            // ตรวจสอบขนาดไฟล์และ resize รูปภาพ
-            const processedFiles: File[] = [];
-            for (const file of newFiles) {
-                if (file.size > MAX_FILE_SIZE) {
-                    toastr.warning(`ไฟล์ ${file.name} มีขนาดเกิน 15MB`);
-                } else {
-                    // Resize รูปภาพ (ถ้าเป็นรูป)
-                    const processedFile = await resizeImage(file);
-                    processedFiles.push(processedFile);
-                }
-            }
-            
-            if (processedFiles.length > 0) {
-                setFormData(prev => ({
-                    ...prev,
-                    attachments: [...prev.attachments, ...processedFiles],
-                }));
-            }
+    const uploadAttachmentToServer = async (file: File): Promise<UploadedAttachmentMeta> => {
+        const uploadData = new FormData();
+        uploadData.append('file', file);
+        uploadData.append('leaveType', leaveCode);
+
+        const response = await fetch('/api/leave-attachments', {
+            method: 'POST',
+            body: uploadData,
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({ error: 'อัปโหลดไฟล์ไม่สำเร็จ' }));
+            throw new Error(errorData.error || 'อัปโหลดไฟล์ไม่สำเร็จ');
         }
-        // Reset input เพื่อให้เลือกไฟล์ซ้ำได้
-        event.target.value = '';
+
+        const result = await response.json();
+        return result.file as UploadedAttachmentMeta;
     };
 
-    // สร้าง URL สำหรับ preview
-    const getFilePreviewUrl = (file: File): string => {
-        return URL.createObjectURL(file);
+    const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+        const files = event.target.files;
+        if (!files) return;
+
+        const newFiles = Array.from(files);
+        let remainingSlots = MAX_FILES - formData.attachments.length;
+
+        if (remainingSlots <= 0) {
+            toastr.warning(`สามารถแนบไฟล์ได้สูงสุด ${MAX_FILES} ไฟล์`);
+            event.target.value = '';
+            return;
+        }
+
+        if (newFiles.length > remainingSlots) {
+            toastr.warning(`เลือกลดจำนวนไฟล์ให้ไม่เกิน ${remainingSlots} ไฟล์`);
+        }
+
+        const filesToProcess = newFiles.slice(0, remainingSlots);
+
+        setProcessingAttachments(true);
+        try {
+            for (const file of filesToProcess) {
+                if (file.size > MAX_FILE_SIZE) {
+                    toastr.warning(`ไฟล์ ${file.name} มีขนาดเกิน 15MB`);
+                    continue;
+                }
+
+                const processedFile = await resizeImage(file);
+                const previewUrl = URL.createObjectURL(processedFile);
+
+                setFormData(prev => ({
+                    ...prev,
+                    attachments: [
+                        ...prev.attachments,
+                        {
+                            file: processedFile,
+                            previewUrl,
+                        },
+                    ],
+                }));
+            }
+        } finally {
+            setProcessingAttachments(false);
+            event.target.value = '';
+        }
     };
 
     // ตรวจสอบว่าเป็นไฟล์รูปภาพหรือไม่
@@ -308,6 +359,13 @@ export default function LeaveFormPage() {
 
     // ลบไฟล์แนบ
     const removeAttachment = (index: number) => {
+        const target = formData.attachments[index];
+        if (!target) return;
+
+        if (target.previewUrl) {
+            URL.revokeObjectURL(target.previewUrl);
+        }
+
         setFormData(prev => ({
             ...prev,
             attachments: prev.attachments.filter((_, i) => i !== index),
@@ -330,8 +388,12 @@ export default function LeaveFormPage() {
             newErrors.endDate = 'วันที่สิ้นสุดต้องไม่น้อยกว่าวันที่เริ่มลา';
         }
 
-        if (!formData.totalDays || parseFloat(formData.totalDays) <= 0) {
+        const totalDaysNum = parseFloat(formData.totalDays) || 0;
+
+        if (!formData.totalDays || totalDaysNum <= 0) {
             newErrors.totalDays = 'กรุณาระบุจำนวนวันลา';
+        } else if (maxLeaveDaysByRange !== null && totalDaysNum > maxLeaveDaysByRange) {
+            newErrors.totalDays = `จำนวนวันลาสูงสุด ${maxLeaveDaysByRange} วัน ตามช่วงวันที่เลือก`;
         }
 
         if (!formData.reason.trim()) {
@@ -339,8 +401,7 @@ export default function LeaveFormPage() {
         }
 
         // ตรวจสอบใบรับรองแพทย์สำหรับลาป่วยเกิน 3 วัน
-        const totalDaysNum = parseFloat(formData.totalDays) || 0;
-        if (type === 'sick' && totalDaysNum > 3 && formData.attachments.length === 0) {
+        if (leaveCode === 'sick' && totalDaysNum > 3 && formData.attachments.length === 0) {
             newErrors.attachments = 'กรุณาแนบใบรับรองแพทย์เนื่องจากลาเกิน 3 วัน';
         }
 
@@ -348,8 +409,12 @@ export default function LeaveFormPage() {
         return { isValid: Object.keys(newErrors).length === 0, errors: newErrors };
     };
 
-    // เปิด preview ก่อนส่ง
-    const handleOpenPreview = () => {
+    // เปิด confirm ก่อนส่ง
+    const handleOpenConfirm = () => {
+        if (processingAttachments) {
+            toastr.warning('กรุณารอให้ประมวลผลไฟล์เสร็จก่อน');
+            return;
+        }
         const { isValid, errors: validationErrors } = validateForm();
         if (!isValid) {
             // แสดง error แรกที่พบ
@@ -361,18 +426,38 @@ export default function LeaveFormPage() {
             }
             return;
         }
-        setShowPreviewDialog(true);
+        setShowConfirmDialog(true);
     };
 
     // ส่งคำขอลา
     const handleSubmit = async () => {
-        setShowPreviewDialog(false);
+        setShowConfirmDialog(false);
         setSubmitting(true);
 
+        const uploadedMetas: UploadedAttachmentMeta[] = [];
+        const cleanupUploadedFiles = async () => {
+            if (!uploadedMetas.length) return;
+            await Promise.all(
+                uploadedMetas.map(file =>
+                    fetch('/api/leave-attachments', {
+                        method: 'DELETE',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ filePath: file.filePath }),
+                    }).catch(() => undefined)
+                )
+            );
+        };
+
         try {
-            // TODO: Implement API call to save leave request
+            for (const attachment of formData.attachments) {
+                const uploadedMeta = await uploadAttachmentToServer(attachment.file);
+                uploadedMetas.push(uploadedMeta);
+            }
+
             const payload = {
-                leaveType: type,
+                leaveType: leaveCode,
                 startDate: formData.startDate,
                 startTime: formData.startTime,
                 endDate: formData.endDate,
@@ -382,36 +467,72 @@ export default function LeaveFormPage() {
                 contactPhone: formData.contactPhone,
                 contactAddress: formData.contactAddress,
                 status: 'pending',
+                attachments: uploadedMetas,
             };
 
-            console.log('Submitting:', payload);
+            const response = await fetch('/api/leaves', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(payload),
+            });
 
-            // Simulate API call
-            await new Promise(resolve => setTimeout(resolve, 1500));
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({ error: 'เกิดข้อผิดพลาดในการบันทึกข้อมูล' }));
+                throw new Error(errorData.error || 'ไม่สามารถบันทึกคำขอลาได้');
+            }
 
             toastr.success('ส่งคำขอลาเรียบร้อยแล้ว');
-            router.push('/');
+            router.push('/leave');
         } catch (error) {
+            await cleanupUploadedFiles();
             console.error('Error submitting leave request:', error);
-            toastr.error('เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง');
+            toastr.error(error instanceof Error ? error.message : 'เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง');
         } finally {
             setSubmitting(false);
         }
     };
 
-    if (loading) {
+    // ถ้ายังโหลดข้อมูลอยู่หรือยังไม่มี leaveType
+    if (loading || !leaveType) {
+        const sectionHeights = [190, 230, 260];
         return (
-            <Box sx={{ minHeight: '100vh', bgcolor: 'background.default', p: 2.5 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 3 }}>
-                    <Skeleton variant="circular" width={40} height={40} />
-                    <Skeleton variant="text" width={150} height={32} />
+            <Box sx={{ minHeight: '100vh', bgcolor: '#f5f7fa', pb: 8 }}>
+                <Box
+                    sx={{
+                        background: 'linear-gradient(135deg, #4F46E5 0%, #6366F1 100%)',
+                        px: 2,
+                        py: 2,
+                        boxShadow: '0 4px 12px rgba(79, 70, 229, 0.3)'
+                    }}
+                >
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                        <Skeleton variant="circular" width={40} height={40} sx={{ bgcolor: 'rgba(255,255,255,0.4)' }} />
+                        <Box sx={{ flex: 1 }}>
+                            <Skeleton variant="text" width="70%" height={26} sx={{ bgcolor: 'rgba(255,255,255,0.4)' }} />
+                            <Skeleton variant="text" width="45%" height={18} sx={{ bgcolor: 'rgba(255,255,255,0.35)', mt: 0.5 }} />
+                        </Box>
+                        <Skeleton variant="rounded" width={70} height={28} sx={{ bgcolor: 'rgba(255,255,255,0.4)', borderRadius: 999 }} />
+                    </Box>
                 </Box>
-                <Skeleton variant="rounded" height={120} sx={{ borderRadius: 3, mb: 2 }} />
-                <Skeleton variant="rounded" height={200} sx={{ borderRadius: 3, mb: 2 }} />
-                <Skeleton variant="rounded" height={150} sx={{ borderRadius: 3 }} />
+
+                <Container maxWidth={false} disableGutters sx={{ maxWidth: 1200, px: { xs: 1.5, sm: 2 }, pt: 3 }}>
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
+                        <Skeleton variant="rounded" height={130} sx={{ borderRadius: 2 }} />
+                        {sectionHeights.map((height, index) => (
+                            <Skeleton key={index} variant="rounded" height={height} sx={{ borderRadius: 2 }} />
+                        ))}
+                        <Skeleton variant="rounded" height={72} sx={{ borderRadius: 999, maxWidth: 480, alignSelf: 'center', mt: 1 }} />
+                    </Box>
+                </Container>
             </Box>
         );
     }
+
+    // ดึง config สำหรับ icon และสี
+    const config = leaveTypeConfig[leaveType.code] || leaveTypeConfig.default;
+    const IconComponent = config.icon;
 
     return (
         <>
@@ -419,14 +540,15 @@ export default function LeaveFormPage() {
                 {/* Header - Enhanced */}
                 <Box
                     sx={{
-                        background: 'linear-gradient(135deg, #1976d2 0%, #1565c0 100%)',
+                        background: `linear-gradient(135deg, ${config.color} 0%, ${config.color}dd 100%)`,
                         position: 'sticky',
                         top: 0,
                         zIndex: 100,
                         boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
                     }}
                 >
-                    <Box sx={{ display: 'flex', alignItems: 'center', px: 2, py: 1.5 }}>
+                    <Container maxWidth={false} sx={{ maxWidth: 1200 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', px: 2, py: 1.5 }}>
                         <IconButton 
                             onClick={() => router.back()} 
                             sx={{ 
@@ -447,10 +569,10 @@ export default function LeaveFormPage() {
                                 {leaveType.description}
                             </Typography>
                         </Box>
-                        {leaveType.maxDays && (
+                        {leaveType.maxDaysPerYear && (
                             <Chip 
                                 size="small"
-                                label={`${leaveType.maxDays} วัน/ปี`}
+                                label={`${leaveType.maxDaysPerYear} วัน/ปี`}
                                 sx={{ 
                                     bgcolor: 'rgba(255,255,255,0.2)', 
                                     color: 'white',
@@ -459,35 +581,29 @@ export default function LeaveFormPage() {
                                 }}
                             />
                         )}
-                    </Box>
+                        </Box>
+                    </Container>
                 </Box>
 
                 {/* Main content */}
-                <Box sx={{ px: 2, pt: 2.5 }}>
-                    {/* ข้อมูลผู้ขอลา */}
-                    <Box sx={{ mb: 3 }}>
+                <Container maxWidth={false} disableGutters sx={{ maxWidth: 1200, px: { xs: 1, sm: 2 } }}>
+                    <Box sx={{ pt: 2 }}>
+                        {/* ข้อมูลผู้ขอลา */}
+                        <Box sx={{ mb: 2.5, p: 2, bgcolor: 'grey.50', borderRadius: 1, border: '1px solid', borderColor: 'grey.200' }}>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 }}>
                             <Box sx={{ 
                                 width: 28, height: 28, borderRadius: 1.5, 
-                                bgcolor: leaveType.lightColor, 
+                                bgcolor: config.lightColor, 
                                 display: 'flex', alignItems: 'center', justifyContent: 'center' 
                             }}>
-                                <User size={15} color={leaveType.color} />
+                                <User size={15} color={config.color} />
                             </Box>
                             <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
                                 ข้อมูลผู้ขอลา
                             </Typography>
                         </Box>
                         
-                        <Box sx={{ 
-                            bgcolor: 'white', 
-                            borderRadius: 1, 
-                            p: 2,
-                            boxShadow: '0 2px 12px rgba(0,0,0,0.04)',
-                            border: '1px solid',
-                            borderColor: 'grey.100',
-                        }}>
-                            <Box sx={{ display: 'grid', gap: 1.5 }}>
+                        <Box sx={{ display: 'grid', gap: 1.5 }}>
                                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                     <Typography variant="body2" color="text.secondary">ชื่อ-นามสกุล</Typography>
                                     <Typography variant="body2" fontWeight={600}>
@@ -524,30 +640,24 @@ export default function LeaveFormPage() {
                         </Box>
                     </Box>
 
+                    <Divider sx={{ my: 3 }} />
+
                     {/* รายละเอียดการลา */}
-                    <Box sx={{ mb: 3 }}>
+                    <Box sx={{ mb: 3, p: 2, bgcolor: 'grey.50', borderRadius: 1, border: '1px solid', borderColor: 'grey.200' }}>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 }}>
                             <Box sx={{ 
                                 width: 28, height: 28, borderRadius: 1.5, 
-                                bgcolor: leaveType.lightColor, 
+                                bgcolor: config.lightColor, 
                                 display: 'flex', alignItems: 'center', justifyContent: 'center' 
                             }}>
-                                <Calendar size={15} color={leaveType.color} />
+                                <Calendar size={15} color={config.color} />
                             </Box>
                             <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
                                 รายละเอียดการลา
                             </Typography>
                         </Box>
 
-                        <Box sx={{ 
-                            bgcolor: 'white', 
-                            borderRadius: 1, 
-                            p: 2,
-                            boxShadow: '0 2px 12px rgba(0,0,0,0.04)',
-                            border: '1px solid',
-                            borderColor: 'grey.100',
-                        }}>
-                            {/* วันที่เขียนใบลา */}
+                        {/* วันที่เขียนใบลา */}
                             <Box sx={{ 
                                 display: 'flex', 
                                 justifyContent: 'space-between', 
@@ -560,7 +670,7 @@ export default function LeaveFormPage() {
                                 <Typography variant="body2" color="text.secondary">
                                     วันที่เขียนใบลา
                                 </Typography>
-                                <Typography variant="body2" fontWeight={600} color={leaveType.color}>
+                                <Typography variant="body2" fontWeight={600} color={config.color}>
                                     {dayjs().locale('th').format('DD MMMM')} {dayjs().year() + 543}
                                 </Typography>
                             </Box>
@@ -580,7 +690,7 @@ export default function LeaveFormPage() {
                                         sx={{
                                             '& .MuiOutlinedInput-root': {
                                                 '& fieldset': { borderColor: '#e5e7eb' },
-                                                '&:hover fieldset': { borderColor: leaveType.color },
+                                                '&:hover fieldset': { borderColor: config.color },
                                             },
                                             '& input[type="date"]': {
                                                 color: 'transparent',
@@ -600,7 +710,7 @@ export default function LeaveFormPage() {
                                             input: {
                                                 startAdornment: (
                                                     <InputAdornment position="start">
-                                                        <Calendar size={16} color={leaveType.color} />
+                                                        <Calendar size={16} color={config.color} />
                                                     </InputAdornment>
                                                 ),
                                             },
@@ -646,7 +756,7 @@ export default function LeaveFormPage() {
                                         sx={{
                                             '& .MuiOutlinedInput-root': {
                                                 '& fieldset': { borderColor: '#e5e7eb' },
-                                                '&:hover fieldset': { borderColor: leaveType.color },
+                                                '&:hover fieldset': { borderColor: config.color },
                                             },
                                         }}
                                         slotProps={{
@@ -678,7 +788,7 @@ export default function LeaveFormPage() {
                                         sx={{
                                             '& .MuiOutlinedInput-root': {
                                                 '& fieldset': { borderColor: '#e5e7eb' },
-                                                '&:hover fieldset': { borderColor: leaveType.color },
+                                                '&:hover fieldset': { borderColor: config.color },
                                             },
                                             '& input[type="date"]': {
                                                 color: 'transparent',
@@ -698,7 +808,7 @@ export default function LeaveFormPage() {
                                             input: {
                                                 startAdornment: (
                                                     <InputAdornment position="start">
-                                                        <Calendar size={16} color={leaveType.color} />
+                                                        <Calendar size={16} color={config.color} />
                                                     </InputAdornment>
                                                 ),
                                             },
@@ -747,7 +857,7 @@ export default function LeaveFormPage() {
                                         sx={{
                                             '& .MuiOutlinedInput-root': {
                                                 '& fieldset': { borderColor: '#e5e7eb' },
-                                                '&:hover fieldset': { borderColor: leaveType.color },
+                                                '&:hover fieldset': { borderColor: config.color },
                                             },
                                         }}
                                         slotProps={{
@@ -763,9 +873,26 @@ export default function LeaveFormPage() {
                                     {errors.endDate}
                                 </Typography>
                             )}
+                    </Box>
 
-                            {/* จำนวนวันลา */}
-                            <TextField
+                    <Divider sx={{ my: 3 }} />
+
+                    {/* จำนวนวันลา */}
+                    <Box sx={{ mb: 3, p: 2, bgcolor: 'grey.50', borderRadius: 1, border: '1px solid', borderColor: 'grey.200' }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 }}>
+                            <Box sx={{ 
+                                width: 28, height: 28, borderRadius: 1.5, 
+                                bgcolor: config.lightColor, 
+                                display: 'flex', alignItems: 'center', justifyContent: 'center' 
+                            }}>
+                                <Calendar size={15} color={config.color} />
+                            </Box>
+                            <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
+                                จำนวนวันลา
+                            </Typography>
+                        </Box>
+
+                        <TextField
                                 fullWidth
                                 label="จำนวนวันลา"
                                 type="number"
@@ -774,18 +901,18 @@ export default function LeaveFormPage() {
                                 size="small"
                                 placeholder="เช่น 1, 0.5, 1.5, 2"
                                 error={!!errors.totalDays}
-                                helperText={errors.totalDays || 'ระบุจำนวนวันลา เช่น 0.5 = ครึ่งวัน, 1 = เต็มวัน'}
+                                helperText={totalDaysHelperText}
                                 sx={{
                                     '& .MuiOutlinedInput-root': {
                                         '& fieldset': { borderColor: '#e5e7eb' },
-                                        '&:hover fieldset': { borderColor: leaveType.color },
+                                        '&:hover fieldset': { borderColor: config.color },
                                     },
                                 }}
                                 slotProps={{
                                     input: {
                                         startAdornment: (
                                             <InputAdornment position="start">
-                                                <Calendar size={18} color={leaveType.color} />
+                                                <Calendar size={18} color={config.color} />
                                             </InputAdornment>
                                         ),
                                     },
@@ -801,7 +928,7 @@ export default function LeaveFormPage() {
                                 <Box
                                     sx={{
                                         p: 2,
-                                        bgcolor: leaveType.lightColor,
+                                        bgcolor: config.lightColor,
                                         borderRadius: 2,
                                         display: 'flex',
                                         justifyContent: 'space-between',
@@ -814,7 +941,7 @@ export default function LeaveFormPage() {
                                     <Chip
                                         label={`${formData.totalDays} วัน`}
                                         sx={{
-                                            bgcolor: leaveType.color,
+                                            bgcolor: config.color,
                                             color: 'white',
                                             fontWeight: 'bold',
                                         }}
@@ -822,38 +949,31 @@ export default function LeaveFormPage() {
                                 </Box>
                             )}
 
-                            {leaveType.maxDays && (
+                            {leaveType.maxDaysPerYear && (
                                 <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
-                                    สิทธิ์การลาสูงสุด: {leaveType.maxDays} วัน/ปี โดยไม่หักเงิน
+                                    สิทธิ์การลาสูงสุด: {leaveType.maxDaysPerYear} วัน/ปี โดยไม่หักเงิน
                                 </Typography>
                             )}
-                        </Box>
                     </Box>
 
+                    <Divider sx={{ my: 3 }} />
+
                     {/* เหตุผลการลา */}
-                    <Box sx={{ mb: 3 }}>
+                    <Box sx={{ mb: 3, p: 2, bgcolor: 'grey.50', borderRadius: 1, border: '1px solid', borderColor: 'grey.200' }}>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 }}>
                             <Box sx={{ 
                                 width: 28, height: 28, borderRadius: 1.5, 
-                                bgcolor: leaveType.lightColor, 
+                                bgcolor: config.lightColor, 
                                 display: 'flex', alignItems: 'center', justifyContent: 'center' 
                             }}>
-                                <FileText size={15} color={leaveType.color} />
+                                <FileText size={15} color={config.color} />
                             </Box>
                             <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
                                 เหตุผลการลา
                             </Typography>
                         </Box>
 
-                        <Box sx={{ 
-                            bgcolor: 'white', 
-                            borderRadius: 1, 
-                            p: 2,
-                            boxShadow: '0 2px 12px rgba(0,0,0,0.04)',
-                            border: '1px solid',
-                            borderColor: 'grey.100',
-                        }}>
-                            <TextField
+                        <TextField
                                 multiline
                                 rows={3}
                                 fullWidth
@@ -869,70 +989,53 @@ export default function LeaveFormPage() {
                                     },
                                 }}
                             />
-                        </Box>
                     </Box>
 
+                    <Divider sx={{ my: 3 }} />
+
                     {/* ไฟล์แนบ */}
-                    <Box sx={{ mb: 3 }}>
+                      <Box sx={{ mb: 3, p: 2, bgcolor: 'grey.50', borderRadius: 1, border: '1px solid', borderColor: 'grey.200' }}>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 }}>
                             <Box sx={{ 
                                 width: 28, height: 28, borderRadius: 1.5, 
-                                bgcolor: leaveType.lightColor, 
+                                bgcolor: config.lightColor, 
                                 display: 'flex', alignItems: 'center', justifyContent: 'center' 
                             }}>
-                                <Paperclip size={15} color={leaveType.color} />
+                                <Paperclip size={15} color={config.color} />
                             </Box>
                             <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
                                 ไฟล์แนบ
                             </Typography>
                         </Box>
 
-                        <Box sx={{ 
-                            bgcolor: 'white', 
-                            borderRadius: 1, 
-                            p: 2,
-                            boxShadow: '0 2px 12px rgba(0,0,0,0.04)',
-                            border: '1px solid',
-                            borderColor: 'grey.100',
-                        }}>
-                            {leaveType.attachmentNote && (
-                                <Alert 
-                                    severity={type === 'sick' && (parseFloat(formData.totalDays) || 0) >= 3 ? 'warning' : 'info'} 
-                                    icon={<AlertCircle size={18} />}
-                                    sx={{ mb: 2, borderRadius: 2 }}
-                                >
-                                    {leaveType.attachmentNote}
-                                </Alert>
-                            )}
-
                             {/* ปุ่มอัพโหลด */}
-                            <input
-                                ref={fileInputRef}
-                                type="file"
-                                multiple
-                                accept=".pdf,.jpg,.jpeg,.png"
-                                onChange={handleFileUpload}
-                                style={{ display: 'none' }}
-                            />
+                        <input
+                            ref={fileInputRef}
+                            type="file"
+                            multiple
+                            accept=".pdf,.jpg,.jpeg,.png,.heic,.heif,image/heic"
+                            onChange={handleFileUpload}
+                            style={{ display: 'none' }}
+                        />
 
-                            <Button
-                                variant="outlined"
-                                fullWidth
-                                startIcon={<Upload size={18} />}
-                                onClick={() => fileInputRef.current?.click()}
-                                disabled={formData.attachments.length >= MAX_FILES}
-                                sx={{
-                                    borderStyle: 'dashed',
-                                    borderRadius: 2,
-                                    py: 2,
-                                    mb: errors.attachments ? 0 : 1.5,
-                                    borderColor: leaveType.color,
-                                    color: leaveType.color,
-                                    bgcolor: leaveType.lightColor + '30',
-                                    '&:hover': {
-                                        borderColor: leaveType.color,
-                                        bgcolor: leaveType.lightColor,
-                                    },
+                        <Button
+                            variant="outlined"
+                            fullWidth
+                            startIcon={<Upload size={18} />}
+                            onClick={() => fileInputRef.current?.click()}
+                            disabled={formData.attachments.length >= MAX_FILES || processingAttachments}
+                            sx={{
+                                borderStyle: 'dashed',
+                                borderRadius: 2,
+                                py: 2,
+                                mb: errors.attachments ? 0 : 1.5,
+                                borderColor: config.color,
+                                color: config.color,
+                                bgcolor: config.lightColor + '30',
+                                '&:hover': {
+                                    borderColor: config.color,
+                                    bgcolor: config.lightColor,
+                                },
                                     '&.Mui-disabled': {
                                         borderColor: 'grey.300',
                                         color: 'grey.400',
@@ -940,10 +1043,11 @@ export default function LeaveFormPage() {
                                     }
                                 }}
                             >
-                                {formData.attachments.length >= MAX_FILES 
-                                    ? `แนบไฟล์ครบ ${MAX_FILES} ไฟล์แล้ว` 
-                                    : `อัพโหลดไฟล์แนบ (${formData.attachments.length}/${MAX_FILES})`
-                                }
+                                {processingAttachments
+                                    ? 'กำลังประมวลผลไฟล์...'
+                                    : formData.attachments.length >= MAX_FILES
+                                        ? `แนบไฟล์ครบ ${MAX_FILES} ไฟล์แล้ว`
+                                        : `อัพโหลดไฟล์แนบ (${formData.attachments.length}/${MAX_FILES})`}
                             </Button>
 
                             {errors.attachments && (
@@ -955,9 +1059,9 @@ export default function LeaveFormPage() {
                             {/* รายการไฟล์แนบพร้อม Preview */}
                             {formData.attachments.length > 0 && (
                                 <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5, mb: 1.5 }}>
-                                    {formData.attachments.map((file, index) => (
+                                    {formData.attachments.map((attachment, index) => (
                                         <Box
-                                            key={index}
+                                            key={`${attachment.file.name}-${index}`}
                                             sx={{
                                                 position: 'relative',
                                                 width: 100,
@@ -974,19 +1078,19 @@ export default function LeaveFormPage() {
                                                     border: '1px solid',
                                                     borderColor: 'grey.200',
                                                     bgcolor: 'grey.50',
-                                                    cursor: isImageFile(file) ? 'pointer' : 'default',
+                                                    cursor: isImageFile(attachment.file) ? 'pointer' : 'default',
                                                 }}
                                                 onClick={() => {
-                                                    if (isImageFile(file)) {
-                                                        setPreviewImage(getFilePreviewUrl(file));
+                                                    if (isImageFile(attachment.file)) {
+                                                        setPreviewImage(attachment.previewUrl);
                                                     }
                                                 }}
                                             >
-                                            {isImageFile(file) ? (
+                                            {isImageFile(attachment.file) ? (
                                                 <Box
                                                     component="img"
-                                                    src={getFilePreviewUrl(file)}
-                                                    alt={file.name}
+                                                    src={attachment.previewUrl}
+                                                    alt={attachment.file.name}
                                                     sx={{
                                                         width: '100%',
                                                         height: '100%',
@@ -1005,7 +1109,7 @@ export default function LeaveFormPage() {
                                                         p: 1,
                                                     }}
                                                 >
-                                                    <FileText size={32} color={leaveType.color} />
+                                                    <FileText size={32} color={config.color} />
                                                     <Typography 
                                                         variant="caption" 
                                                         noWrap 
@@ -1015,7 +1119,7 @@ export default function LeaveFormPage() {
                                                             fontSize: '0.65rem',
                                                         }}
                                                     >
-                                                        {file.name}
+                                                        {attachment.file.name}
                                                     </Typography>
                                                 </Box>
                                             )}
@@ -1060,30 +1164,29 @@ export default function LeaveFormPage() {
                                                     fontSize: '0.6rem',
                                                 }}
                                             >
-                                                {(file.size / (1024 * 1024)).toFixed(1)} MB
+                                                {(attachment.file.size / (1024 * 1024)).toFixed(1)} MB
                                             </Typography>
                                         </Box>
                                     ))}
                                 </Box>
                             )}
 
-                            <Typography variant="caption" color="text.secondary">
-                                รองรับไฟล์ .pdf, .jpg, .jpeg, .png (สูงสุด {MAX_FILES} ไฟล์, ไฟล์ละไม่เกิน 15MB)
-                            </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                            รองรับไฟล์ .pdf, .jpg, .jpeg, .png (สูงสุด {MAX_FILES} ไฟล์, ไฟล์ละไม่เกิน 15MB)
+                        </Typography>
 
-                            {/* แจ้งเตือนลาป่วยเกิน 3 วัน */}
-                            {type === 'sick' && (parseFloat(formData.totalDays) || 0) > 3 && formData.attachments.length === 0 && (
-                                <Alert 
-                                    severity="warning" 
-                                    icon={<AlertCircle size={18} />}
-                                    sx={{ mt: 2, borderRadius: 2 }}
-                                >
-                                    ลาป่วยเกิน 3 วัน กรุณาแนบใบรับรองแพทย์
-                                </Alert>
-                            )}
-                        </Box>
+                        {/* แจ้งเตือนลาป่วยเกิน 3 วัน */}
+                        {leaveCode === 'sick' && (parseFloat(formData.totalDays) || 0) > 3 && formData.attachments.length === 0 && (
+                            <Alert 
+                                severity="warning" 
+                                icon={<AlertCircle size={18} />}
+                                sx={{ mt: 2, borderRadius: 2 }}
+                            >
+                                ลาป่วยเกิน 3 วัน กรุณาแนบใบรับรองแพทย์
+                            </Alert>
+                        )}
                     </Box>
-                </Box>
+                </Container>
             </Box>
 
             {/* Fixed Footer - ปุ่มดำเนินการ */}
@@ -1102,12 +1205,12 @@ export default function LeaveFormPage() {
                     zIndex: 100,
                 }}
             >
-                <Box sx={{ maxWidth: 600, mx: 'auto' }}>
+                <Box sx={{ maxWidth: 1200, mx: 'auto' }}>
                     <Button
                         variant="contained"
                         fullWidth
                         startIcon={<Send size={18} />}
-                        onClick={handleOpenPreview}
+                        onClick={handleOpenConfirm}
                         disabled={submitting}
                         sx={{
                             py: 1.5,
@@ -1126,11 +1229,11 @@ export default function LeaveFormPage() {
                 </Box>
             </Box>
 
-            {/* Dialog Preview ข้อมูลก่อนส่ง */}
+            {/* Confirm Dialog */}
             <Dialog
-                open={showPreviewDialog}
-                onClose={() => setShowPreviewDialog(false)}
-                maxWidth="sm"
+                open={showConfirmDialog}
+                onClose={() => setShowConfirmDialog(false)}
+                maxWidth="xs"
                 fullWidth
                 sx={{
                     '& .MuiDialog-paper': {
@@ -1139,183 +1242,64 @@ export default function LeaveFormPage() {
                     }
                 }}
             >
-                <Box sx={{ p: 2.5 }}>
-                    {/* Header */}
-                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                            
-                            <Box>
-                                <Typography variant="h6" fontWeight="bold">
-                                    ตรวจสอบข้อมูลการลา
-                                </Typography>
-                                <Typography variant="caption" color="text.secondary">
-                                    กรุณาตรวจสอบข้อมูลก่อนยืนยัน
-                                </Typography>
-                            </Box>
+                <Box sx={{ p: 3 }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
+                        <Box
+                            sx={{
+                                width: 56,
+                                height: 56,
+                                borderRadius: '50%',
+                                bgcolor: config.lightColor,
+                                color: config.color,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                            }}
+                        >
+                            <Send size={24} />
                         </Box>
-                        <IconButton onClick={() => setShowPreviewDialog(false)} size="small">
-                            <X size={20} />
-                        </IconButton>
                     </Box>
+                    <Typography variant="h6" fontWeight="bold" textAlign="center">
+                        ยืนยันส่งคำขอลา?
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" textAlign="center" sx={{ mt: 1, mb: 3 }}>
+                        ระบบจะส่งคำขอไปยังผู้อนุมัติทันทีเมื่อกดยืนยัน
+                    </Typography>
 
-                    {/* ประเภทการลา */}
-                    <Box sx={{ 
-                        bgcolor: leaveType.lightColor, 
-                        borderRadius: 2, 
-                        p: 1.5, 
-                        mb: 2,
-                        border: `1px solid ${leaveType.color}30`
-                    }}>
-                        <Typography variant="subtitle2" fontWeight="bold" color={leaveType.color}>
+                    <Box sx={{ bgcolor: 'grey.50', borderRadius: 1, p: 1.5, mb: 3, border: '1px solid', borderColor: 'grey.200' }}>
+                        <Typography variant="subtitle2" fontWeight="bold" sx={{ mb: 0.5 }}>
                             {leaveType.name}
                         </Typography>
-                    </Box>
-
-                    {/* ข้อมูลผู้ขอลา */}
-                    <Box sx={{ 
-                        bgcolor: 'grey.50', 
-                        borderRadius: 1, 
-                        p: 1.5, 
-                        mb: 2,
-                        border: '1px solid',
-                        borderColor: 'grey.200'
-                    }}>
-                        <Box sx={{ display: 'flex', gap: 1, mb: 1 }}>
-                            <User size={18} color="#1976d2" />
-                            <Box sx={{ flex: 1 }}>
-                                <Typography variant="caption" color="text.secondary">ชื่อ-นามสกุล</Typography>
-                                <Typography variant="body2" fontWeight={500}>
-                                    {userProfile?.firstName} {userProfile?.lastName}
-                                </Typography>
-                            </Box>
-                        </Box>
-                        <Box sx={{ display: 'flex', gap: 1, mb: 1 }}>
-                            <Building2 size={18} color="#1976d2" />
-                            <Box sx={{ flex: 1 }}>
-                                <Typography variant="caption" color="text.secondary">ฝ่าย</Typography>
-                                <Typography variant="body2" fontWeight={500}>
-                                    {userProfile?.sectionName || '-'}
-                                </Typography>
-                            </Box>
-                        </Box>
-                        <Box sx={{ display: 'flex', gap: 1, mb: 1 }}>
-                            <Briefcase size={18} color="#1976d2" />
-                            <Box sx={{ flex: 1 }}>
-                                <Typography variant="caption" color="text.secondary">แผนก</Typography>
-                                <Typography variant="body2" fontWeight={500}>
-                                    {userProfile?.departmentName || '-'}
-                                </Typography>
-                            </Box>
-                        </Box>
-                        <Box sx={{ display: 'flex', gap: 1 }}>
-                            <Briefcase size={18} color="#1976d2" />
-                            <Box sx={{ flex: 1 }}>
-                                <Typography variant="caption" color="text.secondary">ตำแหน่ง</Typography>
-                                <Typography variant="body2" fontWeight={500}>
-                                    {userProfile?.position || '-'}
-                                </Typography>
-                            </Box>
-                        </Box>
-                        {userProfile?.shift && (
-                            <Box sx={{ display: 'flex', gap: 1 }}>
-                                <Clock size={18} color="#1976d2" />
-                                <Box sx={{ flex: 1 }}>
-                                    <Typography variant="caption" color="text.secondary">กะ</Typography>
-                                    <Typography variant="body2" fontWeight={500}>
-                                        {userProfile.shift}
-                                    </Typography>
-                                </Box>
-                            </Box>
+                        <Typography variant="body2" color="text.secondary">
+                            {formData.startDate && formData.endDate
+                                ? `${dayjs(formData.startDate).locale('th').format('D MMM YYYY')} - ${dayjs(formData.endDate).locale('th').format('D MMM YYYY')}`
+                                : 'ยังไม่ได้เลือกช่วงวัน'}
+                        </Typography>
+                        {formData.totalDays && (
+                            <Typography variant="body2" color="text.secondary">
+                                จำนวนวันลา {formData.totalDays} วัน
+                            </Typography>
+                        )}
+                        {formData.reason && (
+                            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                                เหตุผล: {formData.reason}
+                            </Typography>
                         )}
                     </Box>
 
-                    {/* รายละเอียด */}
-                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, mb: 2.5 }}>
-                        <Box sx={{ display: 'flex', gap: 1 }}>
-                            <Calendar size={18} color="#1976d2" />
-                            <Box sx={{ flex: 1 }}>
-                                <Typography variant="caption" color="text.secondary">วันที่ลา</Typography>
-                                <Typography variant="body2" fontWeight={500}>
-                                    {formData.startDate ? (() => {
-                                        const start = dayjs(formData.startDate);
-                                        const end = dayjs(formData.endDate);
-                                        const startYear = start.year() + 543;
-                                        const endYear = end.year() + 543;
-                                        return `${start.format('D MMM')} ${startYear} - ${end.format('D MMM')} ${endYear}`;
-                                    })() : '-'}
-                                </Typography>
-                            </Box>
-                        </Box>
-                        
-                        <Box sx={{ display: 'flex', gap: 1 }}>
-                            <Clock size={18} color="#1976d2" />
-                            <Box sx={{ flex: 1 }}>
-                                <Typography variant="caption" color="text.secondary">เวลา</Typography>
-                                <Typography variant="body2" fontWeight={500}>
-                                    {formData.startTime} - {formData.endTime} น.
-                                </Typography>
-                            </Box>
-                        </Box>
-
-                        <Box sx={{ display: 'flex', gap: 1 }}>
-                            <FileText size={18} color="#1976d2" />
-                            <Box sx={{ flex: 1 }}>
-                                <Typography variant="caption" color="text.secondary">จำนวนวันลา</Typography>
-                                <Typography variant="body2" fontWeight={500}>
-                                    {formData.totalDays} วัน
-                                </Typography>
-                            </Box>
-                        </Box>
-
-                        <Box sx={{ display: 'flex', gap: 1 }}>
-                            <FileText size={18} color="#1976d2" />
-                            <Box sx={{ flex: 1 }}>
-                                <Typography variant="caption" color="text.secondary">เหตุผลการลา</Typography>
-                                <Typography variant="body2" fontWeight={500}>
-                                    {formData.reason}
-                                </Typography>
-                            </Box>
-                        </Box>
-
-                        {formData.contactAddress && (
-                            <Box sx={{ display: 'flex', gap: 1 }}>
-                                <MapPin size={18} color="#1976d2" />
-                                <Box sx={{ flex: 1 }}>
-                                    <Typography variant="caption" color="text.secondary">ที่อยู่ระหว่างลา</Typography>
-                                    <Typography variant="body2" fontWeight={500}>
-                                        {formData.contactAddress}
-                                    </Typography>
-                                </Box>
-                            </Box>
-                        )}
-
-                        {formData.attachments.length > 0 && (
-                            <Box sx={{ display: 'flex', gap: 1 }}>
-                                <Paperclip size={18} color="#1976d2" />
-                                <Box sx={{ flex: 1 }}>
-                                    <Typography variant="caption" color="text.secondary">ไฟล์แนบ</Typography>
-                                    <Typography variant="body2" fontWeight={500}>
-                                        {formData.attachments.length} ไฟล์
-                                    </Typography>
-                                </Box>
-                            </Box>
-                        )}
-                    </Box>
-
-                    {/* ปุ่มดำเนินการ */}
-                    <Box sx={{ display: 'flex', gap: 2 }}>
+                    <Box sx={{ display: 'flex', gap: 1.5 }}>
                         <Button
                             variant="outlined"
                             fullWidth
-                            onClick={() => setShowPreviewDialog(false)}
-                            sx={{ 
-                                py: 1.2, 
+                            onClick={() => setShowConfirmDialog(false)}
+                            sx={{
+                                py: 1.1,
                                 borderRadius: 2,
                                 borderColor: 'grey.400',
                                 color: 'grey.700',
                             }}
                         >
-                            แก้ไข
+                            ยกเลิก
                         </Button>
                         <Button
                             variant="contained"
@@ -1324,7 +1308,7 @@ export default function LeaveFormPage() {
                             onClick={handleSubmit}
                             disabled={submitting}
                             sx={{
-                                py: 1.2,
+                                py: 1.1,
                                 borderRadius: 2,
                                 bgcolor: '#1976d2',
                                 fontWeight: 600,
@@ -1333,7 +1317,7 @@ export default function LeaveFormPage() {
                                 },
                             }}
                         >
-                            {submitting ? 'กำลังส่ง...' : 'ยืนยันส่งคำขอ'}
+                            {submitting ? 'กำลังส่ง...' : 'ยืนยัน'}
                         </Button>
                     </Box>
                 </Box>

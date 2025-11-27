@@ -15,7 +15,8 @@ const Header = () => {
     const currentDate = new Date().toLocaleDateString(dateLocale, {
         weekday: 'short',
         day: 'numeric',
-        month: 'short'
+        month: 'short',
+        year: 'numeric',
     });
 
     // ตรวจสอบว่าเป็น admin หรือ hr ไหม
