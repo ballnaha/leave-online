@@ -18,11 +18,11 @@ const BottomNav: React.FC<BottomNavProps> = ({ activePage = 'home' }) => {
     const closeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     const leaveTypes = [
-        { icon: Stethoscope, name: 'ลาป่วย', color: '#FF6B6B', gradient: 'linear-gradient(135deg, #FF6B6B 0%, #FF8E8E 100%)' },
-        { icon: Umbrella, name: 'ลากิจ', color: '#4ECDC4', gradient: 'linear-gradient(135deg, #4ECDC4 0%, #6FE0D7 100%)' },
-        { icon: Sun, name: 'ลาพักร้อน', color: '#FFD93D', gradient: 'linear-gradient(135deg, #FFD93D 0%, #FFE566 100%)' },
-        { icon: Baby, name: 'ลาคลอด', color: '#FF8ED4', gradient: 'linear-gradient(135deg, #FF8ED4 0%, #FFB3E6 100%)' },
-        { icon: MoreHorizontal, name: 'ลาอื่นๆ', color: '#95A5A6', gradient: 'linear-gradient(135deg, #95A5A6 0%, #B0BEC5 100%)' },
+        { icon: Stethoscope, name: 'ลาป่วย', code: 'sick', color: '#FF6B6B', gradient: 'linear-gradient(135deg, #FF6B6B 0%, #FF8E8E 100%)' },
+        { icon: Umbrella, name: 'ลากิจ', code: 'personal', color: '#4ECDC4', gradient: 'linear-gradient(135deg, #4ECDC4 0%, #6FE0D7 100%)' },
+        { icon: Sun, name: 'ลาพักร้อน', code: 'vacation', color: '#FFD93D', gradient: 'linear-gradient(135deg, #FFD93D 0%, #FFE566 100%)' },
+        { icon: Baby, name: 'ลาคลอด', code: 'other', color: '#FF8ED4', gradient: 'linear-gradient(135deg, #FF8ED4 0%, #FFB3E6 100%)' },
+        { icon: MoreHorizontal, name: 'ลาอื่นๆ', code: 'other', color: '#95A5A6', gradient: 'linear-gradient(135deg, #95A5A6 0%, #B0BEC5 100%)' },
     ];
 
     // Control mount/unmount for exit animation
@@ -56,13 +56,33 @@ const BottomNav: React.FC<BottomNavProps> = ({ activePage = 'home' }) => {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [openMenu]);
 
-    const handleLeaveTypeClick = (leaveName: string) => {
-        console.log(`Selected: ${leaveName}`);
+    const handleLeaveTypeClick = (leaveCode: string) => {
         setOpenMenu(false);
+        router.push(`/leave/${leaveCode}`);
     };
 
     return (
         <>
+            {/* Overlay Background */}
+            {renderMenu && (
+                <Box
+                    onClick={() => setOpenMenu(false)}
+                    sx={{
+                        position: 'fixed',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        bgcolor: 'rgba(0, 0, 0, 0.3)',
+                        backdropFilter: 'blur(2px)',
+                        zIndex: 999,
+                        opacity: openMenu ? 1 : 0,
+                        transition: 'opacity 0.3s ease',
+                        pointerEvents: openMenu ? 'auto' : 'none',
+                    }}
+                />
+            )}
+
             <Box sx={{ position: 'fixed', bottom: 0, left: '50%', transform: 'translateX(-50%)', pointerEvents: 'none', zIndex: 1000, width: '100%', maxWidth: 560 }}>
                 <Box sx={{ position: 'relative', height: 70, width: '100%' }}>
                     {/* Leave Type Menu Balloon - Right Side (render with exit animation) */}
@@ -84,7 +104,7 @@ const BottomNav: React.FC<BottomNavProps> = ({ activePage = 'home' }) => {
                                     return (
                                         <Box
                                             key={leave.name}
-                                            onClick={() => handleLeaveTypeClick(leave.name)}
+                                            onClick={() => handleLeaveTypeClick(leave.code)}
                                             sx={{
                                                 display: 'flex',
                                                 alignItems: 'center',

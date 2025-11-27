@@ -1,0 +1,1335 @@
+'use client';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import {
+    Box,
+    Typography,
+    TextField,
+    Button,
+    InputAdornment,
+    IconButton,
+    Drawer,
+    List,
+    ListItem,
+    ListItemButton,
+    ListItemText,
+    ListItemIcon,
+    CircularProgress,
+    Avatar,
+    Paper,
+    Skeleton,
+    Dialog,
+    DialogTitle,
+    DialogContent,
+    DialogActions,
+    Slider,
+} from '@mui/material';
+import { 
+    Building2, 
+    User, 
+    Hash, 
+    Briefcase, 
+    Calendar, 
+    ChevronDown, 
+    Check, 
+    ArrowLeft,
+    Save,
+    Camera,
+    MapPin,
+    Mail,
+    Clock,
+    X,
+    ZoomIn,
+    ZoomOut,
+    RotateCw,
+} from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
+import { useToastr } from '@/app/components/Toastr';
+import { useUser } from '@/app/providers/UserProvider';
+
+interface Company {
+    id: number;
+    code: string;
+    name: string;
+}
+
+interface Department {
+    id: number;
+    code: string;
+    name: string;
+    company: string;
+}
+
+interface Section {
+    id: number;
+    code: string;
+    name: string;
+    departmentId: number;
+}
+
+interface DrawerOption {
+    value: string;
+    label: string;
+}
+
+interface UserProfile {
+    id: number;
+    employeeId: string;
+    email: string | null;
+    firstName: string;
+    lastName: string;
+    avatar: string | null;
+    company: string;
+    companyName: string;
+    employeeType: string;
+    department: string;
+    departmentName: string;
+    section: string | null;
+    sectionName: string | null;
+    shift: string | null;
+    startDate: string;
+    role: string;
+    isActive: boolean;
+}
+
+export default function EditProfilePage() {
+    const router = useRouter();
+    const toastr = useToastr();
+    const { data: session } = useSession();
+    const { refetch: refetchUser } = useUser();
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const canvasRef = useRef<HTMLCanvasElement>(null);
+
+    const [formData, setFormData] = useState({
+        company: '',
+        employeeType: '',
+        firstName: '',
+        lastName: '',
+        employeeId: '',
+        departmentId: '',
+        sectionId: '',
+        shift: '',
+        startDate: '',
+        email: '',
+    });
+
+    const [profile, setProfile] = useState<UserProfile | null>(null);
+    const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+    const [originalImage, setOriginalImage] = useState<string | null>(null);
+    const [pendingAvatarUpload, setPendingAvatarUpload] = useState<string | null>(null); // Base64 image waiting to be uploaded
+
+    // Image editor states
+    const [imageEditorOpen, setImageEditorOpen] = useState(false);
+    const [zoom, setZoom] = useState(1);
+    const [rotation, setRotation] = useState(0);
+    const [position, setPosition] = useState({ x: 0, y: 0 });
+    const [isDragging, setIsDragging] = useState(false);
+    const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+
+    // Data from API
+    const [companies, setCompanies] = useState<Company[]>([]);
+    const [departments, setDepartments] = useState<Department[]>([]);
+    const [sections, setSections] = useState<Section[]>([]);
+
+    // Loading states for data
+    const [loadingProfile, setLoadingProfile] = useState(true);
+    const [loadingCompanies, setLoadingCompanies] = useState(true);
+    const [loadingDepartments, setLoadingDepartments] = useState(false);
+    const [loadingSections, setLoadingSections] = useState(false);
+    const [isSaving, setIsSaving] = useState(false);
+    const [mounted, setMounted] = useState(false);
+
+    // Drawer states
+    const [drawerOpen, setDrawerOpen] = useState(false);
+    const [drawerType, setDrawerType] = useState<'company' | 'employeeType' | 'department' | 'section' | 'shift' | null>(null);
+    const [drawerTitle, setDrawerTitle] = useState('');
+    const [drawerOptions, setDrawerOptions] = useState<DrawerOption[]>([]);
+
+    // Fetch profile
+    const fetchProfile = useCallback(async () => {
+        try {
+            const res = await fetch('/api/profile');
+            if (res.ok) {
+                const data = await res.json();
+                setProfile(data);
+                setFormData({
+                    company: data.company || '',
+                    employeeType: data.employeeType || '',
+                    firstName: data.firstName || '',
+                    lastName: data.lastName || '',
+                    employeeId: data.employeeId || '',
+                    departmentId: data.department || '',
+                    sectionId: data.section || '',
+                    shift: data.shift || '',
+                    startDate: data.startDate ? new Date(data.startDate).toISOString().split('T')[0] : '',
+                    email: data.email || '',
+                });
+                // Only set avatar preview if there's no pending upload (user hasn't selected a new image)
+                setAvatarPreview(prev => {
+                    // If there's already a pending upload or a base64 image, don't override
+                    if (prev && prev.startsWith('data:')) {
+                        return prev;
+                    }
+                    return data.avatar || prev;
+                });
+            }
+        } catch (error) {
+            console.error('Error fetching profile:', error);
+            toastr.error('ไม่สามารถดึงข้อมูลได้');
+        } finally {
+            setLoadingProfile(false);
+        }
+    }, [toastr]);
+
+    // Fetch companies on mount - only run once
+    useEffect(() => {
+        setMounted(true);
+        fetchProfile();
+        
+        const fetchCompanies = async () => {
+            try {
+                const res = await fetch('/api/companies');
+                const data = await res.json();
+                setCompanies(data);
+            } catch (err) {
+                console.error('Error fetching companies:', err);
+            } finally {
+                setLoadingCompanies(false);
+            }
+        };
+        fetchCompanies();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    // Fetch departments when company changes
+    useEffect(() => {
+        if (!formData.company) {
+            setDepartments([]);
+            return;
+        }
+
+        const fetchDepartments = async () => {
+            setLoadingDepartments(true);
+            try {
+                const res = await fetch(`/api/departments?company=${formData.company}`);
+                const data = await res.json();
+                setDepartments(data);
+            } catch (err) {
+                console.error('Error fetching departments:', err);
+            } finally {
+                setLoadingDepartments(false);
+            }
+        };
+        fetchDepartments();
+    }, [formData.company]);
+
+    // Fetch sections when department changes
+    useEffect(() => {
+        if (!formData.departmentId) {
+            setSections([]);
+            return;
+        }
+
+        const dept = departments.find(d => d.code === formData.departmentId || d.name === formData.departmentId);
+        if (!dept) return;
+
+        const fetchSections = async () => {
+            setLoadingSections(true);
+            try {
+                const res = await fetch(`/api/sections?departmentId=${dept.id}`);
+                const data = await res.json();
+                setSections(data);
+            } catch (err) {
+                console.error('Error fetching sections:', err);
+            } finally {
+                setLoadingSections(false);
+            }
+        };
+        fetchSections();
+    }, [formData.departmentId, departments]);
+
+    const handleChange = (field: string) => (e: React.ChangeEvent<HTMLInputElement>) => {
+        setFormData({ ...formData, [field]: e.target.value });
+    };
+
+    // Image handling functions
+    const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        // Check file type
+        if (!file.type.startsWith('image/')) {
+            toastr.error('กรุณาเลือกไฟล์รูปภาพ');
+            return;
+        }
+
+        // Check file size (max 15MB)
+        if (file.size > 15 * 1024 * 1024) {
+            toastr.error('ไฟล์รูปภาพต้องมีขนาดไม่เกิน 15MB');
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            const imageData = event.target?.result as string;
+            setOriginalImage(imageData);
+            setZoom(1);
+            setRotation(0);
+            setPosition({ x: 0, y: 0 });
+            setImageEditorOpen(true);
+        };
+        reader.readAsDataURL(file);
+
+        // Reset input
+        if (fileInputRef.current) {
+            fileInputRef.current.value = '';
+        }
+    };
+
+    const resizeImage = (imageSrc: string, maxWidth: number, maxHeight: number): Promise<string> => {
+        return new Promise((resolve) => {
+            const img = new Image();
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                let width = img.width;
+                let height = img.height;
+
+                // Calculate new dimensions maintaining aspect ratio
+                if (width > height) {
+                    if (width > maxWidth) {
+                        height = Math.round((height * maxWidth) / width);
+                        width = maxWidth;
+                    }
+                } else {
+                    if (height > maxHeight) {
+                        width = Math.round((width * maxHeight) / height);
+                        height = maxHeight;
+                    }
+                }
+
+                canvas.width = width;
+                canvas.height = height;
+
+                const ctx = canvas.getContext('2d');
+                if (ctx) {
+                    ctx.drawImage(img, 0, 0, width, height);
+                }
+
+                resolve(canvas.toDataURL('image/jpeg', 0.8));
+            };
+            img.src = imageSrc;
+        });
+    };
+
+    const cropCircleImage = useCallback((): Promise<void> => {
+        return new Promise((resolve) => {
+            if (!originalImage || !canvasRef.current) {
+                resolve();
+                return;
+            }
+
+            const canvas = canvasRef.current;
+            const ctx = canvas.getContext('2d');
+            if (!ctx) {
+                resolve();
+                return;
+            }
+
+            const img = new Image();
+            img.crossOrigin = 'anonymous';
+            img.onload = () => {
+                const outputSize = 200; // Final output size
+                const cropAreaSize = 200; // Crop area size in preview (diameter)
+                const previewHeight = 300; // Preview container height
+                
+                canvas.width = outputSize;
+                canvas.height = outputSize;
+
+                // Clear canvas completely
+                ctx.clearRect(0, 0, outputSize, outputSize);
+                
+                // Fill with background color first
+                ctx.fillStyle = '#f5f5f5';
+                ctx.fillRect(0, 0, outputSize, outputSize);
+
+                // Save state before clipping
+                ctx.save();
+
+                // Create circular clip
+                ctx.beginPath();
+                ctx.arc(outputSize / 2, outputSize / 2, outputSize / 2, 0, Math.PI * 2);
+                ctx.closePath();
+                ctx.clip();
+
+                // Calculate how image is displayed in preview
+                const imgAspect = img.width / img.height;
+                
+                // Image fills container height, maintaining aspect ratio
+                const displayHeight = previewHeight;
+                const displayWidth = previewHeight * imgAspect;
+
+                // Scale factor: crop area to output size
+                const scale = outputSize / cropAreaSize;
+
+                // Apply transformations
+                ctx.translate(outputSize / 2, outputSize / 2);
+                ctx.rotate((rotation * Math.PI) / 180);
+
+                // Apply zoom and calculate draw dimensions
+                const drawWidth = displayWidth * zoom * scale;
+                const drawHeight = displayHeight * zoom * scale;
+                
+                // Position offset: divide by zoom because CSS transform does translate before scale
+                const offsetX = (position.x / zoom) * scale;
+                const offsetY = (position.y / zoom) * scale;
+                
+                ctx.drawImage(
+                    img,
+                    -drawWidth / 2 + offsetX,
+                    -drawHeight / 2 + offsetY,
+                    drawWidth,
+                    drawHeight
+                );
+
+                // Restore context
+                ctx.restore();
+                resolve();
+            };
+            img.onerror = () => {
+                console.error('Failed to load image for cropping');
+                resolve();
+            };
+            img.src = originalImage;
+        });
+    }, [originalImage, zoom, rotation, position]);
+
+    useEffect(() => {
+        if (imageEditorOpen && originalImage) {
+            cropCircleImage();
+        }
+    }, [imageEditorOpen, originalImage, zoom, rotation, position, cropCircleImage]);
+
+    const handleSaveImage = async () => {
+        if (!canvasRef.current || !originalImage) return;
+
+        // Wait for the image to be cropped first
+        await cropCircleImage();
+        
+        // Small delay to ensure canvas is fully rendered
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+        
+        const croppedImage = canvas.toDataURL('image/jpeg', 0.8);
+        
+        // Verify that the image is not empty/black
+        if (croppedImage && croppedImage.length > 100) {
+            // Store the cropped image for later upload and show preview
+            setPendingAvatarUpload(croppedImage);
+            setAvatarPreview(croppedImage);
+            setImageEditorOpen(false);
+            
+        } else {
+            toastr.error('ไม่สามารถประมวลผลรูปภาพได้ กรุณาลองใหม่อีกครั้ง');
+        }
+    };
+
+    const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
+        setIsDragging(true);
+        setDragStart({ x: e.clientX - position.x, y: e.clientY - position.y });
+    };
+
+    const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
+        if (!isDragging) return;
+        setPosition({
+            x: e.clientX - dragStart.x,
+            y: e.clientY - dragStart.y,
+        });
+    };
+
+    const handleMouseUp = () => {
+        setIsDragging(false);
+    };
+
+    const handleTouchStart = (e: React.TouchEvent<HTMLCanvasElement>) => {
+        const touch = e.touches[0];
+        setIsDragging(true);
+        setDragStart({ x: touch.clientX - position.x, y: touch.clientY - position.y });
+    };
+
+    const handleTouchMove = (e: React.TouchEvent<HTMLCanvasElement>) => {
+        if (!isDragging) return;
+        const touch = e.touches[0];
+        setPosition({
+            x: touch.clientX - dragStart.x,
+            y: touch.clientY - dragStart.y,
+        });
+    };
+
+    const handleTouchEnd = () => {
+        setIsDragging(false);
+    };
+
+    const handleSubmit = async () => {
+        // Validate first name
+        if (!formData.firstName.trim()) {
+            toastr.warning('กรุณากรอกชื่อ');
+            return;
+        }
+
+        // Validate last name
+        if (!formData.lastName.trim()) {
+            toastr.warning('กรุณากรอกนามสกุล');
+            return;
+        }
+
+        setIsSaving(true);
+
+        try {
+            let avatarPath = profile?.avatar || null;
+
+            // Upload avatar if there's a pending upload
+            if (pendingAvatarUpload) {
+                const uploadRes = await fetch('/api/upload', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        image: pendingAvatarUpload,
+                        type: 'avatar',
+                    }),
+                });
+
+                const uploadData = await uploadRes.json();
+
+                if (!uploadRes.ok) {
+                    throw new Error(uploadData.error || 'อัพโหลดรูปภาพไม่สำเร็จ');
+                }
+
+                avatarPath = uploadData.path;
+            }
+
+            const response = await fetch('/api/profile', {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    firstName: formData.firstName,
+                    lastName: formData.lastName,
+                    email: formData.email || null,
+                    company: formData.company,
+                    employeeType: formData.employeeType,
+                    department: formData.departmentId,
+                    section: formData.sectionId || null,
+                    shift: formData.shift || null,
+                    avatar: avatarPath,
+                }),
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.error || 'เกิดข้อผิดพลาดในการบันทึก');
+            }
+
+            // Refresh user data in global context
+            await refetchUser();
+
+            toastr.success('บันทึกข้อมูลสำเร็จ');
+            router.back();
+
+        } catch (err) {
+            toastr.error(err instanceof Error ? err.message : 'เกิดข้อผิดพลาดในการบันทึก');
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    const openDrawer = (type: 'company' | 'employeeType' | 'department' | 'section' | 'shift') => {
+        setDrawerType(type);
+        
+        switch (type) {
+            case 'company':
+                setDrawerTitle('เลือกบริษัท');
+                setDrawerOptions(companies.map(c => ({ value: c.code, label: c.name })));
+                break;
+            case 'employeeType':
+                setDrawerTitle('เลือกประเภทพนักงาน');
+                setDrawerOptions([
+                    { value: 'daily', label: 'รายวัน' },
+                    { value: 'monthly', label: 'รายเดือน' },
+                ]);
+                break;
+            case 'department':
+                setDrawerTitle('เลือกฝ่าย');
+                setDrawerOptions(departments.map(d => ({ value: d.code, label: d.name })));
+                break;
+            case 'section':
+                setDrawerTitle('เลือกแผนก');
+                setDrawerOptions(sections.map(s => ({ value: s.code, label: s.name })));
+                break;
+            case 'shift':
+                setDrawerTitle('เลือกกะทำงาน');
+                setDrawerOptions([
+                    { value: '', label: 'ไม่ระบุ' },
+                    { value: 'day', label: 'กะกลางวัน' },
+                    { value: 'night', label: 'กะกลางคืน' },
+                    { value: 'rotating', label: 'กะหมุนเวียน' },
+                ]);
+                break;
+        }
+        setDrawerOpen(true);
+    };
+
+    const handleDrawerSelect = (value: string) => {
+        if (drawerType === 'company') {
+            setFormData({ ...formData, company: value, departmentId: '', sectionId: '' });
+            setDepartments([]);
+            setSections([]);
+        } else if (drawerType === 'employeeType') {
+            setFormData({ ...formData, employeeType: value });
+        } else if (drawerType === 'department') {
+            setFormData({ ...formData, departmentId: value, sectionId: '' });
+            setSections([]);
+        } else if (drawerType === 'section') {
+            setFormData({ ...formData, sectionId: value });
+        } else if (drawerType === 'shift') {
+            setFormData({ ...formData, shift: value });
+        }
+        setDrawerOpen(false);
+    };
+
+    const getDisplayValue = (type: 'company' | 'employeeType' | 'department' | 'section' | 'shift') => {
+        switch (type) {
+            case 'company':
+                const company = companies.find(c => c.code === formData.company);
+                return company?.name || profile?.companyName || '';
+            case 'employeeType':
+                return formData.employeeType === 'daily' ? 'รายวัน' : formData.employeeType === 'monthly' ? 'รายเดือน' : '';
+            case 'department':
+                const dept = departments.find(d => d.code === formData.departmentId || d.name === formData.departmentId);
+                return dept?.name || profile?.departmentName || '';
+            case 'section':
+                const sec = sections.find(s => s.code === formData.sectionId || s.name === formData.sectionId);
+                return sec?.name || profile?.sectionName || '';
+            case 'shift':
+                const shifts: Record<string, string> = { day: 'กะกลางวัน', night: 'กะกลางคืน', rotating: 'กะหมุนเวียน' };
+                return formData.shift ? shifts[formData.shift] || formData.shift : '';
+        }
+    };
+
+    const getInitials = () => {
+        if (formData.firstName && formData.lastName) {
+            return `${formData.firstName.charAt(0)}${formData.lastName.charAt(0)}`;
+        }
+        return '';
+    };
+
+    // Format date for display
+    const formatThaiDate = (dateString: string) => {
+        if (!dateString) return '';
+        const date = new Date(dateString);
+        const day = date.getDate();
+        const months = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 
+                       'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+        const month = months[date.getMonth()];
+        const year = date.getFullYear() + 543;
+        return `${day} ${month} ${year}`;
+    };
+
+    const showLoading = !mounted || loadingProfile;
+
+    return (
+        <Box sx={{ minHeight: '100vh', bgcolor: '#F8F9FA' }}>
+            {/* Header */}
+            <Box
+                sx={{
+                    background: 'linear-gradient(135deg, #1b194b 0%, #2d2a6e 100%)',
+                    pt: 2,
+                    pb: 2,
+                    px: 2,
+                    position: 'sticky',
+                    top: 0,
+                    zIndex: 100,
+                }}
+            >
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <IconButton
+                        onClick={() => router.back()}
+                        sx={{
+                            color: 'white',
+                            bgcolor: 'rgba(255, 255, 255, 0.15)',
+                            '&:hover': { bgcolor: 'rgba(255, 255, 255, 0.25)' },
+                            width: 40,
+                            height: 40,
+                        }}
+                    >
+                        <ArrowLeft size={22} />
+                    </IconButton>
+                    <Typography variant="h6" sx={{ color: 'white', fontWeight: 600, flex: 1 }}>
+                        แก้ไขโปรไฟล์
+                    </Typography>
+                    <Button
+                        onClick={handleSubmit}
+                        disabled={isSaving}
+                        sx={{
+                            color: 'white',
+                            fontWeight: 600,
+                            minWidth: 'auto',
+                            px: 2,
+                            '&:hover': { bgcolor: 'rgba(255, 255, 255, 0.15)' },
+                        }}
+                        startIcon={isSaving ? <CircularProgress size={16} color="inherit" /> : <Save size={18} />}
+                    >
+                        {isSaving ? 'กำลังบันทึก...' : 'บันทึก'}
+                    </Button>
+                </Box>
+            </Box>
+
+            {/* Content */}
+            <Box sx={{ p: 2 }}>
+                {showLoading ? (
+                    <>
+                        {/* Avatar Skeleton */}
+                        <Box sx={{ display: 'flex', justifyContent: 'center', mb: 3, mt: 2 }}>
+                            <Skeleton variant="circular" width={120} height={120} />
+                        </Box>
+                        {/* Form Skeleton */}
+                        <Paper sx={{ p: 2, borderRadius: 2 }}>
+                            {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+                                <Box key={i} sx={{ mb: 2.5 }}>
+                                    <Skeleton variant="text" width={80} height={20} sx={{ mb: 0.5 }} />
+                                    <Skeleton variant="rounded" height={48} />
+                                </Box>
+                            ))}
+                        </Paper>
+                    </>
+                ) : (
+                    <>
+                        {/* Avatar Section */}
+                        <Box sx={{ display: 'flex', justifyContent: 'center', mb: 3, mt: 2 }}>
+                            <Box sx={{ position: 'relative' }}>
+                                <Avatar
+                                    src={avatarPreview || undefined}
+                                    sx={{
+                                        width: 120,
+                                        height: 120,
+                                        background: avatarPreview ? 'transparent' : 'linear-gradient(135deg, #1b194b 0%, #2d2a6e 100%)',
+                                        fontSize: '3rem',
+                                        fontWeight: 700,
+                                        boxShadow: '0 8px 24px rgba(27, 25, 75, 0.3)',
+                                        border: '4px solid white',
+                                    }}
+                                >
+                                    {!avatarPreview && getInitials()}
+                                </Avatar>
+                                <input
+                                    ref={fileInputRef}
+                                    type="file"
+                                    accept="image/*"
+                                    hidden
+                                    onChange={handleImageSelect}
+                                />
+                                <IconButton
+                                    onClick={() => fileInputRef.current?.click()}
+                                    sx={{
+                                        position: 'absolute',
+                                        bottom: 0,
+                                        right: 0,
+                                        width: 40,
+                                        height: 40,
+                                        bgcolor: '#1b194b',
+                                        color: 'white',
+                                        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2)',
+                                        '&:hover': { bgcolor: '#2d2a6e' },
+                                    }}
+                                >
+                                    <Camera size={20} />
+                                </IconButton>
+                            </Box>
+                        </Box>
+
+                        <Typography variant="caption" sx={{ display: 'block', textAlign: 'center', color: 'text.secondary', mb: 3 }}>
+                            แตะที่ไอคอนกล้องเพื่อเปลี่ยนรูปโปรไฟล์
+                        </Typography>
+
+                        {/* Form */}
+                        <Paper
+                            elevation={0}
+                            sx={{
+                                p: 2.5,
+                                borderRadius: 2,
+                                boxShadow: '0 4px 20px rgba(0, 0, 0, 0.06)',
+                                border: '1px solid rgba(0, 0, 0, 0.05)',
+                            }}
+                        >
+                            {/* Employee ID (Read-only) */}
+                            <Box sx={{ mb: 2.5 }}>
+                                <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, mb: 0.5, display: 'block' }}>
+                                    รหัสพนักงาน
+                                </Typography>
+                                <TextField
+                                    id="edit-employeeId"
+                                    fullWidth
+                                    size="small"
+                                    value={formData.employeeId}
+                                    disabled
+                                    InputProps={{
+                                        startAdornment: (
+                                            <InputAdornment position="start">
+                                                <Hash size={18} color="#9e9e9e" />
+                                            </InputAdornment>
+                                        ),
+                                    }}
+                                    sx={{
+                                        '& .MuiOutlinedInput-root': {
+                                            bgcolor: '#f5f5f5',
+                                        },
+                                    }}
+                                />
+                            </Box>
+
+                            {/* First Name */}
+                            <Box sx={{ mb: 2.5 }}>
+                                <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, mb: 0.5, display: 'block' }}>
+                                    ชื่อ *
+                                </Typography>
+                                <TextField
+                                    id="edit-firstName"
+                                    fullWidth
+                                    size="small"
+                                    value={formData.firstName}
+                                    onChange={handleChange('firstName')}
+                                    placeholder="กรอกชื่อ"
+                                    InputProps={{
+                                        startAdornment: (
+                                            <InputAdornment position="start">
+                                                <User size={18} color="#1b194b" />
+                                            </InputAdornment>
+                                        ),
+                                    }}
+                                    sx={{
+                                        '& .MuiOutlinedInput-root': {
+                                            '&:focus-within': {
+                                                '& fieldset': { borderColor: '#1b194b' },
+                                            },
+                                        },
+                                    }}
+                                />
+                            </Box>
+
+                            {/* Last Name */}
+                            <Box sx={{ mb: 2.5 }}>
+                                <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, mb: 0.5, display: 'block' }}>
+                                    นามสกุล *
+                                </Typography>
+                                <TextField
+                                    id="edit-lastName"
+                                    fullWidth
+                                    size="small"
+                                    value={formData.lastName}
+                                    onChange={handleChange('lastName')}
+                                    placeholder="กรอกนามสกุล"
+                                    InputProps={{
+                                        startAdornment: (
+                                            <InputAdornment position="start">
+                                                <User size={18} color="#1b194b" />
+                                            </InputAdornment>
+                                        ),
+                                    }}
+                                    sx={{
+                                        '& .MuiOutlinedInput-root': {
+                                            '&:focus-within': {
+                                                '& fieldset': { borderColor: '#1b194b' },
+                                            },
+                                        },
+                                    }}
+                                />
+                            </Box>
+
+                            {/* Email */}
+                            <Box sx={{ mb: 2.5 }}>
+                                <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, mb: 0.5, display: 'block' }}>
+                                    อีเมล
+                                </Typography>
+                                <TextField
+                                    id="edit-email"
+                                    fullWidth
+                                    size="small"
+                                    type="email"
+                                    value={formData.email}
+                                    onChange={handleChange('email')}
+                                    placeholder="example@company.com"
+                                    InputProps={{
+                                        startAdornment: (
+                                            <InputAdornment position="start">
+                                                <Mail size={18} color="#1b194b" />
+                                            </InputAdornment>
+                                        ),
+                                    }}
+                                    sx={{
+                                        '& .MuiOutlinedInput-root': {
+                                            '&:focus-within': {
+                                                '& fieldset': { borderColor: '#1b194b' },
+                                            },
+                                        },
+                                    }}
+                                />
+                            </Box>
+
+                            {/* Company */}
+                            <Box sx={{ mb: 2.5 }}>
+                                <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, mb: 0.5, display: 'block' }}>
+                                    บริษัท
+                                </Typography>
+                                <TextField
+                                    id="edit-company"
+                                    fullWidth
+                                    size="small"
+                                    value={getDisplayValue('company')}
+                                    onClick={() => openDrawer('company')}
+                                    placeholder="เลือกบริษัท"
+                                    InputProps={{
+                                        readOnly: true,
+                                        startAdornment: (
+                                            <InputAdornment position="start">
+                                                <Building2 size={18} color="#1b194b" />
+                                            </InputAdornment>
+                                        ),
+                                        endAdornment: loadingCompanies ? (
+                                            <CircularProgress size={18} />
+                                        ) : (
+                                            <ChevronDown size={18} color="#9e9e9e" />
+                                        ),
+                                    }}
+                                    sx={{ cursor: 'pointer' }}
+                                />
+                            </Box>
+
+                            {/* Employee Type */}
+                            <Box sx={{ mb: 2.5 }}>
+                                <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, mb: 0.5, display: 'block' }}>
+                                    ประเภทพนักงาน
+                                </Typography>
+                                <TextField
+                                    id="edit-employeeType"
+                                    fullWidth
+                                    size="small"
+                                    value={getDisplayValue('employeeType')}
+                                    onClick={() => openDrawer('employeeType')}
+                                    placeholder="เลือกประเภทพนักงาน"
+                                    InputProps={{
+                                        readOnly: true,
+                                        startAdornment: (
+                                            <InputAdornment position="start">
+                                                <Briefcase size={18} color="#1b194b" />
+                                            </InputAdornment>
+                                        ),
+                                        endAdornment: <ChevronDown size={18} color="#9e9e9e" />,
+                                    }}
+                                    sx={{ cursor: 'pointer' }}
+                                />
+                            </Box>
+
+                            {/* Department */}
+                            <Box sx={{ mb: 2.5 }}>
+                                <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, mb: 0.5, display: 'block' }}>
+                                    ฝ่าย
+                                </Typography>
+                                <TextField
+                                    id="edit-department"
+                                    fullWidth
+                                    size="small"
+                                    value={getDisplayValue('department')}
+                                    onClick={() => formData.company && openDrawer('department')}
+                                    placeholder={formData.company ? 'เลือกฝ่าย' : 'กรุณาเลือกบริษัทก่อน'}
+                                    disabled={!formData.company}
+                                    InputProps={{
+                                        readOnly: true,
+                                        startAdornment: (
+                                            <InputAdornment position="start">
+                                                <Briefcase size={18} color="#1b194b" />
+                                            </InputAdornment>
+                                        ),
+                                        endAdornment: loadingDepartments ? (
+                                            <CircularProgress size={18} />
+                                        ) : (
+                                            <ChevronDown size={18} color="#9e9e9e" />
+                                        ),
+                                    }}
+                                    sx={{ cursor: formData.company ? 'pointer' : 'default' }}
+                                />
+                            </Box>
+
+                            {/* Section */}
+                            <Box sx={{ mb: 2.5 }}>
+                                <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, mb: 0.5, display: 'block' }}>
+                                    แผนก
+                                </Typography>
+                                <TextField
+                                    id="edit-section"
+                                    fullWidth
+                                    size="small"
+                                    value={getDisplayValue('section')}
+                                    onClick={() => formData.departmentId && sections.length > 0 && openDrawer('section')}
+                                    placeholder={formData.departmentId ? (sections.length > 0 ? 'เลือกแผนก' : 'ไม่มีแผนก') : 'กรุณาเลือกฝ่ายก่อน'}
+                                    disabled={!formData.departmentId || sections.length === 0}
+                                    InputProps={{
+                                        readOnly: true,
+                                        startAdornment: (
+                                            <InputAdornment position="start">
+                                                <MapPin size={18} color="#1b194b" />
+                                            </InputAdornment>
+                                        ),
+                                        endAdornment: loadingSections ? (
+                                            <CircularProgress size={18} />
+                                        ) : (
+                                            <ChevronDown size={18} color="#9e9e9e" />
+                                        ),
+                                    }}
+                                    sx={{ cursor: formData.departmentId && sections.length > 0 ? 'pointer' : 'default' }}
+                                />
+                            </Box>
+
+                            {/* Shift */}
+                            <Box sx={{ mb: 2.5 }}>
+                                <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, mb: 0.5, display: 'block' }}>
+                                    กะทำงาน
+                                </Typography>
+                                <TextField
+                                    id="edit-shift"
+                                    fullWidth
+                                    size="small"
+                                    value={getDisplayValue('shift')}
+                                    onClick={() => openDrawer('shift')}
+                                    placeholder="เลือกกะทำงาน"
+                                    InputProps={{
+                                        readOnly: true,
+                                        startAdornment: (
+                                            <InputAdornment position="start">
+                                                <Clock size={18} color="#1b194b" />
+                                            </InputAdornment>
+                                        ),
+                                        endAdornment: <ChevronDown size={18} color="#9e9e9e" />,
+                                    }}
+                                    sx={{ cursor: 'pointer' }}
+                                />
+                            </Box>
+
+                            {/* Start Date (Read-only) */}
+                            <Box sx={{ mb: 1 }}>
+                                <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, mb: 0.5, display: 'block' }}>
+                                    วันที่เริ่มงาน
+                                </Typography>
+                                <TextField
+                                    id="edit-startDate"
+                                    fullWidth
+                                    size="small"
+                                    value={formatThaiDate(formData.startDate)}
+                                    disabled
+                                    InputProps={{
+                                        startAdornment: (
+                                            <InputAdornment position="start">
+                                                <Calendar size={18} color="#9e9e9e" />
+                                            </InputAdornment>
+                                        ),
+                                    }}
+                                    sx={{
+                                        '& .MuiOutlinedInput-root': {
+                                            bgcolor: '#f5f5f5',
+                                        },
+                                    }}
+                                />
+                            </Box>
+                        </Paper>
+                    </>
+                )}
+            </Box>
+
+            {/* Bottom Drawer for Selection */}
+            <Drawer
+                anchor="bottom"
+                open={drawerOpen}
+                onClose={() => setDrawerOpen(false)}
+                PaperProps={{
+                    sx: {
+                        borderTopLeftRadius: 20,
+                        borderTopRightRadius: 20,
+                        maxHeight: '70vh',
+                    },
+                }}
+            >
+                <Box sx={{ p: 2, borderBottom: '1px solid #eee' }}>
+                    <Box
+                        sx={{
+                            width: 40,
+                            height: 4,
+                            bgcolor: '#ddd',
+                            borderRadius: 2,
+                            mx: 'auto',
+                            mb: 2,
+                        }}
+                    />
+                    <Typography variant="h6" sx={{ fontWeight: 700, textAlign: 'center' }}>
+                        {drawerTitle}
+                    </Typography>
+                </Box>
+                <List sx={{ overflow: 'auto' }}>
+                    {drawerOptions.map((option) => {
+                        let isSelected = false;
+                        if (drawerType === 'company') isSelected = formData.company === option.value;
+                        else if (drawerType === 'employeeType') isSelected = formData.employeeType === option.value;
+                        else if (drawerType === 'department') isSelected = formData.departmentId === option.value;
+                        else if (drawerType === 'section') isSelected = formData.sectionId === option.value;
+                        else if (drawerType === 'shift') isSelected = formData.shift === option.value;
+
+                        return (
+                            <ListItem key={option.value} disablePadding>
+                                <ListItemButton
+                                    onClick={() => handleDrawerSelect(option.value)}
+                                    sx={{
+                                        py: 1.5,
+                                        bgcolor: isSelected ? 'rgba(27, 25, 75, 0.08)' : 'transparent',
+                                    }}
+                                >
+                                    <ListItemText
+                                        primary={option.label}
+                                        primaryTypographyProps={{
+                                            fontWeight: isSelected ? 600 : 400,
+                                            color: isSelected ? '#1b194b' : 'text.primary',
+                                        }}
+                                    />
+                                    {isSelected && (
+                                        <ListItemIcon sx={{ minWidth: 'auto' }}>
+                                            <Check size={20} color="#1b194b" />
+                                        </ListItemIcon>
+                                    )}
+                                </ListItemButton>
+                            </ListItem>
+                        );
+                    })}
+                </List>
+            </Drawer>
+
+            {/* Image Editor Dialog */}
+            <Dialog
+                open={imageEditorOpen}
+                onClose={() => setImageEditorOpen(false)}
+                maxWidth="sm"
+                fullWidth
+                PaperProps={{
+                    sx: { borderRadius: 1 },
+                }}
+            >
+                <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pb: 1 }}>
+                    <Typography component="span" variant="h6" sx={{ fontWeight: 700 }}>
+                        ปรับแต่งรูปภาพ
+                    </Typography>
+                    <IconButton onClick={() => setImageEditorOpen(false)} size="small">
+                        <X size={20} />
+                    </IconButton>
+                </DialogTitle>
+                <DialogContent sx={{ p: 0 }}>
+                    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                        {/* Image Preview Container */}
+                        <Box
+                            sx={{
+                                position: 'relative',
+                                width: '100%',
+                                height: 300,
+                                bgcolor: '#1a1a1a',
+                                overflow: 'hidden',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                            }}
+                        >
+                            {/* Original Image */}
+                            {originalImage && (
+                                <Box
+                                    component="img"
+                                    src={originalImage}
+                                    sx={{
+                                        maxWidth: '100%',
+                                        maxHeight: '100%',
+                                        transform: `scale(${zoom}) rotate(${rotation}deg) translate(${position.x / zoom}px, ${position.y / zoom}px)`,
+                                        transition: isDragging ? 'none' : 'transform 0.1s ease-out',
+                                        cursor: isDragging ? 'grabbing' : 'grab',
+                                        userSelect: 'none',
+                                        pointerEvents: 'none',
+                                    }}
+                                    draggable={false}
+                                />
+                            )}
+                            
+                            {/* Crop Circle Overlay */}
+                            <Box
+                                sx={{
+                                    position: 'absolute',
+                                    inset: 0,
+                                    pointerEvents: 'none',
+                                }}
+                            >
+                                {/* Dark overlay with circle cutout using SVG */}
+                                <svg width="100%" height="100%" style={{ position: 'absolute' }}>
+                                    <defs>
+                                        <mask id="circleMask">
+                                            <rect width="100%" height="100%" fill="white" />
+                                            <circle cx="50%" cy="50%" r="100" fill="black" />
+                                        </mask>
+                                    </defs>
+                                    <rect 
+                                        width="100%" 
+                                        height="100%" 
+                                        fill="rgba(0,0,0,0.6)" 
+                                        mask="url(#circleMask)" 
+                                    />
+                                    <circle 
+                                        cx="50%" 
+                                        cy="50%" 
+                                        r="100" 
+                                        fill="none" 
+                                        stroke="white" 
+                                        strokeWidth="2"
+                                        strokeDasharray="8 4"
+                                    />
+                                </svg>
+                            </Box>
+
+                            {/* Drag Area (invisible) */}
+                            <Box
+                                sx={{
+                                    position: 'absolute',
+                                    inset: 0,
+                                    cursor: isDragging ? 'grabbing' : 'grab',
+                                    touchAction: 'none',
+                                }}
+                                onMouseDown={(e) => {
+                                    setIsDragging(true);
+                                    setDragStart({ x: e.clientX - position.x, y: e.clientY - position.y });
+                                }}
+                                onMouseMove={(e) => {
+                                    if (!isDragging) return;
+                                    setPosition({
+                                        x: e.clientX - dragStart.x,
+                                        y: e.clientY - dragStart.y,
+                                    });
+                                }}
+                                onMouseUp={() => setIsDragging(false)}
+                                onMouseLeave={() => setIsDragging(false)}
+                                onTouchStart={(e) => {
+                                    const touch = e.touches[0];
+                                    setIsDragging(true);
+                                    setDragStart({ x: touch.clientX - position.x, y: touch.clientY - position.y });
+                                }}
+                                onTouchMove={(e) => {
+                                    if (!isDragging) return;
+                                    const touch = e.touches[0];
+                                    setPosition({
+                                        x: touch.clientX - dragStart.x,
+                                        y: touch.clientY - dragStart.y,
+                                    });
+                                }}
+                                onTouchEnd={() => setIsDragging(false)}
+                            />
+                        </Box>
+
+                        {/* Controls */}
+                        <Box sx={{ width: '100%', p: 2, pt: 2 }}>
+                            <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', textAlign: 'center', mb: 2 }}>
+                                ลากเพื่อปรับตำแหน่ง • ใช้ slider เพื่อซูม
+                            </Typography>
+
+                            {/* Zoom Control */}
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+                                <ZoomOut size={20} color="#666" />
+                                <Slider
+                                    value={zoom}
+                                    onChange={(_, value) => setZoom(value as number)}
+                                    min={0.5}
+                                    max={3}
+                                    step={0.05}
+                                    sx={{
+                                        color: '#1b194b',
+                                        '& .MuiSlider-thumb': {
+                                            bgcolor: '#1b194b',
+                                        },
+                                    }}
+                                />
+                                <ZoomIn size={20} color="#666" />
+                            </Box>
+
+                            {/* Rotation Control */}
+                            <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center' }}>
+                                <Button
+                                    variant="outlined"
+                                    size="small"
+                                    onClick={() => setRotation((r) => r - 90)}
+                                    startIcon={<RotateCw size={16} style={{ transform: 'scaleX(-1)' }} />}
+                                    sx={{ borderColor: '#1b194b', color: '#1b194b' }}
+                                >
+                                    หมุนซ้าย
+                                </Button>
+                                <Button
+                                    variant="outlined"
+                                    size="small"
+                                    onClick={() => {
+                                        setZoom(1);
+                                        setRotation(0);
+                                        setPosition({ x: 0, y: 0 });
+                                    }}
+                                    sx={{ borderColor: '#999', color: '#666' }}
+                                >
+                                    รีเซ็ต
+                                </Button>
+                                <Button
+                                    variant="outlined"
+                                    size="small"
+                                    onClick={() => setRotation((r) => r + 90)}
+                                    startIcon={<RotateCw size={16} />}
+                                    sx={{ borderColor: '#1b194b', color: '#1b194b' }}
+                                >
+                                    หมุนขวา
+                                </Button>
+                            </Box>
+                        </Box>
+                    </Box>
+                </DialogContent>
+                <DialogActions sx={{ p: 2, pt: 0 }}>
+                    <Button 
+                        onClick={() => setImageEditorOpen(false)}
+                        sx={{ color: '#666' }}
+                    >
+                        ยกเลิก
+                    </Button>
+                    <Button
+                        variant="contained"
+                        onClick={handleSaveImage}
+                        sx={{
+                            bgcolor: '#1b194b',
+                            '&:hover': { bgcolor: '#2d2a6e' },
+                        }}
+                    >
+                        บันทึกรูปภาพ
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
+            {/* Hidden canvas for image processing - placed outside Dialog to ensure it's always available */}
+            <canvas
+                ref={canvasRef}
+                width={200}
+                height={200}
+                style={{ 
+                    position: 'fixed',
+                    left: '-9999px',
+                    top: '-9999px',
+                    pointerEvents: 'none',
+                }}
+            />
+        </Box>
+    );
+}

@@ -1,7 +1,8 @@
 'use client';
-import React, { useEffect, useState } from 'react';
-import { Box, Typography, Avatar, Paper, IconButton, Chip, Switch, Divider, Dialog, DialogTitle, List, ListItemButton, ListItemText, Skeleton } from '@mui/material';
+import React, { useEffect, useState, useCallback } from 'react';
+import { Box, Typography, Avatar, Paper, IconButton, Chip, Switch, Divider, Dialog, DialogTitle, List, ListItemButton, ListItemText, Skeleton, CircularProgress } from '@mui/material';
 import { localeLabel, useLocale } from '../providers/LocaleProvider';
+import { useRouter } from 'next/navigation';
 import {
     Edit2,
     LogOut,
@@ -22,8 +23,35 @@ import {
     User,
     Smartphone,
     LucideIcon,
+    Briefcase,
+    Building2,
+    Hash,
 } from 'lucide-react';
 import BottomNav from '../components/BottomNav';
+import { signOut, useSession } from 'next-auth/react';
+import { useToastr } from '@/app/components/Toastr';
+
+// Type definitions for user profile
+interface UserProfile {
+    id: number;
+    employeeId: string;
+    email: string | null;
+    firstName: string;
+    lastName: string;
+    avatar: string | null;
+    company: string;
+    companyName: string;
+    employeeType: string;
+    department: string;
+    departmentName: string;
+    section: string | null;
+    sectionName: string | null;
+    shift: string | null;
+    startDate: string;
+    role: string;
+    isActive: boolean;
+    createdAt: string;
+}
 
 // Type definitions for settings items
 interface SettingsItemBase {
@@ -56,34 +84,122 @@ interface SettingsSection {
 
 export default function ProfilePage() {
     const { locale, setLocale, t } = useLocale();
+    const { data: session } = useSession();
+    const router = useRouter();
+    const toastr = useToastr();
     const [notifications, setNotifications] = useState(true);
     const [darkMode, setDarkMode] = useState(false);
     const [emailNotif, setEmailNotif] = useState(true);
     const [openLanguage, setOpenLanguage] = useState(false);
     const [loading, setLoading] = useState(true);
     const [mounted, setMounted] = useState(false);
+    const [isLoggingOut, setIsLoggingOut] = useState(false);
+    const [profile, setProfile] = useState<UserProfile | null>(null);
     const languageOptions: Array<{ code: 'th' | 'en' | 'my'; label: string }> = [
         { code: 'th', label: localeLabel.th },
         { code: 'en', label: localeLabel.en },
         { code: 'my', label: localeLabel.my },
     ];
 
-    useEffect(() => {
-        setMounted(true);
-        const hasLoaded = sessionStorage.getItem('profile_loaded') === 'true';
-        
-        if (hasLoaded) {
-            // Already loaded before, skip loading animation
+    // Fetch profile data
+    const fetchProfile = useCallback(async () => {
+        try {
+            const res = await fetch('/api/profile');
+            if (res.ok) {
+                const data = await res.json();
+                setProfile(data);
+            } else {
+                console.error('Failed to fetch profile');
+            }
+        } catch (error) {
+            console.error('Error fetching profile:', error);
+        } finally {
             setLoading(false);
-        } else {
-            // First time load, show loading animation
-            const timer = setTimeout(() => {
-                setLoading(false);
-                sessionStorage.setItem('profile_loaded', 'true');
-            }, 600);
-            return () => clearTimeout(timer);
         }
     }, []);
+
+    const handleLogout = async () => {
+        setIsLoggingOut(true);
+
+        try {
+            // Clear localStorage
+            localStorage.clear();
+
+            // Clear sessionStorage
+            sessionStorage.clear();
+
+            // Clear all cookies via API
+            await fetch('/api/auth/logout', { method: 'POST' });
+
+            // Clear cookies on client side
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i];
+                const eqPos = cookie.indexOf('=');
+                const name = eqPos > -1 ? cookie.substr(0, eqPos) : cookie;
+                document.cookie = name.trim() + '=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/';
+            }
+
+            // Clear cache if supported
+            if ('caches' in window) {
+                const cacheNames = await caches.keys();
+                await Promise.all(
+                    cacheNames.map(cacheName => caches.delete(cacheName))
+                );
+            }
+
+            toastr.success('ออกจากระบบสำเร็จ');
+
+            // Sign out from NextAuth and redirect to login
+            await signOut({
+                callbackUrl: '/login',
+                redirect: true,
+            });
+
+        } catch (error) {
+            console.error('Logout error:', error);
+            toastr.error('เกิดข้อผิดพลาดในการออกจากระบบ');
+            setIsLoggingOut(false);
+        }
+    };
+
+    useEffect(() => {
+        setMounted(true);
+        fetchProfile();
+    }, [fetchProfile]);
+    
+    // Get initials for avatar
+    const getInitials = () => {
+        if (profile) {
+            const firstInitial = profile.firstName.charAt(0);
+            const lastInitial = profile.lastName.charAt(0);
+            return `${firstInitial}${lastInitial}`;
+        }
+        return '';
+    };
+
+    // Format date to Thai format
+    const formatThaiDate = (dateString: string) => {
+        const date = new Date(dateString);
+        const day = date.getDate();
+        const months = ['มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน', 
+                       'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'];
+        const month = months[date.getMonth()];
+        const year = date.getFullYear() + 543; // Convert to Buddhist Era
+        return `${day} ${month} ${year}`;
+    };
+
+    // Get employee type label
+    const getEmployeeTypeLabel = (type: string) => {
+        switch (type) {
+            case 'monthly':
+                return 'พนักงานรายเดือน';
+            case 'daily':
+                return 'พนักงานรายวัน';
+            default:
+                return type;
+        }
+    };
     
     // Prevent hydration mismatch by always showing loading state until mounted
     const showLoading = !mounted || loading;
@@ -92,39 +208,29 @@ export default function ProfilePage() {
         {
             title: 'บัญชี',
             items: [
-                { icon: User, label: 'แก้ไขโปรไฟล์', color: '#667eea', link: '#' },
-                { icon: Mail, label: 'เปลี่ยนอีเมล', color: '#4ECDC4', link: '#' },
-                { icon: Lock, label: 'เปลี่ยนรหัสผ่าน', color: '#FF6B6B', link: '#' },
+                { icon: User, label: 'แก้ไขโปรไฟล์', color: '#667eea', link: '/profile/edit' },
+                
             ],
         },
         {
             title: 'การแจ้งเตือน',
             items: [
                 { icon: Bell, label: 'การแจ้งเตือนแบบพุช', color: '#FFD93D', toggle: true, value: notifications, onChange: setNotifications },
-                { icon: Mail, label: 'การแจ้งเตือนทางอีเมล', color: '#9C27B0', toggle: true, value: emailNotif, onChange: setEmailNotif },
-                { icon: Smartphone, label: 'การแจ้งเตือน SMS', color: '#FF8ED4', link: '#' },
+                
             ],
         },
         {
             title: 'การตั้งค่าทั่วไป',
             items: [
-                { icon: Moon, label: 'โหมดมืด', color: '#424242', toggle: true, value: darkMode, onChange: setDarkMode },
+                
                 { icon: Globe, label: 'ภาษา', color: '#1976D2', subtitle: localeLabel[locale], link: '#' },
-            ],
-        },
-        {
-            title: 'ความปลอดภัย',
-            items: [
-                { icon: Shield, label: 'การยืนยันตัวตนสองชั้น', color: '#2E7D32', link: '#' },
-                { icon: Lock, label: 'ประวัติการเข้าสู่ระบบ', color: '#F57C00', link: '#' },
             ],
         },
         {
             title: 'ช่วยเหลือและข้อมูล',
             items: [
                 { icon: HelpCircle, label: 'ศูนย์ช่วยเหลือ', color: '#00ACC1', link: '#' },
-                { icon: FileText, label: 'นโยบายความเป็นส่วนตัว', color: '#5E35B1', link: '#' },
-                { icon: FileText, label: 'ข้อกำหนดการใช้งาน', color: '#6D4C41', link: '#' },
+                
             ],
         },
     ];
@@ -166,8 +272,21 @@ export default function ProfilePage() {
                     <Typography variant="h5" sx={{ color: 'white', fontWeight: 700 }}>
                         {t('common_profile', 'โปรไฟล์')}
                     </Typography>
-                    <IconButton sx={{ bgcolor: 'rgba(255, 255, 255, 0.2)', color: 'white', '&:hover': { bgcolor: 'rgba(255, 255, 255, 0.3)' } }}>
-                        <LogOut size={20} />
+                    <IconButton 
+                        onClick={handleLogout}
+                        disabled={isLoggingOut}
+                        sx={{ 
+                            bgcolor: 'rgba(255, 255, 255, 0.2)', 
+                            color: 'white', 
+                            '&:hover': { bgcolor: 'rgba(255, 255, 255, 0.3)' },
+                            '&.Mui-disabled': {
+                                bgcolor: 'rgba(255, 255, 255, 0.2)',
+                                color: 'white',
+                                opacity: 0.7,
+                            },
+                        }}
+                    >
+                        {isLoggingOut ? <CircularProgress size={20} color="inherit" /> : <LogOut size={20} />}
                     </IconButton>
                 </Box>
             </Box>
@@ -210,18 +329,20 @@ export default function ProfilePage() {
                     <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
                         <Box sx={{ position: 'relative' }}>
                             <Avatar
+                                src={profile?.avatar || undefined}
                                 sx={{
                                     width: 80,
                                     height: 80,
-                                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                                    background: profile?.avatar ? 'transparent' : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                                     fontSize: '2rem',
                                     fontWeight: 700,
                                     boxShadow: '0 8px 24px rgba(102, 126, 234, 0.4)',
                                 }}
                             >
-                                สพ
+                                {!profile?.avatar && getInitials()}
                             </Avatar>
                             <IconButton
+                                onClick={() => router.push('/profile/edit')}
                                 sx={{
                                     position: 'absolute',
                                     bottom: -5,
@@ -238,10 +359,10 @@ export default function ProfilePage() {
                         </Box>
                         <Box sx={{ ml: 2, flex: 1 }}>
                             <Typography variant="h6" sx={{ fontWeight: 700, mb: 0.5 }}>
-                                สมชาย ใจดี
+                                {profile ? `${profile.firstName} ${profile.lastName}` : '-'}
                             </Typography>
                             <Chip
-                                label={t('role_fulltime', 'พนักงานประจำ')}
+                                label={profile ? getEmployeeTypeLabel(profile.employeeType) : t('role_fulltime', 'พนักงานประจำ')}
                                 size="small"
                                 sx={{
                                     bgcolor: '#E8F5E9',
@@ -262,20 +383,20 @@ export default function ProfilePage() {
                                     width: 36,
                                     height: 36,
                                     borderRadius: 1.5,
-                                    bgcolor: '#F3E5F5',
+                                    bgcolor: '#EDE7F6',
                                     display: 'flex',
                                     alignItems: 'center',
                                     justifyContent: 'center',
                                 }}
                             >
-                                <Mail size={18} color="#9C27B0" />
+                                <Hash size={18} color="#673AB7" />
                             </Box>
                             <Box>
                                 <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.7rem' }}>
-                                    {t('profile_email', 'อีเมล')}
+                                    รหัสพนักงาน
                                 </Typography>
                                 <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                                    somchai.j@company.com
+                                    {profile?.employeeId || '-'}
                                 </Typography>
                             </Box>
                         </Box>
@@ -292,14 +413,14 @@ export default function ProfilePage() {
                                     justifyContent: 'center',
                                 }}
                             >
-                                <Phone size={18} color="#1976D2" />
+                                <Building2 size={18} color="#1976D2" />
                             </Box>
                             <Box>
                                 <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.7rem' }}>
-                                    {t('profile_phone', 'เบอร์โทร')}
+                                    บริษัท
                                 </Typography>
                                 <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                                    081-234-5678
+                                    {profile?.companyName || '-'}
                                 </Typography>
                             </Box>
                         </Box>
@@ -316,17 +437,43 @@ export default function ProfilePage() {
                                     justifyContent: 'center',
                                 }}
                             >
-                                <MapPin size={18} color="#F57C00" />
+                                <Briefcase size={18} color="#F57C00" />
                             </Box>
                             <Box>
                                 <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.7rem' }}>
-                                    {t('profile_department', 'แผนก')}
+                                    ฝ่าย
                                 </Typography>
                                 <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                                    ฝ่ายพัฒนาระบบ
+                                    {profile?.departmentName || '-'}
                                 </Typography>
                             </Box>
                         </Box>
+
+                        {profile?.sectionName && (
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                                <Box
+                                    sx={{
+                                        width: 36,
+                                        height: 36,
+                                        borderRadius: 1.5,
+                                        bgcolor: '#FCE4EC',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                    }}
+                                >
+                                    <MapPin size={18} color="#E91E63" />
+                                </Box>
+                                <Box>
+                                    <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.7rem' }}>
+                                        แผนก
+                                    </Typography>
+                                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                        {profile.sectionName}
+                                    </Typography>
+                                </Box>
+                            </Box>
+                        )}
 
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
                             <Box
@@ -347,10 +494,36 @@ export default function ProfilePage() {
                                     {t('profile_started', 'วันที่เริ่มงาน')}
                                 </Typography>
                                 <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                                    1 มกราคม 2020
+                                    {profile ? formatThaiDate(profile.startDate) : '-'}
                                 </Typography>
                             </Box>
                         </Box>
+
+                        {profile?.email && (
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                                <Box
+                                    sx={{
+                                        width: 36,
+                                        height: 36,
+                                        borderRadius: 1.5,
+                                        bgcolor: '#F3E5F5',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                    }}
+                                >
+                                    <Mail size={18} color="#9C27B0" />
+                                </Box>
+                                <Box>
+                                    <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.7rem' }}>
+                                        {t('profile_email', 'อีเมล')}
+                                    </Typography>
+                                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                        {profile.email}
+                                    </Typography>
+                                </Box>
+                            </Box>
+                        )}
                     </Box>
                     </>
                     )}

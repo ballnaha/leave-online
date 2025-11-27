@@ -1,0 +1,169 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// User model for authentication
+model User {
+  id            Int       @id @default(autoincrement())
+  employeeId    String    @unique // รหัสพนักงาน
+  email         String?   @unique
+  password      String
+  firstName     String
+  lastName      String
+  gender        String    // male, female - เพศ (มีผลต่อประเภทการลา เช่น ลาคลอด)
+  avatar        String?   @db.VarChar(500) // Path to avatar image file
+  company       String    // psc, pslp
+  employeeType  String    // daily, monthly
+  position      String?   // ตำแหน่งงาน
+  department    String
+  section       String?
+  shift         String?
+  startDate     DateTime
+  role          String    @default("user") // user, admin, hr
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  leaveRequests LeaveRequest[]
+  sessions      Session[]
+
+  @@map("users")
+}
+
+// Session model for NextAuth
+model Session {
+  id           Int      @id @default(autoincrement())
+  sessionToken String   @unique
+  userId       Int
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+// Leave Request model
+model LeaveRequest {
+  id             Int      @id @default(autoincrement())
+  userId         Int
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  leaveType      String   // sick, personal, vacation, maternity, etc.
+  startDate      DateTime
+  startTime      String?  // เวลาเริ่มลา
+  endDate        DateTime
+  endTime        String?  // เวลาสิ้นสุดลา
+  totalDays      Float
+  reason         String   @db.Text
+  contactPhone   String?  // เบอร์โทรติดต่อระหว่างลา
+  contactAddress String?  @db.Text // ที่อยู่ระหว่างลา
+  status         String   @default("pending") // pending, approved, rejected
+  approvedBy     String?
+  approvedAt     DateTime?
+  rejectedBy     String?
+  rejectedAt     DateTime?
+  rejectReason   String?  @db.Text
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  // Relations
+  attachments    LeaveAttachment[]
+
+  @@map("leave_requests")
+}
+
+// Leave Attachment model - เก็บไฟล์แนบการลา
+model LeaveAttachment {
+  id             Int          @id @default(autoincrement())
+  leaveRequestId Int
+  leaveRequest   LeaveRequest @relation(fields: [leaveRequestId], references: [id], onDelete: Cascade)
+  fileName       String       // ชื่อไฟล์ต้นฉบับ
+  filePath       String       // path ที่เก็บไฟล์
+  fileSize       Int          // ขนาดไฟล์ (bytes)
+  mimeType       String       // ประเภทไฟล์
+  createdAt      DateTime     @default(now())
+
+  @@map("leave_attachments")
+}
+
+// Leave Balance model
+model LeaveBalance {
+  id           Int      @id @default(autoincrement())
+  employeeId   String
+  leaveType    String
+  year         Int
+  totalDays    Float
+  usedDays     Float    @default(0)
+  remainingDays Float
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([employeeId, leaveType, year])
+  @@map("leave_balances")
+}
+
+// Company model
+model Company {
+  id        Int      @id @default(autoincrement())
+  code      String   @unique // psc, pslp
+  name      String
+  address   String?  @db.Text
+  phone     String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("companies")
+}
+
+// Department model (ฝ่าย)
+model Department {
+  id        Int      @id @default(autoincrement())
+  code      String   @unique
+  name      String
+  company   String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  sections  Section[]
+
+  @@map("departments")
+}
+
+// Section model (แผนก)
+model Section {
+  id           Int        @id @default(autoincrement())
+  code         String     @unique
+  name         String
+  departmentId Int
+  department   Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  isActive     Boolean    @default(true)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  @@map("sections")
+}
+
+// Leave Type model
+model LeaveType {
+  id           Int      @id @default(autoincrement())
+  code         String   @unique
+  name         String
+  description  String?  @db.Text
+  maxDaysPerYear Float?
+  isPaid       Boolean  @default(true)
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@map("leave_types")
+}

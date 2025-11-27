@@ -1,6 +1,6 @@
 'use client';
 import React, { useEffect, useState } from 'react';
-import { Box, Typography, Button, Card, CardContent, Skeleton } from '@mui/material';
+import { Box, Typography, Button, Card, CardContent, Skeleton, Container } from '@mui/material';
 import Header from './components/Header';
 import LeaveTypeCard from './components/LeaveTypeCard';
 import RecentActivityCard from './components/RecentActivityCard';
@@ -9,9 +9,11 @@ import { Calendar, Activity, Briefcase } from 'lucide-react';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import 'swiper/css';
 import { useLocale } from './providers/LocaleProvider';
+import { useRouter } from 'next/navigation';
 
 export default function Home() {
   const { t } = useLocale();
+  const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [mounted, setMounted] = useState(false);
 
@@ -36,7 +38,7 @@ export default function Home() {
   const showLoading = !mounted || loading;
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: 'background.default', pb: 10 }}>
-      <Box component="main" sx={{ px: 2.5 }}>
+      <Container maxWidth={false} sx={{ maxWidth: 1200, px: { xs: 2.5, sm: 3, md: 4 } }}>
         <Header />
 
         {/* Leave Balance Section */}
@@ -52,7 +54,11 @@ export default function Home() {
                 <Typography variant="h6" sx={{ fontWeight: 'bold', color: 'text.primary' }}>
                   {t('home_leave_types', 'ประเภทการลา')}
                 </Typography>
-                <Button size="small" sx={{ fontWeight: 'medium' }}>
+                <Button 
+                  size="small" 
+                  sx={{ fontWeight: 'medium' }}
+                  onClick={() => router.push('/leave')}
+                >
                   {t('home_see_all', 'ดูทั้งหมด')}
                 </Button>
               </>
@@ -218,7 +224,7 @@ export default function Home() {
             </>
           )}
         </Box>
-      </Box>
+      </Container>
 
       <BottomNav activePage="home" />
     </Box>

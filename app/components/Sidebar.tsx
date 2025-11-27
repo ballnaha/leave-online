@@ -1,7 +1,10 @@
 'use client';
-import React from 'react';
-import { Drawer, Box, List, ListItem, ListItemButton, ListItemIcon, ListItemText, Typography, Avatar, Divider, IconButton } from '@mui/material';
+import React, { useState } from 'react';
+import { Drawer, Box, List, ListItem, ListItemButton, ListItemIcon, ListItemText, Typography, Avatar, Divider, IconButton, CircularProgress, Skeleton } from '@mui/material';
 import { Home, Calendar, Settings, LogOut, User, X } from 'lucide-react';
+import { signOut } from 'next-auth/react';
+import { useToastr } from '@/app/components/Toastr';
+import { useUser } from '@/app/providers/UserProvider';
 
 interface SidebarProps {
     open: boolean;
@@ -9,6 +12,55 @@ interface SidebarProps {
 }
 
 const Sidebar = ({ open, onClose }: SidebarProps) => {
+    const [isLoggingOut, setIsLoggingOut] = useState(false);
+    const toastr = useToastr();
+    const { user, loading } = useUser();
+
+    const handleLogout = async () => {
+        setIsLoggingOut(true);
+
+        try {
+            // Clear localStorage
+            localStorage.clear();
+
+            // Clear sessionStorage
+            sessionStorage.clear();
+
+            // Clear all cookies via API
+            await fetch('/api/auth/logout', { method: 'POST' });
+
+            // Clear cookies on client side
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i];
+                const eqPos = cookie.indexOf('=');
+                const name = eqPos > -1 ? cookie.substr(0, eqPos) : cookie;
+                document.cookie = name.trim() + '=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/';
+            }
+
+            // Clear cache if supported
+            if ('caches' in window) {
+                const cacheNames = await caches.keys();
+                await Promise.all(
+                    cacheNames.map(cacheName => caches.delete(cacheName))
+                );
+            }
+
+            toastr.success('ออกจากระบบสำเร็จ');
+
+            // Sign out from NextAuth and redirect to login
+            await signOut({
+                callbackUrl: '/login',
+                redirect: true,
+            });
+
+        } catch (error) {
+            console.error('Logout error:', error);
+            toastr.error('เกิดข้อผิดพลาดในการออกจากระบบ');
+            setIsLoggingOut(false);
+        }
+    };
+
     const menuItems = [
         { text: 'แดชบอร์ด', icon: <Home size={20} />, active: true },
         { text: 'การลาของฉัน', icon: <Calendar size={20} /> },
@@ -35,13 +87,32 @@ const Sidebar = ({ open, onClose }: SidebarProps) => {
                 {/* Header of Sidebar */}
                 <Box sx={{ p: 3, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                        <Avatar
-                            src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=100&q=80"
-                            sx={{ width: 48, height: 48, boxShadow: 1 }}
-                        />
+                        {loading ? (
+                            <Skeleton variant="circular" width={48} height={48} />
+                        ) : (
+                            <Avatar
+                                src={user?.avatar || undefined}
+                                sx={{ width: 48, height: 48, boxShadow: 1, bgcolor: 'primary.main' }}
+                            >
+                                {user?.firstName?.charAt(0)?.toUpperCase()}
+                            </Avatar>
+                        )}
                         <Box>
-                            <Typography variant="subtitle1" fontWeight="bold">บอล</Typography>
-                            <Typography variant="caption" color="text.secondary">ดูโปรไฟล์</Typography>
+                            {loading ? (
+                                <>
+                                    <Skeleton variant="text" width={80} height={24} />
+                                    <Skeleton variant="text" width={60} height={16} />
+                                </>
+                            ) : (
+                                <>
+                                    <Typography variant="subtitle1" fontWeight="bold">
+                                        {user?.firstName} {user?.lastName}
+                                    </Typography>
+                                    <Typography variant="caption" color="text.secondary">
+                                        {user?.role === 'admin' ? 'ผู้ดูแลระบบ' : user?.role === 'hr' ? 'HR' : 'พนักงาน'}
+                                    </Typography>
+                                </>
+                            )}
                         </Box>
                     </Box>
                     <IconButton onClick={onClose} size="small">
@@ -81,17 +152,26 @@ const Sidebar = ({ open, onClose }: SidebarProps) => {
 
                 <Box sx={{ p: 3 }}>
                     <ListItemButton
+                        onClick={handleLogout}
+                        disabled={isLoggingOut}
                         sx={{
                             borderRadius: 3,
                             color: 'error.main',
                             bgcolor: 'error.light',
-                            '&:hover': { bgcolor: '#ffcdd2' }
+                            '&:hover': { bgcolor: '#ffcdd2' },
+                            '&.Mui-disabled': {
+                                bgcolor: 'error.light',
+                                opacity: 0.7,
+                            },
                         }}
                     >
                         <ListItemIcon sx={{ minWidth: 40, color: 'error.main' }}>
-                            <LogOut size={20} />
+                            {isLoggingOut ? <CircularProgress size={20} color="error" /> : <LogOut size={20} />}
                         </ListItemIcon>
-                        <ListItemText primary="ออกจากระบบ" primaryTypographyProps={{ fontWeight: 600 }} />
+                        <ListItemText 
+                            primary={isLoggingOut ? 'กำลังออกจากระบบ...' : 'ออกจากระบบ'} 
+                            primaryTypographyProps={{ fontWeight: 600 }} 
+                        />
                     </ListItemButton>
                 </Box>
             </Box>
