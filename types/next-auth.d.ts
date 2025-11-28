@@ -1,6 +1,7 @@
 import 'next-auth';
 import { DefaultSession, DefaultUser } from 'next-auth';
 import { JWT, DefaultJWT } from 'next-auth/jwt';
+import type { UserRole } from '@/types/user-role';
 
 declare module 'next-auth' {
   interface Session {
@@ -12,7 +13,7 @@ declare module 'next-auth' {
       company: string;
       employeeType: string;
       department: string;
-      role: string;
+      role: UserRole;
     } & DefaultSession['user'];
   }
 
@@ -23,7 +24,7 @@ declare module 'next-auth' {
     company: string;
     employeeType: string;
     department: string;
-    role: string;
+    role: UserRole;
   }
 }
 
@@ -36,6 +37,6 @@ declare module 'next-auth/jwt' {
     company: string;
     employeeType: string;
     department: string;
-    role: string;
+    role: UserRole;
   }
 }

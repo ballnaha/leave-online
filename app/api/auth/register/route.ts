@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { UserRole } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 
 export async function POST(request: NextRequest) {
@@ -58,7 +59,8 @@ export async function POST(request: NextRequest) {
         shift: shift || null,
         startDate: new Date(startDate),
         password: hashedPassword,
-        role: 'user',
+        // Ensure role matches Prisma enum; default to employee
+        role: UserRole.employee,
         isActive: true,
       },
     });

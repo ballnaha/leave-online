@@ -41,11 +41,14 @@ import {
     ZoomIn,
     ZoomOut,
     RotateCw,
+    Eye,
+    EyeOff,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { useToastr } from '@/app/components/Toastr';
 import { useUser } from '@/app/providers/UserProvider';
+import type { UserRole } from '@/types/user-role';
 
 interface Company {
     id: number;
@@ -88,7 +91,7 @@ interface UserProfile {
     sectionName: string | null;
     shift: string | null;
     startDate: string;
-    role: string;
+    role: UserRole;
     isActive: boolean;
 }
 
@@ -138,6 +141,15 @@ export default function EditProfilePage() {
     const [loadingSections, setLoadingSections] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [mounted, setMounted] = useState(false);
+
+    // Password change states
+    const [changePasswordOpen, setChangePasswordOpen] = useState(false);
+    const [currentPassword, setCurrentPassword] = useState('');
+    const [newPassword, setNewPassword] = useState('');
+    const [confirmPassword, setConfirmPassword] = useState('');
+    const [showCurrent, setShowCurrent] = useState(false);
+    const [showNew, setShowNew] = useState(false);
+    const [showConfirm, setShowConfirm] = useState(false);
 
     // Drawer states
     const [drawerOpen, setDrawerOpen] = useState(false);
@@ -484,6 +496,27 @@ export default function EditProfilePage() {
             return;
         }
 
+        // Password validations when section is open or any field filled
+        const wantsPasswordChange = changePasswordOpen || currentPassword || newPassword || confirmPassword;
+        if (wantsPasswordChange) {
+            if (!currentPassword) {
+                toastr.warning('กรุณากรอกรหัสผ่านปัจจุบัน');
+                return;
+            }
+            if (!newPassword) {
+                toastr.warning('กรุณากรอกรหัสผ่านใหม่');
+                return;
+            }
+            if (newPassword.length < 6) {
+                toastr.warning('รหัสผ่านใหม่ต้องมีอย่างน้อย 6 ตัวอักษร');
+                return;
+            }
+            if (newPassword !== confirmPassword) {
+                toastr.warning('รหัสผ่านใหม่และยืนยันไม่ตรงกัน');
+                return;
+            }
+        }
+
         setIsSaving(true);
 
         try {
@@ -526,6 +559,13 @@ export default function EditProfilePage() {
                     section: formData.sectionId || null,
                     shift: formData.shift || null,
                     avatar: avatarPath,
+                    ...(wantsPasswordChange
+                        ? {
+                              currentPassword,
+                              newPassword,
+                              confirmPassword,
+                          }
+                        : {}),
                 }),
             });
 
@@ -539,6 +579,11 @@ export default function EditProfilePage() {
             await refetchUser();
 
             toastr.success('บันทึกข้อมูลสำเร็จ');
+            // Reset password fields
+            setCurrentPassword('');
+            setNewPassword('');
+            setConfirmPassword('');
+            setChangePasswordOpen(false);
             router.back();
 
         } catch (err) {
@@ -761,7 +806,7 @@ export default function EditProfilePage() {
                             elevation={0}
                             sx={{
                                 p: 2.5,
-                                borderRadius: 2,
+                                borderRadius: 1,
                                 boxShadow: '0 4px 20px rgba(0, 0, 0, 0.06)',
                                 border: '1px solid rgba(0, 0, 0, 0.05)',
                             }}
@@ -1044,6 +1089,93 @@ export default function EditProfilePage() {
                                     }}
                                 />
                             </Box>
+
+                                {/* Change Password Section */}
+                                <Box sx={{ mt: 3 }}>
+                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                                        <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600 }}>
+                                            เปลี่ยนรหัสผ่าน
+                                        </Typography>
+                                        <Button
+                                            variant="outlined"
+                                            size="small"
+                                            onClick={() => setChangePasswordOpen((v) => !v)}
+                                            sx={{ borderColor: '#1b194b', color: '#1b194b' }}
+                                        >
+                                            {changePasswordOpen ? 'ซ่อน' : 'แสดง'}
+                                        </Button>
+                                    </Box>
+
+                                    {changePasswordOpen && (
+                                        <>
+                                            {/* Current Password */}
+                                            <Box sx={{ mb: 2 }}>
+                                                <TextField
+                                                    id="edit-currentPassword"
+                                                    fullWidth
+                                                    size="small"
+                                                    type={showCurrent ? 'text' : 'password'}
+                                                    value={currentPassword}
+                                                    onChange={(e) => setCurrentPassword(e.target.value)}
+                                                    placeholder="รหัสผ่านปัจจุบัน"
+                                                    InputProps={{
+                                                        endAdornment: (
+                                                            <InputAdornment position="end">
+                                                                <IconButton onClick={() => setShowCurrent((v) => !v)} edge="end">
+                                                                    {showCurrent ? <EyeOff size={18} /> : <Eye size={18} />}
+                                                                </IconButton>
+                                                            </InputAdornment>
+                                                        ),
+                                                    }}
+                                                />
+                                            </Box>
+
+                                            {/* New Password */}
+                                            <Box sx={{ mb: 2 }}>
+                                                <TextField
+                                                    id="edit-newPassword"
+                                                    fullWidth
+                                                    size="small"
+                                                    type={showNew ? 'text' : 'password'}
+                                                    value={newPassword}
+                                                    onChange={(e) => setNewPassword(e.target.value)}
+                                                    placeholder="รหัสผ่านใหม่ (อย่างน้อย 6 ตัวอักษร)"
+                                                    InputProps={{
+                                                        endAdornment: (
+                                                            <InputAdornment position="end">
+                                                                <IconButton onClick={() => setShowNew((v) => !v)} edge="end">
+                                                                    {showNew ? <EyeOff size={18} /> : <Eye size={18} />}
+                                                                </IconButton>
+                                                            </InputAdornment>
+                                                        ),
+                                                    }}
+                                                />
+                                            </Box>
+
+                                            {/* Confirm Password */}
+                                            <Box sx={{ mb: 1 }}>
+                                                <TextField
+                                                    id="edit-confirmPassword"
+                                                    fullWidth
+                                                    size="small"
+                                                    type={showConfirm ? 'text' : 'password'}
+                                                    value={confirmPassword}
+                                                    onChange={(e) => setConfirmPassword(e.target.value)}
+                                                    placeholder="ยืนยันรหัสผ่านใหม่"
+                                                    InputProps={{
+                                                        endAdornment: (
+                                                            <InputAdornment position="end">
+                                                                <IconButton onClick={() => setShowConfirm((v) => !v)} edge="end">
+                                                                    {showConfirm ? <EyeOff size={18} /> : <Eye size={18} />}
+                                                                </IconButton>
+                                                            </InputAdornment>
+                                                        ),
+                                                    }}
+                                                />
+                                            </Box>
+                                        </>
+                                    )}
+                                </Box>
                         </Paper>
                     </>
                 )}

@@ -5,6 +5,7 @@ import { Home, Calendar, Settings, LogOut, User, X } from 'lucide-react';
 import { signOut } from 'next-auth/react';
 import { useToastr } from '@/app/components/Toastr';
 import { useUser } from '@/app/providers/UserProvider';
+import { usePathname, useRouter } from 'next/navigation';
 
 interface SidebarProps {
     open: boolean;
@@ -15,6 +16,8 @@ const Sidebar = ({ open, onClose }: SidebarProps) => {
     const [isLoggingOut, setIsLoggingOut] = useState(false);
     const toastr = useToastr();
     const { user, loading } = useUser();
+    const router = useRouter();
+    const pathname = usePathname();
 
     const handleLogout = async () => {
         setIsLoggingOut(true);
@@ -62,11 +65,23 @@ const Sidebar = ({ open, onClose }: SidebarProps) => {
     };
 
     const menuItems = [
-        { text: 'แดชบอร์ด', icon: <Home size={20} />, active: true },
-        { text: 'การลาของฉัน', icon: <Calendar size={20} /> },
-        { text: 'โปรไฟล์', icon: <User size={20} /> },
-        { text: 'ตั้งค่า', icon: <Settings size={20} /> },
+        { text: 'แดชบอร์ด', icon: <Home size={20} />, path: '/' },
+        { text: 'จัดการใบลา', icon: <Calendar size={20} />, path: '/approval' },
+        { text: 'การลาของฉัน', icon: <Calendar size={20} />, path: '/leave' },
+        { text: 'โปรไฟล์', icon: <User size={20} />, path: '/profile' },
+        { text: 'ตั้งค่า', icon: <Settings size={20} />, path: '/settings' },
     ];
+
+    if (user?.role === 'admin') {
+        menuItems.push({ text: 'ตั้งค่าผู้อนุมัติ', icon: <Settings size={20} />, path: '/admin/approval-workflows' });
+    }
+
+    const handleNavigate = (path: string) => {
+        if (path) {
+            router.push(path);
+            onClose();
+        }
+    };
 
     return (
         <Drawer
@@ -123,31 +138,35 @@ const Sidebar = ({ open, onClose }: SidebarProps) => {
                 <Divider sx={{ mx: 3, opacity: 0.5 }} />
 
                 <List sx={{ px: 2, py: 3, flex: 1 }}>
-                    {menuItems.map((item) => (
-                        <ListItem key={item.text} disablePadding sx={{ mb: 1 }}>
-                            <ListItemButton
-                                sx={{
-                                    borderRadius: 3,
-                                    bgcolor: item.active ? 'primary.main' : 'transparent',
-                                    color: item.active ? 'white' : 'text.primary',
-                                    '&:hover': {
-                                        bgcolor: item.active ? 'primary.dark' : 'grey.100',
-                                    }
-                                }}
-                            >
-                                <ListItemIcon sx={{ minWidth: 40, color: item.active ? 'white' : 'text.secondary' }}>
-                                    {item.icon}
-                                </ListItemIcon>
-                                <ListItemText
-                                    primary={item.text}
-                                    primaryTypographyProps={{
-                                        fontSize: '0.95rem',
-                                        fontWeight: item.active ? 600 : 400
+                    {menuItems.map((item) => {
+                        const isActive = pathname === item.path;
+                        return (
+                            <ListItem key={item.text} disablePadding sx={{ mb: 1 }}>
+                                <ListItemButton
+                                    onClick={() => handleNavigate(item.path)}
+                                    sx={{
+                                        borderRadius: 3,
+                                        bgcolor: isActive ? 'primary.main' : 'transparent',
+                                        color: isActive ? 'white' : 'text.primary',
+                                        '&:hover': {
+                                            bgcolor: isActive ? 'primary.dark' : 'grey.100',
+                                        }
                                     }}
-                                />
-                            </ListItemButton>
-                        </ListItem>
-                    ))}
+                                >
+                                    <ListItemIcon sx={{ minWidth: 40, color: isActive ? 'white' : 'text.secondary' }}>
+                                        {item.icon}
+                                    </ListItemIcon>
+                                    <ListItemText
+                                        primary={item.text}
+                                        primaryTypographyProps={{
+                                            fontSize: '0.95rem',
+                                            fontWeight: isActive ? 600 : 400
+                                        }}
+                                    />
+                                </ListItemButton>
+                            </ListItem>
+                        );
+                    })}
                 </List>
 
                 <Box sx={{ p: 3 }}>

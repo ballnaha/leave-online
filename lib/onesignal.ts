@@ -1,0 +1,220 @@
+/**
+ * OneSignal Push Notification Service
+ * ใช้สำหรับส่งแจ้งเตือนไปยัง Mobile App
+ */
+
+import { prisma } from './prisma';
+
+// OneSignal Configuration
+const ONESIGNAL_APP_ID = process.env.ONESIGNAL_APP_ID || '';
+const ONESIGNAL_REST_API_KEY = process.env.ONESIGNAL_REST_API_KEY || '';
+const ONESIGNAL_API_URL = 'https://onesignal.com/api/v1/notifications';
+
+export interface NotificationPayload {
+  title: string;
+  message: string;
+  data?: Record<string, any>;
+  url?: string;
+}
+
+export interface NotificationResult {
+  success: boolean;
+  notificationId?: string;
+  error?: string;
+}
+
+/**
+ * ส่ง Push Notification ไปยัง OneSignal
+ */
+export async function sendPushNotification(
+  playerIds: string[],
+  payload: NotificationPayload
+): Promise<NotificationResult> {
+  if (!ONESIGNAL_APP_ID || !ONESIGNAL_REST_API_KEY) {
+    console.warn('OneSignal credentials not configured');
+    return { success: false, error: 'OneSignal not configured' };
+  }
+
+  if (playerIds.length === 0) {
+    return { success: false, error: 'No player IDs provided' };
+  }
+
+  try {
+    const response = await fetch(ONESIGNAL_API_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Basic ${ONESIGNAL_REST_API_KEY}`,
+      },
+      body: JSON.stringify({
+        app_id: ONESIGNAL_APP_ID,
+        include_player_ids: playerIds,
+        headings: { en: payload.title, th: payload.title },
+        contents: { en: payload.message, th: payload.message },
+        data: payload.data || {},
+        url: payload.url,
+      }),
+    });
+
+    const result = await response.json();
+
+    if (response.ok && result.id) {
+      return { success: true, notificationId: result.id };
+    } else {
+      return { success: false, error: result.errors?.[0] || 'Unknown error' };
+    }
+  } catch (error) {
+    console.error('OneSignal API error:', error);
+    return { success: false, error: String(error) };
+  }
+}
+
+/**
+ * ดึง Player IDs ของ user
+ */
+export async function getUserPlayerIds(userId: number): Promise<string[]> {
+  const devices = await prisma.userDevice.findMany({
+    where: { userId, isActive: true },
+    select: { playerId: true },
+  });
+  return devices.map(d => d.playerId);
+}
+
+/**
+ * ส่งแจ้งเตือนไปยัง user และบันทึก log
+ */
+export async function notifyUser(
+  userId: number,
+  type: string,
+  payload: NotificationPayload
+): Promise<NotificationResult> {
+  const playerIds = await getUserPlayerIds(userId);
+
+  // บันทึก notification log ไม่ว่าจะส่งได้หรือไม่
+  const logData = {
+    userId,
+    type,
+    title: payload.title,
+    message: payload.message,
+    data: payload.data || {},
+    status: 'pending' as const,
+  };
+
+  if (playerIds.length === 0) {
+    // ไม่มี device ลงทะเบียน แต่ยังบันทึก log
+    await prisma.notificationLog.create({
+      data: { ...logData, status: 'failed' },
+    });
+    return { success: false, error: 'No devices registered' };
+  }
+
+  const result = await sendPushNotification(playerIds, payload);
+
+  // บันทึก log พร้อมผลลัพธ์
+  await prisma.notificationLog.create({
+    data: {
+      ...logData,
+      oneSignalId: result.notificationId,
+      status: result.success ? 'sent' : 'failed',
+    },
+  });
+
+  return result;
+}
+
+/**
+ * แจ้งเตือนเมื่อมีใบลาใหม่รอการอนุมัติ
+ */
+export async function notifyApprovalPending(
+  approverId: number,
+  leaveRequestId: number,
+  requesterName: string,
+  leaveType: string
+): Promise<NotificationResult> {
+  return notifyUser(approverId, 'approval_pending', {
+    title: '📋 มีใบลารออนุมัติ',
+    message: `${requesterName} ขอ${leaveType}`,
+    data: {
+      type: 'approval_pending',
+      leaveRequestId,
+    },
+  });
+}
+
+/**
+ * แจ้งเตือนเมื่อใบลาได้รับการอนุมัติ
+ */
+export async function notifyLeaveApproved(
+  userId: number,
+  leaveRequestId: number,
+  approverName: string,
+  leaveType: string
+): Promise<NotificationResult> {
+  return notifyUser(userId, 'approved', {
+    title: '✅ ใบลาได้รับการอนุมัติ',
+    message: `${leaveType}ของคุณได้รับการอนุมัติโดย ${approverName}`,
+    data: {
+      type: 'approved',
+      leaveRequestId,
+    },
+  });
+}
+
+/**
+ * แจ้งเตือนเมื่อใบลาถูกปฏิเสธ
+ */
+export async function notifyLeaveRejected(
+  userId: number,
+  leaveRequestId: number,
+  approverName: string,
+  leaveType: string,
+  reason?: string
+): Promise<NotificationResult> {
+  return notifyUser(userId, 'rejected', {
+    title: '❌ ใบลาถูกปฏิเสธ',
+    message: `${leaveType}ของคุณถูกปฏิเสธโดย ${approverName}${reason ? `: ${reason}` : ''}`,
+    data: {
+      type: 'rejected',
+      leaveRequestId,
+      reason,
+    },
+  });
+}
+
+/**
+ * แจ้งเตือนเมื่อใบลาถูก escalate ไป HR
+ */
+export async function notifyEscalated(
+  userId: number,
+  leaveRequestId: number,
+  leaveType: string
+): Promise<NotificationResult> {
+  return notifyUser(userId, 'escalated', {
+    title: '⚡ ใบลาถูกส่งต่อ',
+    message: `${leaveType}ของคุณถูกส่งไปยังผู้จัดการฝ่ายบุคคลเนื่องจากเกินเวลากำหนด`,
+    data: {
+      type: 'escalated',
+      leaveRequestId,
+    },
+  });
+}
+
+/**
+ * แจ้งเตือนเตือนความจำให้อนุมัติ
+ */
+export async function notifyApprovalReminder(
+  approverId: number,
+  leaveRequestId: number,
+  requesterName: string,
+  leaveType: string,
+  hoursLeft: number
+): Promise<NotificationResult> {
+  return notifyUser(approverId, 'reminder', {
+    title: '⏰ เตือนอนุมัติใบลา',
+    message: `${requesterName} รอ${leaveType} (เหลือเวลา ${hoursLeft} ชม.)`,
+    data: {
+      type: 'reminder',
+      leaveRequestId,
+    },
+  });
+}

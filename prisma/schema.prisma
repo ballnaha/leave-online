@@ -27,14 +27,19 @@ model User {
   section       String?
   shift         String?
   startDate     DateTime
-  role          String    @default("user") // user, admin, hr
+  role          UserRole  @default(employee)
   isActive      Boolean   @default(true)
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
   // Relations
-  leaveRequests LeaveRequest[]
-  sessions      Session[]
+  leaveRequests       LeaveRequest[]
+  sessions            Session[]
+  approvalFlows       UserApprovalFlow[] @relation("UserApprovalFlow")
+  approverFlows       UserApprovalFlow[] @relation("ApproverFlow")
+  leaveApprovals      LeaveApproval[]
+  devices             UserDevice[]
+  notifications       NotificationLog[]
 
   @@map("users")
 }
@@ -64,17 +69,26 @@ model LeaveRequest {
   reason         String   @db.Text
   contactPhone   String?  // เบอร์โทรติดต่อระหว่างลา
   contactAddress String?  @db.Text // ที่อยู่ระหว่างลา
-  status         String   @default("pending") // pending, approved, rejected
-  approvedBy     String?
-  approvedAt     DateTime?
-  rejectedBy     String?
-  rejectedAt     DateTime?
-  rejectReason   String?  @db.Text
+  
+  // Approval workflow
+  status         String   @default("pending") // pending, in_progress, approved, rejected, cancelled
+  currentLevel   Int      @default(1)  // ระดับอนุมัติปัจจุบัน
+  escalationDeadline DateTime?  // deadline รวม 2 วัน ถ้าเกินส่งไป HR
+  isEscalated    Boolean  @default(false)  // ถูก escalate ไป HR แล้ว
+  
+  // Final approval info
+  finalApprovedBy   Int?
+  finalApprovedAt   DateTime?
+  finalRejectedBy   Int?
+  finalRejectedAt   DateTime?
+  rejectReason      String?  @db.Text
+  
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
   // Relations
   attachments    LeaveAttachment[]
+  approvals      LeaveApproval[]
 
   @@map("leave_requests")
 }
@@ -166,4 +180,125 @@ model LeaveType {
   updatedAt    DateTime @updatedAt
 
   @@map("leave_types")
+}
+
+// ตั้งค่า Flow อนุมัติรายบุคคล
+model UserApprovalFlow {
+  id            Int      @id @default(autoincrement())
+  userId        Int      // พนักงานเจ้าของ flow
+  user          User     @relation("UserApprovalFlow", fields: [userId], references: [id], onDelete: Cascade)
+  
+  level         Int      // ลำดับ 1, 2, 3...
+  approverId    Int      // ผู้อนุมัติ
+  approver      User     @relation("ApproverFlow", fields: [approverId], references: [id], onDelete: Cascade)
+  
+  isRequired    Boolean  @default(true)
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([userId, level])
+  @@map("user_approval_flows")
+}
+
+// บันทึกการอนุมัติแต่ละขั้น
+model LeaveApproval {
+  id              Int           @id @default(autoincrement())
+  leaveRequestId  Int
+  leaveRequest    LeaveRequest  @relation(fields: [leaveRequestId], references: [id], onDelete: Cascade)
+  
+  level           Int           // ลำดับอนุมัติ (1, 2, 3... หรือ 99 สำหรับ escalated to HR)
+  approverId      Int           // ผู้อนุมัติที่กำหนด
+  approver        User          @relation(fields: [approverId], references: [id])
+  
+  status          String        @default("pending") // pending, approved, rejected, skipped
+  comment         String?       @db.Text
+  actionAt        DateTime?     // วันที่ดำเนินการ
+  
+  notifiedAt      DateTime?     // วันที่ส่ง notification
+  reminderCount   Int           @default(0)  // จำนวนครั้งที่เตือน
+  
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@unique([leaveRequestId, level])
+  @@map("leave_approvals")
+}
+
+// เก็บ Device Token สำหรับ OneSignal
+model UserDevice {
+  id            Int      @id @default(autoincrement())
+  userId        Int
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  playerId      String   @unique  // OneSignal Player ID
+  deviceType    String   // ios, android, web
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@map("user_devices")
+}
+
+// ประวัติการแจ้งเตือน
+model NotificationLog {
+  id              Int       @id @default(autoincrement())
+  userId          Int
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  type            String    // leave_request, approval_pending, approved, rejected, escalated, reminder
+  title           String
+  message         String    @db.Text
+  data            Json?     // ข้อมูลเพิ่มเติม เช่น leaveRequestId
+  
+  oneSignalId     String?   // OneSignal Notification ID
+  status          String    @default("sent") // sent, delivered, failed
+  
+  createdAt       DateTime  @default(now())
+
+  @@map("notification_logs")
+}
+
+// Workflow อนุมัติระดับองค์กร/แผนก
+model ApprovalWorkflow {
+  id           Int      @id @default(autoincrement())
+  name         String
+  description  String?
+  
+  company      String?  // Match User.company
+  department   String?  // Match User.department
+  section      String?  // Match User.section
+  
+  steps        ApprovalWorkflowStep[]
+  
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@map("approval_workflows")
+}
+
+model ApprovalWorkflowStep {
+  id                 Int              @id @default(autoincrement())
+  workflowId         Int
+  workflow           ApprovalWorkflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  
+  level              Int
+  approverRole       UserRole?        // If set, find user with this role in same dept/company
+  approverId         Int?             // If set, specific user
+  
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+
+  @@map("approval_workflow_steps")
+}
+
+enum UserRole {
+  employee
+  shift_supervisor
+  section_head
+  dept_manager
+  hr_manager
+  admin
+  hr
 }

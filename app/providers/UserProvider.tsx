@@ -1,6 +1,7 @@
 'use client';
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
+import type { UserRole } from '@/types/user-role';
 
 interface UserProfile {
     id: number;
@@ -18,7 +19,7 @@ interface UserProfile {
     sectionName: string | null;
     shift: string | null;
     startDate: string | null;
-    role: string;
+    role: UserRole;
     isActive: boolean;
     createdAt: string;
 }

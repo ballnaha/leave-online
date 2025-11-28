@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/prisma';
+import bcrypt from 'bcryptjs';
 
 export async function GET() {
     try {
@@ -46,19 +47,35 @@ export async function GET() {
         }
 
         // Get department and section names from database
-        const departmentData = await prisma.department.findFirst({
-            where: { code: user.department },
-            select: { name: true },
-        });
+        const departmentData = user.department
+            ? await prisma.department.findFirst({
+                where: {
+                    code: {
+                        equals: user.department,
+                    },
+                },
+                select: { name: true },
+            })
+            : null;
 
-        const sectionData = user.section ? await prisma.section.findFirst({
-            where: { code: user.section },
-            select: { name: true },
-        }) : null;
+        const sectionData = user.section
+            ? await prisma.section.findFirst({
+                where: {
+                    code: {
+                        equals: user.section,
+                    },
+                },
+                select: { name: true },
+            })
+            : null;
 
         // Get company name
         const companyData = await prisma.company.findFirst({
-            where: { code: user.company },
+            where: {
+                code: {
+                    equals: user.company,
+                },
+            },
             select: { name: true },
         });
 
@@ -89,7 +106,7 @@ export async function PUT(request: Request) {
         }
 
         const body = await request.json();
-        const { firstName, lastName, email, company, employeeType, department, section, shift, avatar } = body;
+        const { firstName, lastName, email, company, employeeType, department, section, shift, avatar, currentPassword, newPassword, confirmPassword } = body;
 
         // Validation
         if (!firstName?.trim()) {
@@ -125,6 +142,50 @@ export async function PUT(request: Request) {
             }
         }
 
+        // Optional password change validation
+        if (newPassword || currentPassword || confirmPassword) {
+            if (!currentPassword || !newPassword || !confirmPassword) {
+                return NextResponse.json(
+                    { error: 'กรุณากรอกรหัสผ่านปัจจุบัน รหัสผ่านใหม่ และยืนยันรหัสผ่าน' },
+                    { status: 400 }
+                );
+            }
+
+            if (newPassword !== confirmPassword) {
+                return NextResponse.json(
+                    { error: 'รหัสผ่านใหม่และยืนยันรหัสผ่านไม่ตรงกัน' },
+                    { status: 400 }
+                );
+            }
+
+            if (newPassword.length < 6) {
+                return NextResponse.json(
+                    { error: 'รหัสผ่านใหม่ต้องมีอย่างน้อย 6 ตัวอักษร' },
+                    { status: 400 }
+                );
+            }
+
+            const userForPassword = await prisma.user.findUnique({
+                where: { employeeId: session.user.employeeId },
+                select: { password: true },
+            });
+
+            if (!userForPassword?.password) {
+                return NextResponse.json(
+                    { error: 'ไม่สามารถตรวจสอบรหัสผ่านได้' },
+                    { status: 400 }
+                );
+            }
+
+            const isValid = await bcrypt.compare(String(currentPassword), userForPassword.password);
+            if (!isValid) {
+                return NextResponse.json(
+                    { error: 'รหัสผ่านปัจจุบันไม่ถูกต้อง' },
+                    { status: 400 }
+                );
+            }
+        }
+
         // Update user
         const updatedUser = await prisma.user.update({
             where: {
@@ -140,6 +201,9 @@ export async function PUT(request: Request) {
                 department: department || undefined,
                 section: section || null,
                 shift: shift || null,
+                ...(newPassword && currentPassword && confirmPassword
+                    ? { password: await bcrypt.hash(String(newPassword), 12) }
+                    : {}),
             },
         });
 

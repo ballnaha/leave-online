@@ -6,15 +6,13 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const departmentId = searchParams.get('departmentId');
 
-    if (!departmentId) {
-      return NextResponse.json([]);
+    const whereClause: any = { isActive: true };
+    if (departmentId) {
+      whereClause.departmentId = parseInt(departmentId);
     }
 
     const sections = await prisma.section.findMany({
-      where: { 
-        isActive: true,
-        departmentId: parseInt(departmentId),
-      },
+      where: whereClause,
       orderBy: { name: 'asc' },
       select: {
         id: true,

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { createApprovalSteps } from '@/lib/escalation';
 
 interface AttachmentPayload {
     fileName: string;
@@ -60,6 +61,10 @@ export async function POST(request: Request) {
             ? attachments
             : [];
 
+        // คำนวณ escalation deadline (2 วัน = 48 ชั่วโมง)
+        const escalationDeadline = new Date();
+        escalationDeadline.setHours(escalationDeadline.getHours() + 48);
+
         const leaveRequest = await prisma.leaveRequest.create({
             data: {
                 userId: Number(session.user.id),
@@ -72,7 +77,10 @@ export async function POST(request: Request) {
                 reason,
                 contactPhone,
                 contactAddress,
-                status,
+                status: 'pending',
+                currentLevel: 1,
+                escalationDeadline,
+                isEscalated: false,
                 attachments:
                     attachmentList.length > 0
                         ? {
@@ -89,6 +97,9 @@ export async function POST(request: Request) {
                 attachments: true,
             },
         });
+
+        // สร้าง approval steps ตาม flow ที่กำหนด
+        await createApprovalSteps(leaveRequest.id, Number(session.user.id));
 
         return NextResponse.json({ success: true, data: leaveRequest }, { status: 201 });
     } catch (error) {

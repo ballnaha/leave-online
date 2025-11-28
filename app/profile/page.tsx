@@ -3,6 +3,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { Box, Typography, Avatar, Paper, IconButton, Chip, Switch, Divider, Dialog, DialogTitle, List, ListItemButton, ListItemText, Skeleton, CircularProgress } from '@mui/material';
 import { localeLabel, useLocale } from '../providers/LocaleProvider';
 import { useRouter } from 'next/navigation';
+import type { UserRole } from '@/types/user-role';
 import {
     Edit2,
     LogOut,
@@ -48,7 +49,7 @@ interface UserProfile {
     sectionName: string | null;
     shift: string | null;
     startDate: string;
-    role: string;
+    role: UserRole;
     isActive: boolean;
     createdAt: string;
 }
