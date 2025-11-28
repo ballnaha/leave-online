@@ -1,0 +1,236 @@
+'use client';
+
+import React, { useState, useEffect } from 'react';
+import {
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Button,
+  TextField,
+  Box,
+  FormControlLabel,
+  Switch,
+  CircularProgress,
+  InputAdornment,
+} from '@mui/material';
+import { Calendar } from 'lucide-react';
+
+interface LeaveType {
+  id: number;
+  code: string;
+  name: string;
+  description: string | null;
+  maxDaysPerYear: number | null;
+  isPaid: boolean;
+  isActive: boolean;
+}
+
+interface LeaveTypeDialogProps {
+  open: boolean;
+  onClose: () => void;
+  onSave: () => void;
+  leaveType?: LeaveType;
+}
+
+export default function LeaveTypeDialog({
+  open,
+  onClose,
+  onSave,
+  leaveType,
+}: LeaveTypeDialogProps) {
+  const [loading, setLoading] = useState(false);
+  const [formData, setFormData] = useState({
+    code: '',
+    name: '',
+    description: '',
+    maxDaysPerYear: '',
+    isPaid: true,
+    isActive: true,
+  });
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    if (leaveType) {
+      setFormData({
+        code: leaveType.code || '',
+        name: leaveType.name || '',
+        description: leaveType.description || '',
+        maxDaysPerYear: leaveType.maxDaysPerYear?.toString() || '',
+        isPaid: leaveType.isPaid ?? true,
+        isActive: leaveType.isActive ?? true,
+      });
+    } else {
+      setFormData({
+        code: '',
+        name: '',
+        description: '',
+        maxDaysPerYear: '',
+        isPaid: true,
+        isActive: true,
+      });
+    }
+    setErrors({});
+  }, [leaveType, open]);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value, checked, type } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked : value,
+    }));
+    if (errors[name]) {
+      setErrors((prev) => ({ ...prev, [name]: '' }));
+    }
+  };
+
+  const validate = () => {
+    const newErrors: Record<string, string> = {};
+    if (!formData.code.trim()) {
+      newErrors.code = 'กรุณากรอกรหัสประเภทการลา';
+    }
+    if (!formData.name.trim()) {
+      newErrors.name = 'กรุณากรอกชื่อประเภทการลา';
+    }
+    if (formData.maxDaysPerYear && isNaN(parseFloat(formData.maxDaysPerYear))) {
+      newErrors.maxDaysPerYear = 'กรุณากรอกตัวเลข';
+    }
+    if (formData.maxDaysPerYear && parseFloat(formData.maxDaysPerYear) < 0) {
+      newErrors.maxDaysPerYear = 'จำนวนวันต้องไม่ติดลบ';
+    }
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSubmit = async () => {
+    if (!validate()) return;
+
+    setLoading(true);
+    try {
+      const url = leaveType
+        ? `/api/admin/leave-types/${leaveType.id}`
+        : '/api/admin/leave-types';
+      const method = leaveType ? 'PUT' : 'POST';
+
+      const res = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || 'เกิดข้อผิดพลาด');
+      }
+
+      onSave();
+    } catch (error: any) {
+      setErrors({ submit: error.message });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+      <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+        <Calendar size={24} />
+        {leaveType ? 'แก้ไขประเภทการลา' : 'เพิ่มประเภทการลาใหม่'}
+      </DialogTitle>
+      <DialogContent>
+        <Box sx={{ pt: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
+          {errors.submit && (
+            <Box sx={{ color: 'error.main', mb: 1 }}>{errors.submit}</Box>
+          )}
+
+          <TextField
+            label="รหัสประเภทการลา"
+            name="code"
+            value={formData.code}
+            onChange={handleChange}
+            error={!!errors.code}
+            helperText={errors.code || 'เช่น SICK, PERSONAL, VACATION'}
+            fullWidth
+            required
+            inputProps={{ style: { textTransform: 'uppercase' } }}
+          />
+
+          <TextField
+            label="ชื่อประเภทการลา"
+            name="name"
+            value={formData.name}
+            onChange={handleChange}
+            error={!!errors.name}
+            helperText={errors.name || 'เช่น ลาป่วย, ลากิจ, ลาพักร้อน'}
+            fullWidth
+            required
+          />
+
+          <TextField
+            label="คำอธิบาย"
+            name="description"
+            value={formData.description}
+            onChange={handleChange}
+            multiline
+            rows={3}
+            fullWidth
+          />
+
+          <TextField
+            label="จำนวนวันลาสูงสุดต่อปี"
+            name="maxDaysPerYear"
+            value={formData.maxDaysPerYear}
+            onChange={handleChange}
+            error={!!errors.maxDaysPerYear}
+            helperText={errors.maxDaysPerYear || 'เว้นว่างหากไม่จำกัด'}
+            type="number"
+            fullWidth
+            InputProps={{
+              endAdornment: <InputAdornment position="end">วัน</InputAdornment>,
+            }}
+            inputProps={{ min: 0, step: 0.5 }}
+          />
+
+          <Box sx={{ display: 'flex', gap: 3 }}>
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={formData.isPaid}
+                  onChange={handleChange}
+                  name="isPaid"
+                  color="primary"
+                />
+              }
+              label="ได้รับค่าจ้าง"
+            />
+
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={formData.isActive}
+                  onChange={handleChange}
+                  name="isActive"
+                  color="primary"
+                />
+              }
+              label="เปิดใช้งาน"
+            />
+          </Box>
+        </Box>
+      </DialogContent>
+      <DialogActions sx={{ px: 3, pb: 2 }}>
+        <Button onClick={onClose} color="inherit" disabled={loading}>
+          ยกเลิก
+        </Button>
+        <Button
+          onClick={handleSubmit}
+          variant="contained"
+          disabled={loading}
+          startIcon={loading ? <CircularProgress size={16} /> : null}
+        >
+          {loading ? 'กำลังบันทึก...' : 'บันทึก'}
+        </Button>
+      </DialogActions>
+    </Dialog>
+  );
+}
