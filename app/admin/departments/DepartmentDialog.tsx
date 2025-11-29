@@ -16,6 +16,8 @@ import {
   InputLabel,
   Select,
   MenuItem,
+  InputAdornment,
+  Typography,
 } from '@mui/material';
 import { Layers } from 'lucide-react';
 
@@ -39,6 +41,16 @@ interface DepartmentDialogProps {
   onSave: () => void;
   department?: Department;
 }
+
+// Prefix mapping for each company
+const COMPANY_PREFIXES: Record<string, string> = {
+  'PSC': '2',   // พูนทรัพย์แคน
+  'PS': '3', // พูนทรัพย์โลหะการพิมพ์
+};
+
+const getCompanyPrefix = (companyCode: string): string => {
+  return COMPANY_PREFIXES[companyCode] || '';
+};
 
 export default function DepartmentDialog({
   open,
@@ -93,6 +105,22 @@ export default function DepartmentDialog({
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, checked, type } = e.target;
+    
+    // ป้องกันการลบ prefix ออกจากรหัสฝ่าย
+    if (name === 'code' && formData.company) {
+      const prefix = getCompanyPrefix(formData.company);
+      // ถ้าค่าใหม่ไม่ขึ้นต้นด้วย prefix ให้ใส่ prefix กลับไป
+      if (prefix && !value.startsWith(prefix)) {
+        // ถ้าพยายามลบ prefix ออก ให้คง prefix ไว้
+        const newValue = prefix + value.replace(/^\d*/, '');
+        setFormData((prev) => ({
+          ...prev,
+          [name]: newValue || prefix,
+        }));
+        return;
+      }
+    }
+    
     setFormData((prev) => ({
       ...prev,
       [name]: type === 'checkbox' ? checked : value,
@@ -104,10 +132,29 @@ export default function DepartmentDialog({
 
   const handleSelectChange = (e: any) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+    
+    if (name === 'company') {
+      const prefix = getCompanyPrefix(value);
+      // ถ้าเป็นการสร้างใหม่ ให้ใส่ prefix อัตโนมัติ
+      if (!department) {
+        setFormData((prev) => ({
+          ...prev,
+          [name]: value,
+          code: prefix,
+        }));
+      } else {
+        setFormData((prev) => ({
+          ...prev,
+          [name]: value,
+        }));
+      }
+    } else {
+      setFormData((prev) => ({
+        ...prev,
+        [name]: value,
+      }));
+    }
+    
     if (errors[name]) {
       setErrors((prev) => ({ ...prev, [name]: '' }));
     }
@@ -158,18 +205,35 @@ export default function DepartmentDialog({
   };
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-      <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+    <Dialog 
+      open={open} 
+      onClose={onClose} 
+      maxWidth="sm" 
+      fullWidth
+      PaperProps={{
+        sx: {
+          borderRadius: 1,
+        }
+      }}
+    >
+      <DialogTitle sx={{ 
+        display: 'flex', 
+        alignItems: 'center', 
+        gap: 1,
+        pb: 1,
+        borderBottom: '1px solid',
+        borderColor: 'divider',
+      }}>
         <Layers size={24} />
-        {department ? 'แก้ไขแผนก' : 'เพิ่มแผนกใหม่'}
+        {department ? 'แก้ไขฝ่าย' : 'เพิ่มฝ่ายใหม่'}
       </DialogTitle>
-      <DialogContent>
-        <Box sx={{ pt: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
+      <DialogContent sx={{ p: 2 ,mt:2 }}>
+        <Box sx={{ pt: 1, display: 'flex', flexDirection: 'column', gap: 2 }}>
           {errors.submit && (
             <Box sx={{ color: 'error.main', mb: 1 }}>{errors.submit}</Box>
           )}
 
-          <FormControl fullWidth error={!!errors.company} required>
+          <FormControl size="small" fullWidth error={!!errors.company} required>
             <InputLabel>บริษัท</InputLabel>
             <Select
               name="company"
@@ -191,24 +255,45 @@ export default function DepartmentDialog({
           </FormControl>
 
           <TextField
-            label="รหัสแผนก"
+            label="รหัสฝ่าย"
             name="code"
             value={formData.code}
             onChange={handleChange}
             error={!!errors.code}
-            helperText={errors.code || 'เช่น DEPT001, HR, IT'}
+            helperText={errors.code || `เช่น ${getCompanyPrefix(formData.company) || '?'}1100, ${getCompanyPrefix(formData.company) || '?'}3800 (ขึ้นต้นด้วย ${getCompanyPrefix(formData.company) || 'เลือกบริษัทก่อน'})`}
+            size="small"
             fullWidth
             required
-            inputProps={{ style: { textTransform: 'uppercase' } }}
+            InputProps={{
+              startAdornment: formData.company ? (
+                <InputAdornment position="start">
+                  <Typography 
+                    variant="body2" 
+                    sx={{ 
+                      color: 'primary.main', 
+                      fontWeight: 600,
+                      bgcolor: 'primary.50',
+                      px: 1,
+                      py: 0.25,
+                      borderRadius: 0.5,
+                      mr: 0.5,
+                    }}
+                  >
+                    {formData.company === 'PSC' ? 'PSC' : 'PS'}
+                  </Typography>
+                </InputAdornment>
+              ) : null,
+            }}
           />
 
           <TextField
-            label="ชื่อแผนก"
+            label="ชื่อฝ่าย"
             name="name"
             value={formData.name}
             onChange={handleChange}
             error={!!errors.name}
             helperText={errors.name}
+            size="small"
             fullWidth
             required
           />

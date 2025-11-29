@@ -21,7 +21,6 @@ import {
   InputAdornment,
   Card,
   CardContent,
-  Grid,
   Avatar,
   alpha,
   useTheme,
@@ -140,8 +139,6 @@ function TableSkeleton() {
         <TableRow key={row}>
           <TableCell><Skeleton variant="rounded" width={60} height={24} /></TableCell>
           <TableCell><Skeleton variant="text" width={150} /></TableCell>
-          <TableCell><Skeleton variant="rounded" width={100} height={24} /></TableCell>
-          <TableCell><Skeleton variant="rounded" width={80} height={24} /></TableCell>
           <TableCell align="center"><Skeleton variant="rounded" width={80} height={24} /></TableCell>
           <TableCell align="right">
             <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
@@ -227,10 +224,10 @@ export default function SectionsPage() {
         const data = await res.json();
         throw new Error(data.error || 'Failed to delete');
       }
-      toastr.success('ลบหน่วยงานสำเร็จ');
+      toastr.success('ลบแผนกสำเร็จ');
       fetchSections();
     } catch (err: any) {
-      toastr.error(err.message || 'เกิดข้อผิดพลาดในการลบหน่วยงาน');
+      toastr.error(err.message || 'เกิดข้อผิดพลาดในการลบแผนก');
     } finally {
       setDeleteLoading(false);
       setConfirmOpen(false);
@@ -240,7 +237,7 @@ export default function SectionsPage() {
 
   const handleSave = () => {
     setDialogOpen(false);
-    toastr.success(selectedSection ? 'แก้ไขหน่วยงานสำเร็จ' : 'เพิ่มหน่วยงานสำเร็จ');
+    toastr.success(selectedSection ? 'แก้ไขแผนกสำเร็จ' : 'เพิ่มแผนกสำเร็จ');
     fetchSections();
   };
 
@@ -321,10 +318,10 @@ export default function SectionsPage() {
             </Avatar>
             <Box>
               <Typography variant="h4" component="h1" fontWeight={700}>
-                จัดการหน่วยงาน
+                จัดการแผนก
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                เพิ่ม แก้ไข และจัดการข้อมูลหน่วยงานในระบบ
+                เพิ่ม แก้ไข และจัดการข้อมูลแผนกในระบบ
               </Typography>
             </Box>
           </Box>
@@ -343,49 +340,41 @@ export default function SectionsPage() {
             },
           }}
         >
-          เพิ่มหน่วยงาน
+          เพิ่มแผนก
         </Button>
       </Box>
 
       {/* Stats Cards */}
-      <Grid container spacing={3} sx={{ mb: 4 }}>
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-          <StatCard
-            title="หน่วยงานทั้งหมด"
-            value={sections.length}
-            icon={<FolderTree size={26} />}
-            color="primary"
-            subtitle="ในระบบ"
-          />
-        </Grid>
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-          <StatCard
-            title="เปิดใช้งาน"
-            value={activeSections}
-            icon={<CheckCircle size={26} />}
-            color="success"
-            subtitle="พร้อมใช้งาน"
-          />
-        </Grid>
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-          <StatCard
-            title="ปิดใช้งาน"
-            value={inactiveSections}
-            icon={<XCircle size={26} />}
-            color="secondary"
-            subtitle="ไม่ได้ใช้งาน"
-          />
-        </Grid>
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-          <StatCard
-            title="แผนก"
-            value={totalDepartments}
-            icon={<Layers size={26} />}
-            color="warning"
-            subtitle="ที่มีหน่วยงาน"
-          />
-        </Grid>
-      </Grid>
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: 'repeat(4, 1fr)' }, gap: 3, mb: 4 }}>
+        <StatCard
+          title="แผนกทั้งหมด"
+          value={sections.length}
+          icon={<FolderTree size={26} />}
+          color="primary"
+          subtitle="ในระบบ"
+        />
+        <StatCard
+          title="เปิดใช้งาน"
+          value={activeSections}
+          icon={<CheckCircle size={26} />}
+          color="success"
+          subtitle="พร้อมใช้งาน"
+        />
+        <StatCard
+          title="ปิดใช้งาน"
+          value={inactiveSections}
+          icon={<XCircle size={26} />}
+          color="secondary"
+          subtitle="ไม่ได้ใช้งาน"
+        />
+        <StatCard
+          title="แผนก"
+          value={totalDepartments}
+          icon={<Layers size={26} />}
+          color="warning"
+          subtitle="ที่มีแผนก"
+        />
+      </Box>
 
       {/* Search & Filters */}
       <Paper 
@@ -400,7 +389,7 @@ export default function SectionsPage() {
       >
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
           <TextField
-            placeholder="ค้นหาหน่วยงาน..."
+            placeholder="ค้นหาแผนก..."
             size="small"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
@@ -461,13 +450,13 @@ export default function SectionsPage() {
             <InputLabel>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                 <Layers size={16} />
-                แผนก
+                ฝ่าย
               </Box>
             </InputLabel>
             <Select
               value={departmentFilter}
               onChange={(e) => setDepartmentFilter(e.target.value)}
-              label="แผนก"
+              label="ฝ่าย"
               sx={{
                 borderRadius: 1,
                 bgcolor: 'background.default',
@@ -583,9 +572,7 @@ export default function SectionsPage() {
             <TableHead>
               <TableRow sx={{ bgcolor: alpha(theme.palette.primary.main, 0.04) }}>
                 <TableCell sx={{ fontWeight: 600, color: 'text.secondary', py: 2 }}>รหัส</TableCell>
-                <TableCell sx={{ fontWeight: 600, color: 'text.secondary', py: 2 }}>ชื่อหน่วยงาน</TableCell>
-                <TableCell sx={{ fontWeight: 600, color: 'text.secondary', py: 2 }}>แผนก</TableCell>
-                <TableCell sx={{ fontWeight: 600, color: 'text.secondary', py: 2 }}>บริษัท</TableCell>
+                <TableCell sx={{ fontWeight: 600, color: 'text.secondary', py: 2 }}>ชื่อแผนก</TableCell>
                 <TableCell sx={{ fontWeight: 600, color: 'text.secondary', py: 2 }} align="center">สถานะ</TableCell>
                 <TableCell sx={{ fontWeight: 600, color: 'text.secondary', py: 2 }} align="right">จัดการ</TableCell>
               </TableRow>
@@ -595,7 +582,7 @@ export default function SectionsPage() {
             ) : filteredSections.length === 0 ? (
               <TableBody>
                 <TableRow>
-                  <TableCell colSpan={6} align="center" sx={{ py: 10 }}>
+                  <TableCell colSpan={4} align="center" sx={{ py: 10 }}>
                     <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
                       <Avatar
                         sx={{
@@ -610,13 +597,13 @@ export default function SectionsPage() {
                       <Box sx={{ textAlign: 'center' }}>
                         <Typography variant="h6" fontWeight={600} gutterBottom>
                           {searchQuery || companyFilter !== 'all' || departmentFilter !== 'all' || statusFilter !== 'all' 
-                            ? 'ไม่พบหน่วยงานที่ค้นหา' 
-                            : 'ยังไม่มีข้อมูลหน่วยงาน'}
+                            ? 'ไม่พบแผนกที่ค้นหา' 
+                            : 'ยังไม่มีข้อมูลแผนก'}
                         </Typography>
                         <Typography variant="body2" color="text.secondary">
                           {searchQuery || companyFilter !== 'all' || departmentFilter !== 'all' || statusFilter !== 'all'
                             ? 'ลองค้นหาด้วยคำค้นอื่น หรือเปลี่ยนตัวกรอง' 
-                            : 'เริ่มต้นใช้งานโดยการเพิ่มหน่วยงานใหม่'}
+                            : 'เริ่มต้นใช้งานโดยการเพิ่มแผนกใหม่'}
                         </Typography>
                       </Box>
                       {!searchQuery && companyFilter === 'all' && departmentFilter === 'all' && statusFilter === 'all' && (
@@ -626,7 +613,7 @@ export default function SectionsPage() {
                           onClick={handleCreate}
                           sx={{ mt: 1, borderRadius: 1 }}
                         >
-                          เพิ่มหน่วยงานแรก
+                          เพิ่มแผนกแรก
                         </Button>
                       )}
                     </Box>
@@ -635,122 +622,121 @@ export default function SectionsPage() {
               </TableBody>
             ) : (
               <TableBody>
-                {paginatedSections.map((section) => (
-                  <TableRow
-                    key={section.id}
-                    sx={{
-                      transition: 'background-color 0.2s ease',
-                      '&:hover': { 
-                        bgcolor: alpha(theme.palette.primary.main, 0.04),
-                      },
-                      '&:last-child td': { border: 0 },
-                    }}
-                  >
-                    <TableCell>
-                      <Chip
-                        label={section.code}
-                        size="small"
-                        sx={{ 
-                          fontWeight: 600,
-                          bgcolor: alpha(theme.palette.primary.main, 0.1),
-                          color: 'primary.main',
-                          borderRadius: 1,
-                        }}
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Typography variant="subtitle2" fontWeight={600}>
-                        {section.name}
-                      </Typography>
-                    </TableCell>
-                    <TableCell>
-                      <Chip
-                        icon={<Layers size={14} />}
-                        label={section.department.name}
-                        size="small"
-                        variant="outlined"
-                        sx={{ 
-                          borderRadius: 1,
-                          '& .MuiChip-icon': {
-                            color: 'inherit',
-                          },
-                        }}
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Chip
-                        icon={<Building2 size={14} />}
-                        label={section.department.company}
-                        size="small"
-                        sx={{ 
-                          bgcolor: alpha(theme.palette.info?.main || '#2196f3', 0.1),
-                          color: theme.palette.info?.main || '#2196f3',
-                          fontWeight: 500,
-                          borderRadius: 1,
-                          '& .MuiChip-icon': {
-                            color: 'inherit',
-                          },
-                        }}
-                      />
-                    </TableCell>
-                    <TableCell align="center">
-                      <Chip
-                        icon={section.isActive 
-                          ? <CheckCircle size={14} /> 
-                          : <XCircle size={14} />
-                        }
-                        label={section.isActive ? 'เปิดใช้งาน' : 'ปิดใช้งาน'}
-                        size="small"
+                {paginatedSections.map((section, index) => {
+                  const showHeader = index === 0 || section.departmentId !== paginatedSections[index - 1].departmentId;
+                  
+                  return (
+                    <React.Fragment key={section.id}>
+                      {showHeader && (
+                        <TableRow sx={{ bgcolor: alpha(theme.palette.primary.main, 0.08) }}>
+                          <TableCell colSpan={4} sx={{ py: 1.5 }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                              <Layers size={20} color={theme.palette.primary.main} />
+                              <Typography variant="subtitle1" color="primary.main" fontWeight={700}>
+                                {section.department.name}
+                              </Typography>
+                              <Chip 
+                                label={section.department.company} 
+                                size="small" 
+                                variant="outlined"
+                                sx={{ 
+                                  height: 24, 
+                                  fontSize: '0.75rem', 
+                                  borderColor: alpha(theme.palette.primary.main, 0.3),
+                                  color: 'primary.main',
+                                  bgcolor: 'background.paper' 
+                                }} 
+                              />
+                            </Box>
+                          </TableCell>
+                        </TableRow>
+                      )}
+                      <TableRow
                         sx={{
-                          fontWeight: 500,
-                          bgcolor: section.isActive 
-                            ? theme.palette.success.light 
-                            : alpha(theme.palette.text.secondary, 0.1),
-                          color: section.isActive 
-                            ? theme.palette.success.main 
-                            : 'text.secondary',
-                          '& .MuiChip-icon': {
-                            color: 'inherit',
+                          transition: 'background-color 0.2s ease',
+                          '&:hover': { 
+                            bgcolor: alpha(theme.palette.primary.main, 0.04),
                           },
+                          '&:last-child td': { border: 0 },
                         }}
-                      />
-                    </TableCell>
-                    <TableCell align="right">
-                      <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 0.5 }}>
-                        <Tooltip title="แก้ไข">
-                          <IconButton
-                            onClick={() => handleEdit(section)}
-                            size="medium"
-                            sx={{
-                              color: 'primary.main',
+                      >
+                        <TableCell>
+                          <Chip
+                            label={section.code}
+                            size="small"
+                            sx={{ 
+                              fontWeight: 600,
                               bgcolor: alpha(theme.palette.primary.main, 0.1),
-                              '&:hover': {
-                                bgcolor: alpha(theme.palette.primary.main, 0.2),
-                              },
+                              color: 'primary.main',
+                              borderRadius: 1,
                             }}
-                          >
-                            <Pencil size={18} />
-                          </IconButton>
-                        </Tooltip>
-                        <Tooltip title="ลบ">
-                          <IconButton
-                            onClick={() => handleDelete(section)}
-                            size="medium"
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <Typography variant="subtitle2" fontWeight={600}>
+                            {section.name}
+                          </Typography>
+                        </TableCell>
+                        <TableCell align="center">
+                          <Chip
+                            icon={section.isActive 
+                              ? <CheckCircle size={14} /> 
+                              : <XCircle size={14} />
+                            }
+                            label={section.isActive ? 'เปิดใช้งาน' : 'ปิดใช้งาน'}
+                            size="small"
                             sx={{
-                              color: 'error.main',
-                              bgcolor: alpha(theme.palette.error.main, 0.1),
-                              '&:hover': {
-                                bgcolor: alpha(theme.palette.error.main, 0.2),
+                              fontWeight: 500,
+                              bgcolor: section.isActive 
+                                ? theme.palette.success.light 
+                                : alpha(theme.palette.text.secondary, 0.1),
+                              color: section.isActive 
+                                ? theme.palette.success.main 
+                                : 'text.secondary',
+                              '& .MuiChip-icon': {
+                                color: 'inherit',
                               },
                             }}
-                          >
-                            <Trash2 size={18} />
-                          </IconButton>
-                        </Tooltip>
-                      </Box>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                          />
+                        </TableCell>
+                        <TableCell align="right">
+                          <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 0.5 }}>
+                            <Tooltip title="แก้ไข">
+                              <IconButton
+                                onClick={() => handleEdit(section)}
+                                size="medium"
+                                sx={{
+                                  color: 'primary.main',
+                                  bgcolor: alpha(theme.palette.primary.main, 0.1),
+                                  '&:hover': {
+                                    bgcolor: alpha(theme.palette.primary.main, 0.2),
+                                  },
+                                }}
+                              >
+                                <Pencil size={18} />
+                              </IconButton>
+                            </Tooltip>
+                            <Tooltip title="ลบ">
+                              <IconButton
+                                onClick={() => handleDelete(section)}
+                                size="medium"
+                                sx={{
+                                  color: 'error.main',
+                                  bgcolor: alpha(theme.palette.error.main, 0.1),
+                                  '&:hover': {
+                                    bgcolor: alpha(theme.palette.error.main, 0.2),
+                                  },
+                                }}
+                              >
+                                <Trash2 size={18} />
+                              </IconButton>
+                            </Tooltip>
+                          </Box>
+                        </TableCell>
+                      </TableRow>
+                    </React.Fragment>
+                  );
+                })}
               </TableBody>
             )}
           </Table>
@@ -808,8 +794,8 @@ export default function SectionsPage() {
           setDeleteTarget(null);
         }}
         onConfirm={handleConfirmDelete}
-        title="ยืนยันการลบหน่วยงาน"
-        message={`คุณต้องการลบหน่วยงาน "${deleteTarget?.name}" ใช่หรือไม่? การดำเนินการนี้ไม่สามารถย้อนกลับได้`}
+        title="ยืนยันการลบแผนก"
+        message={`คุณต้องการลบแผนก "${deleteTarget?.name}" ใช่หรือไม่? การดำเนินการนี้ไม่สามารถย้อนกลับได้`}
         type="delete"
         confirmText="ลบ"
         loading={deleteLoading}

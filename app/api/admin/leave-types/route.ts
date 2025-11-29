@@ -1,9 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { getServerSession } from 'next-auth';
+import { authOptions, isAdminRole } from '@/lib/auth';
 
 // GET all leave types
 export async function GET() {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session || !isAdminRole(session.user.role)) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const leaveTypes = await prisma.leaveType.findMany({
       orderBy: { name: 'asc' },
     });
@@ -21,6 +28,11 @@ export async function GET() {
 // POST create new leave type
 export async function POST(request: NextRequest) {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session || !isAdminRole(session.user.role)) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const body = await request.json();
     const { code, name, description, maxDaysPerYear, isPaid, isActive } = body;
 
@@ -34,7 +46,7 @@ export async function POST(request: NextRequest) {
 
     // Check if code already exists
     const existingLeaveType = await prisma.leaveType.findUnique({
-      where: { code: code.toUpperCase() },
+      where: { code: code },
     });
 
     if (existingLeaveType) {
@@ -46,7 +58,7 @@ export async function POST(request: NextRequest) {
 
     const leaveType = await prisma.leaveType.create({
       data: {
-        code: code.toUpperCase(),
+        code: code,
         name,
         description: description || null,
         maxDaysPerYear: maxDaysPerYear ? parseFloat(maxDaysPerYear) : null,

@@ -241,7 +241,7 @@ export default function RegisterPage() {
 
         setIsLoading(true);
 
-        // Get department and section names for storing
+        // Get department and section codes for storing
         const selectedDepartment = departments.find(d => d.id === parseInt(formData.departmentId));
         const selectedSection = sections.find(s => s.id === parseInt(formData.sectionId));
 
@@ -259,8 +259,8 @@ export default function RegisterPage() {
                     gender: formData.gender,
                     employeeId: formData.employeeId,
                     position: formData.position || null,
-                    department: selectedDepartment?.name || '',
-                    section: selectedSection?.name || null,
+                    department: selectedDepartment?.code || '',
+                    section: selectedSection?.code || null,
                     shift: formData.shift || null,
                     startDate: formData.startDate,
                     password: formData.password,
@@ -310,10 +310,9 @@ export default function RegisterPage() {
     ];
 
     const shifts = [
-        { value: '', label: 'ไม่ระบุ' },
-        { value: 'day', label: 'กะกลางวัน' },
-        { value: 'night', label: 'กะกลางคืน' },
-        { value: 'rotating', label: 'กะหมุนเวียน' },
+        { value: '', label: 'ไม่มีกะ' },
+        { value: 'morning', label: 'กะเช้า' },
+        { value: 'night', label: 'กะดึก' },
     ];
 
     // Convert API data to drawer options

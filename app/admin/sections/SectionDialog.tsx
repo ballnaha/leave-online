@@ -17,8 +17,13 @@ import {
   Select,
   MenuItem,
   ListSubheader,
+  Chip,
+  alpha,
+  useTheme,
+  InputAdornment,
+  Typography,
 } from '@mui/material';
-import { FolderTree } from 'lucide-react';
+import { FolderTree, Building2 } from 'lucide-react';
 
 interface Department {
   id: number;
@@ -49,6 +54,7 @@ export default function SectionDialog({
   onSave,
   section,
 }: SectionDialogProps) {
+  const theme = useTheme();
   const [loading, setLoading] = useState(false);
   const [departments, setDepartments] = useState<Department[]>([]);
   const [formData, setFormData] = useState({
@@ -97,6 +103,24 @@ export default function SectionDialog({
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, checked, type } = e.target;
+    
+    // ป้องกันการลบ prefix ออกจากรหัสแผนก
+    if (name === 'code') {
+      const company = getSelectedCompany();
+      if (company) {
+        const prefix = getCompanyPrefix(company);
+        // ถ้าค่าใหม่ไม่ขึ้นต้นด้วย prefix ให้ใส่ prefix กลับไป
+        if (prefix && !value.startsWith(prefix)) {
+          const newValue = prefix + value.replace(/^\d*/, '');
+          setFormData((prev) => ({
+            ...prev,
+            [name]: newValue || prefix,
+          }));
+          return;
+        }
+      }
+    }
+    
     setFormData((prev) => ({
       ...prev,
       [name]: type === 'checkbox' ? checked : value,
@@ -108,10 +132,33 @@ export default function SectionDialog({
 
   const handleSelectChange = (e: any) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+    
+    if (name === 'departmentId') {
+      // หา company จาก department ที่เลือก
+      const selectedDept = departments.find(d => d.id.toString() === value);
+      const company = selectedDept?.company || '';
+      const prefix = getCompanyPrefix(company);
+      
+      // ถ้าเป็นการสร้างใหม่ ให้ใส่ prefix อัตโนมัติ
+      if (!section) {
+        setFormData((prev) => ({
+          ...prev,
+          [name]: value,
+          code: prefix,
+        }));
+      } else {
+        setFormData((prev) => ({
+          ...prev,
+          [name]: value,
+        }));
+      }
+    } else {
+      setFormData((prev) => ({
+        ...prev,
+        [name]: value,
+      }));
+    }
+    
     if (errors[name]) {
       setErrors((prev) => ({ ...prev, [name]: '' }));
     }
@@ -120,10 +167,10 @@ export default function SectionDialog({
   const validate = () => {
     const newErrors: Record<string, string> = {};
     if (!formData.code.trim()) {
-      newErrors.code = 'กรุณากรอกรหัสหน่วยงาน';
+      newErrors.code = 'กรุณากรอกรหัสแผนก';
     }
     if (!formData.name.trim()) {
-      newErrors.name = 'กรุณากรอกชื่อหน่วยงาน';
+      newErrors.name = 'กรุณากรอกชื่อแผนก';
     }
     if (!formData.departmentId) {
       newErrors.departmentId = 'กรุณาเลือกแผนก';
@@ -161,6 +208,32 @@ export default function SectionDialog({
     }
   };
 
+  // Company display config
+  const companyConfig: Record<string, { name: string; color: string }> = {
+    'PSC': { name: 'พูนทรัพย์แคน (PSC)', color: theme.palette.primary.main },
+    'PS': { name: 'พูนทรัพย์โลหะภัณฑ์ (PS)', color: theme.palette.secondary.main },
+  };
+
+  // Prefix mapping for each company
+  const COMPANY_PREFIXES: Record<string, string> = {
+    'PSC': '2',  // พูนทรัพย์แคน
+    'PS': '3',   // พูนทรัพย์โลหะภัณฑ์
+  };
+
+  // Get company from selected department
+  const getSelectedCompany = (): string => {
+    if (!formData.departmentId) return '';
+    const dept = departments.find(d => d.id.toString() === formData.departmentId);
+    return dept?.company || '';
+  };
+
+  const getCompanyPrefix = (company: string): string => {
+    return COMPANY_PREFIXES[company] || '';
+  };
+
+  // Company order
+  const companyOrder = ['PSC', 'PS'];
+
   // Group departments by company
   const groupedDepartments = departments.reduce((acc, dept) => {
     if (!acc[dept.company]) {
@@ -170,36 +243,136 @@ export default function SectionDialog({
     return acc;
   }, {} as Record<string, Department[]>);
 
+  // Sort companies by order
+  const sortedCompanies = companyOrder.filter(c => groupedDepartments[c]);
+
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-      <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+    <Dialog 
+      open={open} 
+      onClose={onClose} 
+      maxWidth="sm" 
+      fullWidth
+      PaperProps={{
+        sx: {
+          borderRadius: 1,
+        }
+      }}
+    >
+      <DialogTitle sx={{ 
+        display: 'flex', 
+        alignItems: 'center', 
+        gap: 1,
+        pb: 1,
+        borderBottom: '1px solid',
+        borderColor: 'divider',
+      }}>
         <FolderTree size={24} />
-        {section ? 'แก้ไขหน่วยงาน' : 'เพิ่มหน่วยงานใหม่'}
+        {section ? 'แก้ไขแผนก' : 'เพิ่มแผนกใหม่'}
       </DialogTitle>
-      <DialogContent>
-        <Box sx={{ pt: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
+      <DialogContent sx={{ p: 2 , mt:2}}>
+        <Box sx={{ pt: 1, display: 'flex', flexDirection: 'column', gap: 2 }}>
           {errors.submit && (
             <Box sx={{ color: 'error.main', mb: 1 }}>{errors.submit}</Box>
           )}
 
-          <FormControl fullWidth error={!!errors.departmentId} required>
-            <InputLabel>แผนก</InputLabel>
+          <FormControl size="small" fullWidth error={!!errors.departmentId} required>
+            <InputLabel>ฝ่าย</InputLabel>
             <Select
               name="departmentId"
               value={formData.departmentId}
               onChange={handleSelectChange}
-              label="แผนก"
+              label="ฝ่าย"
+              MenuProps={{
+                PaperProps: {
+                  sx: { maxHeight: 400 }
+                }
+              }}
             >
-              {Object.entries(groupedDepartments).map(([company, depts]) => [
-                <ListSubheader key={company} sx={{ bgcolor: 'background.paper', fontWeight: 600 }}>
-                  {company}
-                </ListSubheader>,
-                ...depts.map((dept) => (
-                  <MenuItem key={dept.id} value={dept.id.toString()}>
-                    {dept.name} ({dept.code})
-                  </MenuItem>
-                )),
-              ])}
+              {sortedCompanies.map((company, index) => {
+                const config = companyConfig[company] || { name: company, color: theme.palette.grey[600] };
+                const depts = groupedDepartments[company] || [];
+                
+                return [
+                  <ListSubheader 
+                    key={company} 
+                    sx={{ 
+                      bgcolor: alpha(config.color, 0.08),
+                      borderLeft: `4px solid ${config.color}`,
+                      fontWeight: 700,
+                      fontSize: '0.85rem',
+                      py: 1.5,
+                      lineHeight: 1.5,
+                      mt: index > 0 ? 0.5 : 0,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 1,
+                    }}
+                  >
+                    <Building2 size={14} color={config.color} />
+                    {config.name}
+                    <Chip 
+                      label={`${depts.length} ฝ่าย`} 
+                      size="small" 
+                      sx={{ 
+                        ml: 'auto',
+                        height: 20,
+                        fontSize: '0.7rem',
+                        bgcolor: alpha(config.color, 0.15),
+                        color: config.color,
+                        fontWeight: 600,
+                      }} 
+                    />
+                  </ListSubheader>,
+                  ...depts.map((dept) => (
+                    <MenuItem 
+                      key={dept.id} 
+                      value={dept.id.toString()}
+                      sx={{
+                        pl: 4,
+                        borderLeft: `4px solid transparent`,
+                        '&:hover': {
+                          borderLeftColor: config.color,
+                          bgcolor: alpha(config.color, 0.04),
+                        },
+                        '&.Mui-selected': {
+                          borderLeftColor: config.color,
+                          bgcolor: alpha(config.color, 0.08),
+                          '&:hover': {
+                            bgcolor: alpha(config.color, 0.12),
+                          },
+                        },
+                      }}
+                    >
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, width: '100%' }}>
+                        <Box 
+                          sx={{ 
+                            width: 6, 
+                            height: 6, 
+                            borderRadius: '50%', 
+                            bgcolor: config.color,
+                            opacity: 0.6,
+                          }} 
+                        />
+                        <Box sx={{ flex: 1 }}>
+                          <Box component="span" sx={{ fontWeight: 500 }}>
+                            {dept.name}
+                          </Box>
+                          <Box 
+                            component="span" 
+                            sx={{ 
+                              ml: 1, 
+                              color: 'text.secondary',
+                              fontSize: '0.8rem',
+                            }}
+                          >
+                            ({dept.code})
+                          </Box>
+                        </Box>
+                      </Box>
+                    </MenuItem>
+                  )),
+                ];
+              })}
             </Select>
             {errors.departmentId && (
               <Box sx={{ color: 'error.main', fontSize: '0.75rem', mt: 0.5, ml: 1.75 }}>
@@ -209,24 +382,46 @@ export default function SectionDialog({
           </FormControl>
 
           <TextField
-            label="รหัสหน่วยงาน"
+            label="รหัสแผนก"
             name="code"
             value={formData.code}
             onChange={handleChange}
             error={!!errors.code}
-            helperText={errors.code || 'เช่น SEC001, HR-01, IT-DEV'}
+            helperText={errors.code || `เช่น ${getCompanyPrefix(getSelectedCompany()) || '?'}101, ${getCompanyPrefix(getSelectedCompany()) || '?'}102 (ขึ้นต้นด้วย ${getCompanyPrefix(getSelectedCompany()) || 'เลือกฝ่ายก่อน'})`}
+            size="small"
             fullWidth
             required
-            inputProps={{ style: { textTransform: 'uppercase' } }}
+            disabled={!formData.departmentId}
+            InputProps={{
+              startAdornment: getSelectedCompany() ? (
+                <InputAdornment position="start">
+                  <Typography 
+                    variant="body2" 
+                    sx={{ 
+                      color: 'primary.main', 
+                      fontWeight: 600,
+                      bgcolor: 'primary.50',
+                      px: 1,
+                      py: 0.25,
+                      borderRadius: 0.5,
+                      mr: 0.5,
+                    }}
+                  >
+                    {getSelectedCompany()}
+                  </Typography>
+                </InputAdornment>
+              ) : null,
+            }}
           />
 
           <TextField
-            label="ชื่อหน่วยงาน"
+            label="ชื่อแผนก"
             name="name"
             value={formData.name}
             onChange={handleChange}
             error={!!errors.name}
             helperText={errors.name}
+            size="small"
             fullWidth
             required
           />

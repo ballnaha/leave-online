@@ -19,8 +19,8 @@ const Header = () => {
         year: 'numeric',
     });
 
-    // ตรวจสอบว่าเป็น admin หรือ hr ไหม
-    const isAdminOrHR = user?.role === 'admin' || user?.role === 'hr';
+    // ตรวจสอบว่าเป็น admin, hr หรือ hr_manager ไหม
+    const isAdminOrHR = ['admin', 'hr', 'hr_manager'].includes(user?.role || '');
 
     return (
         <>

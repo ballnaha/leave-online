@@ -36,6 +36,19 @@ export async function GET(request: NextRequest) {
             orderBy: { startDate: 'desc' },
             include: {
                 attachments: true,
+                approvals: {
+                    include: {
+                        approver: {
+                            select: {
+                                id: true,
+                                firstName: true,
+                                lastName: true,
+                                position: true,
+                            },
+                        },
+                    },
+                    orderBy: { level: 'asc' },
+                },
             },
         });
 

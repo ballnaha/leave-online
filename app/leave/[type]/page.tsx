@@ -44,6 +44,8 @@ import {
     Shield,
     Users,
     Car,
+    Plus,
+    Minus,
 } from 'lucide-react';
 import { useRouter, useParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
@@ -57,11 +59,11 @@ const PRIMARY_LIGHT = '#e3f2fd';
 
 // กำหนด icon และสีสำหรับแต่ละประเภทการลา
 const leaveTypeConfig: Record<string, { icon: any; color: string; lightColor: string }> = {
-    sick: { icon: Stethoscope, color: '#FF6B6B', lightColor: '#FFEBEE' },
-    personal: { icon: Briefcase, color: '#AB47BC', lightColor: '#F3E5F5' },
-    vacation: { icon: Umbrella, color: '#FF7043', lightColor: '#FBE9E7' },
+    sick: { icon: Stethoscope, color: '#42A5F5', lightColor: '#E3F2FD' },
+    personal: { icon: Briefcase, color: '#845EF7', lightColor: '#F3EFFF' },
+    vacation: { icon: Umbrella, color: '#FFD43B', lightColor: '#FFF9DB' },
     annual: { icon: Sun, color: '#FFD93D', lightColor: '#FFF9C4' },
-    maternity: { icon: Baby, color: '#FF8ED4', lightColor: '#FCE4EC' },
+    maternity: { icon: Baby, color: '#F783AC', lightColor: '#FFDEEB' },
     ordination: { icon: Church, color: '#FFA726', lightColor: '#FFF3E0' },
     military: { icon: Shield, color: '#66BB6A', lightColor: '#E8F5E9' },
     marriage: { icon: Heart, color: '#EF5350', lightColor: '#FFEBEE' },
@@ -70,7 +72,7 @@ const leaveTypeConfig: Record<string, { icon: any; color: string; lightColor: st
     sterilization: { icon: Stethoscope, color: '#26A69A', lightColor: '#E0F2F1' },
     business: { icon: Car, color: '#7E57C2', lightColor: '#EDE7F6' },
     unpaid: { icon: Clock, color: '#9E9E9E', lightColor: '#F5F5F5' },
-    default: { icon: HelpCircle, color: '#5C6BC0', lightColor: '#E8EAF6' },
+    default: { icon: HelpCircle, color: '#748FFC', lightColor: '#EDF2FF' },
 };
 
 interface LeaveTypeData {
@@ -892,65 +894,97 @@ export default function LeaveFormPage() {
                             </Typography>
                         </Box>
 
-                        <TextField
-                                fullWidth
-                                label="จำนวนวันลา"
-                                type="number"
-                                value={formData.totalDays}
-                                onChange={(e) => handleFormChange('totalDays', e.target.value)}
-                                size="small"
-                                placeholder="เช่น 1, 0.5, 1.5, 2"
-                                error={!!errors.totalDays}
-                                helperText={totalDaysHelperText}
-                                sx={{
-                                    '& .MuiOutlinedInput-root': {
-                                        '& fieldset': { borderColor: '#e5e7eb' },
-                                        '&:hover fieldset': { borderColor: config.color },
-                                    },
-                                }}
-                                slotProps={{
-                                    input: {
-                                        startAdornment: (
-                                            <InputAdornment position="start">
-                                                <Calendar size={18} color={config.color} />
-                                            </InputAdornment>
-                                        ),
-                                    },
-                                    htmlInput: {
-                                        step: 0.5,
-                                        min: 0.5,
+                        <Box
+                            sx={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: 1.5,
+                                mb: 1.5,
+                            }}
+                        >
+                            {/* ปุ่มลด */}
+                            <IconButton
+                                onClick={() => {
+                                    const current = parseFloat(formData.totalDays) || 0.5;
+                                    if (current > 0.5) {
+                                        handleFormChange('totalDays', (current - 0.5).toString());
                                     }
                                 }}
-                            />
+                                disabled={!formData.totalDays || parseFloat(formData.totalDays) <= 0.5}
+                                sx={{
+                                    width: 36,
+                                    height: 36,
+                                    bgcolor: config.lightColor,
+                                    border: `1.5px solid ${config.color}`,
+                                    '&:hover': { bgcolor: config.lightColor },
+                                    '&:disabled': { opacity: 0.4 },
+                                }}
+                            >
+                                <Minus size={18} color={config.color} />
+                            </IconButton>
 
-                            {/* แสดงจำนวนวันลา */}
-                            {formData.totalDays && (
-                                <Box
-                                    sx={{
-                                        p: 2,
-                                        bgcolor: config.lightColor,
-                                        borderRadius: 2,
-                                        display: 'flex',
-                                        justifyContent: 'space-between',
-                                        alignItems: 'center',
-                                    }}
-                                >
-                                    <Typography variant="body2" fontWeight={500}>
-                                        จำนวนวันลา
-                                    </Typography>
-                                    <Chip
-                                        label={`${formData.totalDays} วัน`}
-                                        sx={{
-                                            bgcolor: config.color,
-                                            color: 'white',
-                                            fontWeight: 'bold',
-                                        }}
-                                    />
-                                </Box>
+                            {/* แสดงจำนวนวัน */}
+                            <Box
+                                sx={{
+                                    minWidth: 80,
+                                    textAlign: 'center',
+                                    py: 1,
+                                    px: 2,
+                                    bgcolor: config.color,
+                                    borderRadius: 1.5,
+                                }}
+                            >
+                                <Typography sx={{ fontSize: '1.25rem', fontWeight: 700, color: 'white', lineHeight: 1.2 }}>
+                                    {formData.totalDays || '0'}
+                                </Typography>
+                                <Typography sx={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.9)' }}>
+                                    วัน
+                                </Typography>
+                            </Box>
+
+                            {/* ปุ่มเพิ่ม */}
+                            <IconButton
+                                onClick={() => {
+                                    const current = parseFloat(formData.totalDays) || 0;
+                                    const max = maxLeaveDaysByRange || 999;
+                                    if (current + 0.5 <= max) {
+                                        handleFormChange('totalDays', (current + 0.5).toString());
+                                    }
+                                }}
+                                disabled={maxLeaveDaysByRange !== null && parseFloat(formData.totalDays) >= maxLeaveDaysByRange}
+                                sx={{
+                                    width: 36,
+                                    height: 36,
+                                    bgcolor: config.lightColor,
+                                    border: `1.5px solid ${config.color}`,
+                                    '&:hover': { bgcolor: config.lightColor },
+                                    '&:disabled': { opacity: 0.4 },
+                                }}
+                            >
+                                <Plus size={18} color={config.color} />
+                            </IconButton>
+                        </Box>
+
+                        {/* Helper text */}
+                        <Typography 
+                            variant="caption" 
+                            sx={{ 
+                                display: 'block', 
+                                textAlign: 'center', 
+                                color: errors.totalDays ? 'error.main' : 'text.secondary',
+                                mb: 2,
+                            }}
+                        >
+                            {errors.totalDays || (
+                                maxLeaveDaysByRange 
+                                    ? `กดปุ่ม +/- เพื่อปรับทีละ 0.5 วัน (สูงสุด ${maxLeaveDaysByRange} วัน)`
+                                    : 'กดปุ่ม +/- เพื่อปรับทีละ 0.5 วัน'
                             )}
+                        </Typography>
 
                             {leaveType.maxDaysPerYear && (
-                                <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+                                <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block', textAlign: 'center' }}>
                                     สิทธิ์การลาสูงสุด: {leaveType.maxDaysPerYear} วัน/ปี โดยไม่หักเงิน
                                 </Typography>
                             )}

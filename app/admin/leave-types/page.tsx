@@ -21,7 +21,6 @@ import {
   InputAdornment,
   Card,
   CardContent,
-  Grid,
   Avatar,
   alpha,
   useTheme,
@@ -330,44 +329,36 @@ export default function LeaveTypesPage() {
       </Box>
 
       {/* Stats Cards */}
-      <Grid container spacing={3} sx={{ mb: 4 }}>
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-          <StatCard
-            title="ประเภทการลาทั้งหมด"
-            value={leaveTypes.length}
-            icon={<Calendar size={26} />}
-            color="primary"
-            subtitle="ในระบบ"
-          />
-        </Grid>
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-          <StatCard
-            title="เปิดใช้งาน"
-            value={activeLeaveTypes}
-            icon={<CheckCircle size={26} />}
-            color="success"
-            subtitle="พร้อมใช้งาน"
-          />
-        </Grid>
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-          <StatCard
-            title="ปิดใช้งาน"
-            value={inactiveLeaveTypes}
-            icon={<XCircle size={26} />}
-            color="secondary"
-            subtitle="ไม่ได้ใช้งาน"
-          />
-        </Grid>
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-          <StatCard
-            title="ได้รับค่าจ้าง"
-            value={paidLeaveTypes}
-            icon={<DollarSign size={26} />}
-            color="warning"
-            subtitle="ประเภทการลา"
-          />
-        </Grid>
-      </Grid>
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: 'repeat(4, 1fr)' }, gap: 3, mb: 4 }}>
+        <StatCard
+          title="ประเภทการลาทั้งหมด"
+          value={leaveTypes.length}
+          icon={<Calendar size={26} />}
+          color="primary"
+          subtitle="ในระบบ"
+        />
+        <StatCard
+          title="เปิดใช้งาน"
+          value={activeLeaveTypes}
+          icon={<CheckCircle size={26} />}
+          color="success"
+          subtitle="พร้อมใช้งาน"
+        />
+        <StatCard
+          title="ปิดใช้งาน"
+          value={inactiveLeaveTypes}
+          icon={<XCircle size={26} />}
+          color="secondary"
+          subtitle="ไม่ได้ใช้งาน"
+        />
+        <StatCard
+          title="ได้รับค่าจ้าง"
+          value={paidLeaveTypes}
+          icon={<DollarSign size={26} />}
+          color="warning"
+          subtitle="ประเภทการลา"
+        />
+      </Box>
 
       {/* Search & Filters */}
       <Paper 
@@ -656,10 +647,7 @@ export default function LeaveTypesPage() {
                     </TableCell>
                     <TableCell align="center">
                       <Chip
-                        icon={leaveType.isPaid 
-                          ? <DollarSign size={14} /> 
-                          : <Clock size={14} />
-                        }
+                        
                         label={leaveType.isPaid ? 'ได้รับ' : 'ไม่ได้รับ'}
                         size="small"
                         sx={{

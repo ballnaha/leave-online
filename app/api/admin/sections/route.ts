@@ -1,9 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { getServerSession } from 'next-auth';
+import { authOptions, isAdminRole } from '@/lib/auth';
 
 // GET all sections
 export async function GET() {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session || !isAdminRole(session.user.role)) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const sections = await prisma.section.findMany({
       include: {
         department: {
@@ -35,6 +42,11 @@ export async function GET() {
 // POST create new section
 export async function POST(request: NextRequest) {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session || !isAdminRole(session.user.role)) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const body = await request.json();
     const { code, name, departmentId, isActive } = body;
 

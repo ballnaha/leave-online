@@ -1,6 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -10,41 +7,39 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// User model for authentication
 model User {
-  id            Int       @id @default(autoincrement())
-  employeeId    String    @unique // รหัสพนักงาน
-  email         String?   @unique
-  password      String
-  firstName     String
-  lastName      String
-  gender        String    // male, female - เพศ (มีผลต่อประเภทการลา เช่น ลาคลอด)
-  avatar        String?   @db.VarChar(500) // Path to avatar image file
-  company       String    // psc, pslp
-  employeeType  String    // daily, monthly
-  position      String?   // ตำแหน่งงาน
-  department    String
-  section       String?
-  shift         String?
-  startDate     DateTime
-  role          UserRole  @default(employee)
-  isActive      Boolean   @default(true)
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-
-  // Relations
-  leaveRequests       LeaveRequest[]
-  sessions            Session[]
-  approvalFlows       UserApprovalFlow[] @relation("UserApprovalFlow")
-  approverFlows       UserApprovalFlow[] @relation("ApproverFlow")
-  leaveApprovals      LeaveApproval[]
-  devices             UserDevice[]
-  notifications       NotificationLog[]
+  id                 Int                @id @default(autoincrement())
+  employeeId         String             @unique
+  email              String?            @unique
+  password           String
+  firstName          String
+  lastName           String
+  gender             String
+  avatar             String?            @db.VarChar(500)
+  company            String
+  employeeType       String
+  department         String
+  section            String?
+  shift              String?
+  startDate          DateTime
+  role               UserRole           @default(employee)
+  isActive           Boolean            @default(true)
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+  position           String?
+  managedDepartments String?            @db.Text
+  managedSections    String?            @db.Text
+  leaveApprovals     LeaveApproval[]
+  leaveRequests      LeaveRequest[]
+  notifications      NotificationLog[]
+  sessions           Session[]
+  approverFlows      UserApprovalFlow[] @relation("ApproverFlow")
+  approvalFlows      UserApprovalFlow[] @relation("UserApprovalFlow")
+  devices            UserDevice[]
 
   @@map("users")
 }
 
-// Session model for NextAuth
 model Session {
   id           Int      @id @default(autoincrement())
   sessionToken String   @unique
@@ -52,81 +47,76 @@ model Session {
   expires      DateTime
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@index([userId], map: "sessions_userId_fkey")
   @@map("sessions")
 }
 
-// Leave Request model
 model LeaveRequest {
-  id             Int      @id @default(autoincrement())
-  userId         Int
-  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  leaveType      String   // sick, personal, vacation, maternity, etc.
-  startDate      DateTime
-  startTime      String?  // เวลาเริ่มลา
-  endDate        DateTime
-  endTime        String?  // เวลาสิ้นสุดลา
-  totalDays      Float
-  reason         String   @db.Text
-  contactPhone   String?  // เบอร์โทรติดต่อระหว่างลา
-  contactAddress String?  @db.Text // ที่อยู่ระหว่างลา
-  
-  // Approval workflow
-  status         String   @default("pending") // pending, in_progress, approved, rejected, cancelled
-  currentLevel   Int      @default(1)  // ระดับอนุมัติปัจจุบัน
-  escalationDeadline DateTime?  // deadline รวม 2 วัน ถ้าเกินส่งไป HR
-  isEscalated    Boolean  @default(false)  // ถูก escalate ไป HR แล้ว
-  
-  // Final approval info
-  finalApprovedBy   Int?
-  finalApprovedAt   DateTime?
-  finalRejectedBy   Int?
-  finalRejectedAt   DateTime?
-  rejectReason      String?  @db.Text
-  
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  id                 Int               @id @default(autoincrement())
+  leaveCode          String?           @unique
+  userId             Int
+  leaveType          String
+  startDate          DateTime
+  endDate            DateTime
+  totalDays          Float
+  reason             String            @db.Text
+  status             String            @default("pending")
+  rejectReason       String?           @db.Text
+  cancelReason       String?           @db.Text
+  cancelledAt        DateTime?
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+  contactAddress     String?           @db.Text
+  contactPhone       String?
+  endTime            String?
+  startTime          String?
+  currentLevel       Int               @default(1)
+  escalationDeadline DateTime?
+  finalApprovedAt    DateTime?
+  finalApprovedBy    Int?
+  finalRejectedAt    DateTime?
+  finalRejectedBy    Int?
+  isEscalated        Boolean           @default(false)
+  approvals          LeaveApproval[]
+  attachments        LeaveAttachment[]
+  user               User              @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  // Relations
-  attachments    LeaveAttachment[]
-  approvals      LeaveApproval[]
-
+  @@index([userId], map: "leave_requests_userId_fkey")
   @@map("leave_requests")
 }
 
-// Leave Attachment model - เก็บไฟล์แนบการลา
 model LeaveAttachment {
   id             Int          @id @default(autoincrement())
   leaveRequestId Int
-  leaveRequest   LeaveRequest @relation(fields: [leaveRequestId], references: [id], onDelete: Cascade)
-  fileName       String       // ชื่อไฟล์ต้นฉบับ
-  filePath       String       // path ที่เก็บไฟล์
-  fileSize       Int          // ขนาดไฟล์ (bytes)
-  mimeType       String       // ประเภทไฟล์
+  fileName       String
+  filePath       String
+  fileSize       Int
+  mimeType       String
   createdAt      DateTime     @default(now())
+  leaveRequest   LeaveRequest @relation(fields: [leaveRequestId], references: [id], onDelete: Cascade)
 
+  @@index([leaveRequestId], map: "leave_attachments_leaveRequestId_fkey")
   @@map("leave_attachments")
 }
 
-// Leave Balance model
 model LeaveBalance {
-  id           Int      @id @default(autoincrement())
-  employeeId   String
-  leaveType    String
-  year         Int
-  totalDays    Float
-  usedDays     Float    @default(0)
+  id            Int      @id @default(autoincrement())
+  employeeId    String
+  leaveType     String
+  year          Int
+  totalDays     Float
+  usedDays      Float    @default(0)
   remainingDays Float
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
   @@unique([employeeId, leaveType, year])
   @@map("leave_balances")
 }
 
-// Company model
 model Company {
   id        Int      @id @default(autoincrement())
-  code      String   @unique // psc, pslp
+  code      String   @unique
   name      String
   address   String?  @db.Text
   phone     String?
@@ -137,159 +127,140 @@ model Company {
   @@map("companies")
 }
 
-// Department model (ฝ่าย)
 model Department {
-  id        Int      @id @default(autoincrement())
-  code      String   @unique
+  id        Int       @id @default(autoincrement())
+  code      String    @unique
   name      String
   company   String
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // Relations
+  isActive  Boolean   @default(true)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
   sections  Section[]
 
   @@map("departments")
 }
 
-// Section model (แผนก)
 model Section {
   id           Int        @id @default(autoincrement())
   code         String     @unique
   name         String
   departmentId Int
-  department   Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
   isActive     Boolean    @default(true)
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
+  department   Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
 
+  @@index([departmentId], map: "sections_departmentId_fkey")
   @@map("sections")
 }
 
-// Leave Type model
 model LeaveType {
-  id           Int      @id @default(autoincrement())
-  code         String   @unique
-  name         String
-  description  String?  @db.Text
+  id             Int      @id @default(autoincrement())
+  code           String   @unique
+  name           String
+  description    String?  @db.Text
   maxDaysPerYear Float?
-  isPaid       Boolean  @default(true)
-  isActive     Boolean  @default(true)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  isPaid         Boolean  @default(true)
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   @@map("leave_types")
 }
 
-// ตั้งค่า Flow อนุมัติรายบุคคล
 model UserApprovalFlow {
-  id            Int      @id @default(autoincrement())
-  userId        Int      // พนักงานเจ้าของ flow
-  user          User     @relation("UserApprovalFlow", fields: [userId], references: [id], onDelete: Cascade)
-  
-  level         Int      // ลำดับ 1, 2, 3...
-  approverId    Int      // ผู้อนุมัติ
-  approver      User     @relation("ApproverFlow", fields: [approverId], references: [id], onDelete: Cascade)
-  
-  isRequired    Boolean  @default(true)
-  isActive      Boolean  @default(true)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id         Int      @id @default(autoincrement())
+  userId     Int
+  level      Int
+  approverId Int
+  isRequired Boolean  @default(true)
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  approver   User     @relation("ApproverFlow", fields: [approverId], references: [id], onDelete: Cascade)
+  user       User     @relation("UserApprovalFlow", fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, level])
+  @@index([approverId], map: "user_approval_flows_approverId_fkey")
   @@map("user_approval_flows")
 }
 
-// บันทึกการอนุมัติแต่ละขั้น
 model LeaveApproval {
-  id              Int           @id @default(autoincrement())
-  leaveRequestId  Int
-  leaveRequest    LeaveRequest  @relation(fields: [leaveRequestId], references: [id], onDelete: Cascade)
-  
-  level           Int           // ลำดับอนุมัติ (1, 2, 3... หรือ 99 สำหรับ escalated to HR)
-  approverId      Int           // ผู้อนุมัติที่กำหนด
-  approver        User          @relation(fields: [approverId], references: [id])
-  
-  status          String        @default("pending") // pending, approved, rejected, skipped
-  comment         String?       @db.Text
-  actionAt        DateTime?     // วันที่ดำเนินการ
-  
-  notifiedAt      DateTime?     // วันที่ส่ง notification
-  reminderCount   Int           @default(0)  // จำนวนครั้งที่เตือน
-  
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
+  id             Int          @id @default(autoincrement())
+  leaveRequestId Int
+  level          Int
+  approverId     Int
+  status         String       @default("pending")
+  comment        String?      @db.Text
+  actionAt       DateTime?
+  notifiedAt     DateTime?
+  reminderCount  Int          @default(0)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  approver       User         @relation(fields: [approverId], references: [id])
+  leaveRequest   LeaveRequest @relation(fields: [leaveRequestId], references: [id], onDelete: Cascade)
 
   @@unique([leaveRequestId, level])
+  @@index([approverId], map: "leave_approvals_approverId_fkey")
   @@map("leave_approvals")
 }
 
-// เก็บ Device Token สำหรับ OneSignal
 model UserDevice {
-  id            Int      @id @default(autoincrement())
-  userId        Int
-  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  playerId      String   @unique  // OneSignal Player ID
-  deviceType    String   // ios, android, web
-  isActive      Boolean  @default(true)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id         Int      @id @default(autoincrement())
+  userId     Int
+  playerId   String   @unique
+  deviceType String
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@index([userId], map: "user_devices_userId_fkey")
   @@map("user_devices")
 }
 
-// ประวัติการแจ้งเตือน
 model NotificationLog {
-  id              Int       @id @default(autoincrement())
-  userId          Int
-  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  type            String    // leave_request, approval_pending, approved, rejected, escalated, reminder
-  title           String
-  message         String    @db.Text
-  data            Json?     // ข้อมูลเพิ่มเติม เช่น leaveRequestId
-  
-  oneSignalId     String?   // OneSignal Notification ID
-  status          String    @default("sent") // sent, delivered, failed
-  
-  createdAt       DateTime  @default(now())
+  id          Int      @id @default(autoincrement())
+  userId      Int
+  type        String
+  title       String
+  message     String   @db.Text
+  data        Json?
+  oneSignalId String?
+  status      String   @default("sent")
+  createdAt   DateTime @default(now())
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@index([userId], map: "notification_logs_userId_fkey")
   @@map("notification_logs")
 }
 
-// Workflow อนุมัติระดับองค์กร/แผนก
 model ApprovalWorkflow {
-  id           Int      @id @default(autoincrement())
-  name         String
-  description  String?
-  
-  company      String?  // Match User.company
-  department   String?  // Match User.department
-  section      String?  // Match User.section
-  
-  steps        ApprovalWorkflowStep[]
-  
-  isActive     Boolean  @default(true)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id          Int                    @id @default(autoincrement())
+  name        String
+  description String?
+  company     String?
+  department  String?
+  section     String?
+  isActive    Boolean                @default(true)
+  createdAt   DateTime               @default(now())
+  updatedAt   DateTime               @updatedAt
+  steps       ApprovalWorkflowStep[]
 
   @@map("approval_workflows")
 }
 
 model ApprovalWorkflowStep {
-  id                 Int              @id @default(autoincrement())
-  workflowId         Int
-  workflow           ApprovalWorkflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
-  
-  level              Int
-  approverRole       UserRole?        // If set, find user with this role in same dept/company
-  approverId         Int?             // If set, specific user
-  
-  createdAt          DateTime         @default(now())
-  updatedAt          DateTime         @updatedAt
+  id           Int              @id @default(autoincrement())
+  workflowId   Int
+  level        Int
+  approverRole UserRole?
+  approverId   Int?
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+  workflow     ApprovalWorkflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
 
+  @@index([workflowId], map: "approval_workflow_steps_workflowId_fkey")
   @@map("approval_workflow_steps")
 }
 

@@ -72,7 +72,9 @@ const Sidebar = ({ open, onClose }: SidebarProps) => {
         { text: 'ตั้งค่า', icon: <Settings size={20} />, path: '/settings' },
     ];
 
-    if (user?.role === 'admin') {
+    // Admin roles that can access admin settings
+    const adminRoles = ['admin', 'hr', 'hr_manager'];
+    if (adminRoles.includes(user?.role || '')) {
         menuItems.push({ text: 'ตั้งค่าผู้อนุมัติ', icon: <Settings size={20} />, path: '/admin/approval-workflows' });
     }
 
@@ -124,7 +126,9 @@ const Sidebar = ({ open, onClose }: SidebarProps) => {
                                         {user?.firstName} {user?.lastName}
                                     </Typography>
                                     <Typography variant="caption" color="text.secondary">
-                                        {user?.role === 'admin' ? 'ผู้ดูแลระบบ' : user?.role === 'hr' ? 'HR' : 'พนักงาน'}
+                                        {user?.role === 'admin' ? 'ผู้ดูแลระบบ' : 
+                                         user?.role === 'hr' ? 'HR' : 
+                                         user?.role === 'hr_manager' ? 'HR Manager' : 'พนักงาน'}
                                     </Typography>
                                 </>
                             )}

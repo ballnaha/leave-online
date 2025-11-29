@@ -16,8 +16,8 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const status = searchParams.get('status') || 'pending'; // pending, all
 
-    // Admin: ดึงจาก leave_requests โดยตรง (เห็นทุกใบลา)
-    if (userRole === 'admin') {
+    // Admin และ HR Manager: ดึงจาก leave_requests โดยตรง (เห็นทุกใบลา)
+    if (userRole === 'admin' || userRole === 'hr_manager') {
       const whereClause: Record<string, unknown> = {};
       
       if (status === 'pending') {
@@ -82,6 +82,8 @@ export async function GET(request: NextRequest) {
           escalationDeadline: leave.escalationDeadline,
           isEscalated: leave.isEscalated,
           createdAt: leave.createdAt,
+          cancelReason: leave.cancelReason,
+          cancelledAt: leave.cancelledAt,
           user: leave.user,
           attachments: leave.attachments,
           approvalHistory: leave.approvals,
@@ -93,6 +95,7 @@ export async function GET(request: NextRequest) {
         pending: leaveRequests.filter((r) => ['pending', 'in_progress'].includes(r.status)).length,
         approved: leaveRequests.filter((r) => r.status === 'approved').length,
         rejected: leaveRequests.filter((r) => r.status === 'rejected').length,
+        cancelled: leaveRequests.filter((r) => r.status === 'cancelled').length,
         total: leaveRequests.length,
       };
 
@@ -185,6 +188,8 @@ export async function GET(request: NextRequest) {
         escalationDeadline: approval.leaveRequest.escalationDeadline,
         isEscalated: approval.leaveRequest.isEscalated,
         createdAt: approval.leaveRequest.createdAt,
+        cancelReason: approval.leaveRequest.cancelReason,
+        cancelledAt: approval.leaveRequest.cancelledAt,
         user: approval.leaveRequest.user,
         attachments: approval.leaveRequest.attachments,
         approvalHistory: approval.leaveRequest.approvals,
@@ -196,6 +201,7 @@ export async function GET(request: NextRequest) {
       pending: result.filter((r) => r.status === 'pending').length,
       approved: result.filter((r) => r.status === 'approved').length,
       rejected: result.filter((r) => r.status === 'rejected').length,
+      cancelled: result.filter((r) => r.status === 'cancelled').length,
       total: result.length,
     };
 

@@ -21,7 +21,6 @@ import {
   InputAdornment,
   Card,
   CardContent,
-  Grid,
   Avatar,
   alpha,
   useTheme,
@@ -283,35 +282,29 @@ export default function CompaniesPage() {
       </Box>
 
       {/* Stats Cards */}
-      <Grid container spacing={3} sx={{ mb: 4 }}>
-        <Grid size={{ xs: 12, sm: 6, md: 4 }}>
-          <StatCard
-            title="บริษัททั้งหมด"
-            value={companies.length}
-            icon={<Building2 size={26} />}
-            color="primary"
-            subtitle="ในระบบ"
-          />
-        </Grid>
-        <Grid size={{ xs: 12, sm: 6, md: 4 }}>
-          <StatCard
-            title="เปิดใช้งาน"
-            value={activeCompanies}
-            icon={<CheckCircle size={26} />}
-            color="success"
-            subtitle="พร้อมใช้งาน"
-          />
-        </Grid>
-        <Grid size={{ xs: 12, sm: 6, md: 4 }}>
-          <StatCard
-            title="ปิดใช้งาน"
-            value={inactiveCompanies}
-            icon={<XCircle size={26} />}
-            color="secondary"
-            subtitle="ไม่ได้ใช้งาน"
-          />
-        </Grid>
-      </Grid>
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: 'repeat(3, 1fr)' }, gap: 3, mb: 4 }}>
+        <StatCard
+          title="บริษัททั้งหมด"
+          value={companies.length}
+          icon={<Building2 size={26} />}
+          color="primary"
+          subtitle="ในระบบ"
+        />
+        <StatCard
+          title="เปิดใช้งาน"
+          value={activeCompanies}
+          icon={<CheckCircle size={26} />}
+          color="success"
+          subtitle="พร้อมใช้งาน"
+        />
+        <StatCard
+          title="ปิดใช้งาน"
+          value={inactiveCompanies}
+          icon={<XCircle size={26} />}
+          color="secondary"
+          subtitle="ไม่ได้ใช้งาน"
+        />
+      </Box>
 
       {/* Search & Actions */}
       <Paper 

@@ -5,6 +5,7 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const departmentId = searchParams.get('departmentId');
+    const departmentCode = searchParams.get('departmentCode');
 
     const whereClause: any = { isActive: true };
     if (departmentId) {
@@ -19,10 +20,26 @@ export async function GET(request: NextRequest) {
         code: true,
         name: true,
         departmentId: true,
+        department: {
+          select: {
+            code: true,
+            company: true,
+          },
+        },
       },
     });
 
-    return NextResponse.json(sections);
+    // Flatten the department info
+    const sectionsWithDeptCode = sections.map(section => ({
+      id: section.id,
+      code: section.code,
+      name: section.name,
+      departmentId: section.departmentId,
+      departmentCode: section.department.code,
+      companyCode: section.department.company,
+    }));
+
+    return NextResponse.json(sectionsWithDeptCode);
   } catch (error) {
     console.error('Error fetching sections:', error);
     return NextResponse.json(

@@ -276,21 +276,71 @@ export async function createApprovalSteps(
               if (anyHr) approverId = anyHr.id;
             }
           } else {
-            let whereClause: any = { role, isActive: true };
-
-            // Contextual lookup based on role
-            // Note: We do not filter by company here to allow managers to approve across companies
-            // provided they share the same section/department/shift code.
-            if (role === 'section_head' && user.section) {
-               whereClause.section = user.section;
-            } else if (role === 'dept_manager' && user.department) {
-               whereClause.department = user.department;
-            } else if (role === 'shift_supervisor' && user.shift) {
-               whereClause.shift = user.shift;
-            }
+            // ค้นหาผู้อนุมัติตาม role โดยเช็คทั้ง:
+            // 1. ฝ่าย/แผนกตัวเอง
+            // 2. ฝ่าย/แผนกที่ดูแลเพิ่มเติม (managedDepartments/managedSections)
             
-            // Find the user with this role
-            const approver = await prisma.user.findFirst({ where: whereClause });
+            let approver = null;
+
+            // หา approver ที่อยู่ฝ่าย/แผนกเดียวกัน (primary lookup)
+            if (role === 'section_head' && user.section) {
+              approver = await prisma.user.findFirst({
+                where: { role, isActive: true, section: user.section }
+              });
+            } else if (role === 'dept_manager' && user.department) {
+              approver = await prisma.user.findFirst({
+                where: { role, isActive: true, department: user.department }
+              });
+            } else if (role === 'shift_supervisor' && user.shift) {
+              approver = await prisma.user.findFirst({
+                where: { role, isActive: true, shift: user.shift }
+              });
+            }
+
+            // ถ้าไม่เจอ ให้หาจาก managedDepartments / managedSections (cross-department)
+            if (!approver) {
+              // หา approver ที่มี managedDepartments หรือ managedSections ครอบคลุมพนักงานคนนี้
+              const potentialApprovers = await prisma.user.findMany({
+                where: { 
+                  role, 
+                  isActive: true,
+                  OR: [
+                    { managedDepartments: { not: null } },
+                    { managedSections: { not: null } },
+                  ]
+                }
+              });
+
+              for (const potential of potentialApprovers) {
+                let manages = false;
+
+                // เช็ค managedDepartments
+                if (potential.managedDepartments && user.department) {
+                  try {
+                    const depts: string[] = JSON.parse(potential.managedDepartments);
+                    if (depts.includes(user.department)) {
+                      manages = true;
+                    }
+                  } catch (e) {}
+                }
+
+                // เช็ค managedSections
+                if (!manages && potential.managedSections && user.section) {
+                  try {
+                    const sects: string[] = JSON.parse(potential.managedSections);
+                    if (sects.includes(user.section)) {
+                      manages = true;
+                    }
+                  } catch (e) {}
+                }
+
+                if (manages) {
+                  approver = potential;
+                  break;
+                }
+              }
+            }
+
             if (approver) {
               approverId = approver.id;
             }

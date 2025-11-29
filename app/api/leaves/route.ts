@@ -11,6 +11,48 @@ interface AttachmentPayload {
     mimeType: string;
 }
 
+// Map leave type to short code
+const leaveTypeCodeMap: Record<string, string> = {
+    sick: 'SK',
+    personal: 'PS',
+    vacation: 'VC',
+    maternity: 'MT',
+    other: 'OT',
+};
+
+// Generate leave code: SK2511001 (type + year + month + running)
+async function generateLeaveCode(leaveType: string, date: Date): Promise<string> {
+    const typeCode = leaveTypeCodeMap[leaveType] || 'OT';
+    const year = String(date.getFullYear()).slice(-2); // 25
+    const month = String(date.getMonth() + 1).padStart(2, '0'); // 11
+    const prefix = `${typeCode}${year}${month}`;
+
+    // หา running number ล่าสุดของเดือนนั้น
+    const lastLeave = await prisma.leaveRequest.findFirst({
+        where: {
+            leaveCode: {
+                startsWith: prefix,
+            },
+        },
+        orderBy: {
+            leaveCode: 'desc',
+        },
+        select: {
+            leaveCode: true,
+        },
+    });
+
+    let runningNumber = 1;
+    if (lastLeave?.leaveCode) {
+        const lastNumber = parseInt(lastLeave.leaveCode.slice(-3), 10);
+        if (!isNaN(lastNumber)) {
+            runningNumber = lastNumber + 1;
+        }
+    }
+
+    return `${prefix}${String(runningNumber).padStart(3, '0')}`;
+}
+
 export async function POST(request: Request) {
     try {
         const session = await getServerSession(authOptions);
@@ -65,9 +107,13 @@ export async function POST(request: Request) {
         const escalationDeadline = new Date();
         escalationDeadline.setHours(escalationDeadline.getHours() + 48);
 
+        // สร้างรหัสใบลา
+        const leaveCode = await generateLeaveCode(leaveType, start);
+
         const leaveRequest = await prisma.leaveRequest.create({
             data: {
                 userId: Number(session.user.id),
+                leaveCode,
                 leaveType,
                 startDate: start,
                 startTime,

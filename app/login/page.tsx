@@ -10,15 +10,17 @@ import {
     Checkbox,
     FormControlLabel,
     CircularProgress,
+    Alert,
 } from '@mui/material';
 import { Lock, Eye, EyeOff, ArrowRight, User } from 'lucide-react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { signIn, useSession } from 'next-auth/react';
 import { useToastr } from '@/app/components/Toastr';
 
 export default function LoginPage() {
     const router = useRouter();
+    const searchParams = useSearchParams();
     const toastr = useToastr();
     const { data: session, status } = useSession();
     
@@ -27,6 +29,15 @@ export default function LoginPage() {
     const [password, setPassword] = useState('');
     const [rememberMe, setRememberMe] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
+    const [accountDisabledMessage, setAccountDisabledMessage] = useState('');
+
+    // Check for reason parameter (account disabled)
+    useEffect(() => {
+        const reason = searchParams.get('reason');
+        if (reason === 'account_disabled') {
+            setAccountDisabledMessage('บัญชีของคุณถูกปิดใช้งานหรือถูกลบออกจากระบบ กรุณาติดต่อผู้ดูแลระบบ');
+        }
+    }, [searchParams]);
 
     // Redirect to home if already logged in
     useEffect(() => {
@@ -185,6 +196,17 @@ export default function LoginPage() {
                     mt:5
                 }}
             >
+                {/* Account Disabled Alert */}
+                {accountDisabledMessage && (
+                    <Alert 
+                        severity="error" 
+                        sx={{ mb: 2, borderRadius: 2 }}
+                        onClose={() => setAccountDisabledMessage('')}
+                    >
+                        {accountDisabledMessage}
+                    </Alert>
+                )}
+
                 {/* Username Field */}
                 <TextField
                     fullWidth

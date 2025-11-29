@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
         password: hashedPassword,
         // Ensure role matches Prisma enum; default to employee
         role: UserRole.employee,
-        isActive: true,
+        isActive: false,
       },
     });
 

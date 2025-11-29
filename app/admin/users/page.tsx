@@ -21,7 +21,6 @@ import {
   InputAdornment,
   Card,
   CardContent,
-  Grid,
   Avatar,
   alpha,
   useTheme,
@@ -31,52 +30,51 @@ import {
   InputLabel,
   Select,
   MenuItem,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  List,
-  ListItem,
-  ListItemText,
-  ListItemIcon,
 } from '@mui/material';
 import {
   Plus,
   Pencil,
   Trash2,
-  Layers,
+  User,
   Search,
   RefreshCw,
   CheckCircle,
   XCircle,
   Building2,
-  FolderTree,
+  Layers,
   Filter,
-  Hash,
+  Shield,
+  Users,
+  Eye,
 } from 'lucide-react';
-import DepartmentDialog from './DepartmentDialog';
+import UserDialog from './UserDialog';
+import UserViewDialog from './UserViewDialog';
 import ConfirmDialog from '../components/ConfirmDialog';
 import { useToastr } from '@/app/components/Toastr';
+import dayjs from 'dayjs';
+import 'dayjs/locale/th';
 
-interface Section {
+interface UserData {
   id: number;
-  code: string;
-  name: string;
-  isActive: boolean;
-}
-
-interface Department {
-  id: number;
-  code: string;
-  name: string;
+  employeeId: string;
+  firstName: string;
+  lastName: string;
+  email: string | null;
+  gender: string;
   company: string;
+  department: string;
+  departmentName: string;
+  section: string | null;
+  sectionName: string | null;
+  position: string | null;
+  shift: string | null;
+  employeeType: string;
+  role: string;
+  startDate: string;
   isActive: boolean;
-  createdAt: string;
-  updatedAt: string;
-  sections: Section[];
-  _count?: {
-    sections: number;
-  };
+  avatar: string | null;
+  managedDepartments?: string | null;
+  managedSections?: string | null;
 }
 
 // Stat Card Component
@@ -150,15 +148,17 @@ function TableSkeleton() {
     <TableBody>
       {[1, 2, 3, 4, 5].map((row) => (
         <TableRow key={row}>
-          <TableCell><Skeleton variant="rounded" width={60} height={24} /></TableCell>
+          <TableCell><Skeleton variant="circular" width={40} height={40} /></TableCell>
+          <TableCell><Skeleton variant="text" width={100} /></TableCell>
           <TableCell><Skeleton variant="text" width={150} /></TableCell>
-          <TableCell><Skeleton variant="rounded" width={80} height={24} /></TableCell>
-          <TableCell><Skeleton variant="text" width={60} /></TableCell>
+          <TableCell><Skeleton variant="text" width={120} /></TableCell>
+          <TableCell><Skeleton variant="text" width={100} /></TableCell>
           <TableCell align="center"><Skeleton variant="rounded" width={80} height={24} /></TableCell>
           <TableCell align="right">
             <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
-              <Skeleton variant="circular" width={32} height={32} />
-              <Skeleton variant="circular" width={32} height={32} />
+              <Skeleton variant="circular" width={36} height={36} />
+              <Skeleton variant="circular" width={36} height={36} />
+              <Skeleton variant="circular" width={36} height={36} />
             </Box>
           </TableCell>
         </TableRow>
@@ -167,42 +167,71 @@ function TableSkeleton() {
   );
 }
 
-export default function DepartmentsPage() {
+export default function UsersPage() {
   const theme = useTheme();
   const toastr = useToastr();
-  const [departments, setDepartments] = useState<Department[]>([]);
+  const [users, setUsers] = useState<UserData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [selectedDepartment, setSelectedDepartment] = useState<Department | undefined>(undefined);
+  const [selectedUser, setSelectedUser] = useState<UserData | undefined>(undefined);
   const [searchQuery, setSearchQuery] = useState('');
+  
+  // Filters
   const [companyFilter, setCompanyFilter] = useState<string>('all');
+  const [departmentFilter, setDepartmentFilter] = useState<string>('all');
+  const [roleFilter, setRoleFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   
-  // Section Dialog State
-  const [sectionDialogOpen, setSectionDialogOpen] = useState(false);
-  const [selectedDepartmentForSections, setSelectedDepartmentForSections] = useState<Department | null>(null);
-
   // Pagination State
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   
   // Confirm Dialog State
   const [confirmOpen, setConfirmOpen] = useState(false);
-  const [deleteTarget, setDeleteTarget] = useState<Department | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<UserData | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
 
-  const fetchDepartments = async () => {
+  // View Dialog State
+  const [viewDialogOpen, setViewDialogOpen] = useState(false);
+  const [viewUser, setViewUser] = useState<UserData | null>(null);
+
+  // Departments and Sections for display
+  const [departments, setDepartments] = useState<{ code: string; name: string; company: string }[]>([]);
+  const [sections, setSections] = useState<{ code: string; name: string; departmentCode: string; departmentName: string }[]>([]);
+
+  const fetchDepartmentsAndSections = async () => {
+    try {
+      const [deptRes, sectRes] = await Promise.all([
+        fetch('/api/departments'),
+        fetch('/api/sections'),
+      ]);
+      
+      if (deptRes.ok) {
+        const deptData = await deptRes.json();
+        setDepartments(deptData);
+      }
+      
+      if (sectRes.ok) {
+        const sectData = await sectRes.json();
+        setSections(sectData);
+      }
+    } catch (err) {
+      console.error('Error fetching departments/sections:', err);
+    }
+  };
+
+  const fetchUsers = async () => {
     try {
       setLoading(true);
       setError('');
-      const res = await fetch('/api/admin/departments');
+      const res = await fetch('/api/admin/users');
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({}));
-        throw new Error(errorData.error || 'Failed to fetch departments');
+        throw new Error(errorData.error || 'Failed to fetch users');
       }
       const data = await res.json();
-      setDepartments(data);
+      setUsers(data);
     } catch (err: any) {
       setError(err.message);
       console.error(err);
@@ -212,21 +241,27 @@ export default function DepartmentsPage() {
   };
 
   useEffect(() => {
-    fetchDepartments();
+    fetchUsers();
+    fetchDepartmentsAndSections();
   }, []);
 
   const handleCreate = () => {
-    setSelectedDepartment(undefined);
+    setSelectedUser(undefined);
     setDialogOpen(true);
   };
 
-  const handleEdit = (department: Department) => {
-    setSelectedDepartment(department);
+  const handleEdit = (user: UserData) => {
+    setSelectedUser(user);
     setDialogOpen(true);
   };
 
-  const handleDelete = (department: Department) => {
-    setDeleteTarget(department);
+  const handleView = (user: UserData) => {
+    setViewUser(user);
+    setViewDialogOpen(true);
+  };
+
+  const handleDelete = (user: UserData) => {
+    setDeleteTarget(user);
     setConfirmOpen(true);
   };
 
@@ -235,17 +270,17 @@ export default function DepartmentsPage() {
     
     setDeleteLoading(true);
     try {
-      const res = await fetch(`/api/admin/departments/${deleteTarget.id}`, {
+      const res = await fetch(`/api/admin/users/${deleteTarget.id}`, {
         method: 'DELETE',
       });
       if (!res.ok) {
         const data = await res.json();
         throw new Error(data.error || 'Failed to delete');
       }
-      toastr.success('ลบฝ่ายสำเร็จ');
-      fetchDepartments();
+      toastr.success('ลบผู้ใช้งานสำเร็จ');
+      fetchUsers();
     } catch (err: any) {
-      toastr.error(err.message || 'เกิดข้อผิดพลาดในการลบฝ่าย');
+      toastr.error(err.message || 'เกิดข้อผิดพลาดในการลบผู้ใช้งาน');
     } finally {
       setDeleteLoading(false);
       setConfirmOpen(false);
@@ -255,36 +290,39 @@ export default function DepartmentsPage() {
 
   const handleSave = () => {
     setDialogOpen(false);
-    toastr.success(selectedDepartment ? 'แก้ไขฝ่ายสำเร็จ' : 'เพิ่มฝ่ายสำเร็จ');
-    fetchDepartments();
+    toastr.success(selectedUser ? 'แก้ไขข้อมูลผู้ใช้งานสำเร็จ' : 'เพิ่มผู้ใช้งานสำเร็จ');
+    fetchUsers();
   };
 
-  const handleViewSections = (department: Department) => {
-    setSelectedDepartmentForSections(department);
-    setSectionDialogOpen(true);
-  };
+  // Get unique values for filters
+  const uniqueCompanies = [...new Set(users.map((u) => u.company))].filter(Boolean);
+  const uniqueDepartments = [...new Set(users.map((u) => u.department))].filter(Boolean);
+  const uniqueRoles = [...new Set(users.map((u) => u.role))].filter(Boolean);
+  
+  // Create department code to name map
+  const departmentNameMap = new Map(users.map((u) => [u.department, u.departmentName]));
 
-  // Get unique companies for filter dropdown
-  const uniqueCompanies = [...new Set(departments.map((d) => d.company))];
-
-  // Filter departments based on search and filters
-  const filteredDepartments = departments.filter((department) => {
+  // Filter users
+  const filteredUsers = users.filter((user) => {
     const matchesSearch =
-      department.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      department.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      department.company.toLowerCase().includes(searchQuery.toLowerCase());
+      user.employeeId.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      user.firstName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      user.lastName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (user.email?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false);
     
-    const matchesCompany = companyFilter === 'all' || department.company === companyFilter;
+    const matchesCompany = companyFilter === 'all' || user.company === companyFilter;
+    const matchesDepartment = departmentFilter === 'all' || user.department === departmentFilter;
+    const matchesRole = roleFilter === 'all' || user.role === roleFilter;
     const matchesStatus =
       statusFilter === 'all' ||
-      (statusFilter === 'active' && department.isActive) ||
-      (statusFilter === 'inactive' && !department.isActive);
+      (statusFilter === 'active' && user.isActive) ||
+      (statusFilter === 'inactive' && !user.isActive);
     
-    return matchesSearch && matchesCompany && matchesStatus;
+    return matchesSearch && matchesCompany && matchesDepartment && matchesRole && matchesStatus;
   });
 
-  // Paginated departments
-  const paginatedDepartments = filteredDepartments.slice(
+  // Paginated users
+  const paginatedUsers = filteredUsers.slice(
     page * rowsPerPage,
     page * rowsPerPage + rowsPerPage
   );
@@ -303,12 +341,13 @@ export default function DepartmentsPage() {
   // Reset page when filters change
   useEffect(() => {
     setPage(0);
-  }, [searchQuery, companyFilter, statusFilter]);
+  }, [searchQuery, companyFilter, departmentFilter, roleFilter, statusFilter]);
 
   // Stats
-  const activeDepartments = departments.filter((d) => d.isActive).length;
-  const inactiveDepartments = departments.filter((d) => !d.isActive).length;
-  const totalSections = departments.reduce((acc, d) => acc + (d._count?.sections || 0), 0);
+  const activeUsers = users.filter((u) => u.isActive).length;
+  const inactiveUsers = users.filter((u) => !u.isActive).length;
+  const totalUsers = users.length;
+  const newUsersThisMonth = users.filter((u) => dayjs(u.startDate).isSame(dayjs(), 'month')).length;
 
   return (
     <Box>
@@ -324,14 +363,14 @@ export default function DepartmentsPage() {
                 color: 'primary.main',
               }}
             >
-              <Layers size={24} />
+              <Users size={24} />
             </Avatar>
             <Box>
               <Typography variant="h4" component="h1" fontWeight={700}>
-                จัดการฝ่าย
+                จัดการผู้ใช้งาน
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                เพิ่ม แก้ไข และจัดการข้อมูลฝ่ายในระบบ
+                เพิ่ม แก้ไข และจัดการข้อมูลพนักงานในระบบ
               </Typography>
             </Box>
           </Box>
@@ -350,43 +389,43 @@ export default function DepartmentsPage() {
             },
           }}
         >
-          เพิ่มฝ่าย
+          เพิ่มผู้ใช้งาน
         </Button>
       </Box>
 
       {/* Stats Cards */}
       <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: 'repeat(4, 1fr)' }, gap: 3, mb: 4 }}>
         <StatCard
-          title="ฝ่ายทั้งหมด"
-          value={departments.length}
-          icon={<Layers size={26} />}
+          title="พนักงานทั้งหมด"
+          value={totalUsers}
+          icon={<Users size={26} />}
           color="primary"
           subtitle="ในระบบ"
         />
         <StatCard
-          title="เปิดใช้งาน"
-          value={activeDepartments}
-          icon={<CheckCircle size={26} />}
+          title="พนักงานใหม่"
+          value={newUsersThisMonth}
+          icon={<User size={26} />}
           color="success"
-          subtitle="พร้อมใช้งาน"
+          subtitle="เดือนนี้"
+        />
+        <StatCard
+          title="เปิดใช้งาน"
+          value={activeUsers}
+          icon={<CheckCircle size={26} />}
+          color="warning"
+          subtitle="Active Users"
         />
         <StatCard
           title="ปิดใช้งาน"
-          value={inactiveDepartments}
+          value={inactiveUsers}
           icon={<XCircle size={26} />}
           color="secondary"
-          subtitle="ไม่ได้ใช้งาน"
-        />
-        <StatCard
-          title="แผนก"
-          value={totalSections}
-          icon={<FolderTree size={26} />}
-          color="warning"
-          subtitle="ทั้งหมด"
+          subtitle="Inactive Users"
         />
       </Box>
 
-      {/* Search & Actions */}
+      {/* Search & Filters */}
       <Paper 
         sx={{ 
           p: 2.5, 
@@ -399,13 +438,13 @@ export default function DepartmentsPage() {
       >
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
           <TextField
-            placeholder="ค้นหาแผนก..."
+            placeholder="ค้นหาชื่อ, รหัสพนักงาน..."
             size="small"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             sx={{ 
               flex: 1,
-              minWidth: 180,
+              minWidth: 200,
               '& .MuiOutlinedInput-root': {
                 borderRadius: 1,
                 bgcolor: 'background.default',
@@ -427,7 +466,7 @@ export default function DepartmentsPage() {
           />
 
           {/* Company Filter */}
-          <FormControl size="small" sx={{ minWidth: 150 }}>
+          <FormControl size="small" sx={{ minWidth: 140 }}>
             <InputLabel>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                 <Building2 size={16} />
@@ -438,18 +477,55 @@ export default function DepartmentsPage() {
               value={companyFilter}
               onChange={(e) => setCompanyFilter(e.target.value)}
               label="บริษัท"
-              sx={{
-                borderRadius: 1,
-                bgcolor: 'background.default',
-                '& .MuiOutlinedInput-notchedOutline': {
-                  borderColor: companyFilter !== 'all' ? 'primary.main' : 'divider',
-                },
-              }}
             >
               <MenuItem value="all">ทั้งหมด</MenuItem>
               {uniqueCompanies.map((company) => (
                 <MenuItem key={company} value={company}>
                   {company}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+
+          {/* Department Filter */}
+          <FormControl size="small" sx={{ minWidth: 140 }}>
+            <InputLabel>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                <Layers size={16} />
+                ฝ่าย
+              </Box>
+            </InputLabel>
+            <Select
+              value={departmentFilter}
+              onChange={(e) => setDepartmentFilter(e.target.value)}
+              label="ฝ่าย"
+            >
+              <MenuItem value="all">ทั้งหมด</MenuItem>
+              {uniqueDepartments.map((dept) => (
+                <MenuItem key={dept} value={dept}>
+                  {departmentNameMap.get(dept) || dept}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+
+          {/* Role Filter */}
+          <FormControl size="small" sx={{ minWidth: 140 }}>
+            <InputLabel>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                <Shield size={16} />
+                สิทธิ์
+              </Box>
+            </InputLabel>
+            <Select
+              value={roleFilter}
+              onChange={(e) => setRoleFilter(e.target.value)}
+              label="สิทธิ์"
+            >
+              <MenuItem value="all">ทั้งหมด</MenuItem>
+              {uniqueRoles.map((role) => (
+                <MenuItem key={role} value={role}>
+                  {role}
                 </MenuItem>
               ))}
             </Select>
@@ -467,32 +543,15 @@ export default function DepartmentsPage() {
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
               label="สถานะ"
-              sx={{
-                borderRadius: 1,
-                bgcolor: 'background.default',
-                '& .MuiOutlinedInput-notchedOutline': {
-                  borderColor: statusFilter !== 'all' ? 'primary.main' : 'divider',
-                },
-              }}
             >
               <MenuItem value="all">ทั้งหมด</MenuItem>
-              <MenuItem value="active">
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <CheckCircle size={16} color={theme.palette.success.main} />
-                  เปิดใช้งาน
-                </Box>
-              </MenuItem>
-              <MenuItem value="inactive">
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <XCircle size={16} color={theme.palette.text.secondary} />
-                  ปิดใช้งาน
-                </Box>
-              </MenuItem>
+              <MenuItem value="active">เปิดใช้งาน</MenuItem>
+              <MenuItem value="inactive">ปิดใช้งาน</MenuItem>
             </Select>
           </FormControl>
 
           <Chip 
-            label={`${filteredDepartments.length} รายการ`}
+            label={`${filteredUsers.length} รายการ`}
             size="small"
             sx={{ 
               bgcolor: alpha(theme.palette.primary.main, 0.1),
@@ -502,7 +561,7 @@ export default function DepartmentsPage() {
           />
           <Tooltip title="รีเฟรชข้อมูล">
             <IconButton 
-              onClick={fetchDepartments} 
+              onClick={fetchUsers} 
               disabled={loading}
               sx={{
                 bgcolor: 'background.default',
@@ -552,17 +611,17 @@ export default function DepartmentsPage() {
           <Table>
             <TableHead>
               <TableRow sx={{ bgcolor: alpha(theme.palette.primary.main, 0.04) }}>
-                <TableCell sx={{ fontWeight: 600, color: 'text.secondary', py: 2 }}>รหัส</TableCell>
-                <TableCell sx={{ fontWeight: 600, color: 'text.secondary', py: 2 }}>ชื่อฝ่าย</TableCell>
-                <TableCell sx={{ fontWeight: 600, color: 'text.secondary', py: 2 }}>บริษัท</TableCell>
-                <TableCell sx={{ fontWeight: 600, color: 'text.secondary', py: 2 }}>แผนก</TableCell>
+                <TableCell sx={{ fontWeight: 600, color: 'text.secondary', py: 2 }}>พนักงาน</TableCell>
+                <TableCell sx={{ fontWeight: 600, color: 'text.secondary', py: 2 }}>สังกัด</TableCell>
+                <TableCell sx={{ fontWeight: 600, color: 'text.secondary', py: 2 }}>ตำแหน่ง</TableCell>
+                <TableCell sx={{ fontWeight: 600, color: 'text.secondary', py: 2 }}>สิทธิ์</TableCell>
                 <TableCell sx={{ fontWeight: 600, color: 'text.secondary', py: 2 }} align="center">สถานะ</TableCell>
                 <TableCell sx={{ fontWeight: 600, color: 'text.secondary', py: 2 }} align="right">จัดการ</TableCell>
               </TableRow>
             </TableHead>
             {loading ? (
               <TableSkeleton />
-            ) : filteredDepartments.length === 0 ? (
+            ) : filteredUsers.length === 0 ? (
               <TableBody>
                 <TableRow>
                   <TableCell colSpan={6} align="center" sx={{ py: 10 }}>
@@ -575,26 +634,28 @@ export default function DepartmentsPage() {
                           color: 'text.secondary',
                         }}
                       >
-                        <Layers size={40} />
+                        <Users size={40} />
                       </Avatar>
                       <Box sx={{ textAlign: 'center' }}>
                         <Typography variant="h6" fontWeight={600} gutterBottom>
-                          {searchQuery ? 'ไม่พบฝ่ายที่ค้นหา' : 'ยังไม่มีข้อมูลฝ่าย'}
+                          {searchQuery || companyFilter !== 'all' || departmentFilter !== 'all' || roleFilter !== 'all' || statusFilter !== 'all'
+                            ? 'ไม่พบผู้ใช้งานที่ค้นหา' 
+                            : 'ยังไม่มีข้อมูลผู้ใช้งาน'}
                         </Typography>
                         <Typography variant="body2" color="text.secondary">
-                          {searchQuery 
-                            ? 'ลองค้นหาด้วยคำค้นอื่น' 
-                            : 'เริ่มต้นใช้งานโดยการเพิ่มฝ่ายใหม่'}
+                          {searchQuery || companyFilter !== 'all' || departmentFilter !== 'all' || roleFilter !== 'all' || statusFilter !== 'all'
+                            ? 'ลองค้นหาด้วยคำค้นอื่น หรือเปลี่ยนตัวกรอง' 
+                            : 'เริ่มต้นใช้งานโดยการเพิ่มผู้ใช้งานใหม่'}
                         </Typography>
                       </Box>
-                      {!searchQuery && (
+                      {!searchQuery && companyFilter === 'all' && departmentFilter === 'all' && roleFilter === 'all' && statusFilter === 'all' && (
                         <Button
                           variant="contained"
                           startIcon={<Plus size={18} />}
                           onClick={handleCreate}
                           sx={{ mt: 1, borderRadius: 1 }}
                         >
-                          เพิ่มฝ่ายแรก
+                          เพิ่มผู้ใช้งานแรก
                         </Button>
                       )}
                     </Box>
@@ -603,9 +664,9 @@ export default function DepartmentsPage() {
               </TableBody>
             ) : (
               <TableBody>
-                {paginatedDepartments.map((department) => (
+                {paginatedUsers.map((user) => (
                   <TableRow
-                    key={department.id}
+                    key={user.id}
                     sx={{
                       transition: 'background-color 0.2s ease',
                       '&:hover': { 
@@ -615,67 +676,131 @@ export default function DepartmentsPage() {
                     }}
                   >
                     <TableCell>
-                      <Chip
-                        label={department.code}
-                        size="small"
-                        sx={{ 
-                          fontWeight: 600,
-                          bgcolor: alpha(theme.palette.primary.main, 0.1),
-                          color: 'primary.main',
-                          borderRadius: 1,
-                        }}
-                      />
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                        <Avatar 
+                          src={user.avatar || undefined} 
+                          alt={`${user.firstName} ${user.lastName}`}
+                          sx={{ bgcolor: theme.palette.primary.main }}
+                        >
+                          {user.firstName.charAt(0)}
+                        </Avatar>
+                        <Box>
+                          <Typography variant="subtitle2" fontWeight={600}>
+                            {user.firstName} {user.lastName}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            {user.employeeId}
+                          </Typography>
+                        </Box>
+                      </Box>
                     </TableCell>
                     <TableCell>
-                      <Typography variant="subtitle2" fontWeight={600}>
-                        {department.name}
+                      <Box>
+                        <Typography variant="body2" fontWeight={500}>
+                          {user.departmentName}
+                        </Typography>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexWrap: 'wrap' }}>
+                          <Chip 
+                            label={user.company} 
+                            size="small" 
+                            variant="outlined"
+                            sx={{ height: 20, fontSize: '0.65rem' }} 
+                          />
+                          {user.sectionName && (
+                            <Typography variant="caption" color="text.secondary">
+                              • {user.sectionName}
+                            </Typography>
+                          )}
+                        </Box>
+                        {/* แสดงฝ่าย/แผนกที่ดูแลเพิ่มเติม */}
+                        {(user.managedDepartments || user.managedSections) && (
+                          <Box sx={{ mt: 0.5 }}>
+                            {user.managedDepartments && (() => {
+                              try {
+                                const depts: string[] = JSON.parse(user.managedDepartments);
+                                if (depts.length > 0) {
+                                  return (
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexWrap: 'wrap' }}>
+                                      <Typography variant="caption" color="warning.main" fontWeight={600}>
+                                        เพิ่มเติมฝ่าย:
+                                      </Typography>
+                                      {depts.map((code) => (
+                                        <Chip
+                                          key={code}
+                                          label={code}
+                                          size="small"
+                                          color="warning"
+                                          variant="outlined"
+                                          sx={{ height: 18, fontSize: '0.6rem' }}
+                                        />
+                                      ))}
+                                    </Box>
+                                  );
+                                }
+                              } catch (e) {}
+                              return null;
+                            })()}
+                            {user.managedSections && (() => {
+                              try {
+                                const sects: string[] = JSON.parse(user.managedSections);
+                                if (sects.length > 0) {
+                                  return (
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexWrap: 'wrap', mt: 0.25 }}>
+                                      <Typography variant="caption" color="info.main" fontWeight={600}>
+                                        แผนก:
+                                      </Typography>
+                                      {sects.map((code) => (
+                                        <Chip
+                                          key={code}
+                                          label={code}
+                                          size="small"
+                                          color="info"
+                                          variant="outlined"
+                                          sx={{ height: 18, fontSize: '0.6rem' }}
+                                        />
+                                      ))}
+                                    </Box>
+                                  );
+                                }
+                              } catch (e) {}
+                              return null;
+                            })()}
+                          </Box>
+                        )}
+                      </Box>
+                    </TableCell>
+                    <TableCell>
+                      <Typography variant="body2">
+                        {user.position || '-'}
                       </Typography>
                     </TableCell>
                     <TableCell>
                       <Chip
-                        icon={<Building2 size={14} />}
-                        label={department.company}
+                        label={user.role}
                         size="small"
-                        variant="outlined"
                         sx={{ 
-                          borderRadius: 1,
-                          '& .MuiChip-icon': {
-                            color: 'inherit',
-                          },
-                        }}
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Chip
-                        label={`${department.sections?.length || department._count?.sections || 0} แผนก`}
-                        size="small"
-                        onClick={() => handleViewSections(department)}
-                        sx={{ 
-                          bgcolor: alpha(theme.palette.warning.main, 0.1),
-                          color: theme.palette.warning.main,
+                          bgcolor: alpha(theme.palette.info.main, 0.1),
+                          color: theme.palette.info.main,
                           fontWeight: 500,
                           borderRadius: 1,
-                          cursor: 'pointer',
-                          '&:hover': {
-                            bgcolor: alpha(theme.palette.warning.main, 0.2),
-                          },
+                          textTransform: 'capitalize',
                         }}
                       />
                     </TableCell>
                     <TableCell align="center">
                       <Chip
-                        icon={department.isActive 
+                        icon={user.isActive 
                           ? <CheckCircle size={14} /> 
                           : <XCircle size={14} />
                         }
-                        label={department.isActive ? 'เปิดใช้งาน' : 'ปิดใช้งาน'}
+                        label={user.isActive ? 'Active' : 'Inactive'}
                         size="small"
                         sx={{
                           fontWeight: 500,
-                          bgcolor: department.isActive 
+                          bgcolor: user.isActive 
                             ? theme.palette.success.light 
                             : alpha(theme.palette.text.secondary, 0.1),
-                          color: department.isActive 
+                          color: user.isActive 
                             ? theme.palette.success.main 
                             : 'text.secondary',
                           '& .MuiChip-icon': {
@@ -686,9 +811,24 @@ export default function DepartmentsPage() {
                     </TableCell>
                     <TableCell align="right">
                       <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 0.5 }}>
+                        <Tooltip title="ดูรายละเอียด">
+                          <IconButton
+                            onClick={() => handleView(user)}
+                            size="medium"
+                            sx={{
+                              color: 'info.main',
+                              bgcolor: alpha(theme.palette.info.main, 0.1),
+                              '&:hover': {
+                                bgcolor: alpha(theme.palette.info.main, 0.2),
+                              },
+                            }}
+                          >
+                            <Eye size={18} />
+                          </IconButton>
+                        </Tooltip>
                         <Tooltip title="แก้ไข">
                           <IconButton
-                            onClick={() => handleEdit(department)}
+                            onClick={() => handleEdit(user)}
                             size="medium"
                             sx={{
                               color: 'primary.main',
@@ -703,7 +843,7 @@ export default function DepartmentsPage() {
                         </Tooltip>
                         <Tooltip title="ลบ">
                           <IconButton
-                            onClick={() => handleDelete(department)}
+                            onClick={() => handleDelete(user)}
                             size="medium"
                             sx={{
                               color: 'error.main',
@@ -727,7 +867,7 @@ export default function DepartmentsPage() {
       </Fade>
 
       {/* Pagination */}
-      {filteredDepartments.length > 0 && (
+      {filteredUsers.length > 0 && (
         <Paper
           sx={{
             mt: 2,
@@ -739,7 +879,7 @@ export default function DepartmentsPage() {
         >
           <TablePagination
             component="div"
-            count={filteredDepartments.length}
+            count={filteredUsers.length}
             page={page}
             onPageChange={handleChangePage}
             rowsPerPage={rowsPerPage}
@@ -761,12 +901,24 @@ export default function DepartmentsPage() {
         </Paper>
       )}
 
-      {/* Department Dialog */}
-      <DepartmentDialog
+      {/* User Dialog */}
+      <UserDialog
         open={dialogOpen}
         onClose={() => setDialogOpen(false)}
         onSave={handleSave}
-        department={selectedDepartment}
+        user={selectedUser}
+      />
+
+      {/* User View Dialog */}
+      <UserViewDialog
+        open={viewDialogOpen}
+        onClose={() => {
+          setViewDialogOpen(false);
+          setViewUser(null);
+        }}
+        user={viewUser}
+        departments={departments}
+        sections={sections}
       />
 
       {/* Confirm Delete Dialog */}
@@ -777,55 +929,12 @@ export default function DepartmentsPage() {
           setDeleteTarget(null);
         }}
         onConfirm={handleConfirmDelete}
-        title="ยืนยันการลบแผนก"
-        message={`คุณต้องการลบแผนก "${deleteTarget?.name}" ใช่หรือไม่? การดำเนินการนี้ไม่สามารถย้อนกลับได้`}
+        title="ยืนยันการลบผู้ใช้งาน"
+        message={`คุณต้องการลบผู้ใช้งาน "${deleteTarget?.firstName} ${deleteTarget?.lastName}" ใช่หรือไม่? การดำเนินการนี้ไม่สามารถย้อนกลับได้`}
         type="delete"
         confirmText="ลบ"
         loading={deleteLoading}
       />
-
-      {/* Sections List Dialog */}
-      <Dialog
-        open={sectionDialogOpen}
-        onClose={() => setSectionDialogOpen(false)}
-        maxWidth="sm"
-        fullWidth
-      >
-        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <FolderTree size={24} />
-          รายชื่อแผนก - {selectedDepartmentForSections?.name}
-        </DialogTitle>
-        <DialogContent dividers>
-          {selectedDepartmentForSections?.sections && selectedDepartmentForSections.sections.length > 0 ? (
-            <List>
-              {selectedDepartmentForSections.sections.map((section) => (
-                <ListItem key={section.id} divider>
-                  <ListItemIcon>
-                    <Hash size={20} />
-                  </ListItemIcon>
-                  <ListItemText
-                    primary={section.name}
-                    secondary={`รหัส: ${section.code} | สถานะ: ${section.isActive ? 'เปิดใช้งาน' : 'ปิดใช้งาน'}`}
-                  />
-                  <Chip
-                    label={section.isActive ? 'Active' : 'Inactive'}
-                    size="small"
-                    color={section.isActive ? 'success' : 'default'}
-                    variant="outlined"
-                  />
-                </ListItem>
-              ))}
-            </List>
-          ) : (
-            <Box sx={{ py: 4, textAlign: 'center', color: 'text.secondary' }}>
-              <Typography>ไม่มีข้อมูลแผนกในฝ่ายนี้</Typography>
-            </Box>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setSectionDialogOpen(false)}>ปิด</Button>
-        </DialogActions>
-      </Dialog>
     </Box>
   );
 }

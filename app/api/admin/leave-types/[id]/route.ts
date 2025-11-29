@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { getServerSession } from 'next-auth';
+import { authOptions, isAdminRole } from '@/lib/auth';
 
 // GET single leave type
 export async function GET(
@@ -7,6 +9,11 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session || !isAdminRole(session.user.role)) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const { id } = await params;
     const leaveType = await prisma.leaveType.findUnique({
       where: { id: parseInt(id) },
@@ -35,6 +42,11 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session || !isAdminRole(session.user.role)) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const { id } = await params;
     const body = await request.json();
     const { code, name, description, maxDaysPerYear, isPaid, isActive } = body;
@@ -52,12 +64,12 @@ export async function PUT(
     }
 
     // Check if code is taken by another leave type
-    if (code && code.toUpperCase() !== existingLeaveType.code) {
+    if (code && code !== existingLeaveType.code) {
       const codeExists = await prisma.leaveType.findUnique({
-        where: { code: code.toUpperCase() },
+        where: { code: code },
       });
 
-      if (codeExists) {
+      if (codeExists && codeExists.id !== parseInt(id)) {
         return NextResponse.json(
           { error: 'รหัสประเภทการลานี้มีอยู่ในระบบแล้ว' },
           { status: 400 }
@@ -68,7 +80,7 @@ export async function PUT(
     const leaveType = await prisma.leaveType.update({
       where: { id: parseInt(id) },
       data: {
-        ...(code && { code: code.toUpperCase() }),
+        ...(code && { code: code }),
         ...(name && { name }),
         ...(description !== undefined && { description: description || null }),
         ...(maxDaysPerYear !== undefined && { 
@@ -97,6 +109,11 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session || !isAdminRole(session.user.role)) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const { id } = await params;
 
     // Check if leave type exists

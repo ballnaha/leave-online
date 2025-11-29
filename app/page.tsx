@@ -26,7 +26,7 @@ interface LeaveType {
 
 // กำหนด icon และสีสำหรับแต่ละประเภทการลา
 const leaveTypeConfig: Record<string, { icon: any; color: string }> = {
-  sick: { icon: Heart, color: '#EF5350' },
+  sick: { icon: Heart, color: '#42A5F5' },
   personal: { icon: Briefcase, color: '#AB47BC' },
   vacation: { icon: Umbrella, color: '#FF7043' },
   annual: { icon: Sun, color: '#FF7043' },

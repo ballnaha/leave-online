@@ -19,8 +19,13 @@ import {
   CardContent,
   Autocomplete,
   Divider,
+  CircularProgress,
+  alpha,
+  useTheme,
+  Chip,
+  ListSubheader,
 } from '@mui/material';
-import { Plus, Trash2, ArrowUp, ArrowDown } from 'lucide-react';
+import { Plus, Trash2, ArrowUp, ArrowDown, GitBranch, Building2, Users } from 'lucide-react';
 
 interface WorkflowDialogProps {
   open: boolean;
@@ -38,14 +43,15 @@ interface Step {
 }
 
 const ROLES = [
-  { value: 'shift_supervisor', label: 'Shift Supervisor (หัวหน้ากะ)' },
-  { value: 'section_head', label: 'Section Head (หัวหน้าแผนก)' },
-  { value: 'dept_manager', label: 'Department Manager (ผจก.ฝ่าย)' },
-  { value: 'hr_manager', label: 'HR Manager (ผจก.บุคคล)' },
+  { value: 'shift_supervisor', label: 'หัวหน้ากะ (Shift Supervisor)' },
+  { value: 'section_head', label: 'หัวหน้าแผนก (Section Head)' },
+  { value: 'dept_manager', label: 'ผจก.ฝ่าย (Dept Manager)' },
+  { value: 'hr_manager', label: 'ผจก.บุคคล (HR Manager)' },
   { value: 'admin', label: 'Admin' },
 ];
 
 export default function WorkflowDialog({ open, onClose, onSave, workflow }: WorkflowDialogProps) {
+  const theme = useTheme();
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [company, setCompany] = useState('');
@@ -233,189 +239,323 @@ export default function WorkflowDialog({ open, onClose, onSave, workflow }: Work
   const filteredSections = sections.filter(s => !department || s.departmentId === (departments.find(d => d.code === department)?.id));
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
-      <DialogTitle>{workflow ? 'Edit Workflow' : 'Create New Workflow'}</DialogTitle>
-      <DialogContent dividers>
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mb: 3 }}>
-          <Box>
+    <Dialog 
+      open={open} 
+      onClose={onClose} 
+      maxWidth="md" 
+      fullWidth
+      PaperProps={{
+        sx: {
+          borderRadius: 2,
+          maxHeight: '90vh',
+        }
+      }}
+    >
+      <DialogTitle sx={{ 
+        pb: 1, 
+        display: 'flex', 
+        alignItems: 'center', 
+        gap: 1.5,
+        borderBottom: '1px solid',
+        borderColor: 'divider',
+      }}>
+        <Box sx={{ 
+          p: 1, 
+          borderRadius: 1, 
+          bgcolor: alpha(theme.palette.primary.main, 0.1),
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}>
+          <GitBranch size={20} color={theme.palette.primary.main} />
+        </Box>
+        <Box>
+          <Typography variant="h6" fontWeight={600}>
+            {workflow ? 'แก้ไข Workflow' : 'สร้าง Workflow ใหม่'}
+          </Typography>
+          <Typography variant="caption" color="text.secondary">
+            กำหนดลำดับขั้นตอนการอนุมัติใบลา
+          </Typography>
+        </Box>
+      </DialogTitle>
+      <DialogContent dividers sx={{ p: 3 }}>
+        {/* Basic Info Section */}
+        <Box sx={{ mb: 3 }}>
+          <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Box sx={{ width: 4, height: 16, bgcolor: 'primary.main', borderRadius: 1 }} />
+            ข้อมูลทั่วไป
+          </Typography>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
             <TextField
-              label="Workflow Name"
+              label="ชื่อ Workflow"
               fullWidth
+              size="small"
               value={name}
               onChange={(e) => setName(e.target.value)}
               required
+              placeholder="เช่น Workflow สำหรับฝ่ายผลิต"
             />
-          </Box>
-          <Box>
             <TextField
-              label="Description"
+              label="รายละเอียด"
               fullWidth
+              size="small"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               multiline
               rows={2}
+              placeholder="อธิบายเพิ่มเติมเกี่ยวกับ Workflow นี้"
             />
           </Box>
-          
-          <Box>
-            <Typography variant="subtitle2" sx={{ mb: 1, mt: 1 }}>Scope (Optional)</Typography>
-            <Typography variant="caption" color="text.secondary" sx={{ mb: 2, display: 'block' }}>
-              Define where this workflow applies. Leave blank for broader scope.
-            </Typography>
-          </Box>
+        </Box>
+        
+        {/* Scope Section */}
+        <Box sx={{ mb: 3 }}>
+          <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Box sx={{ width: 4, height: 16, bgcolor: 'secondary.main', borderRadius: 1 }} />
+            ขอบเขตการใช้งาน
+          </Typography>
+          <Typography variant="caption" color="text.secondary" sx={{ mb: 2, display: 'block' }}>
+            กำหนดว่า Workflow นี้ใช้กับใคร (เว้นว่างไว้ = ใช้ทั้งองค์กร)
+          </Typography>
 
-          <Box sx={{ display: 'flex', gap: 2, flexDirection: { xs: 'column', md: 'row' } }}>
-            <Box sx={{ flex: 1 }}>
-              <FormControl fullWidth>
-                <InputLabel>Company</InputLabel>
-                <Select
-                  value={company}
-                  label="Company"
-                  onChange={(e) => {
-                    setCompany(e.target.value);
-                    setDepartment('');
-                    setSection('');
-                  }}
-                >
-                  <MenuItem value=""><em>None</em></MenuItem>
-                  {companies.map((c) => (
-                    <MenuItem key={c.id} value={c.code}>{c.name}</MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Box>
-            <Box sx={{ flex: 1 }}>
-              <FormControl fullWidth disabled={!company && filteredDepartments.length === 0}>
-                <InputLabel>Department</InputLabel>
-                <Select
-                  value={department}
-                  label="Department"
-                  onChange={(e) => {
-                    setDepartment(e.target.value);
-                    setSection('');
-                  }}
-                >
-                  <MenuItem value=""><em>None</em></MenuItem>
-                  {filteredDepartments.map((d) => (
-                    <MenuItem key={d.id} value={d.code}>{d.name}</MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Box>
-            <Box sx={{ flex: 1 }}>
-              <FormControl fullWidth disabled={!department}>
-                <InputLabel>Section</InputLabel>
-                <Select
-                  value={section}
-                  label="Section"
-                  onChange={(e) => setSection(e.target.value)}
-                >
-                  <MenuItem value=""><em>None</em></MenuItem>
-                  {filteredSections.map((s) => (
-                    <MenuItem key={s.id} value={s.code}>{s.name}</MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Box>
+          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' }, gap: 2 }}>
+            <FormControl fullWidth size="small">
+              <InputLabel>บริษัท</InputLabel>
+              <Select
+                value={company}
+                label="บริษัท"
+                onChange={(e) => {
+                  setCompany(e.target.value);
+                  setDepartment('');
+                  setSection('');
+                }}
+              >
+                <MenuItem value=""><em>ทั้งหมด</em></MenuItem>
+                {companies.map((c) => (
+                  <MenuItem key={c.id} value={c.code}>{c.name}</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+            <FormControl fullWidth size="small" disabled={!company && filteredDepartments.length === 0}>
+              <InputLabel>ฝ่าย</InputLabel>
+              <Select
+                value={department}
+                label="ฝ่าย"
+                onChange={(e) => {
+                  setDepartment(e.target.value);
+                  setSection('');
+                }}
+              >
+                <MenuItem value=""><em>ทั้งหมด</em></MenuItem>
+                {filteredDepartments.map((d) => (
+                  <MenuItem key={d.id} value={d.code}>{d.name}</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+            <FormControl fullWidth size="small" disabled={!department}>
+              <InputLabel>แผนก</InputLabel>
+              <Select
+                value={section}
+                label="แผนก"
+                onChange={(e) => setSection(e.target.value)}
+              >
+                <MenuItem value=""><em>ทั้งหมด</em></MenuItem>
+                {filteredSections.map((s) => (
+                  <MenuItem key={s.id} value={s.code}>{s.name}</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
           </Box>
         </Box>
 
         <Divider sx={{ my: 2 }} />
 
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-          <Typography variant="h6">Approval Steps</Typography>
-          <Button startIcon={<Plus />} onClick={handleAddStep} variant="outlined" size="small">
-            Add Step
-          </Button>
-        </Box>
+        {/* Steps Section */}
+        <Box>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+            <Box>
+              <Typography variant="subtitle2" fontWeight={600} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Box sx={{ width: 4, height: 16, bgcolor: 'success.main', borderRadius: 1 }} />
+                ขั้นตอนการอนุมัติ
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                ลำดับผู้อนุมัติจากขั้นแรกถึงขั้นสุดท้าย
+              </Typography>
+            </Box>
+            <Button 
+              startIcon={<Plus size={16} />} 
+              onClick={handleAddStep} 
+              variant="outlined" 
+              size="small"
+              sx={{ borderRadius: 1 }}
+            >
+              เพิ่มขั้นตอน
+            </Button>
+          </Box>
 
-        {steps.length === 0 ? (
-          <Typography color="text.secondary" align="center" sx={{ py: 4 }}>
-            No steps defined. Add a step to define the approval process.
-          </Typography>
-        ) : (
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            {steps.map((step, index) => (
-              <Card key={index} variant="outlined">
-                <CardContent sx={{ py: 2, '&:last-child': { pb: 2 } }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                    <Box sx={{ width: '8%', display: 'flex', justifyContent: 'center' }}>
-                      <Typography variant="subtitle1" align="center" sx={{ fontWeight: 'bold' }}>
+          {steps.length === 0 ? (
+            <Box 
+              sx={{ 
+                py: 4, 
+                textAlign: 'center',
+                bgcolor: alpha(theme.palette.grey[500], 0.04),
+                borderRadius: 1,
+                border: '1px dashed',
+                borderColor: 'divider',
+              }}
+            >
+              
+              <Typography color="text.secondary" sx={{ mt: 1 }}>
+                ยังไม่มีขั้นตอนอนุมัติ
+              </Typography>
+              <Button 
+                startIcon={<Plus size={16} />} 
+                onClick={handleAddStep} 
+                size="small"
+                sx={{ mt: 1 }}
+              >
+                เพิ่มขั้นตอนแรก
+              </Button>
+            </Box>
+          ) : (
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+              {steps.map((step, index) => (
+                <Card 
+                  key={index} 
+                  variant="outlined"
+                  sx={{ 
+                    borderRadius: 1,
+                    transition: 'all 0.2s',
+                    '&:hover': {
+                      borderColor: 'primary.main',
+                      boxShadow: `0 0 0 1px ${alpha(theme.palette.primary.main, 0.2)}`,
+                    },
+                  }}
+                >
+                  <CardContent sx={{ py: 1.5, px: 2, '&:last-child': { pb: 1.5 } }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                      {/* Step Number */}
+                      <Box 
+                        sx={{ 
+                          width: 32, 
+                          height: 32, 
+                          borderRadius: '50%',
+                          bgcolor: 'primary.main',
+                          color: 'white',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontWeight: 700,
+                          fontSize: 14,
+                          flexShrink: 0,
+                        }}
+                      >
                         {index + 1}
-                      </Typography>
-                    </Box>
-                    <Box sx={{ width: '25%' }}>
-                      <FormControl fullWidth size="small">
-                        <InputLabel>Type</InputLabel>
+                      </Box>
+                      
+                      {/* Type Select */}
+                      <FormControl size="small" sx={{ minWidth: 130 }}>
+                        <InputLabel>ประเภท</InputLabel>
                         <Select
                           value={step.type}
-                          label="Type"
+                          label="ประเภท"
                           onChange={(e) => handleStepChange(index, 'type', e.target.value)}
                         >
-                          <MenuItem value="role">Role Based</MenuItem>
-                          <MenuItem value="user">Specific User</MenuItem>
+                          <MenuItem value="role">ตามตำแหน่ง</MenuItem>
+                          <MenuItem value="user">ระบุคน</MenuItem>
                         </Select>
                       </FormControl>
-                    </Box>
-                    <Box sx={{ flex: 1 }}>
-                      {step.type === 'user' ? (
-                         <Autocomplete
+                      
+                      {/* Role/User Select */}
+                      <Box sx={{ flex: 1 }}>
+                        {step.type === 'user' ? (
+                          <Autocomplete
                             options={users}
-                            getOptionLabel={(option) => `${option.firstName} ${option.lastName} (${option.department})`}
+                            getOptionLabel={(option) => `${option.firstName} ${option.lastName} (${option.department || '-'})`}
                             value={step.approver || null}
                             onChange={(_, newValue) => {
-                                handleStepChange(index, 'approverId', newValue ? newValue.id : null);
+                              handleStepChange(index, 'approverId', newValue ? newValue.id : null);
                             }}
-                            renderInput={(params) => <TextField {...params} label="Select User" size="small" />}
-                         />
-                      ) : (
-                        <FormControl fullWidth size="small">
-                          <InputLabel>Role</InputLabel>
-                          <Select
-                            value={step.approverRole || ''}
-                            label="Role"
-                            onChange={(e) => handleStepChange(index, 'approverRole', e.target.value)}
-                          >
-                            {ROLES.map((role) => (
-                              <MenuItem key={role.value} value={role.value}>
-                                {role.label}
-                              </MenuItem>
-                            ))}
-                          </Select>
-                        </FormControl>
-                      )}
+                            renderInput={(params) => <TextField {...params} label="เลือกผู้อนุมัติ" size="small" />}
+                            size="small"
+                          />
+                        ) : (
+                          <FormControl fullWidth size="small">
+                            <InputLabel>ตำแหน่ง</InputLabel>
+                            <Select
+                              value={step.approverRole || ''}
+                              label="ตำแหน่ง"
+                              onChange={(e) => handleStepChange(index, 'approverRole', e.target.value)}
+                            >
+                              {ROLES.map((role) => (
+                                <MenuItem key={role.value} value={role.value}>
+                                  {role.label}
+                                </MenuItem>
+                              ))}
+                            </Select>
+                          </FormControl>
+                        )}
+                      </Box>
+                      
+                      {/* Action Buttons */}
+                      <Box sx={{ display: 'flex', gap: 0.5, flexShrink: 0 }}>
+                        <IconButton 
+                          size="small" 
+                          onClick={() => handleMoveStep(index, 'up')}
+                          disabled={index === 0}
+                          sx={{ 
+                            bgcolor: alpha(theme.palette.grey[500], 0.1),
+                            '&:hover': { bgcolor: alpha(theme.palette.grey[500], 0.2) },
+                          }}
+                        >
+                          <ArrowUp size={16} />
+                        </IconButton>
+                        <IconButton 
+                          size="small" 
+                          onClick={() => handleMoveStep(index, 'down')}
+                          disabled={index === steps.length - 1}
+                          sx={{ 
+                            bgcolor: alpha(theme.palette.grey[500], 0.1),
+                            '&:hover': { bgcolor: alpha(theme.palette.grey[500], 0.2) },
+                          }}
+                        >
+                          <ArrowDown size={16} />
+                        </IconButton>
+                        <IconButton 
+                          size="small"
+                          onClick={() => handleRemoveStep(index)}
+                          sx={{ 
+                            color: 'error.main',
+                            bgcolor: alpha(theme.palette.error.main, 0.1),
+                            '&:hover': { bgcolor: alpha(theme.palette.error.main, 0.2) },
+                          }}
+                        >
+                          <Trash2 size={16} />
+                        </IconButton>
+                      </Box>
                     </Box>
-                    <Box sx={{ width: 'auto', display: 'flex', gap: 1 }}>
-                      <IconButton 
-                        size="small" 
-                        onClick={() => handleMoveStep(index, 'up')}
-                        disabled={index === 0}
-                      >
-                        <ArrowUp size={18} />
-                      </IconButton>
-                      <IconButton 
-                        size="small" 
-                        onClick={() => handleMoveStep(index, 'down')}
-                        disabled={index === steps.length - 1}
-                      >
-                        <ArrowDown size={18} />
-                      </IconButton>
-                      <IconButton color="error" onClick={() => handleRemoveStep(index)}>
-                        <Trash2 size={18} />
-                      </IconButton>
-                    </Box>
-                  </Box>
-                </CardContent>
-              </Card>
-            ))}
-          </Box>
-        )}
+                  </CardContent>
+                </Card>
+              ))}
+            </Box>
+          )}
+        </Box>
 
       </DialogContent>
-      <DialogActions>
-        <Button onClick={onClose}>Cancel</Button>
-        <Button onClick={handleSubmit} variant="contained" disabled={loading || !name || steps.length === 0}>
-          {loading ? 'Saving...' : 'Save Workflow'}
+      <DialogActions sx={{ px: 3, py: 2, borderTop: '1px solid', borderColor: 'divider' }}>
+        <Button onClick={onClose} sx={{ borderRadius: 1 }}>
+          ยกเลิก
+        </Button>
+        <Button 
+          onClick={handleSubmit} 
+          variant="contained" 
+          disabled={loading || !name || steps.length === 0}
+          sx={{ 
+            borderRadius: 1,
+            minWidth: 120,
+          }}
+        >
+          {loading ? <CircularProgress size={20} /> : (workflow ? 'บันทึก' : 'สร้าง Workflow')}
         </Button>
       </DialogActions>
     </Dialog>

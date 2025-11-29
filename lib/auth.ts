@@ -2,6 +2,16 @@ import { NextAuthOptions } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
+import type { UserRole } from '@/types/user-role';
+
+// Admin roles that can access admin pages
+export const ADMIN_ROLES = ['admin', 'hr', 'hr_manager'] as const;
+export type AdminRole = typeof ADMIN_ROLES[number];
+
+// Helper function to check if user has admin access
+export function isAdminRole(role: string | undefined): boolean {
+  return ADMIN_ROLES.includes(role as AdminRole);
+}
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -77,7 +87,7 @@ export const authOptions: NextAuthOptions = {
         session.user.company = token.company as string;
         session.user.employeeType = token.employeeType as string;
         session.user.department = token.department as string;
-        session.user.role = token.role as string;
+        session.user.role = token.role as UserRole;
       }
       return session;
     },

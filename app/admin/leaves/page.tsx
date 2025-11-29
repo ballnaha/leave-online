@@ -1,0 +1,1401 @@
+'use client';
+
+import React, { useEffect, useState, useCallback } from 'react';
+import {
+  Box,
+  Typography,
+  Paper,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  TablePagination,
+  IconButton,
+  Chip,
+  Tooltip,
+  TextField,
+  InputAdornment,
+  Card,
+  CardContent,
+  Avatar,
+  alpha,
+  useTheme,
+  Skeleton,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Button,
+  Divider,
+  Tabs,
+  Tab,
+} from '@mui/material';
+import {
+  Search,
+  RefreshCw,
+  FileText,
+  Clock,
+  CheckCircle,
+  XCircle,
+  AlertCircle,
+  Calendar,
+  User,
+  Eye,
+  X,
+  Building2,
+  Briefcase,
+  Phone,
+  MapPin,
+  Paperclip,
+  ChevronRight,
+  Image as ImageIcon,
+  Download,
+} from 'lucide-react';
+import { useToastr } from '@/app/components/Toastr';
+
+// Thai date formatter
+const thaiMonths = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+const formatThaiDate = (dateStr: string) => {
+  const date = new Date(dateStr);
+  return `${date.getDate()} ${thaiMonths[date.getMonth()]} ${date.getFullYear() + 543}`;
+};
+const formatThaiDateTime = (dateStr: string) => {
+  const date = new Date(dateStr);
+  const hours = date.getHours().toString().padStart(2, '0');
+  const mins = date.getMinutes().toString().padStart(2, '0');
+  return `${date.getDate()} ${thaiMonths[date.getMonth()]} ${date.getFullYear() + 543} ${hours}:${mins}`;
+};
+
+interface UserInfo {
+  id: number;
+  employeeId: string;
+  firstName: string;
+  lastName: string;
+  company: string;
+  department: string;
+  departmentName?: string;
+  section?: string;
+  sectionName?: string;
+  position?: string;
+  avatar?: string;
+}
+
+interface Approver {
+  id: number;
+  employeeId: string;
+  firstName: string;
+  lastName: string;
+  role: string;
+}
+
+interface Approval {
+  id: number;
+  level: number;
+  status: string;
+  approvedAt?: string;
+  comment?: string;
+  approver: Approver;
+}
+
+interface Attachment {
+  id: number;
+  fileName: string;
+  filePath: string;
+  fileSize: number;
+  mimeType: string;
+}
+
+interface LeaveRequest {
+  id: number;
+  userId: number;
+  leaveType: string;
+  leaveTypeName: string;
+  startDate: string;
+  endDate: string;
+  startTime?: string;
+  endTime?: string;
+  totalDays: number;
+  reason: string;
+  status: string;
+  rejectReason?: string;
+  currentLevel: number;
+  contactPhone?: string;
+  contactAddress?: string;
+  createdAt: string;
+  user: UserInfo;
+  approvals: Approval[];
+  attachments: Attachment[];
+}
+
+interface Company {
+  id: number;
+  code: string;
+  name: string;
+}
+
+interface Department {
+  id: number;
+  code: string;
+  name: string;
+  company: string;
+}
+
+interface Section {
+  id: number;
+  code: string;
+  name: string;
+  departmentCode: string;
+  companyCode: string;
+}
+
+interface LeaveType {
+  id: number;
+  code: string;
+  name: string;
+}
+
+interface Stats {
+  total: number;
+  pending: number;
+  approved: number;
+  rejected: number;
+  cancelled: number;
+}
+
+const statusConfig: Record<string, { label: string; color: 'warning' | 'success' | 'error' | 'default'; icon: React.ReactElement }> = {
+  pending: { label: 'รออนุมัติ', color: 'warning', icon: <Clock size={14} /> },
+  approved: { label: 'อนุมัติแล้ว', color: 'success', icon: <CheckCircle size={14} /> },
+  rejected: { label: 'ไม่อนุมัติ', color: 'error', icon: <XCircle size={14} /> },
+  cancelled: { label: 'ยกเลิก', color: 'default', icon: <AlertCircle size={14} /> },
+};
+
+const roleLabels: Record<string, string> = {
+  employee: 'พนักงาน',
+  shift_supervisor: 'หัวหน้ากะ',
+  section_head: 'หัวหน้าแผนก',
+  dept_manager: 'ผจก.ฝ่าย',
+  hr_manager: 'ผจก.HR',
+  admin: 'Admin',
+  hr: 'HR',
+};
+
+// Stat Card Component
+interface StatCardProps {
+  title: string;
+  value: number;
+  icon: React.ReactNode;
+  color: 'primary' | 'success' | 'warning' | 'error' | 'secondary';
+}
+
+function StatCard({ title, value, icon, color }: StatCardProps) {
+  const theme = useTheme();
+  
+  const colorMap = {
+    primary: { main: theme.palette.primary.main, light: alpha(theme.palette.primary.main, 0.1) },
+    success: { main: theme.palette.success.main, light: alpha(theme.palette.success.main, 0.1) },
+    warning: { main: theme.palette.warning.main, light: alpha(theme.palette.warning.main, 0.1) },
+    error: { main: theme.palette.error.main, light: alpha(theme.palette.error.main, 0.1) },
+    secondary: { main: theme.palette.secondary.main, light: alpha(theme.palette.secondary.main, 0.1) },
+  };
+
+  return (
+    <Card 
+      sx={{ 
+        borderRadius: 1,
+        border: '1px solid',
+        borderColor: 'divider',
+        boxShadow: '0 4px 20px rgba(0,0,0,0.04)',
+        transition: 'all 0.3s ease',
+        '&:hover': {
+          transform: 'translateY(-4px)',
+          boxShadow: '0 8px 30px rgba(0,0,0,0.08)',
+        },
+      }}
+    >
+      <CardContent sx={{ p: 3 }}>
+        <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+          <Box>
+            <Typography variant="body2" color="text.secondary" fontWeight={500} gutterBottom>
+              {title}
+            </Typography>
+            <Typography variant="h3" fontWeight={700} sx={{ color: colorMap[color].main }}>
+              {value}
+            </Typography>
+          </Box>
+          <Avatar
+            sx={{
+              width: 56,
+              height: 56,
+              bgcolor: colorMap[color].light,
+              color: colorMap[color].main,
+            }}
+          >
+            {icon}
+          </Avatar>
+        </Box>
+      </CardContent>
+    </Card>
+  );
+}
+
+// Table Skeleton
+function TableSkeleton() {
+  return (
+    <TableBody>
+      {[1, 2, 3, 4, 5].map((row) => (
+        <TableRow key={row}>
+          <TableCell><Skeleton variant="text" width={80} /></TableCell>
+          <TableCell><Skeleton variant="circular" width={40} height={40} /></TableCell>
+          <TableCell><Skeleton variant="text" width={100} /></TableCell>
+          <TableCell><Skeleton variant="text" width={120} /></TableCell>
+          <TableCell><Skeleton variant="text" width={60} /></TableCell>
+          <TableCell><Skeleton variant="rounded" width={80} height={24} /></TableCell>
+          <TableCell><Skeleton variant="text" width={100} /></TableCell>
+          <TableCell align="right"><Skeleton variant="circular" width={36} height={36} /></TableCell>
+        </TableRow>
+      ))}
+    </TableBody>
+  );
+}
+
+export default function AdminLeavesPage() {
+  const theme = useTheme();
+  const toastr = useToastr();
+  const [loading, setLoading] = useState(true);
+  const [leaves, setLeaves] = useState<LeaveRequest[]>([]);
+  const [stats, setStats] = useState<Stats>({ total: 0, pending: 0, approved: 0, rejected: 0, cancelled: 0 });
+  const [searchQuery, setSearchQuery] = useState('');
+  
+  // Pagination
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+
+  // Filters
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [leaveTypeFilter, setLeaveTypeFilter] = useState<string>('all');
+  const [companyFilter, setCompanyFilter] = useState<string>('all');
+  const [departmentFilter, setDepartmentFilter] = useState<string>('all');
+  const [sectionFilter, setSectionFilter] = useState<string>('all');
+  
+  // Month/Year filters - Start from year 2568 (2025)
+  const currentDate = new Date();
+  const currentYear = currentDate.getFullYear();
+  const currentMonth = currentDate.getMonth() + 1; // 1-12
+  const [selectedMonth, setSelectedMonth] = useState<number>(0); // 0 = all months
+  const [selectedYear, setSelectedYear] = useState<number>(currentYear); // Default current year
+  
+  // Generate year options (from 2568/2025 to current year + 543 in Buddhist Era)
+  const startYear = 2025; // Start from 2025 (พ.ศ. 2568)
+  const yearOptions = Array.from(
+    { length: currentYear - startYear + 1 },
+    (_, i) => startYear + i
+  ).reverse(); // Most recent year first
+  
+  const monthOptions = [
+    { value: 0, label: 'ทุกเดือน' },
+    { value: 1, label: 'มกราคม' },
+    { value: 2, label: 'กุมภาพันธ์' },
+    { value: 3, label: 'มีนาคม' },
+    { value: 4, label: 'เมษายน' },
+    { value: 5, label: 'พฤษภาคม' },
+    { value: 6, label: 'มิถุนายน' },
+    { value: 7, label: 'กรกฎาคม' },
+    { value: 8, label: 'สิงหาคม' },
+    { value: 9, label: 'กันยายน' },
+    { value: 10, label: 'ตุลาคม' },
+    { value: 11, label: 'พฤศจิกายน' },
+    { value: 12, label: 'ธันวาคม' },
+  ];
+
+  // Status tab
+  const [statusTab, setStatusTab] = useState<number>(0);
+  const statusTabMap = ['all', 'pending', 'approved', 'rejected', 'cancelled'];
+
+  // Master data
+  const [companies, setCompanies] = useState<Company[]>([]);
+  const [departments, setDepartments] = useState<Department[]>([]);
+  const [sections, setSections] = useState<Section[]>([]);
+  const [leaveTypes, setLeaveTypes] = useState<LeaveType[]>([]);
+
+  // Detail dialog
+  const [detailDialogOpen, setDetailDialogOpen] = useState(false);
+  const [selectedLeave, setSelectedLeave] = useState<LeaveRequest | null>(null);
+  const [detailTab, setDetailTab] = useState(0);
+
+  // Image modal
+  const [imageModalOpen, setImageModalOpen] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<{ url: string; name: string } | null>(null);
+
+  // Helper to check if file is an image
+  const isImageFile = (mimeType: string) => {
+    return mimeType.startsWith('image/');
+  };
+
+  // Handle file click
+  const handleFileClick = (file: Attachment) => {
+    if (isImageFile(file.mimeType)) {
+      setSelectedImage({ url: file.filePath, name: file.fileName });
+      setImageModalOpen(true);
+    } else {
+      window.open(file.filePath, '_blank');
+    }
+  };
+
+  const fetchMasterData = async () => {
+    try {
+      const [companiesRes, departmentsRes, sectionsRes, leaveTypesRes] = await Promise.all([
+        fetch('/api/companies'),
+        fetch('/api/departments'),
+        fetch('/api/sections'),
+        fetch('/api/leave-types'),
+      ]);
+      
+      if (companiesRes.ok) setCompanies(await companiesRes.json());
+      if (departmentsRes.ok) setDepartments(await departmentsRes.json());
+      if (sectionsRes.ok) setSections(await sectionsRes.json());
+      if (leaveTypesRes.ok) setLeaveTypes(await leaveTypesRes.json());
+    } catch (error) {
+      console.error('Error fetching master data:', error);
+    }
+  };
+
+  // Calculate date range based on selected month/year
+  const getDateRange = useCallback(() => {
+    // If selectedMonth is 0 (all months), filter by year only
+    if (selectedMonth === 0) {
+      const yearStart = new Date(selectedYear, 0, 1);
+      const yearEnd = new Date(selectedYear, 11, 31, 23, 59, 59, 999);
+      return { start: yearStart.toISOString(), end: yearEnd.toISOString() };
+    } else {
+      // Filter by specific month
+      const monthStart = new Date(selectedYear, selectedMonth - 1, 1);
+      const monthEnd = new Date(selectedYear, selectedMonth, 0, 23, 59, 59, 999);
+      return { start: monthStart.toISOString(), end: monthEnd.toISOString() };
+    }
+  }, [selectedMonth, selectedYear]);
+
+  const fetchLeaves = useCallback(async () => {
+    try {
+      setLoading(true);
+      const params = new URLSearchParams();
+      if (statusFilter !== 'all') params.append('status', statusFilter);
+      if (leaveTypeFilter !== 'all') params.append('leaveType', leaveTypeFilter);
+      if (companyFilter !== 'all') params.append('company', companyFilter);
+      if (departmentFilter !== 'all') params.append('department', departmentFilter);
+      if (sectionFilter !== 'all') params.append('section', sectionFilter);
+      if (searchQuery) params.append('search', searchQuery);
+      
+      const dateRange = getDateRange();
+      if (dateRange) {
+        params.append('startDate', dateRange.start);
+        params.append('endDate', dateRange.end);
+      }
+
+      const response = await fetch(`/api/admin/leaves?${params.toString()}`);
+      if (response.ok) {
+        const data = await response.json();
+        setLeaves(data.leaves);
+        setStats(data.stats);
+      }
+    } catch (error) {
+      console.error('Error fetching leaves:', error);
+      toastr.error('เกิดข้อผิดพลาดในการโหลดข้อมูล');
+    } finally {
+      setLoading(false);
+    }
+  }, [statusFilter, leaveTypeFilter, companyFilter, departmentFilter, sectionFilter, searchQuery, getDateRange, toastr]);
+
+  useEffect(() => {
+    fetchMasterData();
+  }, []);
+
+  useEffect(() => {
+    fetchLeaves();
+  }, [fetchLeaves]);
+
+  // Cascading filters
+  const handleCompanyChange = (value: string) => {
+    setCompanyFilter(value);
+    setDepartmentFilter('all');
+    setSectionFilter('all');
+  };
+
+  const handleDepartmentChange = (value: string) => {
+    setDepartmentFilter(value);
+    setSectionFilter('all');
+  };
+
+  const filteredDepartments = companyFilter === 'all'
+    ? departments
+    : departments.filter(d => d.company === companyFilter);
+
+  const filteredSections = (() => {
+    let filtered = sections;
+    if (companyFilter !== 'all') {
+      filtered = filtered.filter(s => s.companyCode === companyFilter);
+    }
+    if (departmentFilter !== 'all') {
+      filtered = filtered.filter(s => s.departmentCode === departmentFilter);
+    }
+    return filtered;
+  })();
+
+  // Paginated leaves
+  const paginatedLeaves = leaves.slice(
+    page * rowsPerPage,
+    page * rowsPerPage + rowsPerPage
+  );
+
+  const handleOpenDetail = (leave: LeaveRequest) => {
+    setSelectedLeave(leave);
+    setDetailTab(0);
+    setDetailDialogOpen(true);
+  };
+
+  const formatDate = (date: string) => {
+    return formatThaiDate(date);
+  };
+
+  const formatDateTime = (date: string) => {
+    return formatThaiDateTime(date);
+  };
+
+  return (
+    <Box>
+      {/* Header */}
+      <Box sx={{ mb: 4, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 2 }}>
+        <Box>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1 }}>
+            <Avatar
+              sx={{
+                width: 48,
+                height: 48,
+                bgcolor: alpha(theme.palette.primary.main, 0.1),
+                color: 'primary.main',
+              }}
+            >
+              <FileText size={24} />
+            </Avatar>
+            <Box>
+              <Typography variant="h4" component="h1" fontWeight={700}>
+                ใบลาทั้งหมด
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                ดูและจัดการใบลาทั้งหมดในระบบ
+              </Typography>
+            </Box>
+          </Box>
+        </Box>
+        <Tooltip title="รีเฟรชข้อมูล">
+          <IconButton 
+            onClick={fetchLeaves} 
+            disabled={loading}
+            sx={{
+              bgcolor: 'background.paper',
+              border: '1px solid',
+              borderColor: 'divider',
+              '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.1) },
+            }}
+          >
+            <RefreshCw size={20} />
+          </IconButton>
+        </Tooltip>
+      </Box>
+
+      {/* Stat Cards */}
+      <Box
+        sx={{
+          display: 'grid',
+          gridTemplateColumns: { xs: '1fr 1fr', sm: 'repeat(3, 1fr)', md: 'repeat(5, 1fr)' },
+          gap: 2,
+          mb: 3,
+        }}
+      >
+        <StatCard
+          title="ทั้งหมด"
+          value={stats.total}
+          icon={<FileText size={28} />}
+          color="primary"
+        />
+        <StatCard
+          title="รออนุมัติ"
+          value={stats.pending}
+          icon={<Clock size={28} />}
+          color="warning"
+        />
+        <StatCard
+          title="อนุมัติแล้ว"
+          value={stats.approved}
+          icon={<CheckCircle size={28} />}
+          color="success"
+        />
+        <StatCard
+          title="ไม่อนุมัติ"
+          value={stats.rejected}
+          icon={<XCircle size={28} />}
+          color="error"
+        />
+        <StatCard
+          title="ยกเลิก"
+          value={stats.cancelled}
+          icon={<AlertCircle size={28} />}
+          color="secondary"
+        />
+      </Box>
+
+      {/* Filters */}
+      <Paper
+        sx={{
+          p: 2.5,
+          mb: 2,
+          borderRadius: 1,
+          border: '1px solid',
+          borderColor: 'divider',
+          boxShadow: 'none',
+        }}
+      >
+        {/* Row 1: Search and Date */}
+        <Box 
+          sx={{ 
+            display: 'grid',
+            gridTemplateColumns: { 
+              xs: '1fr 1fr', 
+              sm: '2fr 1fr 1fr auto',
+            },
+            gap: 2,
+            alignItems: 'center',
+            mb: 2,
+          }}
+        >
+          <TextField
+            placeholder="ค้นหารหัส/ชื่อพนักงาน..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            size="small"
+            sx={{ gridColumn: { xs: 'span 2', sm: 'span 1' } }}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <Search size={18} color={theme.palette.text.secondary} />
+                </InputAdornment>
+              ),
+            }}
+          />
+
+          <FormControl size="small" fullWidth>
+            <InputLabel>เดือน</InputLabel>
+            <Select
+              value={selectedMonth}
+              onChange={(e) => {
+                setSelectedMonth(Number(e.target.value));
+                setPage(0);
+              }}
+              label="เดือน"
+            >
+              {monthOptions.map((month) => (
+                <MenuItem key={month.value} value={month.value}>{month.label}</MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+
+          <FormControl size="small" fullWidth>
+            <InputLabel>ปี</InputLabel>
+            <Select
+              value={selectedYear}
+              onChange={(e) => {
+                setSelectedYear(Number(e.target.value));
+                setPage(0);
+              }}
+              label="ปี"
+            >
+              {yearOptions.map((year) => (
+                <MenuItem key={year} value={year}>พ.ศ. {year + 543}</MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+
+          <Chip 
+            label={`${leaves.length} รายการ`}
+            size="small"
+            sx={{ 
+              bgcolor: alpha(theme.palette.primary.main, 0.1),
+              color: 'primary.main',
+              fontWeight: 600,
+              display: { xs: 'none', sm: 'flex' },
+            }}
+          />
+        </Box>
+
+        {/* Row 2: Cascading Filters */}
+        <Box 
+          sx={{ 
+            display: 'grid',
+            gridTemplateColumns: { 
+              xs: '1fr 1fr', 
+              sm: 'repeat(4, 1fr)',
+            },
+            gap: 2,
+            alignItems: 'center',
+          }}
+        >
+          <FormControl size="small" fullWidth>
+            <InputLabel>ประเภทลา</InputLabel>
+            <Select
+              value={leaveTypeFilter}
+              onChange={(e) => setLeaveTypeFilter(e.target.value)}
+              label="ประเภทลา"
+            >
+              <MenuItem value="all">ทั้งหมด</MenuItem>
+              {leaveTypes.map((lt) => (
+                <MenuItem key={lt.code} value={lt.code}>{lt.name}</MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+
+          <FormControl size="small" fullWidth>
+            <InputLabel>บริษัท</InputLabel>
+            <Select
+              value={companyFilter}
+              onChange={(e) => handleCompanyChange(e.target.value)}
+              label="บริษัท"
+            >
+              <MenuItem value="all">ทั้งหมด</MenuItem>
+              {companies.map((company) => (
+                <MenuItem key={company.code} value={company.code}>{company.name}</MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+
+          <FormControl size="small" fullWidth>
+            <InputLabel>ฝ่าย</InputLabel>
+            <Select
+              value={departmentFilter}
+              onChange={(e) => handleDepartmentChange(e.target.value)}
+              label="ฝ่าย"
+            >
+              <MenuItem value="all">ทั้งหมด</MenuItem>
+              {filteredDepartments.map((dept) => (
+                <MenuItem key={dept.code} value={dept.code}>{dept.name}</MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+
+          <FormControl size="small" fullWidth>
+            <InputLabel>แผนก</InputLabel>
+            <Select
+              value={sectionFilter}
+              onChange={(e) => setSectionFilter(e.target.value)}
+              label="แผนก"
+            >
+              <MenuItem value="all">ทั้งหมด</MenuItem>
+              {filteredSections.map((section) => (
+                <MenuItem key={section.code} value={section.code}>{section.name}</MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        </Box>
+
+        {/* Mobile: Show count */}
+        <Box sx={{ display: { xs: 'flex', sm: 'none' }, justifyContent: 'flex-end', mt: 2 }}>
+          <Chip 
+            label={`${leaves.length} รายการ`}
+            size="small"
+            sx={{ 
+              bgcolor: alpha(theme.palette.primary.main, 0.1),
+              color: 'primary.main',
+              fontWeight: 600,
+            }}
+          />
+        </Box>
+      </Paper>
+
+      {/* Status Tabs */}
+      <Paper
+        sx={{
+          mb: 3,
+          borderRadius: 1,
+          border: '1px solid',
+          borderColor: 'divider',
+          boxShadow: 'none',
+          overflow: 'hidden',
+        }}
+      >
+        <Tabs
+          value={statusTab}
+          onChange={(_, newValue) => {
+            setStatusTab(newValue);
+            setStatusFilter(statusTabMap[newValue]);
+            setPage(0);
+          }}
+          variant="scrollable"
+          scrollButtons="auto"
+          sx={{
+            bgcolor: alpha(theme.palette.primary.main, 0.02),
+            '& .MuiTab-root': {
+              minHeight: 48,
+              textTransform: 'none',
+              fontWeight: 500,
+            },
+            '& .Mui-selected': {
+              fontWeight: 600,
+            },
+          }}
+        >
+          <Tab 
+            label={
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <FileText size={16} />
+                <span>ทั้งหมด</span>
+                <Chip label={stats.total} size="small" sx={{ height: 20, fontSize: '0.7rem' }} />
+              </Box>
+            } 
+          />
+          <Tab 
+            label={
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Clock size={16} />
+                <span>รออนุมัติ</span>
+                <Chip label={stats.pending} size="small" color="warning" sx={{ height: 20, fontSize: '0.7rem' }} />
+              </Box>
+            } 
+          />
+          <Tab 
+            label={
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <CheckCircle size={16} />
+                <span>อนุมัติแล้ว</span>
+                <Chip label={stats.approved} size="small" color="success" sx={{ height: 20, fontSize: '0.7rem' }} />
+              </Box>
+            } 
+          />
+          <Tab 
+            label={
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <XCircle size={16} />
+                <span>ไม่อนุมัติ</span>
+                <Chip label={stats.rejected} size="small" color="error" sx={{ height: 20, fontSize: '0.7rem' }} />
+              </Box>
+            } 
+          />
+          <Tab 
+            label={
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <AlertCircle size={16} />
+                <span>ยกเลิก</span>
+                <Chip label={stats.cancelled} size="small" sx={{ height: 20, fontSize: '0.7rem', bgcolor: 'grey.300' }} />
+              </Box>
+            } 
+          />
+        </Tabs>
+      </Paper>
+
+      {/* Table */}
+      <TableContainer 
+        component={Paper} 
+        sx={{ 
+          borderRadius: 1,
+          border: '1px solid',
+          borderColor: 'divider',
+          boxShadow: 'none',
+          overflow: 'hidden',
+        }}
+      >
+        <Table>
+          <TableHead>
+            <TableRow sx={{ bgcolor: alpha(theme.palette.primary.main, 0.04) }}>
+              <TableCell sx={{ fontWeight: 600, color: 'text.secondary', py: 2 }}>เลขที่</TableCell>
+              <TableCell sx={{ fontWeight: 600, color: 'text.secondary', py: 2 }}>พนักงาน</TableCell>
+              <TableCell sx={{ fontWeight: 600, color: 'text.secondary', py: 2 }}>ประเภท</TableCell>
+              <TableCell sx={{ fontWeight: 600, color: 'text.secondary', py: 2 }}>วันที่ลา</TableCell>
+              <TableCell sx={{ fontWeight: 600, color: 'text.secondary', py: 2 }}>จำนวน</TableCell>
+              <TableCell sx={{ fontWeight: 600, color: 'text.secondary', py: 2 }}>สถานะ</TableCell>
+              <TableCell sx={{ fontWeight: 600, color: 'text.secondary', py: 2 }}>ขั้นตอน</TableCell>
+              <TableCell sx={{ fontWeight: 600, color: 'text.secondary', py: 2 }} align="right">จัดการ</TableCell>
+            </TableRow>
+          </TableHead>
+          {loading ? (
+            <TableSkeleton />
+          ) : leaves.length === 0 ? (
+            <TableBody>
+              <TableRow>
+                <TableCell colSpan={8} align="center" sx={{ py: 10 }}>
+                  <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+                    <Avatar
+                      sx={{
+                        width: 80,
+                        height: 80,
+                        bgcolor: alpha(theme.palette.text.secondary, 0.1),
+                        color: 'text.secondary',
+                      }}
+                    >
+                      <FileText size={40} />
+                    </Avatar>
+                    <Typography variant="h6" fontWeight={600}>
+                      ไม่พบข้อมูลใบลา
+                    </Typography>
+                  </Box>
+                </TableCell>
+              </TableRow>
+            </TableBody>
+          ) : (
+            <TableBody>
+              {paginatedLeaves.map((leave) => {
+                const statusInfo = statusConfig[leave.status] || statusConfig.pending;
+                const pendingApproval = leave.approvals.find(a => a.status === 'pending');
+                const currentApprover = pendingApproval?.approver;
+                
+                return (
+                  <TableRow
+                    key={leave.id}
+                    sx={{
+                      transition: 'background-color 0.2s ease',
+                      '&:hover': { 
+                        bgcolor: alpha(theme.palette.primary.main, 0.04),
+                      },
+                      '&:last-child td': { border: 0 },
+                    }}
+                  >
+                    <TableCell>
+                      <Typography variant="body2" fontWeight={600} color="primary.main">
+                        #{leave.id}
+                      </Typography>
+                    </TableCell>
+                    <TableCell>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                        <Avatar 
+                          src={leave.user.avatar || undefined} 
+                          sx={{ width: 36, height: 36, bgcolor: theme.palette.primary.main }}
+                        >
+                          {leave.user.firstName.charAt(0)}
+                        </Avatar>
+                        <Box>
+                          <Typography variant="body2" fontWeight={600}>
+                            {leave.user.firstName} {leave.user.lastName}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            {leave.user.employeeId}
+                          </Typography>
+                        </Box>
+                      </Box>
+                    </TableCell>
+                    <TableCell>
+                      <Typography variant="body2">
+                        {leave.leaveTypeName}
+                      </Typography>
+                    </TableCell>
+                    <TableCell>
+                      <Typography variant="body2">
+                        {formatDate(leave.startDate)}
+                        {leave.startDate !== leave.endDate && (
+                          <> - {formatDate(leave.endDate)}</>
+                        )}
+                      </Typography>
+                    </TableCell>
+                    <TableCell>
+                      <Typography variant="body2" fontWeight={500}>
+                        {leave.totalDays} วัน
+                      </Typography>
+                    </TableCell>
+                    <TableCell>
+                      <Chip
+                        icon={statusInfo.icon}
+                        label={statusInfo.label}
+                        size="small"
+                        color={statusInfo.color}
+                        sx={{ fontWeight: 500, borderRadius: 1 }}
+                      />
+                    </TableCell>
+                    <TableCell>
+                      {leave.status === 'pending' && currentApprover ? (
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                          <Chip
+                            label={`ขั้นที่ ${leave.currentLevel}`}
+                            size="small"
+                            variant="outlined"
+                            sx={{ fontWeight: 500, borderRadius: 1, fontSize: '0.7rem' }}
+                          />
+                          <Typography variant="caption" color="text.secondary">
+                            รอ {currentApprover.firstName}
+                          </Typography>
+                        </Box>
+                      ) : leave.status === 'approved' ? (
+                        <Typography variant="caption" color="success.main">อนุมัติครบแล้ว</Typography>
+                      ) : leave.status === 'rejected' ? (
+                        <Typography variant="caption" color="error.main">ถูกปฏิเสธ</Typography>
+                      ) : (
+                        <Typography variant="caption" color="text.secondary">-</Typography>
+                      )}
+                    </TableCell>
+                    <TableCell align="right">
+                      <Tooltip title="ดูรายละเอียด">
+                        <IconButton
+                          onClick={() => handleOpenDetail(leave)}
+                          size="small"
+                          sx={{
+                            color: 'primary.main',
+                            bgcolor: alpha(theme.palette.primary.main, 0.1),
+                            '&:hover': {
+                              bgcolor: alpha(theme.palette.primary.main, 0.2),
+                            },
+                          }}
+                        >
+                          <Eye size={18} />
+                        </IconButton>
+                      </Tooltip>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          )}
+        </Table>
+      </TableContainer>
+
+      {/* Pagination */}
+      {leaves.length > 0 && (
+        <Paper
+          sx={{
+            mt: 2,
+            borderRadius: 1,
+            border: '1px solid',
+            borderColor: 'divider',
+            boxShadow: 'none',
+          }}
+        >
+          <TablePagination
+            component="div"
+            count={leaves.length}
+            page={page}
+            onPageChange={(_, newPage) => setPage(newPage)}
+            rowsPerPage={rowsPerPage}
+            onRowsPerPageChange={(e) => {
+              setRowsPerPage(parseInt(e.target.value, 10));
+              setPage(0);
+            }}
+            rowsPerPageOptions={[10, 25, 50, 100]}
+            labelRowsPerPage="แสดงต่อหน้า:"
+            labelDisplayedRows={({ from, to, count }) =>
+              `${from}-${to} จาก ${count !== -1 ? count : `มากกว่า ${to}`}`
+            }
+          />
+        </Paper>
+      )}
+
+      {/* Detail Dialog */}
+      <Dialog 
+        open={detailDialogOpen} 
+        onClose={() => setDetailDialogOpen(false)} 
+        maxWidth="md" 
+        fullWidth
+        PaperProps={{ sx: { borderRadius: 1 } }}
+      >
+        <DialogTitle sx={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'space-between',
+          borderBottom: '1px solid',
+          borderColor: 'divider',
+          pb: 2,
+        }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+            <Avatar sx={{ bgcolor: alpha(theme.palette.primary.main, 0.1), color: 'primary.main' }}>
+              <FileText size={20} />
+            </Avatar>
+            <Box>
+              <Typography variant="h6" fontWeight={600}>
+                ใบลา #{selectedLeave?.id}
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                สร้างเมื่อ {selectedLeave && formatDateTime(selectedLeave.createdAt)}
+              </Typography>
+            </Box>
+          </Box>
+          <IconButton size="small" onClick={() => setDetailDialogOpen(false)}>
+            <X size={18} />
+          </IconButton>
+        </DialogTitle>
+
+        <DialogContent sx={{ p: 0 }}>
+          {selectedLeave && (
+            <>
+              <Tabs 
+                value={detailTab} 
+                onChange={(_, v) => setDetailTab(v)}
+                sx={{ 
+                  borderBottom: 1, 
+                  borderColor: 'divider',
+                  px: 3,
+                }}
+              >
+                <Tab label="ข้อมูลใบลา" />
+                <Tab label={`ขั้นตอนอนุมัติ (${selectedLeave.approvals.length})`} />
+                {selectedLeave.attachments.length > 0 && (
+                  <Tab label={`ไฟล์แนบ (${selectedLeave.attachments.length})`} />
+                )}
+              </Tabs>
+
+              <Box sx={{ p: 3 }}>
+                {/* Tab 0: Leave Info */}
+                {detailTab === 0 && (
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                    {/* Status */}
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                      <Chip
+                        icon={statusConfig[selectedLeave.status]?.icon}
+                        label={statusConfig[selectedLeave.status]?.label}
+                        color={statusConfig[selectedLeave.status]?.color}
+                        sx={{ fontWeight: 600 }}
+                      />
+                      {selectedLeave.status === 'rejected' && selectedLeave.rejectReason && (
+                        <Typography variant="body2" color="error.main">
+                          เหตุผล: {selectedLeave.rejectReason}
+                        </Typography>
+                      )}
+                    </Box>
+
+                    {/* Employee Info */}
+                    <Paper variant="outlined" sx={{ p: 2, borderRadius: 1 }}>
+                      <Typography variant="subtitle2" fontWeight={600} gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <User size={16} /> ข้อมูลพนักงาน
+                      </Typography>
+                      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2, mt: 1.5 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                          <Avatar 
+                            src={selectedLeave.user.avatar || undefined} 
+                            sx={{ width: 48, height: 48, bgcolor: theme.palette.primary.main }}
+                          >
+                            {selectedLeave.user.firstName.charAt(0)}
+                          </Avatar>
+                          <Box>
+                            <Typography variant="body2" fontWeight={600}>
+                              {selectedLeave.user.firstName} {selectedLeave.user.lastName}
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              {selectedLeave.user.employeeId}
+                            </Typography>
+                          </Box>
+                        </Box>
+                        <Box>
+                          <Typography variant="caption" color="text.secondary">สังกัด</Typography>
+                          <Typography variant="body2">
+                            {selectedLeave.user.departmentName || selectedLeave.user.department}
+                            {selectedLeave.user.sectionName && ` / ${selectedLeave.user.sectionName}`}
+                          </Typography>
+                        </Box>
+                      </Box>
+                    </Paper>
+
+                    {/* Leave Details */}
+                    <Paper variant="outlined" sx={{ p: 2, borderRadius: 1 }}>
+                      <Typography variant="subtitle2" fontWeight={600} gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Calendar size={16} /> รายละเอียดการลา
+                      </Typography>
+                      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2, mt: 1.5 }}>
+                        <Box>
+                          <Typography variant="caption" color="text.secondary">ประเภทการลา</Typography>
+                          <Typography variant="body2" fontWeight={500}>{selectedLeave.leaveTypeName}</Typography>
+                        </Box>
+                        <Box>
+                          <Typography variant="caption" color="text.secondary">จำนวนวัน</Typography>
+                          <Typography variant="body2" fontWeight={500}>{selectedLeave.totalDays} วัน</Typography>
+                        </Box>
+                        <Box>
+                          <Typography variant="caption" color="text.secondary">วันที่เริ่ม</Typography>
+                          <Typography variant="body2">
+                            {formatDate(selectedLeave.startDate)}
+                            {selectedLeave.startTime && ` ${selectedLeave.startTime}`}
+                          </Typography>
+                        </Box>
+                        <Box>
+                          <Typography variant="caption" color="text.secondary">วันที่สิ้นสุด</Typography>
+                          <Typography variant="body2">
+                            {formatDate(selectedLeave.endDate)}
+                            {selectedLeave.endTime && ` ${selectedLeave.endTime}`}
+                          </Typography>
+                        </Box>
+                        <Box sx={{ gridColumn: '1 / -1' }}>
+                          <Typography variant="caption" color="text.secondary">เหตุผล</Typography>
+                          <Typography variant="body2">{selectedLeave.reason}</Typography>
+                        </Box>
+                      </Box>
+                    </Paper>
+
+                    {/* Contact Info */}
+                    {(selectedLeave.contactPhone || selectedLeave.contactAddress) && (
+                      <Paper variant="outlined" sx={{ p: 2, borderRadius: 1 }}>
+                        <Typography variant="subtitle2" fontWeight={600} gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <Phone size={16} /> ข้อมูลติดต่อ
+                        </Typography>
+                        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2, mt: 1.5 }}>
+                          {selectedLeave.contactPhone && (
+                            <Box>
+                              <Typography variant="caption" color="text.secondary">เบอร์โทร</Typography>
+                              <Typography variant="body2">{selectedLeave.contactPhone}</Typography>
+                            </Box>
+                          )}
+                          {selectedLeave.contactAddress && (
+                            <Box>
+                              <Typography variant="caption" color="text.secondary">ที่อยู่</Typography>
+                              <Typography variant="body2">{selectedLeave.contactAddress}</Typography>
+                            </Box>
+                          )}
+                        </Box>
+                      </Paper>
+                    )}
+                  </Box>
+                )}
+
+                {/* Tab 1: Approval Steps */}
+                {detailTab === 1 && (
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                    {selectedLeave.approvals.map((approval, idx) => {
+                      const isPending = approval.status === 'pending';
+                      const isApproved = approval.status === 'approved';
+                      const isRejected = approval.status === 'rejected';
+                      const isCancelled = approval.status === 'cancelled';
+                      
+                      // กำหนด label และ color ตาม status
+                      const getStatusLabel = () => {
+                        if (isPending) return 'รออนุมัติ';
+                        if (isApproved) return 'อนุมัติ';
+                        if (isCancelled) return 'ผู้ขอยกเลิก';
+                        return 'ไม่อนุมัติ';
+                      };
+                      
+                      const getStatusColor = (): 'warning' | 'success' | 'default' | 'error' => {
+                        if (isPending) return 'warning';
+                        if (isApproved) return 'success';
+                        if (isCancelled) return 'default';
+                        return 'error';
+                      };
+
+                      const getBorderColor = () => {
+                        if (isPending) return 'warning.main';
+                        if (isApproved) return 'success.main';
+                        if (isRejected) return 'error.main';
+                        if (isCancelled) return 'grey.400';
+                        return 'divider';
+                      };
+
+                      const getBgColor = () => {
+                        if (isPending) return alpha(theme.palette.warning.main, 0.04);
+                        if (isApproved) return alpha(theme.palette.success.main, 0.04);
+                        if (isRejected) return alpha(theme.palette.error.main, 0.04);
+                        if (isCancelled) return alpha(theme.palette.grey[500], 0.04);
+                        return 'transparent';
+                      };
+
+                      const getAvatarBgColor = () => {
+                        if (isPending) return 'warning.main';
+                        if (isApproved) return 'success.main';
+                        if (isRejected) return 'error.main';
+                        return 'grey.400';
+                      };
+                      
+                      return (
+                        <Paper 
+                          key={approval.id}
+                          variant="outlined" 
+                          sx={{ 
+                            p: 2, 
+                            borderRadius: 1,
+                            borderColor: getBorderColor(),
+                            bgcolor: getBgColor(),
+                          }}
+                        >
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                            <Avatar
+                              sx={{
+                                width: 40,
+                                height: 40,
+                                bgcolor: getAvatarBgColor(),
+                                color: 'white',
+                                fontWeight: 'bold',
+                              }}
+                            >
+                              {approval.level}
+                            </Avatar>
+                            <Box sx={{ flex: 1 }}>
+                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                <Typography variant="body2" fontWeight={600}>
+                                  {approval.approver.firstName} {approval.approver.lastName}
+                                </Typography>
+                                <Chip 
+                                  label={roleLabels[approval.approver.role] || approval.approver.role}
+                                  size="small"
+                                  sx={{ height: 20, fontSize: '0.65rem' }}
+                                />
+                              </Box>
+                              <Typography variant="caption" color="text.secondary">
+                                {approval.approver.employeeId}
+                              </Typography>
+                            </Box>
+                            <Box sx={{ textAlign: 'right' }}>
+                              <Chip
+                                label={getStatusLabel()}
+                                size="small"
+                                color={getStatusColor()}
+                                sx={{ fontWeight: 500 }}
+                              />
+                              {approval.approvedAt && (
+                                <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 0.5 }}>
+                                  {formatDateTime(approval.approvedAt)}
+                                </Typography>
+                              )}
+                            </Box>
+                          </Box>
+                          {approval.comment && (
+                            <Typography variant="body2" sx={{ mt: 1.5, pl: 7 }} color="text.secondary">
+                              หมายเหตุ: {approval.comment}
+                            </Typography>
+                          )}
+                        </Paper>
+                      );
+                    })}
+                  </Box>
+                )}
+
+                {/* Tab 2: Attachments */}
+                {detailTab === 2 && selectedLeave.attachments.length > 0 && (
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                    {selectedLeave.attachments.map((file) => (
+                      <Paper 
+                        key={file.id}
+                        variant="outlined" 
+                        sx={{ 
+                          p: 2, 
+                          borderRadius: 1,
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 2,
+                          cursor: 'pointer',
+                          '&:hover': { bgcolor: 'action.hover' },
+                        }}
+                        onClick={() => handleFileClick(file)}
+                      >
+                        {isImageFile(file.mimeType) ? (
+                          <Avatar 
+                            src={file.filePath} 
+                            variant="rounded"
+                            sx={{ width: 48, height: 48 }}
+                          >
+                            <ImageIcon size={20} />
+                          </Avatar>
+                        ) : (
+                          <Avatar sx={{ bgcolor: alpha(theme.palette.primary.main, 0.1), color: 'primary.main' }}>
+                            <Paperclip size={20} />
+                          </Avatar>
+                        )}
+                        <Box sx={{ flex: 1 }}>
+                          <Typography variant="body2" fontWeight={500}>{file.fileName}</Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            {(file.fileSize / 1024).toFixed(1)} KB
+                            {isImageFile(file.mimeType) && ' • คลิกเพื่อดูรูปขนาดเต็ม'}
+                          </Typography>
+                        </Box>
+                        {isImageFile(file.mimeType) ? (
+                          <Eye size={18} color={theme.palette.text.secondary} />
+                        ) : (
+                          <ChevronRight size={18} color={theme.palette.text.secondary} />
+                        )}
+                      </Paper>
+                    ))}
+                  </Box>
+                )}
+              </Box>
+            </>
+          )}
+        </DialogContent>
+
+        <DialogActions sx={{ px: 3, py: 2, borderTop: '1px solid', borderColor: 'divider' }}>
+          <Button onClick={() => setDetailDialogOpen(false)} sx={{ borderRadius: 1 }}>
+            ปิด
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Image Modal */}
+      <Dialog
+        open={imageModalOpen}
+        onClose={() => setImageModalOpen(false)}
+        maxWidth="lg"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 1,
+            bgcolor: 'background.paper',
+            maxHeight: '90vh',
+          }
+        }}
+      >
+        <DialogTitle sx={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'space-between',
+          borderBottom: '1px solid',
+          borderColor: 'divider',
+          py: 1.5,
+        }}>
+          <Typography variant="subtitle1" fontWeight={600} noWrap sx={{ flex: 1, mr: 2 }}>
+            {selectedImage?.name}
+          </Typography>
+          <Box sx={{ display: 'flex', gap: 1 }}>
+            <Tooltip title="ดาวน์โหลด">
+              <IconButton 
+                size="small"
+                onClick={() => {
+                  if (selectedImage) {
+                    const link = document.createElement('a');
+                    link.href = selectedImage.url;
+                    link.download = selectedImage.name;
+                    link.click();
+                  }
+                }}
+              >
+                <Download size={18} />
+              </IconButton>
+            </Tooltip>
+            <Tooltip title="เปิดในแท็บใหม่">
+              <IconButton 
+                size="small"
+                onClick={() => selectedImage && window.open(selectedImage.url, '_blank')}
+              >
+                <ChevronRight size={18} />
+              </IconButton>
+            </Tooltip>
+            <IconButton size="small" onClick={() => setImageModalOpen(false)}>
+              <X size={18} />
+            </IconButton>
+          </Box>
+        </DialogTitle>
+        <DialogContent sx={{ 
+          p: 0, 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'center',
+          bgcolor: alpha(theme.palette.common.black, 0.02),
+          minHeight: 400,
+        }}>
+          {selectedImage && (
+            <Box
+              component="img"
+              src={selectedImage.url}
+              alt={selectedImage.name}
+              sx={{
+                maxWidth: '100%',
+                maxHeight: 'calc(90vh - 120px)',
+                objectFit: 'contain',
+              }}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+    </Box>
+  );
+}

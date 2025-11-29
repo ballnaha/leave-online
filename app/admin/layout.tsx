@@ -69,6 +69,11 @@ const menuItems: MenuItem[] = [
         path: '/admin',
     },
     {
+        text: 'ใบลาทั้งหมด',
+        icon: <FileText size={20} />,
+        path: '/admin/leaves',
+    },
+    {
         text: 'จัดการผู้ใช้',
         icon: <Users size={20} />,
         path: '/admin/users',
@@ -78,12 +83,12 @@ const menuItems: MenuItem[] = [
         icon: <GitBranch size={20} />,
         children: [
             {
-                text: 'ลำดับการอนุมัติ',
+                text: 'Workflow การอนุมัติ',
                 icon: <Layers size={20} />,
                 path: '/admin/approval-workflows',
             },
             {
-                text: 'ผู้อนุมัติของผู้ใช้',
+                text: 'ระบุผู้อนุมัติรายบุคคล',
                 icon: <User size={20} />,
                 path: '/admin/user-approval-flow',
             },
@@ -136,7 +141,7 @@ export default function AdminLayout({
     const router = useRouter();
     const pathname = usePathname();
     const isMobile = useMediaQuery(theme.breakpoints.down('md'));
-    const { user } = useUser();
+    const { user, loading: userLoading } = useUser();
     const toastr = useToastr();
 
     const [mobileOpen, setMobileOpen] = useState(false);
@@ -144,6 +149,18 @@ export default function AdminLayout({
     const [isLoading, setIsLoading] = useState(true);
     const [openSubMenus, setOpenSubMenus] = useState<Record<string, boolean>>({});
     const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+
+    // Admin roles that can access admin pages
+    const ADMIN_ROLES = ['admin', 'hr', 'hr_manager'];
+    const isAdminRole = (role: string | undefined) => ADMIN_ROLES.includes(role || '');
+
+    // Check access and redirect if not authorized
+    useEffect(() => {
+        if (!userLoading && user && !isAdminRole(user.role)) {
+            toastr.error('คุณไม่มีสิทธิ์เข้าถึงหน้านี้');
+            router.push('/');
+        }
+    }, [user, userLoading, router]);
 
     // Load collapsed state from localStorage and set loading complete
     useEffect(() => {
@@ -665,7 +682,9 @@ export default function AdminLayout({
                                     {user?.firstName} {user?.lastName}
                                 </Typography>
                                 <Typography variant="caption" color="text.secondary">
-                                    {user?.role === 'admin' ? 'ผู้ดูแลระบบ' : user?.role}
+                                    {user?.role === 'admin' ? 'ผู้ดูแลระบบ' : 
+                                     user?.role === 'hr' ? 'HR' : 
+                                     user?.role === 'hr_manager' ? 'HR Manager' : user?.role}
                                 </Typography>
                             </Box>
                             <ChevronDown size={18} color={theme.palette.text.secondary} />

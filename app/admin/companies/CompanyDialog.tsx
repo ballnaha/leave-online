@@ -122,13 +122,30 @@ export default function CompanyDialog({
   };
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-      <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+    <Dialog 
+      open={open} 
+      onClose={onClose} 
+      maxWidth="sm" 
+      fullWidth
+      PaperProps={{
+        sx: {
+          borderRadius: 1,
+        }
+      }}
+    >
+      <DialogTitle sx={{ 
+        display: 'flex', 
+        alignItems: 'center', 
+        gap: 1,
+        pb: 1,
+        borderBottom: '1px solid',
+        borderColor: 'divider',
+      }}>
         <Building2 size={24} />
         {company ? 'แก้ไขบริษัท' : 'เพิ่มบริษัทใหม่'}
       </DialogTitle>
-      <DialogContent>
-        <Box sx={{ pt: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
+      <DialogContent sx={{ p: 2 , mt:2 }}>
+        <Box sx={{ pt: 1, display: 'flex', flexDirection: 'column', gap: 2 }}>
           {errors.submit && (
             <Box sx={{ color: 'error.main', mb: 1 }}>{errors.submit}</Box>
           )}
@@ -139,10 +156,10 @@ export default function CompanyDialog({
             value={formData.code}
             onChange={handleChange}
             error={!!errors.code}
-            helperText={errors.code || 'เช่น PSC, PSLP'}
+            helperText={errors.code || 'เช่น PSC, PS'}
+            size="small"
             fullWidth
             required
-            inputProps={{ style: { textTransform: 'uppercase' } }}
           />
 
           <TextField
@@ -152,6 +169,7 @@ export default function CompanyDialog({
             onChange={handleChange}
             error={!!errors.name}
             helperText={errors.name}
+            size="small"
             fullWidth
             required
           />
@@ -161,9 +179,10 @@ export default function CompanyDialog({
             name="address"
             value={formData.address}
             onChange={handleChange}
+            size="small"
             fullWidth
             multiline
-            rows={3}
+            rows={2}
           />
 
           <TextField
@@ -171,6 +190,7 @@ export default function CompanyDialog({
             name="phone"
             value={formData.phone}
             onChange={handleChange}
+            size="small"
             fullWidth
           />
 

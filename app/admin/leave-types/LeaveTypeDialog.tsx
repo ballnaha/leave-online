@@ -132,13 +132,30 @@ export default function LeaveTypeDialog({
   };
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-      <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+    <Dialog 
+      open={open} 
+      onClose={onClose} 
+      maxWidth="sm" 
+      fullWidth
+      PaperProps={{
+        sx: {
+          borderRadius: 1,
+        }
+      }}
+    >
+      <DialogTitle sx={{ 
+        display: 'flex', 
+        alignItems: 'center', 
+        gap: 1,
+        pb: 1,
+        borderBottom: '1px solid',
+        borderColor: 'divider',
+      }}>
         <Calendar size={24} />
         {leaveType ? 'แก้ไขประเภทการลา' : 'เพิ่มประเภทการลาใหม่'}
       </DialogTitle>
-      <DialogContent>
-        <Box sx={{ pt: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
+      <DialogContent sx={{ p: 2 }}>
+        <Box sx={{ pt: 1, display: 'flex', flexDirection: 'column', gap: 2 }}>
           {errors.submit && (
             <Box sx={{ color: 'error.main', mb: 1 }}>{errors.submit}</Box>
           )}
@@ -150,10 +167,11 @@ export default function LeaveTypeDialog({
             onChange={handleChange}
             error={!!errors.code}
             helperText={errors.code || 'เช่น SICK, PERSONAL, VACATION'}
+            size="small"
             fullWidth
             required
-            inputProps={{ style: { textTransform: 'uppercase' } }}
           />
+          
 
           <TextField
             label="ชื่อประเภทการลา"
@@ -162,6 +180,7 @@ export default function LeaveTypeDialog({
             onChange={handleChange}
             error={!!errors.name}
             helperText={errors.name || 'เช่น ลาป่วย, ลากิจ, ลาพักร้อน'}
+            size="small"
             fullWidth
             required
           />
@@ -172,7 +191,8 @@ export default function LeaveTypeDialog({
             value={formData.description}
             onChange={handleChange}
             multiline
-            rows={3}
+            rows={2}
+            size="small"
             fullWidth
           />
 
@@ -184,6 +204,7 @@ export default function LeaveTypeDialog({
             error={!!errors.maxDaysPerYear}
             helperText={errors.maxDaysPerYear || 'เว้นว่างหากไม่จำกัด'}
             type="number"
+            size="small"
             fullWidth
             InputProps={{
               endAdornment: <InputAdornment position="end">วัน</InputAdornment>,

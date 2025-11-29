@@ -43,6 +43,7 @@ import {
   Briefcase,
   ChevronDown,
   ChevronUp,
+  Ban,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import BottomNav from '../components/BottomNav';
@@ -66,6 +67,8 @@ interface ApprovalItem {
     escalationDeadline: string;
     isEscalated: boolean;
     createdAt: string;
+    cancelReason?: string;
+    cancelledAt?: string;
     user: {
       id: number;
       employeeId: string;
@@ -112,6 +115,7 @@ const statusConfig: Record<string, { label: string; color: 'warning' | 'success'
   pending: { label: 'รออนุมัติ', color: 'warning' },
   approved: { label: 'อนุมัติแล้ว', color: 'success' },
   rejected: { label: 'ปฏิเสธ', color: 'error' },
+  cancelled: { label: 'ยกเลิกแล้ว', color: 'default' },
   skipped: { label: 'ข้ามขั้น', color: 'default' },
 };
 
@@ -121,7 +125,7 @@ export default function ApprovalPage() {
   const [approvals, setApprovals] = useState<ApprovalItem[]>([]);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [tabValue, setTabValue] = useState(0);
-  const [counts, setCounts] = useState({ pending: 0, approved: 0, rejected: 0, total: 0 });
+  const [counts, setCounts] = useState({ pending: 0, approved: 0, rejected: 0, cancelled: 0, total: 0 });
   
   // Pagination
   const [page, setPage] = useState(1);
@@ -274,6 +278,8 @@ export default function ApprovalPage() {
         return approvals.filter(a => a.status === 'approved' || a.leaveRequest.status === 'approved');
       case 2: // ปฏิเสธ
         return approvals.filter(a => a.status === 'rejected' || a.leaveRequest.status === 'rejected');
+      case 3: // ยกเลิก
+        return approvals.filter(a => a.status === 'cancelled' || a.leaveRequest.status === 'cancelled');
       default:
         return approvals;
     }
@@ -357,6 +363,20 @@ export default function ApprovalPage() {
             >
               <Typography variant="h5" sx={{ fontWeight: 700, color: 'white', lineHeight: 1.2 }}>{counts.rejected}</Typography>
               <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.9)', fontSize: '0.65rem' }}>ปฏิเสธ</Typography>
+            </Box>
+          </Box>
+          <Box sx={{ flex: 1 }}>
+            <Box
+              sx={{
+                py: 1.5,
+                px: 1,
+                textAlign: 'center',
+                borderRadius: 2,
+                bgcolor: 'rgba(255,255,255,0.2)',
+              }}
+            >
+              <Typography variant="h5" sx={{ fontWeight: 700, color: 'white', lineHeight: 1.2 }}>{counts.cancelled}</Typography>
+              <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.9)', fontSize: '0.65rem' }}>ยกเลิก</Typography>
             </Box>
           </Box>
         </Box>
@@ -486,6 +506,47 @@ export default function ApprovalPage() {
                       }} 
                     >
                       {counts.rejected}
+                    </Box>
+                  )}
+                </Box>
+              }
+              sx={{
+                borderRadius: 2,
+                minHeight: 40,
+                minWidth: 0,
+                px: 1,
+                textTransform: 'none',
+                fontWeight: 600,
+                fontSize: '0.8rem',
+                color: '#888',
+                '&.Mui-selected': {
+                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  color: 'white',
+                },
+                transition: 'all 0.2s',
+              }}
+            />
+            <Tab 
+              label={
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                  <Ban size={14} />
+                  <span>ยกเลิก</span>
+                  {counts.cancelled > 0 && (
+                    <Box 
+                      sx={{ 
+                        minWidth: 18,
+                        height: 18,
+                        borderRadius: '50%',
+                        bgcolor: tabValue === 3 ? 'white' : '#9e9e9e',
+                        color: tabValue === 3 ? '#667eea' : 'white',
+                        fontWeight: 700,
+                        fontSize: '0.65rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }} 
+                    >
+                      {counts.cancelled}
                     </Box>
                   )}
                 </Box>
@@ -664,9 +725,11 @@ export default function ApprovalPage() {
                             fontSize: '0.75rem',
                             fontWeight: 600,
                             bgcolor: isPending ? '#fff3e0' : 
-                                     (approval.leaveRequest.status === 'approved' || approval.status === 'approved') ? '#e8f5e9' : '#ffebee',
+                                     (approval.leaveRequest.status === 'approved' || approval.status === 'approved') ? '#e8f5e9' : 
+                                     (approval.leaveRequest.status === 'cancelled' || approval.status === 'cancelled') ? '#f5f5f5' : '#ffebee',
                             color: isPending ? '#ef6c00' : 
-                                   (approval.leaveRequest.status === 'approved' || approval.status === 'approved') ? '#4CAF50' : '#f44336',
+                                   (approval.leaveRequest.status === 'approved' || approval.status === 'approved') ? '#4CAF50' : 
+                                   (approval.leaveRequest.status === 'cancelled' || approval.status === 'cancelled') ? '#757575' : '#f44336',
                           }}
                         >
                           {statusConfig[approval.leaveRequest.status]?.label || statusConfig[approval.status]?.label || approval.status}
@@ -745,6 +808,18 @@ export default function ApprovalPage() {
                         </Typography>
                       </Box>
 
+                      {/* Cancel Reason - แสดงเฉพาะใบลาที่ยกเลิก */}
+                      {approval.leaveRequest.status === 'cancelled' && approval.leaveRequest.cancelReason && (
+                        <Box sx={{ mb: 1.5 }}>
+                          <Typography sx={{ fontSize: '0.8rem', color: '#EA580C', mb: 0.5, fontWeight: 500, display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                            <Ban size={14} /> เหตุผลที่ยกเลิก
+                          </Typography>
+                          <Typography sx={{ fontSize: '0.9rem', color: '#9A3412', bgcolor: '#FFF7ED', p: 1.5, borderRadius: 1, lineHeight: 1.5, border: '1px solid #FDBA74' }}>
+                            {approval.leaveRequest.cancelReason}
+                          </Typography>
+                        </Box>
+                      )}
+
                       {/* Attachments */}
                       {approval.leaveRequest.attachments && approval.leaveRequest.attachments.length > 0 && (
                         <Box sx={{ mb: 2, p: 1.5, bgcolor: 'white', borderRadius: 1 }}>
@@ -809,19 +884,39 @@ export default function ApprovalPage() {
                           <Typography sx={{ fontSize: '0.8rem', color: '#666', mb: 0.75, fontWeight: 500 }}>ผู้อนุมัติ</Typography>
                           <Box sx={{ bgcolor: 'white', borderRadius: 1, p: 1.5 }}>
                             {approval.leaveRequest.approvalHistory.map((hist, idx) => (
-                              <Box key={idx} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', py: 0.5 }}>
-                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
-                                  {hist.status === 'approved' && <CheckCircle size={14} color="#4CAF50" />}
-                                  {hist.status === 'rejected' && <XCircle size={14} color="#f44336" />}
-                                  {hist.status === 'pending' && <Clock size={14} color="#ff9800" />}
-                                  {hist.status === 'skipped' && <Clock size={14} color="#9e9e9e" />}
-                                  <Typography sx={{ fontSize: '0.85rem', color: '#333' }}>
-                                    {hist.approver.firstName} {hist.approver.lastName}
+                              <Box key={idx} sx={{ py: 0.5 }}>
+                                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+                                    {hist.status === 'approved' && <CheckCircle size={14} color="#4CAF50" />}
+                                    {hist.status === 'rejected' && <XCircle size={14} color="#f44336" />}
+                                    {hist.status === 'pending' && <Clock size={14} color="#ff9800" />}
+                                    {hist.status === 'cancelled' && <Ban size={14} color="#64748B" />}
+                                    {hist.status === 'skipped' && <Clock size={14} color="#9e9e9e" />}
+                                    <Typography sx={{ fontSize: '0.85rem', color: '#333' }}>
+                                      {hist.approver.firstName} {hist.approver.lastName}
+                                    </Typography>
+                                  </Box>
+                                  <Typography sx={{ fontSize: '0.75rem', color: '#666' }}>
+                                    {statusConfig[hist.status]?.label || hist.status}
                                   </Typography>
                                 </Box>
-                                <Typography sx={{ fontSize: '0.75rem', color: '#666' }}>
-                                  {statusConfig[hist.status]?.label || hist.status}
-                                </Typography>
+                                {/* แสดง comment ถ้ามี (โดยเฉพาะ cancelled) */}
+                                {hist.comment && (
+                                  <Typography 
+                                    sx={{ 
+                                      fontSize: '0.75rem', 
+                                      color: hist.status === 'cancelled' ? '#64748B' : '#666',
+                                      mt: 0.5,
+                                      ml: 2.75,
+                                      fontStyle: 'italic',
+                                      bgcolor: hist.status === 'cancelled' ? '#F1F5F9' : 'transparent',
+                                      p: hist.status === 'cancelled' ? 1 : 0,
+                                      borderRadius: 1,
+                                    }}
+                                  >
+                                    {hist.comment}
+                                  </Typography>
+                                )}
                               </Box>
                             ))}
                           </Box>

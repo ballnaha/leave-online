@@ -622,7 +622,7 @@ export default function EditProfilePage() {
                     { value: '', label: 'ไม่ระบุ' },
                     { value: 'day', label: 'กะกลางวัน' },
                     { value: 'night', label: 'กะกลางคืน' },
-                    { value: 'rotating', label: 'กะหมุนเวียน' },
+                    
                 ]);
                 break;
         }
@@ -661,7 +661,7 @@ export default function EditProfilePage() {
                 const sec = sections.find(s => s.code === formData.sectionId || s.name === formData.sectionId);
                 return sec?.name || profile?.sectionName || '';
             case 'shift':
-                const shifts: Record<string, string> = { day: 'กะกลางวัน', night: 'กะกลางคืน', rotating: 'กะหมุนเวียน' };
+                const shifts: Record<string, string> = { day: 'กะกลางวัน', night: 'กะกลางคืน' };
                 return formData.shift ? shifts[formData.shift] || formData.shift : '';
         }
     };

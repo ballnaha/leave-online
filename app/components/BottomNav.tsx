@@ -25,7 +25,7 @@ interface LeaveType {
 
 // กำหนด icon และสีสำหรับแต่ละประเภทการลา (สีแบบ balloon เหมือนปฏิทิน)
 const leaveTypeConfig: Record<string, { icon: any; color: string; gradient: string }> = {
-    sick: { icon: Stethoscope, color: '#FF6B6B', gradient: 'linear-gradient(135deg, #FF6B6B 0%, #FF8E8E 100%)' },
+    sick: { icon: Stethoscope, color: '#42A5F5', gradient: 'linear-gradient(135deg, #42A5F5 0%, #64B5F6 100%)' },
     personal: { icon: Umbrella, color: '#845EF7', gradient: 'linear-gradient(135deg, #845EF7 0%, #9775FA 100%)' },
     vacation: { icon: Sun, color: '#FFD43B', gradient: 'linear-gradient(135deg, #FFD43B 0%, #FFE066 100%)' },
     annual: { icon: Sun, color: '#FFD43B', gradient: 'linear-gradient(135deg, #FFD43B 0%, #FFE066 100%)' },
