@@ -37,26 +37,23 @@ import {
   Tab,
 } from '@mui/material';
 import {
-  Search,
-  RefreshCw,
-  FileText,
-  Clock,
-  CheckCircle,
-  XCircle,
-  AlertCircle,
-  Calendar,
-  User,
-  Eye,
-  X,
-  Building2,
-  Briefcase,
-  Phone,
-  MapPin,
-  Paperclip,
-  ChevronRight,
-  Image as ImageIcon,
-  Download,
-} from 'lucide-react';
+  SearchNormal1,
+  Refresh2,
+  DocumentText,
+  Clock as ClockIcon,
+  TickCircle,
+  CloseCircle,
+  InfoCircle,
+  Calendar as CalendarIcon,
+  User as UserIcon,
+  Eye as EyeIcon,
+  CloseSquare,
+  Call,
+  Paperclip2,
+  ArrowRight2,
+  Image as ImageIconsax,
+  DocumentDownload,
+} from 'iconsax-react';
 import { useToastr } from '@/app/components/Toastr';
 
 // Thai date formatter
@@ -113,6 +110,7 @@ interface Attachment {
 
 interface LeaveRequest {
   id: number;
+  leaveCode: string;
   userId: number;
   leaveType: string;
   leaveTypeName: string;
@@ -169,10 +167,10 @@ interface Stats {
 }
 
 const statusConfig: Record<string, { label: string; color: 'warning' | 'success' | 'error' | 'default'; icon: React.ReactElement }> = {
-  pending: { label: 'รออนุมัติ', color: 'warning', icon: <Clock size={14} /> },
-  approved: { label: 'อนุมัติแล้ว', color: 'success', icon: <CheckCircle size={14} /> },
-  rejected: { label: 'ไม่อนุมัติ', color: 'error', icon: <XCircle size={14} /> },
-  cancelled: { label: 'ยกเลิก', color: 'default', icon: <AlertCircle size={14} /> },
+  pending: { label: 'รออนุมัติ', color: 'warning', icon: <ClockIcon size={14} variant="Outline" color="#fff" /> },
+  approved: { label: 'อนุมัติแล้ว', color: 'success', icon: <TickCircle size={14} variant="Outline" color="#fff" /> },
+  rejected: { label: 'ไม่อนุมัติ', color: 'error', icon: <CloseCircle size={14} variant="Outline" color="#fff" /> },
+  cancelled: { label: 'ยกเลิก', color: 'default', icon: <InfoCircle size={14} variant="Outline" color="#616161" /> },
 };
 
 const roleLabels: Record<string, string> = {
@@ -480,7 +478,7 @@ export default function AdminLeavesPage() {
                 color: 'primary.main',
               }}
             >
-              <FileText size={24} />
+              <DocumentText size={24} variant="Outline" color="#6C63FF" />
             </Avatar>
             <Box>
               <Typography variant="h4" component="h1" fontWeight={700}>
@@ -503,7 +501,7 @@ export default function AdminLeavesPage() {
               '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.1) },
             }}
           >
-            <RefreshCw size={20} />
+            <Refresh2 size={20} variant="Outline" color="#6C63FF" />
           </IconButton>
         </Tooltip>
       </Box>
@@ -520,31 +518,31 @@ export default function AdminLeavesPage() {
         <StatCard
           title="ทั้งหมด"
           value={stats.total}
-          icon={<FileText size={28} />}
+          icon={<DocumentText size={28} variant="Outline" color="#6C63FF" />}
           color="primary"
         />
         <StatCard
           title="รออนุมัติ"
           value={stats.pending}
-          icon={<Clock size={28} />}
+          icon={<ClockIcon size={28} variant="Outline" color="#FF9800" />}
           color="warning"
         />
         <StatCard
           title="อนุมัติแล้ว"
           value={stats.approved}
-          icon={<CheckCircle size={28} />}
+          icon={<TickCircle size={28} variant="Outline" color="#4CAF50" />}
           color="success"
         />
         <StatCard
           title="ไม่อนุมัติ"
           value={stats.rejected}
-          icon={<XCircle size={28} />}
+          icon={<CloseCircle size={28} variant="Outline" color="#F44336" />}
           color="error"
         />
         <StatCard
           title="ยกเลิก"
           value={stats.cancelled}
-          icon={<AlertCircle size={28} />}
+          icon={<InfoCircle size={28} variant="Outline" color="#9E9E9E" />}
           color="secondary"
         />
       </Box>
@@ -582,7 +580,7 @@ export default function AdminLeavesPage() {
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
-                  <Search size={18} color={theme.palette.text.secondary} />
+                  <SearchNormal1 size={18} color={theme.palette.text.secondary} variant="Outline" />
                 </InputAdornment>
               ),
             }}
@@ -750,7 +748,7 @@ export default function AdminLeavesPage() {
           <Tab 
             label={
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <FileText size={16} />
+                <DocumentText size={16} variant="Outline" color="#6C63FF" />
                 <span>ทั้งหมด</span>
                 <Chip label={stats.total} size="small" sx={{ height: 20, fontSize: '0.7rem' }} />
               </Box>
@@ -759,7 +757,7 @@ export default function AdminLeavesPage() {
           <Tab 
             label={
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <Clock size={16} />
+                <ClockIcon size={16} variant="Outline" color="#FF9800" />
                 <span>รออนุมัติ</span>
                 <Chip label={stats.pending} size="small" color="warning" sx={{ height: 20, fontSize: '0.7rem' }} />
               </Box>
@@ -768,7 +766,7 @@ export default function AdminLeavesPage() {
           <Tab 
             label={
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <CheckCircle size={16} />
+                <TickCircle size={16} variant="Outline" color="#4CAF50" />
                 <span>อนุมัติแล้ว</span>
                 <Chip label={stats.approved} size="small" color="success" sx={{ height: 20, fontSize: '0.7rem' }} />
               </Box>
@@ -777,7 +775,7 @@ export default function AdminLeavesPage() {
           <Tab 
             label={
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <XCircle size={16} />
+                <CloseCircle size={16} variant="Outline" color="#F44336" />
                 <span>ไม่อนุมัติ</span>
                 <Chip label={stats.rejected} size="small" color="error" sx={{ height: 20, fontSize: '0.7rem' }} />
               </Box>
@@ -786,7 +784,7 @@ export default function AdminLeavesPage() {
           <Tab 
             label={
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <AlertCircle size={16} />
+                <InfoCircle size={16} variant="Outline" color="#9E9E9E" />
                 <span>ยกเลิก</span>
                 <Chip label={stats.cancelled} size="small" sx={{ height: 20, fontSize: '0.7rem', bgcolor: 'grey.300' }} />
               </Box>
@@ -809,7 +807,8 @@ export default function AdminLeavesPage() {
         <Table>
           <TableHead>
             <TableRow sx={{ bgcolor: alpha(theme.palette.primary.main, 0.04) }}>
-              <TableCell sx={{ fontWeight: 600, color: 'text.secondary', py: 2 }}>เลขที่</TableCell>
+              <TableCell sx={{ fontWeight: 600, color: 'text.secondary', py: 2, width: 60 }}>ลำดับ</TableCell>
+              <TableCell sx={{ fontWeight: 600, color: 'text.secondary', py: 2 }}>รหัสใบลา</TableCell>
               <TableCell sx={{ fontWeight: 600, color: 'text.secondary', py: 2 }}>พนักงาน</TableCell>
               <TableCell sx={{ fontWeight: 600, color: 'text.secondary', py: 2 }}>ประเภท</TableCell>
               <TableCell sx={{ fontWeight: 600, color: 'text.secondary', py: 2 }}>วันที่ลา</TableCell>
@@ -824,7 +823,7 @@ export default function AdminLeavesPage() {
           ) : leaves.length === 0 ? (
             <TableBody>
               <TableRow>
-                <TableCell colSpan={8} align="center" sx={{ py: 10 }}>
+                <TableCell colSpan={9} align="center" sx={{ py: 10 }}>
                   <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
                     <Avatar
                       sx={{
@@ -834,7 +833,7 @@ export default function AdminLeavesPage() {
                         color: 'text.secondary',
                       }}
                     >
-                      <FileText size={40} />
+                      <DocumentText size={40} variant="Outline" color="#9E9E9E" />
                     </Avatar>
                     <Typography variant="h6" fontWeight={600}>
                       ไม่พบข้อมูลใบลา
@@ -845,7 +844,7 @@ export default function AdminLeavesPage() {
             </TableBody>
           ) : (
             <TableBody>
-              {paginatedLeaves.map((leave) => {
+              {paginatedLeaves.map((leave, index) => {
                 const statusInfo = statusConfig[leave.status] || statusConfig.pending;
                 const pendingApproval = leave.approvals.find(a => a.status === 'pending');
                 const currentApprover = pendingApproval?.approver;
@@ -862,8 +861,13 @@ export default function AdminLeavesPage() {
                     }}
                   >
                     <TableCell>
+                      <Typography variant="body2" fontWeight={600} color="text.secondary">
+                        {page * rowsPerPage + index + 1}
+                      </Typography>
+                    </TableCell>
+                    <TableCell>
                       <Typography variant="body2" fontWeight={600} color="primary.main">
-                        #{leave.id}
+                        {leave.leaveCode || `#${leave.id}`}
                       </Typography>
                     </TableCell>
                     <TableCell>
@@ -945,7 +949,7 @@ export default function AdminLeavesPage() {
                             },
                           }}
                         >
-                          <Eye size={18} />
+                          <EyeIcon size={18} variant="Outline" color="#6C63FF" />
                         </IconButton>
                       </Tooltip>
                     </TableCell>
@@ -1005,11 +1009,11 @@ export default function AdminLeavesPage() {
         }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
             <Avatar sx={{ bgcolor: alpha(theme.palette.primary.main, 0.1), color: 'primary.main' }}>
-              <FileText size={20} />
+              <DocumentText size={20} variant="Outline" color="#6C63FF" />
             </Avatar>
             <Box>
               <Typography variant="h6" fontWeight={600}>
-                ใบลา #{selectedLeave?.id}
+                ใบลา {selectedLeave?.leaveCode || `#${selectedLeave?.id}`}
               </Typography>
               <Typography variant="caption" color="text.secondary">
                 สร้างเมื่อ {selectedLeave && formatDateTime(selectedLeave.createdAt)}
@@ -1017,7 +1021,7 @@ export default function AdminLeavesPage() {
             </Box>
           </Box>
           <IconButton size="small" onClick={() => setDetailDialogOpen(false)}>
-            <X size={18} />
+            <CloseSquare size={18} variant="Outline" color="#9E9E9E" />
           </IconButton>
         </DialogTitle>
 
@@ -1062,7 +1066,7 @@ export default function AdminLeavesPage() {
                     {/* Employee Info */}
                     <Paper variant="outlined" sx={{ p: 2, borderRadius: 1 }}>
                       <Typography variant="subtitle2" fontWeight={600} gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <User size={16} /> ข้อมูลพนักงาน
+                        <UserIcon size={16} variant="Outline" color="#6C63FF" /> ข้อมูลพนักงาน
                       </Typography>
                       <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2, mt: 1.5 }}>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
@@ -1094,7 +1098,7 @@ export default function AdminLeavesPage() {
                     {/* Leave Details */}
                     <Paper variant="outlined" sx={{ p: 2, borderRadius: 1 }}>
                       <Typography variant="subtitle2" fontWeight={600} gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Calendar size={16} /> รายละเอียดการลา
+                        <CalendarIcon size={16} variant="Outline" color="#2196F3" /> รายละเอียดการลา
                       </Typography>
                       <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2, mt: 1.5 }}>
                         <Box>
@@ -1130,7 +1134,7 @@ export default function AdminLeavesPage() {
                     {(selectedLeave.contactPhone || selectedLeave.contactAddress) && (
                       <Paper variant="outlined" sx={{ p: 2, borderRadius: 1 }}>
                         <Typography variant="subtitle2" fontWeight={600} gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                          <Phone size={16} /> ข้อมูลติดต่อ
+                          <Call size={16} variant="Outline" color="#4CAF50" /> ข้อมูลติดต่อ
                         </Typography>
                         <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2, mt: 1.5 }}>
                           {selectedLeave.contactPhone && (
@@ -1285,11 +1289,11 @@ export default function AdminLeavesPage() {
                             variant="rounded"
                             sx={{ width: 48, height: 48 }}
                           >
-                            <ImageIcon size={20} />
+                            <ImageIconsax size={20} variant="Outline" color="#E91E63" />
                           </Avatar>
                         ) : (
                           <Avatar sx={{ bgcolor: alpha(theme.palette.primary.main, 0.1), color: 'primary.main' }}>
-                            <Paperclip size={20} />
+                            <Paperclip2 size={20} variant="Outline" color="#6C63FF" />
                           </Avatar>
                         )}
                         <Box sx={{ flex: 1 }}>
@@ -1300,9 +1304,9 @@ export default function AdminLeavesPage() {
                           </Typography>
                         </Box>
                         {isImageFile(file.mimeType) ? (
-                          <Eye size={18} color={theme.palette.text.secondary} />
+                          <EyeIcon size={18} variant="Outline" color={theme.palette.text.secondary} />
                         ) : (
-                          <ChevronRight size={18} color={theme.palette.text.secondary} />
+                          <ArrowRight2 size={18} variant="Outline" color={theme.palette.text.secondary} />
                         )}
                       </Paper>
                     ))}
@@ -1358,7 +1362,7 @@ export default function AdminLeavesPage() {
                   }
                 }}
               >
-                <Download size={18} />
+                <DocumentDownload size={18} variant="Outline" color="#4CAF50" />
               </IconButton>
             </Tooltip>
             <Tooltip title="เปิดในแท็บใหม่">
@@ -1366,11 +1370,11 @@ export default function AdminLeavesPage() {
                 size="small"
                 onClick={() => selectedImage && window.open(selectedImage.url, '_blank')}
               >
-                <ChevronRight size={18} />
+                <ArrowRight2 size={18} variant="Outline" color="#6C63FF" />
               </IconButton>
             </Tooltip>
             <IconButton size="small" onClick={() => setImageModalOpen(false)}>
-              <X size={18} />
+              <CloseSquare size={18} variant="Outline" color="#9E9E9E" />
             </IconButton>
           </Box>
         </DialogTitle>

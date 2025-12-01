@@ -36,18 +36,18 @@ import {
   MenuItem,
 } from '@mui/material';
 import {
-  Plus,
-  Trash2,
-  Search,
-  RefreshCw,
-  UserCog,
-  Users,
-  ArrowDown,
-  Save,
+  Add,
+  Trash,
+  SearchNormal1,
+  Refresh2,
+  UserEdit,
+  People,
+  ArrowDown2,
+  TickSquare,
   Shield,
-  X,
-  RotateCcw,
-} from 'lucide-react';
+  CloseCircle,
+  RotateLeft,
+} from 'iconsax-react';
 import ConfirmDialog from '../components/ConfirmDialog';
 import { useToastr } from '@/app/components/Toastr';
 import type { UserRole } from '@/types/user-role';
@@ -521,10 +521,9 @@ export default function UserApprovalFlowPage() {
                 width: 48,
                 height: 48,
                 bgcolor: alpha(theme.palette.primary.main, 0.1),
-                color: 'primary.main',
               }}
             >
-              <UserCog size={24} />
+              <UserEdit size={24} variant="Bold" color="#6C63FF" />
             </Avatar>
             <Box>
               <Typography variant="h4" component="h1" fontWeight={700}>
@@ -547,7 +546,7 @@ export default function UserApprovalFlowPage() {
               '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.1) },
             }}
           >
-            <RefreshCw size={20} />
+            <Refresh2 size={20} color="#6C63FF" />
           </IconButton>
         </Tooltip>
       </Box>
@@ -564,20 +563,20 @@ export default function UserApprovalFlowPage() {
         <StatCard
           title="พนักงานทั้งหมด"
           value={totalUsers}
-          icon={<Users size={28} />}
+          icon={<People size={28} variant="Bold" color="#6C63FF" />}
           color="primary"
         />
         <StatCard
           title="มี Custom Flow"
           value={usersWithCustomFlows}
-          icon={<UserCog size={28} />}
+          icon={<UserEdit size={28} variant="Bold" color="#22C55E" />}
           color="success"
           subtitle="พนักงานที่มี flow พิเศษ"
         />
         <StatCard
           title="ใช้ Default Workflow"
           value={usersWithDefaultFlow}
-          icon={<Shield size={28} />}
+          icon={<Shield size={28} variant="Bold" color="#F59E0B" />}
           color="warning"
           subtitle="ใช้ flow ตาม ฝ่าย/แผนก"
         />
@@ -607,7 +606,7 @@ export default function UserApprovalFlowPage() {
           InputProps={{
             startAdornment: (
               <InputAdornment position="start">
-                <Search size={18} color={theme.palette.text.secondary} />
+                <SearchNormal1 size={18} color="#6C63FF" />
               </InputAdornment>
             ),
           }}
@@ -708,10 +707,9 @@ export default function UserApprovalFlowPage() {
                         width: 80,
                         height: 80,
                         bgcolor: alpha(theme.palette.text.secondary, 0.1),
-                        color: 'text.secondary',
                       }}
                     >
-                      <Users size={40} />
+                      <People size={40} color="#64748B" />
                     </Avatar>
                     <Typography variant="h6" fontWeight={600}>
                       ไม่พบข้อมูลพนักงาน
@@ -818,7 +816,7 @@ export default function UserApprovalFlowPage() {
                             },
                           }}
                         >
-                          <UserCog size={18} />
+                          <UserEdit size={18} color="#6C63FF" />
                         </IconButton>
                       </Tooltip>
                       {usersWithFlows.has(user.id) && (
@@ -834,7 +832,7 @@ export default function UserApprovalFlowPage() {
                               },
                             }}
                           >
-                            <RotateCcw size={18} />
+                            <RotateLeft size={18} color="#EF4444" />
                           </IconButton>
                         </Tooltip>
                       )}
@@ -895,13 +893,13 @@ export default function UserApprovalFlowPage() {
           borderColor: 'divider',
         }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <UserCog size={20} />
+            <UserEdit size={20} color="#6C63FF" />
             <Typography variant="h6" fontWeight={600}>
               ตั้งค่า Approval Flow
             </Typography>
           </Box>
           <IconButton size="small" onClick={handleCloseDialog}>
-            <X size={18} />
+            <CloseCircle size={18} color="#64748B" />
           </IconButton>
         </DialogTitle>
 
@@ -950,7 +948,7 @@ export default function UserApprovalFlowPage() {
             <Button
               variant="outlined"
               size="small"
-              startIcon={<Plus size={16} />}
+              startIcon={<Add size={16} color="#6C63FF" />}
               onClick={() => setAddApproverDialogOpen(true)}
               sx={{ borderRadius: 1 }}
             >
@@ -971,7 +969,7 @@ export default function UserApprovalFlowPage() {
                 bgcolor: alpha(theme.palette.background.default, 0.5),
               }}
             >
-              <Users size={40} color={theme.palette.text.disabled} />
+              <People size={40} color={theme.palette.text.disabled} />
               <Typography color="text.secondary" sx={{ mt: 1 }}>
                 ยังไม่มีผู้อนุมัติ (ใช้ Default Workflow)
               </Typography>
@@ -1030,13 +1028,13 @@ export default function UserApprovalFlowPage() {
                       color="error"
                       onClick={() => handleRemoveApprover(flow.level)}
                     >
-                      <Trash2 size={16} />
+                      <Trash size={16} color="#EF4444" />
                     </IconButton>
                   </Paper>
 
                   {idx < approvalFlows.length - 1 && (
                     <Box sx={{ display: 'flex', justifyContent: 'center' }}>
-                      <ArrowDown size={18} color={theme.palette.text.disabled} />
+                      <ArrowDown2 size={18} color={theme.palette.text.disabled} />
                     </Box>
                   )}
                 </React.Fragment>
@@ -1048,7 +1046,7 @@ export default function UserApprovalFlowPage() {
           <Box sx={{ mt: 2 }}>
             {approvalFlows.length > 0 && (
               <Box sx={{ display: 'flex', justifyContent: 'center', mb: 1 }}>
-                <ArrowDown size={18} color={theme.palette.text.disabled} />
+                <ArrowDown2 size={18} color={theme.palette.text.disabled} />
               </Box>
             )}
             <Paper 
@@ -1075,7 +1073,7 @@ export default function UserApprovalFlowPage() {
                   justifyContent: 'center',
                 }}
               >
-                <Shield size={14} />
+                <Shield size={14} color="#fff" />
               </Box>
               <Box sx={{ flex: 1 }}>
                 <Typography variant="body2" fontWeight={500}>
@@ -1098,7 +1096,7 @@ export default function UserApprovalFlowPage() {
             variant="contained" 
             onClick={handleSaveFlow}
             disabled={saving}
-            startIcon={<Save size={16} />}
+            startIcon={<TickSquare size={16} color="#fff" />}
             sx={{ borderRadius: 1 }}
           >
             {saving ? 'กำลังบันทึก...' : 'บันทึก'}
@@ -1118,7 +1116,7 @@ export default function UserApprovalFlowPage() {
       >
         <DialogTitle sx={{ borderBottom: '1px solid', borderColor: 'divider' }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <Plus size={20} />
+            <Add size={20} color="#6C63FF" />
             เพิ่มผู้อนุมัติ
           </Box>
         </DialogTitle>

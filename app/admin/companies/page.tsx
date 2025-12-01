@@ -28,17 +28,17 @@ import {
   Skeleton,
 } from '@mui/material';
 import {
-  Plus,
-  Pencil,
-  Trash2,
-  Building2,
-  Search,
-  Phone,
-  MapPin,
-  RefreshCw,
-  CheckCircle,
-  XCircle,
-} from 'lucide-react';
+  Add,
+  Edit2,
+  Trash,
+  Building,
+  SearchNormal1,
+  Call,
+  Location,
+  Refresh2,
+  TickCircle,
+  CloseCircle,
+} from 'iconsax-react';
 import CompanyDialog from './CompanyDialog';
 import ConfirmDialog from '../components/ConfirmDialog';
 import { useToastr } from '@/app/components/Toastr';
@@ -248,10 +248,9 @@ export default function CompaniesPage() {
                 width: 48,
                 height: 48,
                 bgcolor: alpha(theme.palette.primary.main, 0.1),
-                color: 'primary.main',
               }}
             >
-              <Building2 size={24} />
+              <Building size={24} variant="Bold" color="#6C63FF" />
             </Avatar>
             <Box>
               <Typography variant="h4" component="h1" fontWeight={700}>
@@ -265,7 +264,7 @@ export default function CompaniesPage() {
         </Box>
         <Button
           variant="contained"
-          startIcon={<Plus size={18} />}
+          startIcon={<Add size={18} color="#fff" />}
           onClick={handleCreate}
           sx={{ 
             borderRadius: 1,
@@ -286,21 +285,21 @@ export default function CompaniesPage() {
         <StatCard
           title="บริษัททั้งหมด"
           value={companies.length}
-          icon={<Building2 size={26} />}
+          icon={<Building size={26} variant="Bold" color="#6C63FF" />}
           color="primary"
           subtitle="ในระบบ"
         />
         <StatCard
           title="เปิดใช้งาน"
           value={activeCompanies}
-          icon={<CheckCircle size={26} />}
+          icon={<TickCircle size={26} variant="Bold" color="#22C55E" />}
           color="success"
           subtitle="พร้อมใช้งาน"
         />
         <StatCard
           title="ปิดใช้งาน"
           value={inactiveCompanies}
-          icon={<XCircle size={26} />}
+          icon={<CloseCircle size={26} variant="Bold" color="#64748B" />}
           color="secondary"
           subtitle="ไม่ได้ใช้งาน"
         />
@@ -340,7 +339,7 @@ export default function CompaniesPage() {
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
-                  <Search size={18} color={theme.palette.text.secondary} />
+                  <SearchNormal1 size={18} color="#6C63FF" />
                 </InputAdornment>
               ),
             }}
@@ -363,8 +362,9 @@ export default function CompaniesPage() {
                 '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.1) },
               }}
             >
-              <RefreshCw 
-                size={20} 
+              <Refresh2 
+                size={20}
+                color="#6C63FF"
                 style={{ 
                   transition: 'transform 0.3s ease',
                   transform: loading ? 'rotate(360deg)' : 'rotate(0deg)',
@@ -426,10 +426,9 @@ export default function CompaniesPage() {
                           width: 80,
                           height: 80,
                           bgcolor: alpha(theme.palette.text.secondary, 0.1),
-                          color: 'text.secondary',
                         }}
                       >
-                        <Building2 size={40} />
+                        <Building size={40} variant="Bold" color="#64748B" />
                       </Avatar>
                       <Box sx={{ textAlign: 'center' }}>
                         <Typography variant="h6" fontWeight={600} gutterBottom>
@@ -444,7 +443,7 @@ export default function CompaniesPage() {
                       {!searchQuery && (
                         <Button
                           variant="contained"
-                          startIcon={<Plus size={18} />}
+                          startIcon={<Add size={18} color="#fff" />}
                           onClick={handleCreate}
                           sx={{ mt: 1, borderRadius: 1 }}
                         >
@@ -488,7 +487,7 @@ export default function CompaniesPage() {
                     <TableCell>
                       {company.address ? (
                         <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 0.75 }}>
-                          <MapPin size={16} color={theme.palette.text.secondary} style={{ marginTop: 2, flexShrink: 0 }} />
+                          <Location size={16} color="#64748B" style={{ marginTop: 2, flexShrink: 0 }} />
                           <Typography
                             variant="body2"
                             color="text.secondary"
@@ -509,7 +508,7 @@ export default function CompaniesPage() {
                     <TableCell>
                       {company.phone ? (
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
-                          <Phone size={16} color={theme.palette.text.secondary} />
+                          <Call size={16} color="#64748B" />
                           <Typography variant="body2">{company.phone}</Typography>
                         </Box>
                       ) : (
@@ -519,8 +518,8 @@ export default function CompaniesPage() {
                     <TableCell align="center">
                       <Chip
                         icon={company.isActive 
-                          ? <CheckCircle size={14} /> 
-                          : <XCircle size={14} />
+                          ? <TickCircle size={14} /> 
+                          : <CloseCircle size={14} />
                         }
                         label={company.isActive ? 'เปิดใช้งาน' : 'ปิดใช้งาน'}
                         size="small"
@@ -552,7 +551,7 @@ export default function CompaniesPage() {
                               },
                             }}
                           >
-                            <Pencil size={18} />
+                            <Edit2 size={18} color="#6C63FF" />
                           </IconButton>
                         </Tooltip>
                         <Tooltip title="ลบ">
@@ -567,7 +566,7 @@ export default function CompaniesPage() {
                               },
                             }}
                           >
-                            <Trash2 size={18} />
+                            <Trash size={18} color="#EF4444" />
                           </IconButton>
                         </Tooltip>
                       </Box>

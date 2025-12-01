@@ -14,7 +14,7 @@ import {
   CircularProgress,
   InputAdornment,
 } from '@mui/material';
-import { Calendar } from 'lucide-react';
+import { Calendar } from 'iconsax-react';
 
 interface LeaveType {
   id: number;
@@ -151,7 +151,7 @@ export default function LeaveTypeDialog({
         borderBottom: '1px solid',
         borderColor: 'divider',
       }}>
-        <Calendar size={24} />
+        <Calendar size={24} variant="Bold" color="#6C63FF" />
         {leaveType ? 'แก้ไขประเภทการลา' : 'เพิ่มประเภทการลาใหม่'}
       </DialogTitle>
       <DialogContent sx={{ p: 2 }}>

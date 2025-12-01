@@ -1,7 +1,7 @@
 'use client';
 import React, { useState } from 'react';
 import { Drawer, Box, List, ListItem, ListItemButton, ListItemIcon, ListItemText, Typography, Avatar, Divider, IconButton, CircularProgress, Skeleton } from '@mui/material';
-import { Home, Calendar, Settings, LogOut, User, X } from 'lucide-react';
+import { Home2, Calendar, Setting2, Logout, User, CloseSquare, Task } from 'iconsax-react';
 import { signOut } from 'next-auth/react';
 import { useToastr } from '@/app/components/Toastr';
 import { useUser } from '@/app/providers/UserProvider';
@@ -65,17 +65,17 @@ const Sidebar = ({ open, onClose }: SidebarProps) => {
     };
 
     const menuItems = [
-        { text: 'แดชบอร์ด', icon: <Home size={20} />, path: '/' },
-        { text: 'จัดการใบลา', icon: <Calendar size={20} />, path: '/approval' },
-        { text: 'การลาของฉัน', icon: <Calendar size={20} />, path: '/leave' },
-        { text: 'โปรไฟล์', icon: <User size={20} />, path: '/profile' },
-        { text: 'ตั้งค่า', icon: <Settings size={20} />, path: '/settings' },
+        { text: 'แดชบอร์ด', icon: <Home2 size={20} variant="Outline" color="#6C63FF" />, activeIcon: <Home2 size={20} variant="Bold" color="#fff" />, path: '/' },
+        { text: 'จัดการใบลา', icon: <Task size={20} variant="Outline" color="#6C63FF" />, activeIcon: <Task size={20} variant="Bold" color="#fff" />, path: '/approval' },
+        { text: 'การลาของฉัน', icon: <Calendar size={20} variant="Outline" color="#6C63FF" />, activeIcon: <Calendar size={20} variant="Bold" color="#fff" />, path: '/leave' },
+        { text: 'โปรไฟล์', icon: <User size={20} variant="Outline" color="#6C63FF" />, activeIcon: <User size={20} variant="Bold" color="#fff" />, path: '/profile' },
+        { text: 'ตั้งค่า', icon: <Setting2 size={20} variant="Outline" color="#6C63FF" />, activeIcon: <Setting2 size={20} variant="Bold" color="#fff" />, path: '/settings' },
     ];
 
     // Admin roles that can access admin settings
     const adminRoles = ['admin', 'hr', 'hr_manager'];
     if (adminRoles.includes(user?.role || '')) {
-        menuItems.push({ text: 'ตั้งค่าผู้อนุมัติ', icon: <Settings size={20} />, path: '/admin/approval-workflows' });
+        menuItems.push({ text: 'ตั้งค่าผู้อนุมัติ', icon: <Setting2 size={20} variant="Outline" color="#6C63FF" />, activeIcon: <Setting2 size={20} variant="Bold" color="#fff" />, path: '/admin/approval-workflows' });
     }
 
     const handleNavigate = (path: string) => {
@@ -135,7 +135,7 @@ const Sidebar = ({ open, onClose }: SidebarProps) => {
                         </Box>
                     </Box>
                     <IconButton onClick={onClose} size="small">
-                        <X size={20} />
+                        <CloseSquare size={20} variant="Outline" color="#9E9E9E" />
                     </IconButton>
                 </Box>
 
@@ -157,8 +157,8 @@ const Sidebar = ({ open, onClose }: SidebarProps) => {
                                         }
                                     }}
                                 >
-                                    <ListItemIcon sx={{ minWidth: 40, color: isActive ? 'white' : 'text.secondary' }}>
-                                        {item.icon}
+                                    <ListItemIcon sx={{ minWidth: 40 }}>
+                                        {isActive ? item.activeIcon : item.icon}
                                     </ListItemIcon>
                                     <ListItemText
                                         primary={item.text}
@@ -188,8 +188,8 @@ const Sidebar = ({ open, onClose }: SidebarProps) => {
                             },
                         }}
                     >
-                        <ListItemIcon sx={{ minWidth: 40, color: 'error.main' }}>
-                            {isLoggingOut ? <CircularProgress size={20} color="error" /> : <LogOut size={20} />}
+                        <ListItemIcon sx={{ minWidth: 40 }}>
+                            {isLoggingOut ? <CircularProgress size={20} color="error" /> : <Logout size={20} variant="Outline" color="#F44336" />}
                         </ListItemIcon>
                         <ListItemText 
                             primary={isLoggingOut ? 'กำลังออกจากระบบ...' : 'ออกจากระบบ'} 

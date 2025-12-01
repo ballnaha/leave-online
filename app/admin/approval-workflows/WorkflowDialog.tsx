@@ -25,7 +25,7 @@ import {
   Chip,
   ListSubheader,
 } from '@mui/material';
-import { Plus, Trash2, ArrowUp, ArrowDown, GitBranch, Building2, Users } from 'lucide-react';
+import { Add, Trash, ArrowUp2, ArrowDown2, Hierarchy, Building, People } from 'iconsax-react';
 
 interface WorkflowDialogProps {
   open: boolean;
@@ -267,7 +267,7 @@ export default function WorkflowDialog({ open, onClose, onSave, workflow }: Work
           alignItems: 'center',
           justifyContent: 'center',
         }}>
-          <GitBranch size={20} color={theme.palette.primary.main} />
+          <Hierarchy size={20} color={theme.palette.primary.main} variant="Bold" />
         </Box>
         <Box>
           <Typography variant="h6" fontWeight={600}>
@@ -383,7 +383,7 @@ export default function WorkflowDialog({ open, onClose, onSave, workflow }: Work
               </Typography>
             </Box>
             <Button 
-              startIcon={<Plus size={16} />} 
+              startIcon={<Add size={16} color="#6C63FF" />} 
               onClick={handleAddStep} 
               variant="outlined" 
               size="small"
@@ -409,7 +409,7 @@ export default function WorkflowDialog({ open, onClose, onSave, workflow }: Work
                 ยังไม่มีขั้นตอนอนุมัติ
               </Typography>
               <Button 
-                startIcon={<Plus size={16} />} 
+                startIcon={<Add size={16} color="#6C63FF" />} 
                 onClick={handleAddStep} 
                 size="small"
                 sx={{ mt: 1 }}
@@ -508,7 +508,7 @@ export default function WorkflowDialog({ open, onClose, onSave, workflow }: Work
                             '&:hover': { bgcolor: alpha(theme.palette.grey[500], 0.2) },
                           }}
                         >
-                          <ArrowUp size={16} />
+                          <ArrowUp2 size={16} color="#64748B" />
                         </IconButton>
                         <IconButton 
                           size="small" 
@@ -519,7 +519,7 @@ export default function WorkflowDialog({ open, onClose, onSave, workflow }: Work
                             '&:hover': { bgcolor: alpha(theme.palette.grey[500], 0.2) },
                           }}
                         >
-                          <ArrowDown size={16} />
+                          <ArrowDown2 size={16} color="#64748B" />
                         </IconButton>
                         <IconButton 
                           size="small"
@@ -530,7 +530,7 @@ export default function WorkflowDialog({ open, onClose, onSave, workflow }: Work
                             '&:hover': { bgcolor: alpha(theme.palette.error.main, 0.2) },
                           }}
                         >
-                          <Trash2 size={16} />
+                          <Trash size={16} color="#EF4444" />
                         </IconButton>
                       </Box>
                     </Box>

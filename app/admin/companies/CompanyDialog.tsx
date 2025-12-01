@@ -13,7 +13,7 @@ import {
   Switch,
   CircularProgress,
 } from '@mui/material';
-import { Building2 } from 'lucide-react';
+import { Building } from 'iconsax-react';
 
 interface Company {
   id: number;
@@ -141,7 +141,7 @@ export default function CompanyDialog({
         borderBottom: '1px solid',
         borderColor: 'divider',
       }}>
-        <Building2 size={24} />
+        <Building size={24} variant="Bold" color="#6C63FF" />
         {company ? 'แก้ไขบริษัท' : 'เพิ่มบริษัทใหม่'}
       </DialogTitle>
       <DialogContent sx={{ p: 2 , mt:2 }}>

@@ -32,18 +32,18 @@ import {
   MenuItem,
 } from '@mui/material';
 import {
-  Plus,
-  Pencil,
-  Trash2,
+  Add,
+  Edit2,
+  Trash,
   Calendar,
-  Search,
-  RefreshCw,
-  CheckCircle,
-  XCircle,
-  DollarSign,
+  SearchNormal1,
+  Refresh2,
+  TickCircle,
+  CloseCircle,
+  DollarCircle,
   Filter,
   Clock,
-} from 'lucide-react';
+} from 'iconsax-react';
 import LeaveTypeDialog from './LeaveTypeDialog';
 import ConfirmDialog from '../components/ConfirmDialog';
 import { useToastr } from '@/app/components/Toastr';
@@ -295,10 +295,9 @@ export default function LeaveTypesPage() {
                 width: 48,
                 height: 48,
                 bgcolor: alpha(theme.palette.primary.main, 0.1),
-                color: 'primary.main',
               }}
             >
-              <Calendar size={24} />
+              <Calendar size={24} variant="Bold" color="#6C63FF" />
             </Avatar>
             <Box>
               <Typography variant="h4" component="h1" fontWeight={700}>
@@ -312,7 +311,7 @@ export default function LeaveTypesPage() {
         </Box>
         <Button
           variant="contained"
-          startIcon={<Plus size={18} />}
+          startIcon={<Add size={18} color="#fff" />}
           onClick={handleCreate}
           sx={{ 
             borderRadius: 1,
@@ -333,28 +332,28 @@ export default function LeaveTypesPage() {
         <StatCard
           title="ประเภทการลาทั้งหมด"
           value={leaveTypes.length}
-          icon={<Calendar size={26} />}
+          icon={<Calendar size={26} variant="Bold" color="#6C63FF" />}
           color="primary"
           subtitle="ในระบบ"
         />
         <StatCard
           title="เปิดใช้งาน"
           value={activeLeaveTypes}
-          icon={<CheckCircle size={26} />}
+          icon={<TickCircle size={26} variant="Bold" color="#22C55E" />}
           color="success"
           subtitle="พร้อมใช้งาน"
         />
         <StatCard
           title="ปิดใช้งาน"
           value={inactiveLeaveTypes}
-          icon={<XCircle size={26} />}
+          icon={<CloseCircle size={26} variant="Bold" color="#64748B" />}
           color="secondary"
           subtitle="ไม่ได้ใช้งาน"
         />
         <StatCard
           title="ได้รับค่าจ้าง"
           value={paidLeaveTypes}
-          icon={<DollarSign size={26} />}
+          icon={<DollarCircle size={26} variant="Bold" color="#F59E0B" />}
           color="warning"
           subtitle="ประเภทการลา"
         />
@@ -394,7 +393,7 @@ export default function LeaveTypesPage() {
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
-                  <Search size={18} color={theme.palette.text.secondary} />
+                  <SearchNormal1 size={18} color={theme.palette.text.secondary} />
                 </InputAdornment>
               ),
             }}
@@ -404,7 +403,7 @@ export default function LeaveTypesPage() {
           <FormControl size="small" sx={{ minWidth: 140 }}>
             <InputLabel>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                <Filter size={16} />
+                <Filter size={16} color="#6C63FF" />
                 สถานะ
               </Box>
             </InputLabel>
@@ -423,13 +422,13 @@ export default function LeaveTypesPage() {
               <MenuItem value="all">ทั้งหมด</MenuItem>
               <MenuItem value="active">
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <CheckCircle size={16} color={theme.palette.success.main} />
+                  <TickCircle size={16} color={theme.palette.success.main} />
                   เปิดใช้งาน
                 </Box>
               </MenuItem>
               <MenuItem value="inactive">
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <XCircle size={16} color={theme.palette.text.secondary} />
+                  <CloseCircle size={16} color={theme.palette.text.secondary} />
                   ปิดใช้งาน
                 </Box>
               </MenuItem>
@@ -440,7 +439,7 @@ export default function LeaveTypesPage() {
           <FormControl size="small" sx={{ minWidth: 150 }}>
             <InputLabel>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                <DollarSign size={16} />
+                <DollarCircle size={16} color="#6C63FF" />
                 ค่าจ้าง
               </Box>
             </InputLabel>
@@ -459,7 +458,7 @@ export default function LeaveTypesPage() {
               <MenuItem value="all">ทั้งหมด</MenuItem>
               <MenuItem value="paid">
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <DollarSign size={16} color={theme.palette.success.main} />
+                  <DollarCircle size={16} color={theme.palette.success.main} />
                   ได้รับค่าจ้าง
                 </Box>
               </MenuItem>
@@ -490,8 +489,9 @@ export default function LeaveTypesPage() {
                 '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.1) },
               }}
             >
-              <RefreshCw 
-                size={20} 
+              <Refresh2 
+                size={20}
+                color="#6C63FF"
                 style={{ 
                   transition: 'transform 0.3s ease',
                   transform: loading ? 'rotate(360deg)' : 'rotate(0deg)',
@@ -554,10 +554,9 @@ export default function LeaveTypesPage() {
                           width: 80,
                           height: 80,
                           bgcolor: alpha(theme.palette.text.secondary, 0.1),
-                          color: 'text.secondary',
                         }}
                       >
-                        <Calendar size={40} />
+                        <Calendar size={40} variant="Bold" color="#64748B" />
                       </Avatar>
                       <Box sx={{ textAlign: 'center' }}>
                         <Typography variant="h6" fontWeight={600} gutterBottom>
@@ -574,7 +573,7 @@ export default function LeaveTypesPage() {
                       {!searchQuery && statusFilter === 'all' && paidFilter === 'all' && (
                         <Button
                           variant="contained"
-                          startIcon={<Plus size={18} />}
+                          startIcon={<Add size={18} color="#fff" />}
                           onClick={handleCreate}
                           sx={{ mt: 1, borderRadius: 1 }}
                         >
@@ -667,8 +666,8 @@ export default function LeaveTypesPage() {
                     <TableCell align="center">
                       <Chip
                         icon={leaveType.isActive 
-                          ? <CheckCircle size={14} /> 
-                          : <XCircle size={14} />
+                          ? <TickCircle size={14} /> 
+                          : <CloseCircle size={14} />
                         }
                         label={leaveType.isActive ? 'เปิดใช้งาน' : 'ปิดใช้งาน'}
                         size="small"
@@ -700,7 +699,7 @@ export default function LeaveTypesPage() {
                               },
                             }}
                           >
-                            <Pencil size={18} />
+                            <Edit2 size={18} />
                           </IconButton>
                         </Tooltip>
                         <Tooltip title="ลบ">
@@ -715,7 +714,7 @@ export default function LeaveTypesPage() {
                               },
                             }}
                           >
-                            <Trash2 size={18} />
+                            <Trash size={18} />
                           </IconButton>
                         </Tooltip>
                       </Box>

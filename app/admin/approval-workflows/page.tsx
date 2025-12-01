@@ -32,17 +32,17 @@ import {
   Stack,
 } from '@mui/material';
 import {
-  Plus,
-  Pencil,
-  Trash2,
-  Search,
-  RefreshCw,
-  GitBranch,
-  Building2,
-  Layers,
-  Users,
-  ArrowRight,
-} from 'lucide-react';
+  Add,
+  Edit2,
+  Trash,
+  SearchNormal1,
+  Refresh2,
+  Hierarchy,
+  Building,
+  Layer,
+  People,
+  ArrowRight2,
+} from 'iconsax-react';
 import WorkflowDialog from './WorkflowDialog';
 import ConfirmDialog from '../components/ConfirmDialog';
 import { useToastr } from '@/app/components/Toastr';
@@ -391,10 +391,9 @@ export default function ApprovalWorkflowsPage() {
                 width: 48,
                 height: 48,
                 bgcolor: alpha(theme.palette.primary.main, 0.1),
-                color: 'primary.main',
               }}
             >
-              <GitBranch size={24} />
+              <Hierarchy size={24} variant="Bold" color="#6C63FF" />
             </Avatar>
             <Box>
               <Typography variant="h4" component="h1" fontWeight={700}>
@@ -408,7 +407,7 @@ export default function ApprovalWorkflowsPage() {
         </Box>
         <Button
           variant="contained"
-          startIcon={<Plus size={18} />}
+          startIcon={<Add size={18} color="#fff" />}
           onClick={handleCreate}
           sx={{ 
             borderRadius: 1,
@@ -451,27 +450,27 @@ export default function ApprovalWorkflowsPage() {
         <StatCard
           title="Workflow ทั้งหมด"
           value={totalWorkflows}
-          icon={<GitBranch size={28} />}
+          icon={<Hierarchy size={28} variant="Bold" color="#6C63FF" />}
           color="primary"
         />
         <StatCard
           title="Global"
           value={globalWorkflows}
-          icon={<Users size={28} />}
+          icon={<People size={28} variant="Bold" color="#22C55E" />}
           color="success"
           subtitle="ใช้ทั้งองค์กร"
         />
         <StatCard
           title="ระดับบริษัท"
           value={companyWorkflows}
-          icon={<Building2 size={28} />}
+          icon={<Building size={28} variant="Bold" color="#F59E0B" />}
           color="warning"
           subtitle="เฉพาะบริษัท"
         />
         <StatCard
           title="ระดับฝ่าย/แผนก"
           value={departmentWorkflows}
-          icon={<Layers size={28} />}
+          icon={<Layer size={28} variant="Bold" color="#64748B" />}
           color="secondary"
           subtitle="เฉพาะฝ่าย/แผนก"
         />
@@ -504,7 +503,7 @@ export default function ApprovalWorkflowsPage() {
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
-                  <Search size={18} />
+                  <SearchNormal1 size={18} color="#6C63FF" />
                 </InputAdornment>
               ),
             }}
@@ -533,7 +532,7 @@ export default function ApprovalWorkflowsPage() {
                 '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.2) },
               }}
             >
-              <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
+              <Refresh2 size={18} color="#6C63FF" className={loading ? 'animate-spin' : ''} />
             </IconButton>
           </Tooltip>
         </Box>
@@ -567,7 +566,7 @@ export default function ApprovalWorkflowsPage() {
                   <TableRow>
                     <TableCell colSpan={5} align="center" sx={{ py: 8 }}>
                       <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
-                        <GitBranch size={48} color={theme.palette.text.disabled} />
+                        <Hierarchy size={48} color={theme.palette.text.disabled} />
                         <Typography color="text.secondary">
                           {searchQuery || companyFilter !== 'all'
                             ? 'ไม่พบข้อมูลที่ค้นหา'
@@ -576,7 +575,7 @@ export default function ApprovalWorkflowsPage() {
                         {!searchQuery && companyFilter === 'all' && (
                           <Button
                             variant="outlined"
-                            startIcon={<Plus size={18} />}
+                            startIcon={<Add size={18} color="#6C63FF" />}
                             onClick={handleCreate}
                           >
                             เพิ่ม Workflow
@@ -614,7 +613,7 @@ export default function ApprovalWorkflowsPage() {
                               size="small" 
                               color="primary" 
                               variant="outlined"
-                              icon={<Building2 size={12} />}
+                              icon={<Building size={12} color="#6C63FF" />}
                             />
                           )}
                           {workflow.department && (
@@ -623,7 +622,7 @@ export default function ApprovalWorkflowsPage() {
                               size="small" 
                               color="secondary" 
                               variant="outlined"
-                              icon={<Layers size={12} />}
+                              icon={<Layer size={12} color="#64748B" />}
                             />
                           )}
                           {workflow.section && (
@@ -639,7 +638,7 @@ export default function ApprovalWorkflowsPage() {
                               label="Global" 
                               size="small" 
                               color="success"
-                              icon={<Users size={12} />}
+                              icon={<People size={12} color="#22C55E" />}
                             />
                           )}
                         </Stack>
@@ -649,7 +648,7 @@ export default function ApprovalWorkflowsPage() {
                           {workflow.steps.map((step, index) => (
                             <React.Fragment key={step.id}>
                               {index > 0 && (
-                                <ArrowRight size={14} color={theme.palette.text.disabled} style={{ flexShrink: 0 }} />
+                                <ArrowRight2 size={14} color={theme.palette.text.disabled} style={{ flexShrink: 0 }} />
                               )}
                               <Chip
                                 label={
@@ -689,7 +688,7 @@ export default function ApprovalWorkflowsPage() {
                                 '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.1) },
                               }}
                             >
-                              <Pencil size={16} />
+                              <Edit2 size={16} color="#6C63FF" />
                             </IconButton>
                           </Tooltip>
                           <Tooltip title="ลบ">
@@ -701,7 +700,7 @@ export default function ApprovalWorkflowsPage() {
                                 '&:hover': { bgcolor: alpha(theme.palette.error.main, 0.1) },
                               }}
                             >
-                              <Trash2 size={16} />
+                              <Trash size={16} color="#EF4444" />
                             </IconButton>
                           </Tooltip>
                         </Box>

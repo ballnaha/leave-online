@@ -128,6 +128,7 @@ export async function GET(request: NextRequest) {
     // Add names to leaves
     const leavesWithNames = leaves.map(leave => ({
       ...leave,
+      leaveCode: leave.leaveCode || `LV${String(leave.id).padStart(6, '0')}`,
       leaveTypeName: leaveTypeMap.get(leave.leaveType) || leave.leaveType,
       user: {
         ...leave.user,

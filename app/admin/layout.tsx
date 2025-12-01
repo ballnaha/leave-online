@@ -20,128 +20,169 @@ import {
     MenuItem,
     useMediaQuery,
     useTheme,
-    Collapse,
     Tooltip,
     Badge,
     CircularProgress,
     Fade,
 } from '@mui/material';
+import type { Icon } from 'iconsax-react';
 import {
-    Menu as MenuIcon,
-    ChevronLeft,
-    ChevronRight,
-    ChevronDown,
-    ChevronUp,
-    LayoutDashboard,
-    Users,
-    Settings,
-    LogOut,
-    Bell,
-    GitBranch,
-    Building2,
-    Layers,
+    Home2,
+    Category2,
+    DocumentText,
     Calendar,
-    FileText,
-    Shield,
-    User,
-    Home,
-    PanelLeftClose,
-    PanelLeftOpen,
-    Image as ImageIcon,
-} from 'lucide-react';
+    Hierarchy,
+    UserTick,
+    Building,
+    Layer,
+    People,
+    Gallery,
+    DocumentText1,
+    Notification,
+    Setting2,
+    LogoutCurve,
+    ArrowDown2,
+    HambergerMenu,
+    SecuritySafe,
+} from 'iconsax-react';
 import { signOut } from 'next-auth/react';
 import { useUser } from '@/app/providers/UserProvider';
 import { useToastr } from '@/app/components/Toastr';
 
-const drawerWidth = 280;
-const collapsedDrawerWidth = 72;
+const drawerWidth = 260;
+const collapsedDrawerWidth = 68;
 
 interface MenuItem {
     text: string;
-    icon: React.ReactNode;
+    icon: Icon;
+    iconColor: string;
     path?: string;
     children?: MenuItem[];
 }
 
-const menuItems: MenuItem[] = [
+interface MenuGroup {
+    groupLabel?: string;
+    items: MenuItem[];
+}
+
+const menuGroups: MenuGroup[] = [
     {
-        text: 'แดชบอร์ด',
-        icon: <LayoutDashboard size={20} />,
-        path: '/admin',
-    },
-    {
-        text: 'ใบลาทั้งหมด',
-        icon: <FileText size={20} />,
-        path: '/admin/leaves',
-    },
-    {
-        text: 'จัดการผู้ใช้',
-        icon: <Users size={20} />,
-        path: '/admin/users',
-    },
-    {
-        text: 'การอนุมัติ',
-        icon: <GitBranch size={20} />,
-        children: [
+        // กลุ่มหลัก - ไม่มี label
+        items: [
             {
-                text: 'Workflow การอนุมัติ',
-                icon: <Layers size={20} />,
+                text: 'แดชบอร์ด',
+                icon: Category2,
+                iconColor: '#6C63FF',
+                path: '/admin',
+            },
+        ],
+    },
+    {
+        groupLabel: 'ใบลา',
+        items: [
+            {
+                text: 'ใบลาทั้งหมด',
+                icon: DocumentText,
+                iconColor: '#6C63FF',
+                path: '/admin/leaves',
+            },
+            {
+                text: 'ประเภทการลา',
+                icon: Calendar,
+                iconColor: '#6C63FF',
+                path: '/admin/leave-types',
+            },
+        ],
+    },
+    {
+        groupLabel: 'การอนุมัติ',
+        items: [
+            {
+                text: 'Workflow',
+                icon: Hierarchy,
+                iconColor: '#6C63FF',
                 path: '/admin/approval-workflows',
             },
             {
-                text: 'ระบุผู้อนุมัติรายบุคคล',
-                icon: <User size={20} />,
+                text: 'ผู้อนุมัติรายบุคคล',
+                icon: UserTick,
+                iconColor: '#6C63FF',
                 path: '/admin/user-approval-flow',
             },
         ],
     },
     {
-        text: 'จัดการองค์กร',
-        icon: <Building2 size={20} />,
-        children: [
+        groupLabel: 'องค์กร',
+        items: [
             {
                 text: 'บริษัท',
-                icon: <Building2 size={20} />,
+                icon: Building,
+                iconColor: '#6C63FF',
                 path: '/admin/companies',
             },
             {
                 text: 'ฝ่าย',
-                icon: <Layers size={20} />,
+                icon: Layer,
+                iconColor: '#6C63FF',
                 path: '/admin/departments',
             },
             {
                 text: 'แผนก',
-                icon: <Layers size={20} />,
+                icon: Layer,
+                iconColor: '#6C63FF',
                 path: '/admin/sections',
             },
         ],
     },
     {
-        text: 'ประเภทการลา',
-        icon: <Calendar size={20} />,
-        path: '/admin/leave-types',
+        groupLabel: 'ผู้ใช้',
+        items: [
+            {
+                text: 'จัดการผู้ใช้',
+                icon: People,
+                iconColor: '#6C63FF',
+                path: '/admin/users',
+            },
+        ],
     },
     {
-        text: 'Banner/ข่าวสาร',
-        icon: <ImageIcon size={20} />,
-        path: '/admin/banners',
+        groupLabel: 'อื่นๆ',
+        items: [
+            {
+                text: 'Banner',
+                icon: Gallery,
+                iconColor: '#6C63FF',
+                path: '/admin/banners',
+            },
+            {
+                text: 'รายงาน',
+                icon: DocumentText1,
+                iconColor: '#6C63FF',
+                path: '/admin/reports',
+            },
+        ],
     },
     {
-        text: 'รายงาน',
-        icon: <FileText size={20} />,
-        path: '/admin/reports',
-    },
-    {
-        text: 'ทดสอบ Push',
-        icon: <Bell size={20} />,
-        path: '/admin/test-notification',
-    },
-    {
-        text: 'ตั้งค่าระบบ',
-        icon: <Settings size={20} />,
-        path: '/admin/settings',
+        groupLabel: 'ระบบ',
+        items: [
+            {
+                text: 'ทดสอบ Push',
+                icon: Notification,
+                iconColor: '#6C63FF',
+                path: '/admin/test-notification',
+            },
+            {
+                text: 'ตั้งค่า',
+                icon: Setting2,
+                iconColor: '#6C63FF',
+                path: '/admin/settings',
+            },
+        ],
     },
 ];
+
+// Flatten menu items for search/active check
+const menuItems: MenuItem[] = menuGroups.flatMap(group => group.items);
 
 export default function AdminLayout({
     children,
@@ -158,7 +199,6 @@ export default function AdminLayout({
     const [mobileOpen, setMobileOpen] = useState(false);
     const [collapsed, setCollapsed] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
-    const [openSubMenus, setOpenSubMenus] = useState<Record<string, boolean>>({});
     const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
 
     // Admin roles that can access admin pages
@@ -199,13 +239,6 @@ export default function AdminLayout({
         setMobileOpen(!mobileOpen);
     };
 
-    const handleSubMenuToggle = (text: string) => {
-        setOpenSubMenus((prev) => ({
-            ...prev,
-            [text]: !prev[text],
-        }));
-    };
-
     const handleMenuClick = (event: React.MouseEvent<HTMLElement>) => {
         setAnchorEl(event.currentTarget);
     };
@@ -244,14 +277,6 @@ export default function AdminLayout({
         return pathname === path || pathname.startsWith(path + '/');
     };
 
-    const isParentActive = (item: MenuItem) => {
-        if (item.path) return isActiveRoute(item.path);
-        if (item.children) {
-            return item.children.some((child) => isActiveRoute(child.path));
-        }
-        return false;
-    };
-
     const drawer = (
         <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
             {/* Logo / Brand */}
@@ -268,7 +293,7 @@ export default function AdminLayout({
                 }}
             >
                 <Box sx={{ transition: 'transform 0.35s cubic-bezier(0.4, 0, 0.2, 1)' }}>
-                    <Shield size={collapsed ? 28 : 32} color="white" />
+                    <SecuritySafe size={collapsed ? 24 : 28} variant="Bold" color="white" />
                 </Box>
                 <Typography
                     variant="h6"
@@ -291,136 +316,44 @@ export default function AdminLayout({
             <Divider />
 
             {/* Menu Items */}
-            <List sx={{ flex: 1, px: collapsed ? 1 : 2, py: 2, transition: 'padding 0.35s cubic-bezier(0.4, 0, 0.2, 1)' }}>
-                {menuItems.map((item) => (
-                    <React.Fragment key={item.text}>
-                        {item.children ? (
-                            <>
-                                <ListItem disablePadding sx={{ mb: 0.5, position: 'relative' }}>
-                                    <Tooltip title={collapsed ? item.text : ''} placement="right">
-                                        <ListItemButton
-                                            onClick={() => collapsed 
-                                                ? (item.children?.[0]?.path && handleNavigate(item.children[0].path))
-                                                : handleSubMenuToggle(item.text)
-                                            }
-                                            sx={{
-                                                borderRadius: 1,
-                                                justifyContent: collapsed ? 'center' : 'flex-start',
-                                                px: collapsed ? 1 : 2,
-                                                py: 1.25,
-                                                bgcolor: isParentActive(item) ? 'rgba(108, 99, 255, 0.08)' : 'transparent',
-                                                color: isParentActive(item) ? 'primary.main' : 'text.primary',
-                                                transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
-                                                '&:hover': {
-                                                    bgcolor: isParentActive(item) ? 'rgba(108, 99, 255, 0.12)' : 'action.hover',
-                                                    transform: 'translateX(2px)',
-                                                },
-                                            }}
-                                        >
-                                            <ListItemIcon
-                                                sx={{
-                                                    minWidth: collapsed ? 'auto' : 40,
-                                                    color: isParentActive(item) ? 'primary.main' : 'text.secondary',
-                                                    transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
-                                                    transform: isParentActive(item) ? 'scale(1.1)' : 'scale(1)',
-                                                }}
-                                            >
-                                                {item.icon}
-                                            </ListItemIcon>
-                                            <Box
-                                                sx={{
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    justifyContent: 'space-between',
-                                                    flex: 1,
-                                                    opacity: collapsed ? 0 : 1,
-                                                    width: collapsed ? 0 : 'auto',
-                                                    overflow: 'hidden',
-                                                    whiteSpace: 'nowrap',
-                                                    transition: 'opacity 0.25s cubic-bezier(0.4, 0, 0.2, 1), width 0.35s cubic-bezier(0.4, 0, 0.2, 1)',
-                                                }}
-                                            >
-                                                <ListItemText
-                                                    primary={item.text}
-                                                    primaryTypographyProps={{
-                                                        fontSize: '0.9rem',
-                                                        fontWeight: isParentActive(item) ? 600 : 500,
-                                                    }}
-                                                />
-                                                {openSubMenus[item.text] ? (
-                                                    <ChevronUp size={18} />
-                                                ) : (
-                                                    <ChevronDown size={18} />
-                                                )}
-                                            </Box>
-                                        </ListItemButton>
-                                    </Tooltip>
-                                </ListItem>
-                                {!collapsed && (
-                                    <Collapse in={openSubMenus[item.text]} timeout="auto" unmountOnExit>
-                                        <List component="div" disablePadding>
-                                            {item.children.map((child) => (
-                                                <ListItemButton
-                                                    key={child.text}
-                                                    onClick={() => child.path && handleNavigate(child.path)}
-                                                    sx={{
-                                                        pl: 6,
-                                                        py: 1,
-                                                        borderRadius: 1,
-                                                        mb: 0.5,
-                                                        position: 'relative',
-                                                        bgcolor: isActiveRoute(child.path) ? 'primary.main' : 'transparent',
-                                                        color: isActiveRoute(child.path) ? 'white' : 'text.secondary',
-                                                        boxShadow: isActiveRoute(child.path) ? '0 2px 8px rgba(108, 99, 255, 0.35)' : 'none',
-                                                        transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
-                                                        '&:hover': {
-                                                            bgcolor: isActiveRoute(child.path) ? 'primary.dark' : 'action.hover',
-                                                            transform: 'translateX(4px)',
-                                                        },
-                                                        '&::before': isActiveRoute(child.path) ? {
-                                                            content: '""',
-                                                            position: 'absolute',
-                                                            left: 24,
-                                                            top: '50%',
-                                                            transform: 'translateY(-50%)',
-                                                            width: 6,
-                                                            height: 6,
-                                                            borderRadius: '50%',
-                                                            bgcolor: 'white',
-                                                        } : {},
-                                                    }}
-                                                >
-                                                    <ListItemIcon
-                                                        sx={{
-                                                            minWidth: 32,
-                                                            color: isActiveRoute(child.path) ? 'white' : 'text.secondary',
-                                                        }}
-                                                    >
-                                                        {child.icon}
-                                                    </ListItemIcon>
-                                                    <ListItemText
-                                                        primary={child.text}
-                                                        primaryTypographyProps={{
-                                                            fontSize: '0.85rem',
-                                                            fontWeight: isActiveRoute(child.path) ? 600 : 400,
-                                                        }}
-                                                    />
-                                                </ListItemButton>
-                                            ))}
-                                        </List>
-                                    </Collapse>
-                                )}
-                            </>
-                        ) : (
-                            <ListItem disablePadding sx={{ mb: 0.5, position: 'relative' }}>
+            <List sx={{ flex: 1, px: collapsed ? 0.5 : 1.5, py: 1.5, transition: 'padding 0.35s cubic-bezier(0.4, 0, 0.2, 1)', overflowY: 'auto' }}>
+                {menuGroups.map((group, groupIndex) => (
+                    <React.Fragment key={group.groupLabel || `group-${groupIndex}`}>
+                        {/* Group Label */}
+                        {group.groupLabel && !collapsed && (
+                            <Typography
+                                variant="caption"
+                                sx={{
+                                    display: 'block',
+                                    px: 1.5,
+                                    py: 0.5,
+                                    mt: groupIndex > 0 ? 1.5 : 0,
+                                    mb: 0.25,
+                                    color: 'text.disabled',
+                                    fontWeight: 600,
+                                    fontSize: '0.65rem',
+                                    textTransform: 'uppercase',
+                                    letterSpacing: '0.5px',
+                                }}
+                            >
+                                {group.groupLabel}
+                            </Typography>
+                        )}
+                        {/* Group Divider for collapsed state */}
+                        {group.groupLabel && collapsed && groupIndex > 0 && (
+                            <Divider sx={{ my: 0.75 }} />
+                        )}
+                        {/* Menu Items in Group */}
+                        {group.items.map((item) => (
+                            <ListItem key={item.text} disablePadding sx={{ mb: 0.25, position: 'relative' }}>
                                 <Tooltip title={collapsed ? item.text : ''} placement="right">
                                     <ListItemButton
                                         onClick={() => item.path && handleNavigate(item.path)}
                                         sx={{
                                             borderRadius: 1,
                                             justifyContent: collapsed ? 'center' : 'flex-start',
-                                            px: collapsed ? 1 : 2,
-                                            py: 1.25,
+                                            px: collapsed ? 1 : 1.5,
+                                            py: 0.75,
                                             bgcolor: isActiveRoute(item.path) ? 'primary.main' : 'transparent',
                                             color: isActiveRoute(item.path) ? 'white' : 'text.primary',
                                             boxShadow: isActiveRoute(item.path) ? '0 4px 12px rgba(108, 99, 255, 0.4)' : 'none',
@@ -433,13 +366,17 @@ export default function AdminLayout({
                                     >
                                         <ListItemIcon
                                             sx={{
-                                                minWidth: collapsed ? 'auto' : 40,
+                                                minWidth: collapsed ? 'auto' : 32,
                                                 color: isActiveRoute(item.path) ? 'white' : 'text.secondary',
                                                 transition: 'all 0.25s ease',
                                                 transform: isActiveRoute(item.path) ? 'scale(1.1)' : 'scale(1)',
                                             }}
                                         >
-                                            {item.icon}
+                                            <item.icon 
+                                                size={18} 
+                                                variant="Outline" 
+                                                color={isActiveRoute(item.path) ? '#ffffff' : item.iconColor} 
+                                            />
                                         </ListItemIcon>
                                         <Box
                                             sx={{
@@ -453,7 +390,7 @@ export default function AdminLayout({
                                             <ListItemText
                                                 primary={item.text}
                                                 primaryTypographyProps={{
-                                                    fontSize: '0.9rem',
+                                                    fontSize: '0.825rem',
                                                     fontWeight: isActiveRoute(item.path) ? 600 : 500,
                                                 }}
                                             />
@@ -461,21 +398,22 @@ export default function AdminLayout({
                                     </ListItemButton>
                                 </Tooltip>
                             </ListItem>
-                        )}
+                        ))}
                     </React.Fragment>
                 ))}
             </List>
 
-            <Divider sx={{ mx: collapsed ? 1 : 2, transition: 'margin 0.35s cubic-bezier(0.4, 0, 0.2, 1)' }} />
+            <Divider sx={{ mx: collapsed ? 0.5 : 1.5, transition: 'margin 0.35s cubic-bezier(0.4, 0, 0.2, 1)' }} />
 
             {/* Back to Main App */}
-            <Box sx={{ p: collapsed ? 1 : 2, transition: 'padding 0.35s cubic-bezier(0.4, 0, 0.2, 1)' }}>
+            <Box sx={{ p: collapsed ? 0.5 : 1.5, transition: 'padding 0.35s cubic-bezier(0.4, 0, 0.2, 1)' }}>
                 <ListItemButton
                     onClick={() => router.push('/')}
                     sx={{
                         borderRadius: 1,
                         justifyContent: collapsed ? 'center' : 'flex-start',
-                        px: collapsed ? 1 : 2,
+                        px: collapsed ? 1 : 1.5,
+                        py: 0.75,
                         bgcolor: 'grey.100',
                         transition: 'all 0.35s cubic-bezier(0.4, 0, 0.2, 1)',
                         '&:hover': {
@@ -484,10 +422,10 @@ export default function AdminLayout({
                     }}
                 >
                     <ListItemIcon sx={{ 
-                        minWidth: collapsed ? 'auto' : 40,
+                        minWidth: collapsed ? 'auto' : 32,
                         transition: 'min-width 0.35s cubic-bezier(0.4, 0, 0.2, 1)',
                     }}>
-                        <Home size={20} />
+                        <Home2 size={18} variant="Outline" color="#6C63FF" />
                     </ListItemIcon>
                     <Box
                         sx={{
@@ -501,7 +439,7 @@ export default function AdminLayout({
                         <ListItemText
                             primary="กลับหน้าหลัก"
                             primaryTypographyProps={{
-                                fontSize: '0.9rem',
+                                fontSize: '0.825rem',
                                 fontWeight: 500,
                             }}
                         />
@@ -533,7 +471,7 @@ export default function AdminLayout({
                         mb: 2,
                     }}
                 >
-                    <Shield size={40} color="#6C63FF" />
+                    <SecuritySafe size={40} variant="Bold" color="#6C63FF" />
                     <Typography
                         variant="h5"
                         sx={{
@@ -639,15 +577,69 @@ export default function AdminLayout({
                         </Tooltip>
                         
                         {/* Hamburger Menu for Mobile */}
-                        <IconButton
-                            color="inherit"
-                            aria-label="open drawer"
-                            edge="start"
-                            onClick={handleDrawerToggle}
-                            sx={{ mr: 2, display: { md: 'none' }, color: 'text.primary' }}
-                        >
-                            <MenuIcon size={24} />
-                        </IconButton>
+                        <Tooltip title="เปิดเมนู">
+                            <IconButton
+                                color="inherit"
+                                aria-label="open drawer"
+                                edge="start"
+                                onClick={handleDrawerToggle}
+                                sx={{ 
+                                    mr: 2, 
+                                    display: { xs: 'flex', md: 'none' }, 
+                                    color: 'text.primary',
+                                    width: 40,
+                                    height: 40,
+                                    '&:hover': {
+                                        bgcolor: 'action.hover',
+                                    },
+                                }}
+                            >
+                                <Box
+                                    sx={{
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        justifyContent: 'center',
+                                        alignItems: 'center',
+                                        width: 20,
+                                        height: 16,
+                                        position: 'relative',
+                                        '& span': {
+                                            display: 'block',
+                                            position: 'absolute',
+                                            height: 2,
+                                            bgcolor: 'primary.main',
+                                            borderRadius: 1,
+                                            transition: 'all 0.3s ease',
+                                        },
+                                    }}
+                                >
+                                    <Box
+                                        component="span"
+                                        sx={{
+                                            width: 20,
+                                            top: 0,
+                                        }}
+                                    />
+                                    <Box
+                                        component="span"
+                                        sx={{
+                                            width: 14,
+                                            top: '50%',
+                                            transform: 'translateY(-50%)',
+                                            left: 0,
+                                        }}
+                                    />
+                                    <Box
+                                        component="span"
+                                        sx={{
+                                            width: 20,
+                                            bottom: 0,
+                                            left: 0,
+                                        }}
+                                    />
+                                </Box>
+                            </IconButton>
+                        </Tooltip>
                         <Typography variant="h6" noWrap component="div" color="text.primary" fontWeight={600}>
                             {menuItems.find((item) => isActiveRoute(item.path))?.text ||
                                 menuItems
@@ -662,7 +654,7 @@ export default function AdminLayout({
                         <Tooltip title="การแจ้งเตือน">
                             <IconButton sx={{ color: 'text.secondary' }}>
                                 <Badge badgeContent={3} color="error">
-                                    <Bell size={22} />
+                                    <Notification size={22} variant="Bold" color="#6C63FF" />
                                 </Badge>
                             </IconButton>
                         </Tooltip>
@@ -698,7 +690,7 @@ export default function AdminLayout({
                                      user?.role === 'hr_manager' ? 'HR Manager' : user?.role}
                                 </Typography>
                             </Box>
-                            <ChevronDown size={18} color={theme.palette.text.secondary} />
+                            <ArrowDown2 size={16} color={theme.palette.text.secondary} />
                         </Box>
 
                         <Menu
@@ -724,20 +716,20 @@ export default function AdminLayout({
                         >
                             <MenuItem onClick={() => { handleMenuClose(); router.push('/profile'); }}>
                                 <ListItemIcon>
-                                    <User size={18} />
+                                    <UserTick size={18} color="#6C63FF" />
                                 </ListItemIcon>
                                 <ListItemText>โปรไฟล์</ListItemText>
                             </MenuItem>
                             <MenuItem onClick={() => { handleMenuClose(); router.push('/admin/settings'); }}>
                                 <ListItemIcon>
-                                    <Settings size={18} />
+                                    <Setting2 size={18} color="#6C63FF" />
                                 </ListItemIcon>
                                 <ListItemText>ตั้งค่า</ListItemText>
                             </MenuItem>
                             <Divider />
                             <MenuItem onClick={handleLogout} sx={{ color: 'error.main' }}>
                                 <ListItemIcon>
-                                    <LogOut size={18} color={theme.palette.error.main} />
+                                    <LogoutCurve size={18} color={theme.palette.error.main} />
                                 </ListItemIcon>
                                 <ListItemText>ออกจากระบบ</ListItemText>
                             </MenuItem>

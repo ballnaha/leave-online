@@ -1,7 +1,7 @@
 'use client';
 import React, { useMemo, useState } from 'react';
 import { Box, Typography, IconButton, Badge, Avatar, Skeleton } from '@mui/material';
-import { Bell, Menu } from 'lucide-react';
+import { Notification } from 'iconsax-react';
 import Sidebar from './Sidebar';
 import ImageSlider from './ImageSlider';
 import { useLocale } from '../providers/LocaleProvider';
@@ -32,15 +32,59 @@ const Header = () => {
                         {isAdminOrHR && (
                             <IconButton
                                 onClick={() => setIsSidebarOpen(true)}
-                                sx={{
-                                    bgcolor: 'white',
-                                    boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+                                sx={{ 
+                                    color: 'text.primary',
                                     width: 40,
                                     height: 40,
-                                    '&:hover': { bgcolor: 'grey.50' }
+                                    '&:hover': {
+                                        bgcolor: 'action.hover',
+                                    },
                                 }}
                             >
-                                <Menu size={20} className="text-gray-700" />
+                                <Box
+                                    sx={{
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        justifyContent: 'center',
+                                        alignItems: 'center',
+                                        width: 20,
+                                        height: 16,
+                                        position: 'relative',
+                                        '& span': {
+                                            display: 'block',
+                                            position: 'absolute',
+                                            height: 2,
+                                            bgcolor: 'primary.main',
+                                            borderRadius: 1,
+                                            transition: 'all 0.3s ease',
+                                        },
+                                    }}
+                                >
+                                    <Box
+                                        component="span"
+                                        sx={{
+                                            width: 20,
+                                            top: 0,
+                                        }}
+                                    />
+                                    <Box
+                                        component="span"
+                                        sx={{
+                                            width: 14,
+                                            top: '50%',
+                                            transform: 'translateY(-50%)',
+                                            left: 0,
+                                        }}
+                                    />
+                                    <Box
+                                        component="span"
+                                        sx={{
+                                            width: 20,
+                                            bottom: 0,
+                                            left: 0,
+                                        }}
+                                    />
+                                </Box>
                             </IconButton>
                         )}
 
@@ -91,7 +135,7 @@ const Header = () => {
                         }}
                     >
                         <Badge variant="dot" color="error" overlap="circular">
-                            <Bell size={20} className="text-gray-600" />
+                            <Notification size={20} variant="Outline" color="#FF9800" />
                         </Badge>
                     </IconButton>
                 </Box>
