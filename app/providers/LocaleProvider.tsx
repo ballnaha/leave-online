@@ -21,12 +21,14 @@ const messages: Record<LocaleCode, Record<string, string>> = {
     nav_messages: "ข้อความ",
     nav_history: "ประวัติ",
     nav_profile: "โปรไฟล์",
+    nav_leave: "ประวัติการลา",
     greeting: "สวัสดี",
     search_placeholder: "ค้นหาประวัติการลา...",
     profile_email: "อีเมล",
     profile_phone: "เบอร์โทร",
     profile_department: "แผนก",
     profile_started: "วันที่เริ่มงาน",
+
   },
   en: {
     common_profile: "Profile",
@@ -41,7 +43,7 @@ const messages: Record<LocaleCode, Record<string, string>> = {
     nav_home: "Home",
     nav_messages: "Messages",
     nav_history: "History",
-    
+    nav_leave: "Leave History",
     nav_profile: "Profile",
     greeting: "Hello",
     search_placeholder: "Search leave history...",
@@ -49,6 +51,7 @@ const messages: Record<LocaleCode, Record<string, string>> = {
     profile_phone: "Phone",
     profile_department: "Department",
     profile_started: "Start Date",
+
   },
   my: {
     common_profile: "ပရိုဖိုင်",
@@ -64,6 +67,7 @@ const messages: Record<LocaleCode, Record<string, string>> = {
     nav_messages: "မက်ဆေ့ခ်ျများ",
     nav_history: "သမိုင်း",
     nav_profile: "ပရိုဖိုင်",
+    nav_leave: "အားလပ်ရက်သမိုင်း",
     greeting: "မင်္ဂလာပါ",
     search_placeholder: "ခွင့်မှတ်တမ်းရှာရန်...",
     profile_email: "အီးမေးလ်",

@@ -47,6 +47,7 @@ import {
     Home,
     PanelLeftClose,
     PanelLeftOpen,
+    Image as ImageIcon,
 } from 'lucide-react';
 import { signOut } from 'next-auth/react';
 import { useUser } from '@/app/providers/UserProvider';
@@ -121,9 +122,19 @@ const menuItems: MenuItem[] = [
         path: '/admin/leave-types',
     },
     {
+        text: 'Banner/ข่าวสาร',
+        icon: <ImageIcon size={20} />,
+        path: '/admin/banners',
+    },
+    {
         text: 'รายงาน',
         icon: <FileText size={20} />,
         path: '/admin/reports',
+    },
+    {
+        text: 'ทดสอบ Push',
+        icon: <Bell size={20} />,
+        path: '/admin/test-notification',
     },
     {
         text: 'ตั้งค่าระบบ',

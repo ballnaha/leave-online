@@ -59,20 +59,20 @@ const PRIMARY_LIGHT = '#e3f2fd';
 
 // กำหนด icon และสีสำหรับแต่ละประเภทการลา
 const leaveTypeConfig: Record<string, { icon: any; color: string; lightColor: string }> = {
-    sick: { icon: Stethoscope, color: '#42A5F5', lightColor: '#E3F2FD' },
-    personal: { icon: Briefcase, color: '#845EF7', lightColor: '#F3EFFF' },
-    vacation: { icon: Umbrella, color: '#FFD43B', lightColor: '#FFF9DB' },
-    annual: { icon: Sun, color: '#FFD93D', lightColor: '#FFF9C4' },
-    maternity: { icon: Baby, color: '#F783AC', lightColor: '#FFDEEB' },
-    ordination: { icon: Church, color: '#FFA726', lightColor: '#FFF3E0' },
-    military: { icon: Shield, color: '#66BB6A', lightColor: '#E8F5E9' },
-    marriage: { icon: Heart, color: '#EF5350', lightColor: '#FFEBEE' },
-    funeral: { icon: Users, color: '#78909C', lightColor: '#ECEFF1' },
-    paternity: { icon: User, color: '#42A5F5', lightColor: '#E3F2FD' },
-    sterilization: { icon: Stethoscope, color: '#26A69A', lightColor: '#E0F2F1' },
-    business: { icon: Car, color: '#7E57C2', lightColor: '#EDE7F6' },
-    unpaid: { icon: Clock, color: '#9E9E9E', lightColor: '#F5F5F5' },
-    default: { icon: HelpCircle, color: '#748FFC', lightColor: '#EDF2FF' },
+    sick: { icon: Stethoscope, color: '#5E72E4', lightColor: '#E9ECFF' },
+    personal: { icon: Briefcase, color: '#8965E0', lightColor: '#F0E9FF' },
+    vacation: { icon: Umbrella, color: '#11CDEF', lightColor: '#E3F9FC' },
+    annual: { icon: Sun, color: '#2DCECC', lightColor: '#E3FAF9' },
+    maternity: { icon: Baby, color: '#F3A4B5', lightColor: '#FDEEF1' },
+    ordination: { icon: Church, color: '#FB6340', lightColor: '#FFEFE9' },
+    military: { icon: Shield, color: '#5E72E4', lightColor: '#E9ECFF' },
+    marriage: { icon: Heart, color: '#F3A4B5', lightColor: '#FDEEF1' },
+    funeral: { icon: Users, color: '#8898AA', lightColor: '#F0F3F5' },
+    paternity: { icon: User, color: '#11CDEF', lightColor: '#E3F9FC' },
+    sterilization: { icon: Stethoscope, color: '#2DCECC', lightColor: '#E3FAF9' },
+    business: { icon: Car, color: '#8965E0', lightColor: '#F0E9FF' },
+    unpaid: { icon: Clock, color: '#8898AA', lightColor: '#F0F3F5' },
+    default: { icon: HelpCircle, color: '#5E72E4', lightColor: '#E9ECFF' },
 };
 
 interface LeaveTypeData {

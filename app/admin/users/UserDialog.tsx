@@ -21,10 +21,10 @@ import {
   Chip,
   alpha,
   useTheme,
-  Alert,
   Autocomplete,
   Checkbox,
 } from '@mui/material';
+import { useToastr } from '@/app/components/Toastr';
 import { User, Eye, EyeOff, LoaderCircle, UserPlus, UserCog, CheckSquare, Square } from 'lucide-react';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
@@ -86,6 +86,7 @@ export default function UserDialog({
   user,
 }: UserDialogProps) {
   const theme = useTheme();
+  const toastr = useToastr();
   const [loading, setLoading] = useState(false);
   const [companies, setCompanies] = useState<Company[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
@@ -248,10 +249,9 @@ export default function UserDialog({
         : '/api/admin/users';
       const method = user ? 'PUT' : 'POST';
 
-      const payload = {
+      const payload: Record<string, any> = {
         ...formData,
         startDate: formData.startDate.toISOString(),
-        password: formData.password || undefined,
         // Convert arrays to JSON strings
         managedDepartments: formData.managedDepartments.length > 0 
           ? JSON.stringify(formData.managedDepartments) 
@@ -260,6 +260,19 @@ export default function UserDialog({
           ? JSON.stringify(formData.managedSections) 
           : null,
       };
+
+      // สำหรับการสร้าง user ใหม่ ต้องมี password
+      // สำหรับการแก้ไข user ถ้าไม่กรอก password จะไม่ส่งไป
+      if (!user) {
+        // สร้างใหม่ - ต้องมี password
+        payload.password = formData.password;
+      } else if (formData.password) {
+        // แก้ไข - ส่ง password เฉพาะเมื่อกรอก
+        payload.password = formData.password;
+      } else {
+        // แก้ไข - ไม่กรอก password ให้ลบออกจาก payload
+        delete payload.password;
+      }
 
       const res = await fetch(url, {
         method,
@@ -274,7 +287,7 @@ export default function UserDialog({
 
       onSave();
     } catch (error: any) {
-      setErrors({ submit: error.message });
+      toastr.error(error.message);
     } finally {
       setLoading(false);
     }
@@ -364,10 +377,6 @@ export default function UserDialog({
         </DialogTitle>
 
         <DialogContent sx={{ p: 2 }}>
-          {errors.submit && (
-            <Alert severity="error" sx={{ mb: 2 }}>{errors.submit}</Alert>
-          )}
-
           <Box sx={{ 
             display: 'grid', 
             gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, 
@@ -523,8 +532,8 @@ export default function UserDialog({
                 onChange={handleChange}
               >
                 <MenuItem value="">ไม่มีกะ</MenuItem>
-                <MenuItem value="morning">กะเช้า</MenuItem>
-                <MenuItem value="night">กะดึก</MenuItem>
+                <MenuItem value="day">กะกลางวัน</MenuItem>
+                <MenuItem value="night">กะกลางคืน</MenuItem>
               </Select>
             </FormControl>
             <FormControl size="small" fullWidth>

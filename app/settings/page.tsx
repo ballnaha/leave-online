@@ -18,6 +18,7 @@ import {
     LucideIcon,
 } from 'lucide-react';
 import Link from 'next/link';
+import NotificationToggle from '../components/NotificationToggle';
 
 interface SettingsItemBase {
     icon: LucideIcon;
@@ -48,7 +49,6 @@ interface SettingsSection {
 }
 
 export default function SettingsPage() {
-    const [notifications, setNotifications] = useState(true);
     const [darkMode, setDarkMode] = useState(false);
     const [emailNotif, setEmailNotif] = useState(true);
 
@@ -64,7 +64,6 @@ export default function SettingsPage() {
         {
             title: 'การแจ้งเตือน',
             items: [
-                { icon: Bell, label: 'การแจ้งเตือนแบบพุช', color: '#FFD93D', toggle: true, value: notifications, onChange: setNotifications },
                 { icon: Mail, label: 'การแจ้งเตือนทางอีเมล', color: '#9C27B0', toggle: true, value: emailNotif, onChange: setEmailNotif },
                 { icon: Smartphone, label: 'การแจ้งเตือน SMS', color: '#FF8ED4', link: '#' },
             ],
@@ -154,6 +153,14 @@ export default function SettingsPage() {
                     </Box>
                     <ChevronRight size={20} color="#999" />
                 </Paper>
+            </Box>
+
+            {/* Push Notification Toggle */}
+            <Box sx={{ px: 2, mb: 3 }}>
+                <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 700, px: 1, mb: 1, display: 'block', fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: 1 }}>
+                    การแจ้งเตือน Push
+                </Typography>
+                <NotificationToggle variant="card" />
             </Box>
 
             {/* Settings Sections */}

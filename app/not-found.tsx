@@ -1,7 +1,7 @@
 'use client';
 
 import { Box, Button, Container, Typography } from '@mui/material';
-import { Home, Palmtree, Sun } from 'lucide-react';
+import { Home, SunFog, Sun } from 'iconsax-react';
 import Link from 'next/link';
 import { keyframes } from '@mui/system';
 
@@ -35,18 +35,6 @@ export default function NotFound() {
       >
         {/* Graphic Composition */}
         <Box sx={{ position: 'relative', width: 200, height: 200, mb: 2 }}>
-            {/* Sun */}
-            <Box
-                sx={{
-                    position: 'absolute',
-                    top: 10,
-                    right: 20,
-                    color: '#FFB74D', // Orange/Sun color
-                    animation: `${rotate} 10s linear infinite`,
-                }}
-            >
-                <Sun size={50} />
-            </Box>
 
             {/* Palm Tree */}
             <Box
@@ -60,7 +48,7 @@ export default function NotFound() {
                     animation: `${sway} 3s ease-in-out infinite`,
                 }}
             >
-                <Palmtree size={140} strokeWidth={1.5} />
+                <SunFog size={140} color="#6C63FF" />
             </Box>
         </Box>
 
@@ -90,7 +78,7 @@ export default function NotFound() {
           href="/"
           variant="outlined"
           size="large"
-          startIcon={<Home size={20} />}
+          startIcon={<Home size={20} color="#6C63FF" />}
           sx={{
             mt: 2,
             borderRadius: 4,

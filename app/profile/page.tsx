@@ -4,30 +4,31 @@ import { Box, Typography, Avatar, Paper, IconButton, Chip, Switch, Divider, Dial
 import { localeLabel, useLocale } from '../providers/LocaleProvider';
 import { useRouter } from 'next/navigation';
 import type { UserRole } from '@/types/user-role';
+import { useOneSignal } from '../providers/OneSignalProvider';
 import {
     Edit2,
-    LogOut,
-    Mail,
-    Phone,
-    MapPin,
+    Logout,
+    Sms,
+    Call,
+    Location,
     Calendar,
     Award,
-    TrendingUp,
-    Bell,
+    Notification,
     Moon,
-    Globe,
+    Global,
     Lock,
     Shield,
-    HelpCircle,
-    FileText,
-    ChevronRight,
+    MessageQuestion,
+    DocumentText,
+    ArrowRight2,
     User,
-    Smartphone,
-    LucideIcon,
+    Profile2User,
+    Mobile,
     Briefcase,
-    Building2,
-    Hash,
-} from 'lucide-react';
+    Building,
+    HashtagSquare,
+    Icon as IconsaxIcon,
+} from 'iconsax-react';
 import BottomNav from '../components/BottomNav';
 import { signOut, useSession } from 'next-auth/react';
 import { useToastr } from '@/app/components/Toastr';
@@ -56,7 +57,7 @@ interface UserProfile {
 
 // Type definitions for settings items
 interface SettingsItemBase {
-    icon: LucideIcon;
+    icon: IconsaxIcon;
     label: string;
     color: string;
     subtitle?: string;
@@ -88,7 +89,8 @@ export default function ProfilePage() {
     const { data: session } = useSession();
     const router = useRouter();
     const toastr = useToastr();
-    const [notifications, setNotifications] = useState(true);
+    const { isSupported: pushSupported, isSubscribed: pushSubscribed, isInitialized: pushInitialized, permission: pushPermission, subscribe: pushSubscribe, unsubscribe: pushUnsubscribe } = useOneSignal();
+    const [pushLoading, setPushLoading] = useState(false);
     const [darkMode, setDarkMode] = useState(false);
     const [emailNotif, setEmailNotif] = useState(true);
     const [openLanguage, setOpenLanguage] = useState(false);
@@ -205,18 +207,59 @@ export default function ProfilePage() {
     // Prevent hydration mismatch by always showing loading state until mounted
     const showLoading = !mounted || loading;
 
+    // Handle push notification toggle
+    const handlePushToggle = async (value: boolean) => {
+        setPushLoading(true);
+        try {
+            if (value) {
+                await pushSubscribe();
+                toastr.success('เปิดการแจ้งเตือนสำเร็จ');
+            } else {
+                await pushUnsubscribe();
+                toastr.info('ปิดการแจ้งเตือนแล้ว');
+            }
+        } catch (error: any) {
+            console.error('Push toggle error:', error);
+            const errorMsg = error?.message || 'เกิดข้อผิดพลาด';
+            if (errorMsg.includes('not initialized') || errorMsg.includes('not loaded')) {
+                toastr.error('ระบบแจ้งเตือนยังไม่พร้อม กรุณารีเฟรชหน้า');
+            } else {
+                toastr.error('เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง');
+            }
+        } finally {
+            setPushLoading(false);
+        }
+    };
+
+    // Get push notification subtitle based on status
+    const getPushSubtitle = () => {
+        if (!pushSupported) return 'เบราว์เซอร์ไม่รองรับ';
+        if (!pushInitialized) return 'กำลังโหลด...';
+        if (pushPermission === 'denied') return 'ถูกบล็อก - กรุณาเปิดในการตั้งค่าเบราว์เซอร์';
+        if (pushSubscribed) return 'เปิดใช้งาน';
+        return 'ปิดอยู่';
+    };
+
     const settingsSections: SettingsSection[] = [
         {
             title: 'บัญชี',
             items: [
-                { icon: User, label: 'แก้ไขโปรไฟล์', color: '#667eea', link: '/profile/edit' },
+                { icon: Profile2User, label: 'แก้ไขโปรไฟล์', color: '#667eea', link: '/profile/edit' },
                 
             ],
         },
         {
             title: 'การแจ้งเตือน',
             items: [
-                { icon: Bell, label: 'การแจ้งเตือนแบบพุช', color: '#FFD93D', toggle: true, value: notifications, onChange: setNotifications },
+                { 
+                    icon: Notification, 
+                    label: 'การแจ้งเตือนแบบพุช', 
+                    color: '#FFD93D', 
+                    toggle: true, 
+                    value: pushSubscribed, 
+                    onChange: handlePushToggle,
+                    subtitle: getPushSubtitle(),
+                } as SettingsItemWithToggle,
                 
             ],
         },
@@ -224,13 +267,13 @@ export default function ProfilePage() {
             title: 'การตั้งค่าทั่วไป',
             items: [
                 
-                { icon: Globe, label: 'ภาษา', color: '#1976D2', subtitle: localeLabel[locale], link: '#' },
+                { icon: Global, label: 'ภาษา', color: '#1976D2', subtitle: localeLabel[locale], link: '#' },
             ],
         },
         {
             title: 'ช่วยเหลือและข้อมูล',
             items: [
-                { icon: HelpCircle, label: 'ศูนย์ช่วยเหลือ', color: '#00ACC1', link: '#' },
+                { icon: MessageQuestion, label: 'ศูนย์ช่วยเหลือ', color: '#00ACC1', link: '#' },
                 
             ],
         },
@@ -287,7 +330,7 @@ export default function ProfilePage() {
                             },
                         }}
                     >
-                        {isLoggingOut ? <CircularProgress size={20} color="inherit" /> : <LogOut size={20} />}
+                        {isLoggingOut ? <CircularProgress size={20} color="inherit" /> : <Logout size={20} color="white" />}
                     </IconButton>
                 </Box>
             </Box>
@@ -355,7 +398,7 @@ export default function ProfilePage() {
                                     '&:hover': { bgcolor: '#f5f5f5' },
                                 }}
                             >
-                                <Edit2 size={14} />
+                                <Edit2 size={14} variant="Bold" color="#667eea" />
                             </IconButton>
                         </Box>
                         <Box sx={{ ml: 2, flex: 1 }}>
@@ -390,7 +433,7 @@ export default function ProfilePage() {
                                     justifyContent: 'center',
                                 }}
                             >
-                                <Hash size={18} color="#673AB7" />
+                                <HashtagSquare size={18} variant="Bold" color="#673AB7" />
                             </Box>
                             <Box>
                                 <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.7rem' }}>
@@ -414,7 +457,7 @@ export default function ProfilePage() {
                                     justifyContent: 'center',
                                 }}
                             >
-                                <Building2 size={18} color="#1976D2" />
+                                <Building size={18} variant="Bold" color="#1976D2" />
                             </Box>
                             <Box>
                                 <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.7rem' }}>
@@ -438,7 +481,7 @@ export default function ProfilePage() {
                                     justifyContent: 'center',
                                 }}
                             >
-                                <Briefcase size={18} color="#F57C00" />
+                                <Briefcase size={18} variant="Bold" color="#F57C00" />
                             </Box>
                             <Box>
                                 <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.7rem' }}>
@@ -463,7 +506,7 @@ export default function ProfilePage() {
                                         justifyContent: 'center',
                                     }}
                                 >
-                                    <MapPin size={18} color="#E91E63" />
+                                    <Location size={18} variant="Bold" color="#E91E63" />
                                 </Box>
                                 <Box>
                                     <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.7rem' }}>
@@ -488,7 +531,7 @@ export default function ProfilePage() {
                                     justifyContent: 'center',
                                 }}
                             >
-                                <Calendar size={18} color="#388E3C" />
+                                <Calendar size={18} variant="Bold" color="#388E3C" />
                             </Box>
                             <Box>
                                 <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.7rem' }}>
@@ -513,7 +556,7 @@ export default function ProfilePage() {
                                         justifyContent: 'center',
                                     }}
                                 >
-                                    <Mail size={18} color="#9C27B0" />
+                                    <Sms size={18} variant="Bold" color="#9C27B0" />
                                 </Box>
                                 <Box>
                                     <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.7rem' }}>
@@ -616,7 +659,7 @@ export default function ProfilePage() {
                                                             flexShrink: 0,
                                                         }}
                                                     >
-                                                        <Icon size={20} color={item.color} />
+                                                        <Icon size={20} variant="Bold" color={item.color} />
                                                     </Box>
                                                     <Box sx={{ flex: 1 }}>
                                                         <Typography variant="body2" sx={{ fontWeight: 600, mb: item.subtitle ? 0.3 : 0 }}>
@@ -629,20 +672,25 @@ export default function ProfilePage() {
                                                         )}
                                                     </Box>
                                                     {item.toggle ? (
-                                                        <Switch
-                                                            checked={item.value}
-                                                            onChange={(e) => item.onChange?.(e.target.checked)}
-                                                            sx={{
-                                                                '& .MuiSwitch-switchBase.Mui-checked': {
-                                                                    color: item.color,
-                                                                },
-                                                                '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
-                                                                    bgcolor: item.color,
-                                                                },
-                                                            }}
-                                                        />
+                                                        pushLoading && item.label === 'การแจ้งเตือนแบบพุช' ? (
+                                                            <CircularProgress size={24} sx={{ color: item.color }} />
+                                                        ) : (
+                                                            <Switch
+                                                                checked={item.value}
+                                                                onChange={(e) => item.onChange?.(e.target.checked)}
+                                                                disabled={!pushSupported || !pushInitialized || pushPermission === 'denied'}
+                                                                sx={{
+                                                                    '& .MuiSwitch-switchBase.Mui-checked': {
+                                                                        color: item.color,
+                                                                    },
+                                                                    '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
+                                                                        bgcolor: item.color,
+                                                                    },
+                                                                }}
+                                                            />
+                                                        )
                                                     ) : (
-                                                        <ChevronRight size={20} color="#999" />
+                                                        <ArrowRight2 size={20} variant="Bold" color="#999" />
                                                     )}
                                                 </Box>
                                                 {itemIndex < section.items.length - 1 && <Divider sx={{ mx: 2 }} />}
@@ -673,14 +721,16 @@ export default function ProfilePage() {
                             </Box>
                         ) : (
                             <Box
+                                onClick={handleLogout}
                                 sx={{
                                     p: 2,
                                     display: 'flex',
                                     alignItems: 'center',
                                     gap: 2,
-                                    cursor: 'pointer',
+                                    cursor: isLoggingOut ? 'not-allowed' : 'pointer',
                                     transition: 'all 0.2s',
                                     '&:hover': { bgcolor: '#FFF5F5' },
+                                    opacity: isLoggingOut ? 0.7 : 1,
                                 }}
                             >
                                 <Box
@@ -694,10 +744,14 @@ export default function ProfilePage() {
                                         justifyContent: 'center',
                                     }}
                                 >
-                                    <LogOut size={20} color="#D32F2F" />
+                                    {isLoggingOut ? (
+                                        <CircularProgress size={20} sx={{ color: '#D32F2F' }} />
+                                    ) : (
+                                        <Logout size={20} color="#D32F2F" />
+                                    )}
                                 </Box>
                                 <Typography variant="body2" sx={{ fontWeight: 600, color: '#D32F2F', flex: 1 }}>
-                                    ออกจากระบบ
+                                    {isLoggingOut ? 'กำลังออกจากระบบ...' : 'ออกจากระบบ'}
                                 </Typography>
                             </Box>
                         )}

@@ -601,7 +601,7 @@ export default function ApprovalPage() {
         {/* List */}
         {loading ? (
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-            {[1, 2, 3, 4,5,6,7].map((i) => (
+            {[1, 2, 3, 4].map((i) => (
               <Box 
                 key={i} 
                 sx={{ 

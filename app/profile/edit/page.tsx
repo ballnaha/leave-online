@@ -24,26 +24,26 @@ import {
     Slider,
 } from '@mui/material';
 import { 
-    Building2, 
+    Building, 
     User, 
-    Hash, 
+    HashtagSquare, 
     Briefcase, 
     Calendar, 
-    ChevronDown, 
-    Check, 
-    ArrowLeft,
-    Save,
+    ArrowDown2, 
+    TickCircle, 
+    ArrowLeft2,
+    TickSquare,
     Camera,
-    MapPin,
-    Mail,
+    Location,
+    Sms,
     Clock,
-    X,
-    ZoomIn,
-    ZoomOut,
-    RotateCw,
+    CloseCircle,
+    SearchZoomIn,
+    SearchZoomOut,
+    RotateRight,
     Eye,
-    EyeOff,
-} from 'lucide-react';
+    EyeSlash,
+} from 'iconsax-react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { useToastr } from '@/app/components/Toastr';
@@ -692,7 +692,7 @@ export default function EditProfilePage() {
             {/* Header */}
             <Box
                 sx={{
-                    background: 'linear-gradient(135deg, #1b194b 0%, #2d2a6e 100%)',
+                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                     pt: 2,
                     pb: 2,
                     px: 2,
@@ -712,30 +712,16 @@ export default function EditProfilePage() {
                             height: 40,
                         }}
                     >
-                        <ArrowLeft size={22} />
+                        <ArrowLeft2 size={22} color="white" />
                     </IconButton>
                     <Typography variant="h6" sx={{ color: 'white', fontWeight: 600, flex: 1 }}>
                         แก้ไขโปรไฟล์
                     </Typography>
-                    <Button
-                        onClick={handleSubmit}
-                        disabled={isSaving}
-                        sx={{
-                            color: 'white',
-                            fontWeight: 600,
-                            minWidth: 'auto',
-                            px: 2,
-                            '&:hover': { bgcolor: 'rgba(255, 255, 255, 0.15)' },
-                        }}
-                        startIcon={isSaving ? <CircularProgress size={16} color="inherit" /> : <Save size={18} />}
-                    >
-                        {isSaving ? 'กำลังบันทึก...' : 'บันทึก'}
-                    </Button>
                 </Box>
             </Box>
 
             {/* Content */}
-            <Box sx={{ p: 2 }}>
+            <Box sx={{ p: 2, pb: 12 }}>
                 {showLoading ? (
                     <>
                         {/* Avatar Skeleton */}
@@ -786,13 +772,13 @@ export default function EditProfilePage() {
                                         right: 0,
                                         width: 40,
                                         height: 40,
-                                        bgcolor: '#1b194b',
+                                        bgcolor:'white',
                                         color: 'white',
                                         boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2)',
-                                        '&:hover': { bgcolor: '#2d2a6e' },
+                                        '&:hover': { bgcolor: 'white' },
                                     }}
                                 >
-                                    <Camera size={20} />
+                                    <Camera size={20} color="#764ba2" variant='Bold'/>
                                 </IconButton>
                             </Box>
                         </Box>
@@ -825,7 +811,7 @@ export default function EditProfilePage() {
                                     InputProps={{
                                         startAdornment: (
                                             <InputAdornment position="start">
-                                                <Hash size={18} color="#9e9e9e" />
+                                                <HashtagSquare size={18} color="#9e9e9e" />
                                             </InputAdornment>
                                         ),
                                     }}
@@ -911,7 +897,7 @@ export default function EditProfilePage() {
                                     InputProps={{
                                         startAdornment: (
                                             <InputAdornment position="start">
-                                                <Mail size={18} color="#1b194b" />
+                                                <Sms size={18} color="#1b194b" />
                                             </InputAdornment>
                                         ),
                                     }}
@@ -941,13 +927,13 @@ export default function EditProfilePage() {
                                         readOnly: true,
                                         startAdornment: (
                                             <InputAdornment position="start">
-                                                <Building2 size={18} color="#1b194b" />
+                                                <Building size={18} color="#1b194b" />
                                             </InputAdornment>
                                         ),
                                         endAdornment: loadingCompanies ? (
                                             <CircularProgress size={18} />
                                         ) : (
-                                            <ChevronDown size={18} color="#9e9e9e" />
+                                            <ArrowDown2 size={18} color="#9e9e9e" />
                                         ),
                                     }}
                                     sx={{ cursor: 'pointer' }}
@@ -973,7 +959,7 @@ export default function EditProfilePage() {
                                                 <Briefcase size={18} color="#1b194b" />
                                             </InputAdornment>
                                         ),
-                                        endAdornment: <ChevronDown size={18} color="#9e9e9e" />,
+                                        endAdornment: <ArrowDown2 size={18} color="#9e9e9e" />,
                                     }}
                                     sx={{ cursor: 'pointer' }}
                                 />
@@ -1002,7 +988,7 @@ export default function EditProfilePage() {
                                         endAdornment: loadingDepartments ? (
                                             <CircularProgress size={18} />
                                         ) : (
-                                            <ChevronDown size={18} color="#9e9e9e" />
+                                            <ArrowDown2 size={18} color="#9e9e9e" />
                                         ),
                                     }}
                                     sx={{ cursor: formData.company ? 'pointer' : 'default' }}
@@ -1026,13 +1012,13 @@ export default function EditProfilePage() {
                                         readOnly: true,
                                         startAdornment: (
                                             <InputAdornment position="start">
-                                                <MapPin size={18} color="#1b194b" />
+                                                <Location size={18} color="#1b194b" />
                                             </InputAdornment>
                                         ),
                                         endAdornment: loadingSections ? (
                                             <CircularProgress size={18} />
                                         ) : (
-                                            <ChevronDown size={18} color="#9e9e9e" />
+                                            <ArrowDown2 size={18} color="#9e9e9e" />
                                         ),
                                     }}
                                     sx={{ cursor: formData.departmentId && sections.length > 0 ? 'pointer' : 'default' }}
@@ -1058,7 +1044,7 @@ export default function EditProfilePage() {
                                                 <Clock size={18} color="#1b194b" />
                                             </InputAdornment>
                                         ),
-                                        endAdornment: <ChevronDown size={18} color="#9e9e9e" />,
+                                        endAdornment: <ArrowDown2 size={18} color="#9e9e9e" />,
                                     }}
                                     sx={{ cursor: 'pointer' }}
                                 />
@@ -1122,7 +1108,7 @@ export default function EditProfilePage() {
                                                         endAdornment: (
                                                             <InputAdornment position="end">
                                                                 <IconButton onClick={() => setShowCurrent((v) => !v)} edge="end">
-                                                                    {showCurrent ? <EyeOff size={18} /> : <Eye size={18} />}
+                                                                    {showCurrent ? <EyeSlash size={18} /> : <Eye size={18} />}
                                                                 </IconButton>
                                                             </InputAdornment>
                                                         ),
@@ -1144,7 +1130,7 @@ export default function EditProfilePage() {
                                                         endAdornment: (
                                                             <InputAdornment position="end">
                                                                 <IconButton onClick={() => setShowNew((v) => !v)} edge="end">
-                                                                    {showNew ? <EyeOff size={18} /> : <Eye size={18} />}
+                                                                    {showNew ? <EyeSlash size={18} /> : <Eye size={18} />}
                                                                 </IconButton>
                                                             </InputAdornment>
                                                         ),
@@ -1166,7 +1152,7 @@ export default function EditProfilePage() {
                                                         endAdornment: (
                                                             <InputAdornment position="end">
                                                                 <IconButton onClick={() => setShowConfirm((v) => !v)} edge="end">
-                                                                    {showConfirm ? <EyeOff size={18} /> : <Eye size={18} />}
+                                                                    {showConfirm ? <EyeSlash size={18} /> : <Eye size={18} />}
                                                                 </IconButton>
                                                             </InputAdornment>
                                                         ),
@@ -1179,6 +1165,48 @@ export default function EditProfilePage() {
                         </Paper>
                     </>
                 )}
+            </Box>
+
+            {/* Fixed Footer - Save Button */}
+            <Box 
+                sx={{ 
+                    position: 'fixed',
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    bgcolor: 'white',
+                    borderTop: '1px solid',
+                    borderColor: 'grey.200',
+                    px: 2,
+                    py: 2,
+                    boxShadow: '0 -4px 20px rgba(0,0,0,0.08)',
+                    zIndex: 100,
+                }}
+            >
+                <Box sx={{ maxWidth: 560, mx: 'auto' }}>
+                    <Button
+                        variant="contained"
+                        fullWidth
+                        onClick={handleSubmit}
+                        disabled={isSaving}
+                        startIcon={isSaving ? <CircularProgress size={18} color="inherit" /> : <TickSquare color="white" size={18} />}
+                        sx={{
+                            py: 1.5,
+                            borderRadius: 2,
+                            bgcolor: '#667eea',
+                            fontWeight: 600,
+                            fontSize: '1rem',
+                            '&:hover': {
+                                bgcolor: '#667eea',
+                            },
+                            '&:disabled': {
+                                bgcolor: '#ccc',
+                            },
+                        }}
+                    >
+                        {isSaving ? 'กำลังบันทึก...' : 'บันทึกข้อมูล'}
+                    </Button>
+                </Box>
             </Box>
 
             {/* Bottom Drawer for Selection */}
@@ -1236,7 +1264,7 @@ export default function EditProfilePage() {
                                     />
                                     {isSelected && (
                                         <ListItemIcon sx={{ minWidth: 'auto' }}>
-                                            <Check size={20} color="#1b194b" />
+                                            <TickCircle size={20} color="#1b194b" />
                                         </ListItemIcon>
                                     )}
                                 </ListItemButton>
@@ -1261,7 +1289,7 @@ export default function EditProfilePage() {
                         ปรับแต่งรูปภาพ
                     </Typography>
                     <IconButton onClick={() => setImageEditorOpen(false)} size="small">
-                        <X size={20} />
+                        <CloseCircle size={20} />
                     </IconButton>
                 </DialogTitle>
                 <DialogContent sx={{ p: 0 }}>
@@ -1377,7 +1405,7 @@ export default function EditProfilePage() {
 
                             {/* Zoom Control */}
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
-                                <ZoomOut size={20} color="#666" />
+                                <SearchZoomOut size={20} color="#666" />
                                 <Slider
                                     value={zoom}
                                     onChange={(_, value) => setZoom(value as number)}
@@ -1391,7 +1419,7 @@ export default function EditProfilePage() {
                                         },
                                     }}
                                 />
-                                <ZoomIn size={20} color="#666" />
+                                <SearchZoomIn size={20} color="#666" />
                             </Box>
 
                             {/* Rotation Control */}
@@ -1400,7 +1428,7 @@ export default function EditProfilePage() {
                                     variant="outlined"
                                     size="small"
                                     onClick={() => setRotation((r) => r - 90)}
-                                    startIcon={<RotateCw size={16} style={{ transform: 'scaleX(-1)' }} />}
+                                    startIcon={<RotateRight size={16} style={{ transform: 'scaleX(-1)' }} />}
                                     sx={{ borderColor: '#1b194b', color: '#1b194b' }}
                                 >
                                     หมุนซ้าย
@@ -1421,7 +1449,7 @@ export default function EditProfilePage() {
                                     variant="outlined"
                                     size="small"
                                     onClick={() => setRotation((r) => r + 90)}
-                                    startIcon={<RotateCw size={16} />}
+                                    startIcon={<RotateRight size={16} />}
                                     sx={{ borderColor: '#1b194b', color: '#1b194b' }}
                                 >
                                     หมุนขวา

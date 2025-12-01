@@ -1,18 +1,21 @@
 'use client';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { Box, Typography, Button, Card, CardContent, Skeleton, Container } from '@mui/material';
 import Header from './components/Header';
 import LeaveTypeCard from './components/LeaveTypeCard';
 import RecentActivityCard from './components/RecentActivityCard';
 import BottomNav from './components/BottomNav';
 import { 
-  Calendar, Activity, Briefcase, Heart, Umbrella, Sun, Baby,
-  Church, Shield, Users, Car, Clock, HelpCircle, Stethoscope
-} from 'lucide-react';
+  Calendar2, Activity, Briefcase, Heart, Sun1, Lovely,
+  Building4, Shield, People, Car, Clock, MessageQuestion, Health,
+  Profile2User
+} from 'iconsax-react';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import 'swiper/css';
 import { useLocale } from './providers/LocaleProvider';
 import { useRouter } from 'next/navigation';
+import { LeaveRequest } from '@/types/leave';
+import LeaveDetailDrawer from './components/LeaveDetailDrawer';
 
 interface LeaveType {
   id: number;
@@ -26,20 +29,21 @@ interface LeaveType {
 
 // กำหนด icon และสีสำหรับแต่ละประเภทการลา
 const leaveTypeConfig: Record<string, { icon: any; color: string }> = {
-  sick: { icon: Heart, color: '#42A5F5' },
-  personal: { icon: Briefcase, color: '#AB47BC' },
-  vacation: { icon: Umbrella, color: '#FF7043' },
-  annual: { icon: Sun, color: '#FF7043' },
-  maternity: { icon: Baby, color: '#EC407A' },
-  ordination: { icon: Church, color: '#FFA726' },
-  military: { icon: Shield, color: '#66BB6A' },
-  marriage: { icon: Heart, color: '#EF5350' },
-  funeral: { icon: Users, color: '#78909C' },
-  paternity: { icon: Users, color: '#42A5F5' },
-  sterilization: { icon: Stethoscope, color: '#26A69A' },
-  business: { icon: Car, color: '#AB47BC' },
-  unpaid: { icon: Clock, color: '#9E9E9E' },
-  default: { icon: Calendar, color: '#5C6BC0' },
+  sick: { icon: Health, color: '#5E72E4' },
+  personal: { icon: Briefcase, color: '#8965E0' },
+  vacation: { icon: Sun1, color: '#11CDEF' },
+  annual: { icon: Sun1, color: '#2DCECC' },
+  maternity: { icon: Lovely, color: '#F3A4B5' },
+  ordination: { icon: Building4, color: '#FB6340' },
+  military: { icon: Shield, color: '#5E72E4' },
+  marriage: { icon: Heart, color: '#F3A4B5' },
+  funeral: { icon: People, color: '#8898AA' },
+  paternity: { icon: Profile2User, color: '#11CDEF' },
+  sterilization: { icon: Health, color: '#2DCECC' },
+  business: { icon: Car, color: '#8965E0' },
+  unpaid: { icon: Clock, color: '#8898AA' },
+  other: { icon: MessageQuestion, color: '#5E72E4' },
+  default: { icon: Calendar2, color: '#5E72E4' },
 };
 
 export default function Home() {
@@ -48,10 +52,14 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [mounted, setMounted] = useState(false);
   const [leaveTypes, setLeaveTypes] = useState<LeaveType[]>([]);
+  const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>([]);
+  const [selectedLeave, setSelectedLeave] = useState<LeaveRequest | null>(null);
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
   useEffect(() => {
     setMounted(true);
     fetchLeaveTypes();
+    fetchLeaveRequests();
     const hasLoaded = sessionStorage.getItem('home_loaded') === 'true';
     
     if (hasLoaded) {
@@ -80,10 +88,79 @@ export default function Home() {
     }
   };
 
+  const fetchLeaveRequests = async () => {
+    try {
+      const response = await fetch('/api/my-leaves');
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && data.data) {
+          setLeaveRequests(data.data);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching leave requests:', error);
+    }
+  };
+
+  // Format date for display
+  const formatDate = (startDate: string, endDate: string) => {
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    const options: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'short', year: 'numeric' };
+    
+    if (start.getTime() === end.getTime()) {
+      return start.toLocaleDateString('th-TH', options);
+    }
+    return `${start.toLocaleDateString('th-TH', { day: 'numeric', month: 'short' })} - ${end.toLocaleDateString('th-TH', options)}`;
+  };
+
+  // Map status to RecentActivityCard format
+  const mapStatus = (status: string): 'Approved' | 'Pending' | 'Rejected' | 'Cancelled' => {
+    const statusLower = status.toLowerCase();
+    switch (statusLower) {
+      case 'approved':
+        return 'Approved';
+      case 'rejected':
+        return 'Rejected';
+      case 'cancelled':
+        return 'Cancelled';
+      default:
+        return 'Pending';
+    }
+  };
+
+  // Get approval status text
+  const getApprovalStatusText = (leave: LeaveRequest) => {
+    const status = leave.status.toLowerCase();
+    if (status === 'approved') return t('status_approved', 'อนุมัติแล้ว');
+    if (status === 'rejected') return t('status_rejected', 'ถูกปฏิเสธ');
+    if (status === 'cancelled') return t('status_cancelled', 'ยกเลิกแล้ว');
+
+    if (leave.approvals && leave.approvals.length > 0) {
+      // Find the first pending approval
+      const pendingApproval = leave.approvals.find(a => a.status === 'pending');
+      if (pendingApproval) {
+        return `${t('status_waiting_for', 'รอการอนุมัติจาก')} ${pendingApproval.approver?.firstName || 'หัวหน้างาน'}`;
+      }
+    }
+    
+    return t('status_pending', 'รอการอนุมัติ');
+  };
+
+  // แสดง 5 รายการล่าสุด
+  const recentLeaveRequests = useMemo(() => {
+    return leaveRequests.slice(0, 5);
+  }, [leaveRequests]);
+
   const getLeaveTypeConfig = (code: string) => {
     return leaveTypeConfig[code] || leaveTypeConfig.default;
   };
   
+  const handleLeaveClick = (leave: LeaveRequest) => {
+    setSelectedLeave(leave);
+    setDrawerOpen(true);
+  };
+
   // Prevent hydration mismatch by always showing loading state until mounted
   const showLoading = !mounted || loading;
   return (
@@ -101,9 +178,28 @@ export default function Home() {
               </>
             ) : (
               <>
-                <Typography variant="h6" sx={{ fontWeight: 'bold', color: 'text.primary' }}>
-                  {t('home_leave_types', 'ประเภทการลา')}
-                </Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Typography variant="h6" sx={{ fontWeight: 'bold', color: 'text.primary' }}>
+                    {t('home_leave_types', 'ประเภทการลา')}
+                  </Typography>
+                  <Box
+                    sx={{
+                      
+                      color: 'primary.main',
+                      width: 24,
+                      height: 24,
+                      borderRadius: '50%',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '0.75rem',
+                      fontWeight: 'bold',
+                      bgcolor: '#E8EAF6'
+                    }}
+                  >
+                    {leaveTypes.length}
+                  </Box>
+                </Box>
                 <Button 
                   size="small" 
                   sx={{ fontWeight: 'medium' }}
@@ -151,7 +247,7 @@ export default function Home() {
           </Box>
         </Box>
 
-        {/* Featured/Announcement Card */}
+        {/* Featured/Announcement Card -> Main Purple Card */}
         {showLoading ? (
           <Skeleton variant="rounded" height={160} sx={{ borderRadius: 3, mb: 3 }} />
         ) : (
@@ -161,71 +257,74 @@ export default function Home() {
               position: 'relative',
               overflow: 'hidden',
               borderRadius: '30px',
-              boxShadow: '0 10px 30px rgba(0,0,0,0.02)'
+              boxShadow: '0 10px 30px rgba(94, 114, 228, 0.3)',
+              background: 'linear-gradient(135deg, #5E72E4 0%, #825EE4 100%)',
+              color: 'white'
             }}
           >
             <Box
               sx={{
                 position: 'absolute',
-                top: -32,
-                right: -32,
-                width: 128,
-                height: 128,
-                bgcolor: 'warning.light',
-                borderRadius: '0 0 0 100px',
-                zIndex: 0
+                top: 20,
+                right: 20,
+                zIndex: 2
               }}
-            />
-            <CardContent sx={{ position: 'relative', zIndex: 1, p: 2.5 }}>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 0.75 }}>
-                <Box
-                  sx={{
-                    bgcolor: 'warning.light',
-                    color: 'warning.main',
-                    px: 1.5,
-                    py: 0.5,
-                    borderRadius: 50,
-                    fontSize: '0.75rem',
-                    fontWeight: 'bold'
-                  }}
-                >
-                  เร็วๆ นี้
+            >
+              <Box sx={{ width: 4, height: 4, bgcolor: 'white', borderRadius: '50%', boxShadow: '6px 0 0 white, -6px 0 0 white' }} />
+            </Box>
+            
+            <CardContent sx={{ position: 'relative', zIndex: 1, p: 3 }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Box>
+                  <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 0.5, fontSize: '1.1rem', maxWidth: '70%' }}>
+                    วันลาพักร้อนคงเหลือของคุณ
+                  </Typography>
+                  <Button
+                    variant="contained"
+                    sx={{
+                      mt: 2,
+                      bgcolor: 'white',
+                      color: '#5E72E4',
+                      borderRadius: '12px',
+                      textTransform: 'none',
+                      fontWeight: 'bold',
+                      boxShadow: 'none',
+                      '&:hover': {
+                        bgcolor: 'rgba(255,255,255,0.9)',
+                      }
+                    }}
+                    onClick={() => router.push('/leave/annual')}
+                  >
+                    ใช้สิทธิ์ลา
+                  </Button>
                 </Box>
-                <HeartIcon />
-              </Box>
-              <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mb: 0.25, fontSize: '1.05rem' }}>
-                สัมมนาบริษัท
-              </Typography>
-              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1.5 }}>
-                14 วิดีโอคอร์ส (ตัวอย่าง)
-              </Typography>
-
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                <Box sx={{ display: 'flex', ml: 1 }}>
-                  {[1, 2, 3, 4].map(i => (
-                    <Box
-                      key={i}
-                      sx={{
-                        width: 32,
-                        height: 32,
-                        borderRadius: '50%',
-                        border: '2px solid white',
-                        bgcolor: 'grey.300',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontSize: '0.625rem',
-                        color: 'grey.600',
-                        ml: -1
-                      }}
-                    >
-                      U{i}
-                    </Box>
-                  ))}
+                
+                <Box sx={{ position: 'relative', width: 80, height: 80, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <svg width="80" height="80" viewBox="0 0 100 100" style={{ transform: 'rotate(-90deg)' }}>
+                    <circle
+                      cx="50"
+                      cy="50"
+                      r="40"
+                      fill="transparent"
+                      stroke="rgba(255,255,255,0.2)"
+                      strokeWidth="8"
+                    />
+                    <circle
+                      cx="50"
+                      cy="50"
+                      r="40"
+                      fill="transparent"
+                      stroke="white"
+                      strokeWidth="8"
+                      strokeDasharray={`${2 * Math.PI * 40}`}
+                      strokeDashoffset={`${2 * Math.PI * 40 * (1 - 0.85)}`}
+                      strokeLinecap="round"
+                    />
+                  </svg>
+                  <Typography sx={{ position: 'absolute', fontWeight: 'bold', fontSize: '1.2rem' }}>
+                    85%
+                  </Typography>
                 </Box>
-                <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 'medium' }}>
-                  เข้าร่วมทีม!
-                </Typography>
               </Box>
             </CardContent>
           </Card>
@@ -236,37 +335,73 @@ export default function Home() {
           {showLoading ? (
             <>
               <Skeleton variant="text" width={160} height={28} sx={{ mb: 1 }} />
+              <Skeleton variant="rounded" height={48} sx={{ borderRadius: 2, mb: 2 }} />
               {[1,2,3].map(i => (
                 <Skeleton key={i} variant="rounded" height={82} sx={{ borderRadius: 2, mb: 1.5 }} />
               ))}
             </>
           ) : (
             <>
-              <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 1.5, color: 'text.primary' }}>
-                {t('home_recent_requests', 'คำขอล่าสุด')}
-              </Typography>
-              <RecentActivityCard
-                title="ไปเที่ยวบาหลี"
-                date="20 - 25 พ.ย. 2025"
-                status="Approved"
-                image="https://images.unsplash.com/photo-1537996194471-e657df975ab4?auto=format&fit=crop&w=200&q=80"
-              />
-              <RecentActivityCard
-                title="ตรวจสุขภาพ"
-                date="12 พ.ย. 2025"
-                status="Pending"
-              />
-              <RecentActivityCard
-                title="ธุระส่วนตัว"
-                date="01 พ.ย. 2025"
-                status="Rejected"
-              />
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Typography variant="h6" sx={{ fontWeight: 'bold', color: 'text.primary' }}>
+                    {t('home_recent_requests', 'คำขอล่าสุด')}
+                  </Typography>
+                  
+                </Box>
+                <Button 
+                  size="small" 
+                  sx={{ fontWeight: 'medium' }}
+                  onClick={() => router.push('/leave')}
+                >
+                  {t('home_see_all', 'ดูทั้งหมด')}
+                </Button>
+              </Box>
+              
+              {recentLeaveRequests.length > 0 ? (
+                recentLeaveRequests.map((leave) => {
+                  const config = getLeaveTypeConfig(leave.leaveType || leave.leaveCode || 'default');
+                  const IconComponent = config.icon;
+                  
+                  // คำนวณ progress จาก approvals
+                  const totalLevels = leave.approvals?.length || 0;
+                  const approvedCount = leave.approvals?.filter(a => a.status === 'approved').length || 0;
+                  
+                  return (
+                    <Box key={leave.id} onClick={() => handleLeaveClick(leave)}>
+                      <RecentActivityCard
+                        title={leave.reason || leave.leaveTypeInfo?.name || 'การลา'}
+                        date={formatDate(leave.startDate, leave.endDate)}
+                        status={mapStatus(leave.status)}
+                        image={leave.attachments?.[0]?.filePath}
+                        icon={<IconComponent size={24} color={config.color} />}
+                        iconColor={config.color}
+                        approvalStatus={getApprovalStatusText(leave)}
+                        currentLevel={approvedCount}
+                        totalLevels={totalLevels}
+                      />
+                    </Box>
+                  );
+                })
+              ) : (
+                <Box sx={{ textAlign: 'center', py: 4, color: 'text.secondary' }}>
+                  <Typography variant="body2">
+                    {t('home_no_leave_requests', 'ยังไม่มีคำขอลา')}
+                  </Typography>
+                </Box>
+              )}
             </>
           )}
         </Box>
       </Container>
 
       <BottomNav activePage="home" />
+      
+      <LeaveDetailDrawer 
+        open={drawerOpen} 
+        onClose={() => setDrawerOpen(false)} 
+        leave={selectedLeave} 
+      />
     </Box>
   );
 }
@@ -286,9 +421,7 @@ function HeartIcon() {
         color: 'secondary.main'
       }}
     >
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-        <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
-      </svg>
+      <Heart size={18} variant="Bold" color="#F5365C" />
     </Box>
   )
 }

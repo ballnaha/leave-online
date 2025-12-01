@@ -13,6 +13,15 @@ const sarabun = Sarabun({
 export const metadata: Metadata = {
   title: "Leave Online",
   description: "Mobile first leave management application",
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "Leave Online",
+  },
+  formatDetection: {
+    telephone: false,
+  },
 };
 
 export default function RootLayout({

@@ -54,66 +54,26 @@ import {
     Ban,
     Trash2,
     AlertTriangle,
+    Search,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import BottomNav from '@/app/components/BottomNav';
 import dayjs from 'dayjs';
 import 'dayjs/locale/th';
+import { LeaveRequest, LeaveApproval, LeaveAttachment } from '@/types/leave';
+import LeaveDetailDrawer from '@/app/components/LeaveDetailDrawer';
 
 dayjs.locale('th');
 
 // กำหนด icon และสีสำหรับแต่ละประเภทการลา (สีแบบ balloon)
 const leaveTypeConfig: Record<string, { icon: any; color: string; lightColor: string; label: string }> = {
-    sick: { icon: Stethoscope, color: '#42A5F5', lightColor: '#E3F2FD', label: 'ลาป่วย' },
-    personal: { icon: Briefcase, color: '#845EF7', lightColor: '#F3EFFF', label: 'ลากิจ' },
-    vacation: { icon: Umbrella, color: '#FFD43B', lightColor: '#FFF9DB', label: 'ลาพักร้อน' },
-    maternity: { icon: Baby, color: '#F783AC', lightColor: '#FFDEEB', label: 'ลาคลอด' },
-    other: { icon: HelpCircle, color: '#748FFC', lightColor: '#EDF2FF', label: 'อื่นๆ' },
-    default: { icon: Clock, color: '#868E96', lightColor: '#F1F3F5', label: 'การลา' },
+    sick: { icon: Stethoscope, color: '#5E72E4', lightColor: '#E9ECFF', label: 'ลาป่วย' },
+    personal: { icon: Briefcase, color: '#8965E0', lightColor: '#F0E9FF', label: 'ลากิจ' },
+    vacation: { icon: Umbrella, color: '#11CDEF', lightColor: '#E3F9FC', label: 'ลาพักร้อน' },
+    maternity: { icon: Baby, color: '#F3A4B5', lightColor: '#FDEEF1', label: 'ลาคลอด' },
+    other: { icon: HelpCircle, color: '#5E72E4', lightColor: '#E9ECFF', label: 'อื่นๆ' },
+    default: { icon: Clock, color: '#8898AA', lightColor: '#F0F3F5', label: 'การลา' },
 };
-
-interface LeaveApproval {
-    id: number;
-    level: number;
-    status: string;
-    comment: string | null;
-    actionAt: string | null;
-    approver: {
-        id: number;
-        firstName: string;
-        lastName: string;
-        position: string | null;
-    };
-}
-
-interface LeaveAttachment {
-    id: number;
-    fileName: string;
-    filePath: string;
-    fileSize: number;
-    mimeType: string;
-}
-
-interface LeaveRequest {
-    id: number;
-    leaveCode: string | null;
-    leaveType: string;
-    startDate: string;
-    endDate: string;
-    startTime: string | null;
-    endTime: string | null;
-    totalDays: number;
-    reason: string;
-    status: string;
-    contactPhone: string | null;
-    contactAddress: string | null;
-    rejectReason: string | null;
-    cancelReason: string | null;
-    cancelledAt: string | null;
-    createdAt: string;
-    approvals: LeaveApproval[];
-    attachments: LeaveAttachment[];
-}
 
 interface LeaveType {
     id: number;
@@ -140,6 +100,7 @@ export default function LeavePage() {
     const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
     const [cancelling, setCancelling] = useState(false);
     const [cancelReason, setCancelReason] = useState('');
+    const [searchQuery, setSearchQuery] = useState('');
 
     // Generate years for dropdown dynamically
     // Shows current year and all previous years from 2024 (พ.ศ. 2567)
@@ -311,7 +272,23 @@ export default function LeavePage() {
         }
     };
 
-    const recentLeaves = myLeaves.slice(0, 5);
+    // Filter leaves based on search query
+    const filteredLeaves = useMemo(() => {
+        if (!searchQuery.trim()) {
+            return myLeaves;
+        }
+        
+        const query = searchQuery.toLowerCase();
+        return myLeaves.filter(leave => {
+            const reasonMatch = leave.reason?.toLowerCase().includes(query);
+            const typeMatch = leave.leaveTypeInfo?.name?.toLowerCase().includes(query) || 
+                             leave.leaveType?.toLowerCase().includes(query);
+            const statusMatch = getStatusLabel(leave.status).label.toLowerCase().includes(query);
+            return reasonMatch || typeMatch || statusMatch;
+        });
+    }, [myLeaves, searchQuery]);
+
+    const recentLeaves = filteredLeaves.slice(0, 10);
     const today = dayjs();
 
     return (
@@ -504,7 +481,7 @@ export default function LeavePage() {
                             const hasLeave = leavesOnDay.length > 0;
 
                             // Get leave colors for this day
-                            const leaveColors = leavesOnDay.map((l) => getLeaveConfig(l.leaveType).color);
+                            const leaveColors = leavesOnDay.map((l) => getLeaveConfig(l.leaveType || l.leaveCode || 'default').color);
                             const primaryColor = hasLeave ? leaveColors[0] : null;
 
                             return (
@@ -519,21 +496,24 @@ export default function LeavePage() {
                                         borderRadius: 2.5,
                                         position: 'relative',
                                         bgcolor: isToday 
-                                            ? '#6366F1' 
+                                            ? '#667eea' 
                                             : hasLeave 
-                                                ? primaryColor 
+                                                ? 'white' 
                                                 : 'transparent',
+                                        border: hasLeave && !isToday 
+                                            ? `2px solid ${primaryColor}` 
+                                            : 'none',
                                         cursor: hasLeave ? 'pointer' : 'default',
                                         transition: 'all 0.15s ease',
                                         '&:hover': hasLeave || isToday
-                                            ? { transform: 'scale(1.08)', boxShadow: '0 4px 12px rgba(99,102,241,0.3)' }
+                                            ? { transform: 'scale(1.08)', boxShadow: `0 4px 12px ${hasLeave ? `${primaryColor}40` : 'rgba(102,126,234,0.3)'}` }
                                             : {},
                                     }}
                                 >
                                     <Typography
                                         sx={{
                                             fontWeight: isToday || hasLeave ? 600 : 400,
-                                            color: isToday || hasLeave ? 'white' : '#475569',
+                                            color: isToday ? 'white' : hasLeave ? primaryColor : '#475569',
                                             fontSize: { xs: '0.8rem', sm: '0.9rem' },
                                         }}
                                     >
@@ -574,14 +554,14 @@ export default function LeavePage() {
                         </Typography>
                         <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5 }}>
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                <Box sx={{ width: 12, height: 12, borderRadius: '50%', bgcolor: '#6366F1' }} />
+                                <Box sx={{ width: 12, height: 12, borderRadius: '50%', bgcolor: '#667eea' }} />
                                 <Typography variant="caption" sx={{ color: '#64748B' }}>วันนี้</Typography>
                             </Box>
                             {Object.entries(leaveTypeConfig)
                                 .filter(([key]) => key !== 'default')
                                 .map(([key, config]) => (
                                     <Box key={key} sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                        <Box sx={{ width: 12, height: 12, borderRadius: '50%', bgcolor: config.color }} />
+                                        <Box sx={{ width: 12, height: 12, borderRadius: '50%', bgcolor: 'white', border: `2px solid ${config.color}` }} />
                                         <Typography variant="caption" sx={{ color: '#64748B' }}>{config.label}</Typography>
                                     </Box>
                                 ))}
@@ -600,21 +580,46 @@ export default function LeavePage() {
                                 fontSize: '1rem',
                             }}
                         >
-                            ประวัติการลา
+                            ประวัติการลา ({currentDate.format('MMMM')} {currentDate.year() + 543})
                         </Typography>
-                        <Button
-                            size="small"
-                            sx={{ 
-                                textTransform: 'none', 
-                                color: '#6366F1',
-                                fontWeight: 500,
-                                fontSize: '0.85rem',
+                        <Box
+                            sx={{
+                                bgcolor: '#E8EAF6',
+                                color: '#5E72E4',
+                                px: 1.5,
+                                py: 0.5,
+                                borderRadius: 2,
+                                fontSize: '0.8rem',
+                                fontWeight: 600,
                             }}
-                            onClick={() => router.push('/leave/history')}
                         >
-                            See all
-                        </Button>
+                            {filteredLeaves.length} รายการ
+                        </Box>
                     </Box>
+
+                    {/* Search Box */}
+                    <TextField
+                        fullWidth
+                        size="small"
+                        placeholder="ค้นหาใบลา..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        InputProps={{
+                            startAdornment: (
+                                <Box sx={{ display: 'flex', alignItems: 'center', pl: 1, pr: 0.5 }}>
+                                    <Search size={18} color="#94A3B8" />
+                                </Box>
+                            ),
+                            sx: {
+                                borderRadius: 2,
+                                bgcolor: 'white',
+                                '& fieldset': { borderColor: '#E2E8F0' },
+                                '&:hover fieldset': { borderColor: '#CBD5E1 !important' },
+                                '&.Mui-focused fieldset': { borderColor: '#667eea !important' },
+                            }
+                        }}
+                        sx={{ mb: 2 }}
+                    />
 
                     {loading ? (
                         <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
@@ -632,14 +637,14 @@ export default function LeavePage() {
                             }}
                         >
                             <Typography variant="body2" color="text.secondary">
-                                ยังไม่มีประวัติการลาในเดือนนี้
+                                {searchQuery ? 'ไม่พบใบลาที่ตรงกับการค้นหา' : 'ยังไม่มีประวัติการลาในเดือนนี้'}
                             </Typography>
                         </Card>
                     ) : (
                         <Fade in>
                             <Stack spacing={1.5}>
                                 {recentLeaves.map((leave) => {
-                                    const config = getLeaveConfig(leave.leaveType);
+                                    const config = getLeaveConfig(leave.leaveType || leave.leaveCode || 'default');
                                     const startDate = dayjs(leave.startDate);
                                     const statusInfo = getStatusLabel(leave.status);
                                     const StatusIcon = statusInfo.icon;
@@ -760,484 +765,13 @@ export default function LeavePage() {
             <BottomNav activePage="leave" />
 
             {/* Leave Detail Drawer */}
-            <Drawer
-                anchor="bottom"
+            <LeaveDetailDrawer
                 open={drawerOpen}
                 onClose={handleCloseDrawer}
-                PaperProps={{
-                    sx: {
-                        borderTopLeftRadius: 16,
-                        borderTopRightRadius: 16,
-                        maxHeight: '90vh',
-                        bgcolor: '#FAFBFC',
-                    },
-                }}
-            >
-                {selectedLeave && (() => {
-                    const config = getLeaveConfig(selectedLeave.leaveType);
-                    const statusInfo = getStatusLabel(selectedLeave.status);
-                    const StatusIcon = statusInfo.icon;
-                    const LeaveIcon = config.icon;
-                    const startDate = dayjs(selectedLeave.startDate);
-                    const endDate = dayjs(selectedLeave.endDate);
-                    const isSameDay = startDate.isSame(endDate, 'day');
+                leave={selectedLeave}
+                onCancel={() => setCancelDialogOpen(true)}
+            />
 
-                    return (
-                        <Box sx={{ pb: 4 }}>
-                            {/* Drawer Handle */}
-                            <Box
-                                sx={{
-                                    display: 'flex',
-                                    justifyContent: 'center',
-                                    pt: 1.5,
-                                    pb: 1,
-                                }}
-                            >
-                                <Box
-                                    sx={{
-                                        width: 40,
-                                        height: 4,
-                                        borderRadius: 2,
-                                        bgcolor: '#E2E8F0',
-                                    }}
-                                />
-                            </Box>
-
-                            {/* Header */}
-                            <Box
-                                sx={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'space-between',
-                                    px: 2.5,
-                                    py: 1.5,
-                                    borderBottom: '1px solid #F1F5F9',
-                                }}
-                            >
-                                <Box>
-                                    <Typography variant="h6" sx={{ fontWeight: 700, color: '#1E293B' }}>
-                                        รายละเอียดใบลา
-                                    </Typography>
-                                    {selectedLeave.leaveCode && (
-                                        <Typography sx={{ fontSize: '0.8rem', color: '#64748B' }}>
-                                            รหัส: {selectedLeave.leaveCode}
-                                        </Typography>
-                                    )}
-                                </Box>
-                                <IconButton onClick={handleCloseDrawer} size="small">
-                                    <X size={20} />
-                                </IconButton>
-                            </Box>
-
-                            {/* Content */}
-                            <Box sx={{ px: 2.5, py: 2, overflowY: 'auto', maxHeight: 'calc(90vh - 80px)' }}>
-                                {/* Leave Type & Status Card */}
-                                <Card
-                                    sx={{
-                                        borderRadius: 1,
-                                        p: 2.5,
-                                        mb: 2,
-                                        background: `linear-gradient(135deg, ${config.color}15 0%, ${config.color}05 100%)`,
-                                        border: `1px solid ${config.color}30`,
-                                    }}
-                                >
-                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
-                                        <Box
-                                            sx={{
-                                                width: 56,
-                                                height: 56,
-                                                borderRadius: 1,
-                                                bgcolor: config.color,
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                justifyContent: 'center',
-                                            }}
-                                        >
-                                            <LeaveIcon size={28} color="white" />
-                                        </Box>
-                                        <Box sx={{ flex: 1 }}>
-                                            <Typography sx={{ fontWeight: 700, fontSize: '1.2rem', color: '#1E293B', mb: 0.5 }}>
-                                                {config.label}
-                                            </Typography>
-                                            <Box
-                                                sx={{
-                                                    display: 'inline-flex',
-                                                    alignItems: 'center',
-                                                    gap: 0.5,
-                                                    px: 1.5,
-                                                    py: 0.5,
-                                                    borderRadius: 1,
-                                                    bgcolor: statusInfo.bgColor,
-                                                }}
-                                            >
-                                                <StatusIcon size={14} color={statusInfo.textColor} />
-                                                <Typography sx={{ fontSize: '0.85rem', fontWeight: 600, color: statusInfo.textColor }}>
-                                                    {statusInfo.label}
-                                                </Typography>
-                                            </Box>
-                                        </Box>
-                                    </Box>
-
-                                    {/* Date Range */}
-                                    <Box
-                                        sx={{
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            gap: 1.5,
-                                            p: 1.5,
-                                            borderRadius: 1,
-                                            bgcolor: 'white',
-                                        }}
-                                    >
-                                        <CalendarDays size={20} color={config.color} />
-                                        <Box>
-                                            <Typography sx={{ fontSize: '0.9rem', fontWeight: 600, color: '#1E293B' }}>
-                                                {isSameDay 
-                                                    ? startDate.format('D MMMM YYYY')
-                                                    : `${startDate.format('D MMM')} - ${endDate.format('D MMM YYYY')}`
-                                                }
-                                            </Typography>
-                                            <Typography sx={{ fontSize: '0.8rem', color: '#64748B' }}>
-                                                รวม {selectedLeave.totalDays} วัน
-                                                {selectedLeave.startTime && selectedLeave.endTime && 
-                                                    ` (${selectedLeave.startTime} - ${selectedLeave.endTime})`
-                                                }
-                                            </Typography>
-                                        </Box>
-                                    </Box>
-                                </Card>
-
-                                {/* Reason */}
-                                <Card
-                                    sx={{
-                                        borderRadius: 1,
-                                        p: 2,
-                                        mb: 2,
-                                        border: '1px solid #F1F5F9',
-                                    }}
-                                >
-                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                                        <FileText size={18} color="#64748B" />
-                                        <Typography sx={{ fontWeight: 600, color: '#475569', fontSize: '0.9rem' }}>
-                                            เหตุผลการลา
-                                        </Typography>
-                                    </Box>
-                                    <Typography sx={{ color: '#1E293B', fontSize: '0.95rem', pl: 3.5 }}>
-                                        {selectedLeave.reason}
-                                    </Typography>
-                                </Card>
-
-                                {/* Contact Info */}
-                                {(selectedLeave.contactPhone || selectedLeave.contactAddress) && (
-                                    <Card
-                                        sx={{
-                                            borderRadius: 1,
-                                            p: 2,
-                                            mb: 2,
-                                            border: '1px solid #F1F5F9',
-                                        }}
-                                    >
-                                        <Typography sx={{ fontWeight: 600, color: '#475569', fontSize: '0.9rem', mb: 1.5 }}>
-                                            ข้อมูลติดต่อระหว่างลา
-                                        </Typography>
-                                        {selectedLeave.contactPhone && (
-                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                                                <Phone size={16} color="#64748B" />
-                                                <Typography sx={{ color: '#1E293B', fontSize: '0.9rem' }}>
-                                                    {selectedLeave.contactPhone}
-                                                </Typography>
-                                            </Box>
-                                        )}
-                                        {selectedLeave.contactAddress && (
-                                            <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
-                                                <MapPin size={16} color="#64748B" style={{ marginTop: 2 }} />
-                                                <Typography sx={{ color: '#1E293B', fontSize: '0.9rem' }}>
-                                                    {selectedLeave.contactAddress}
-                                                </Typography>
-                                            </Box>
-                                        )}
-                                    </Card>
-                                )}
-
-                                {/* Attachments */}
-                                {selectedLeave.attachments && selectedLeave.attachments.length > 0 && (
-                                    <Card
-                                        sx={{
-                                            borderRadius: 1,
-                                            p: 2,
-                                            mb: 2,
-                                            border: '1px solid #F1F5F9',
-                                        }}
-                                    >
-                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 }}>
-                                            <Paperclip size={18} color="#64748B" />
-                                            <Typography sx={{ fontWeight: 600, color: '#475569', fontSize: '0.9rem' }}>
-                                                เอกสารแนบ ({selectedLeave.attachments.length})
-                                            </Typography>
-                                        </Box>
-                                        <Stack spacing={1}>
-                                            {selectedLeave.attachments.map((attachment) => (
-                                                <Box
-                                                    key={attachment.id}
-                                                    component="a"
-                                                    href={attachment.filePath}
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    sx={{
-                                                        display: 'flex',
-                                                        alignItems: 'center',
-                                                        gap: 1.5,
-                                                        p: 1.5,
-                                                        borderRadius: 2,
-                                                        bgcolor: '#F8FAFC',
-                                                        textDecoration: 'none',
-                                                        transition: 'all 0.15s ease',
-                                                        '&:hover': {
-                                                            bgcolor: '#F1F5F9',
-                                                        },
-                                                    }}
-                                                >
-                                                    <Box
-                                                        sx={{
-                                                            width: 40,
-                                                            height: 40,
-                                                            borderRadius: 2,
-                                                            bgcolor: '#E2E8F0',
-                                                            display: 'flex',
-                                                            alignItems: 'center',
-                                                            justifyContent: 'center',
-                                                        }}
-                                                    >
-                                                        <FileText size={18} color="#64748B" />
-                                                    </Box>
-                                                    <Box sx={{ flex: 1, minWidth: 0 }}>
-                                                        <Typography
-                                                            sx={{
-                                                                fontWeight: 500,
-                                                                color: '#1E293B',
-                                                                fontSize: '0.85rem',
-                                                                overflow: 'hidden',
-                                                                textOverflow: 'ellipsis',
-                                                                whiteSpace: 'nowrap',
-                                                            }}
-                                                        >
-                                                            {attachment.fileName}
-                                                        </Typography>
-                                                        <Typography sx={{ fontSize: '0.75rem', color: '#94A3B8' }}>
-                                                            {(attachment.fileSize / 1024).toFixed(1)} KB
-                                                        </Typography>
-                                                    </Box>
-                                                </Box>
-                                            ))}
-                                        </Stack>
-                                    </Card>
-                                )}
-
-                                {/* Rejection Reason */}
-                                {selectedLeave.status === 'rejected' && selectedLeave.rejectReason && (
-                                    <Card
-                                        sx={{
-                                            borderRadius: 1,
-                                            p: 2,
-                                            mb: 2,
-                                            bgcolor: '#FEF2F2',
-                                            border: '1px solid #FECACA',
-                                        }}
-                                    >
-                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                                            <XCircle size={18} color="#DC2626" />
-                                            <Typography sx={{ fontWeight: 600, color: '#DC2626', fontSize: '0.9rem' }}>
-                                                เหตุผลที่ไม่อนุมัติ
-                                            </Typography>
-                                        </Box>
-                                        <Typography sx={{ color: '#991B1B', fontSize: '0.9rem', pl: 3.5 }}>
-                                            {selectedLeave.rejectReason}
-                                        </Typography>
-                                    </Card>
-                                )}
-
-                                {/* Cancellation Reason */}
-                                {selectedLeave.status === 'cancelled' && (
-                                    <Card
-                                        sx={{
-                                            borderRadius: 1,
-                                            p: 2,
-                                            mb: 2,
-                                            bgcolor: '#FFF7ED',
-                                            border: '1px solid #FDBA74',
-                                        }}
-                                    >
-                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                                            <Ban size={18} color="#EA580C" />
-                                            <Typography sx={{ fontWeight: 600, color: '#EA580C', fontSize: '0.9rem' }}>
-                                                ยกเลิกใบลาแล้ว
-                                            </Typography>
-                                        </Box>
-                                        {selectedLeave.cancelReason && (
-                                            <Typography sx={{ color: '#9A3412', fontSize: '0.9rem', pl: 3.5, mb: 1 }}>
-                                                <strong>เหตุผล:</strong> {selectedLeave.cancelReason}
-                                            </Typography>
-                                        )}
-                                        {selectedLeave.cancelledAt && (
-                                            <Typography sx={{ color: '#C2410C', fontSize: '0.8rem', pl: 3.5 }}>
-                                                ยกเลิกเมื่อ {dayjs(selectedLeave.cancelledAt).format('D MMMM YYYY เวลา HH:mm น.')}
-                                            </Typography>
-                                        )}
-                                    </Card>
-                                )}
-
-                                {/* Approval Flow */}
-                                {selectedLeave.approvals && selectedLeave.approvals.length > 0 && (
-                                    <Card
-                                        sx={{
-                                            borderRadius: 1,
-                                            p: 2,
-                                            border: '1px solid #F1F5F9',
-                                        }}
-                                    >
-                                        <Typography sx={{ fontWeight: 600, color: '#475569', fontSize: '0.9rem', mb: 2 }}>
-                                            สถานะการอนุมัติ
-                                        </Typography>
-                                        <Stack spacing={0}>
-                                            {selectedLeave.approvals.map((approval, index) => {
-                                                const approvalStatus = getStatusLabel(approval.status);
-                                                const ApprovalIcon = approvalStatus.icon;
-                                                const isLast = index === selectedLeave.approvals.length - 1;
-
-                                                return (
-                                                    <Box key={approval.id} sx={{ display: 'flex', gap: 1.5 }}>
-                                                        {/* Timeline indicator */}
-                                                        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                                                            <Box
-                                                                sx={{
-                                                                    width: 32,
-                                                                    height: 32,
-                                                                    borderRadius: '50%',
-                                                                    bgcolor: approvalStatus.bgColor,
-                                                                    display: 'flex',
-                                                                    alignItems: 'center',
-                                                                    justifyContent: 'center',
-                                                                    border: `2px solid ${approvalStatus.textColor}`,
-                                                                }}
-                                                            >
-                                                                <ApprovalIcon size={16} color={approvalStatus.textColor} />
-                                                            </Box>
-                                                            {!isLast && (
-                                                                <Box
-                                                                    sx={{
-                                                                        width: 2,
-                                                                        flex: 1,
-                                                                        minHeight: 24,
-                                                                        bgcolor: '#E2E8F0',
-                                                                        my: 0.5,
-                                                                    }}
-                                                                />
-                                                            )}
-                                                        </Box>
-
-                                                        {/* Approval Content */}
-                                                        <Box sx={{ flex: 1, pb: isLast ? 0 : 2 }}>
-                                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
-                                                                <Typography sx={{ fontWeight: 600, color: '#1E293B', fontSize: '0.9rem' }}>
-                                                                    ลำดับที่ {approval.level}
-                                                                </Typography>
-                                                                <Chip
-                                                                    label={approvalStatus.label}
-                                                                    size="small"
-                                                                    sx={{
-                                                                        height: 22,
-                                                                        bgcolor: approvalStatus.bgColor,
-                                                                        color: approvalStatus.textColor,
-                                                                        fontWeight: 600,
-                                                                        fontSize: '0.7rem',
-                                                                    }}
-                                                                />
-                                                            </Box>
-                                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
-                                                                <Avatar
-                                                                    sx={{
-                                                                        width: 24,
-                                                                        height: 24,
-                                                                        bgcolor: '#E2E8F0',
-                                                                        fontSize: '0.7rem',
-                                                                    }}
-                                                                >
-                                                                    {approval.approver.firstName[0]}
-                                                                </Avatar>
-                                                                <Typography sx={{ color: '#475569', fontSize: '0.85rem' }}>
-                                                                    {approval.approver.firstName} {approval.approver.lastName}
-                                                                    {approval.approver.position && (
-                                                                        <Typography component="span" sx={{ color: '#94A3B8', fontSize: '0.8rem' }}>
-                                                                            {' '}• {approval.approver.position}
-                                                                        </Typography>
-                                                                    )}
-                                                                </Typography>
-                                                            </Box>
-                                                            {approval.actionAt && (
-                                                                <Typography sx={{ color: '#94A3B8', fontSize: '0.8rem' }}>
-                                                                    {dayjs(approval.actionAt).format('D MMM YYYY HH:mm น.')}
-                                                                </Typography>
-                                                            )}
-                                                            {approval.comment && (
-                                                                <Box
-                                                                    sx={{
-                                                                        mt: 1,
-                                                                        p: 1.5,
-                                                                        borderRadius: 2,
-                                                                        bgcolor: '#F8FAFC',
-                                                                        borderLeft: `3px solid ${approvalStatus.textColor}`,
-                                                                    }}
-                                                                >
-                                                                    <Typography sx={{ color: '#475569', fontSize: '0.85rem' }}>
-                                                                        "{approval.comment}"
-                                                                    </Typography>
-                                                                </Box>
-                                                            )}
-                                                        </Box>
-                                                    </Box>
-                                                );
-                                            })}
-                                        </Stack>
-                                    </Card>
-                                )}
-
-                                {/* Created Date */}
-                                <Box sx={{ mt: 2, textAlign: 'center' }}>
-                                    <Typography sx={{ color: '#94A3B8', fontSize: '0.8rem' }}>
-                                        ยื่นเมื่อ {dayjs(selectedLeave.createdAt).format('D MMMM YYYY เวลา HH:mm น.')}
-                                    </Typography>
-                                </Box>
-
-                                {/* Cancel Button - Only show for pending status */}
-                                {selectedLeave.status === 'pending' && (
-                                    <Box sx={{ mt: 3 }}>
-                                        <Button
-                                            fullWidth
-                                            variant="outlined"
-                                            color="error"
-                                            onClick={() => setCancelDialogOpen(true)}
-                                            startIcon={<Trash2 size={18} />}
-                                            sx={{
-                                                borderRadius: 1,
-                                                py: 1.5,
-                                                fontWeight: 600,
-                                                borderColor: '#DC2626',
-                                                color: '#DC2626',
-                                                '&:hover': {
-                                                    bgcolor: '#FEF2F2',
-                                                    borderColor: '#DC2626',
-                                                },
-                                            }}
-                                        >
-                                            ยกเลิกใบลา
-                                        </Button>
-                                    </Box>
-                                )}
-                            </Box>
-                        </Box>
-                    );
-                })()}
-            </Drawer>
 
             {/* Cancel Confirmation Dialog */}
             <Dialog

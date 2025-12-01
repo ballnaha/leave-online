@@ -5,16 +5,19 @@ import ThemeRegistry from "../ThemeRegistry";
 import { LocaleProvider } from "./LocaleProvider";
 import { ToastrProvider } from "../components/Toastr";
 import { UserProvider } from "./UserProvider";
+import { OneSignalProvider } from "./OneSignalProvider";
 
 export default function AppProviders({ children, initialLocale }: { children: React.ReactNode; initialLocale?: "th" | "en" | "my" }) {
   return (
     <SessionProvider>
       <UserProvider>
-        <LocaleProvider initialLocale={initialLocale}>
-          <ThemeRegistry>
-            <ToastrProvider>{children}</ToastrProvider>
-          </ThemeRegistry>
-        </LocaleProvider>
+        <OneSignalProvider>
+          <LocaleProvider initialLocale={initialLocale}>
+            <ThemeRegistry>
+              <ToastrProvider>{children}</ToastrProvider>
+            </ThemeRegistry>
+          </LocaleProvider>
+        </OneSignalProvider>
       </UserProvider>
     </SessionProvider>
   );

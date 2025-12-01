@@ -1,13 +1,30 @@
 'use client';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { Box, IconButton, Fab, Paper, Typography } from '@mui/material';
+import { Box, Fab, Paper, Typography } from '@mui/material';
 import { useLocale } from '../providers/LocaleProvider';
 import { 
-    Home, Mail, Heart, User, Plus, 
-    Stethoscope, Umbrella, Sun, Baby, MoreHorizontal,
-    Briefcase, Calendar, Clock, Church, Shield, Users, Car, HelpCircle , History
-} from 'lucide-react';
+    Home2, 
+    Message, 
+    Heart, 
+    User, 
+    Add, 
+    Health, 
+    Sun1, 
+    Lovely, 
+    More,
+    Briefcase, 
+    Calendar2,   
+    Clock, 
+    Building4, 
+    Shield, 
+    People, 
+    Car, 
+    MessageQuestion,
+    Profile2User,
+    Clock as ClockTimer,
+    
+} from 'iconsax-react';
 
 interface BottomNavProps {
     activePage?: 'home' | 'messages' | 'leave' | 'profile';
@@ -25,22 +42,26 @@ interface LeaveType {
 
 // กำหนด icon และสีสำหรับแต่ละประเภทการลา (สีแบบ balloon เหมือนปฏิทิน)
 const leaveTypeConfig: Record<string, { icon: any; color: string; gradient: string }> = {
-    sick: { icon: Stethoscope, color: '#42A5F5', gradient: 'linear-gradient(135deg, #42A5F5 0%, #64B5F6 100%)' },
-    personal: { icon: Umbrella, color: '#845EF7', gradient: 'linear-gradient(135deg, #845EF7 0%, #9775FA 100%)' },
-    vacation: { icon: Sun, color: '#FFD43B', gradient: 'linear-gradient(135deg, #FFD43B 0%, #FFE066 100%)' },
-    annual: { icon: Sun, color: '#FFD43B', gradient: 'linear-gradient(135deg, #FFD43B 0%, #FFE066 100%)' },
-    maternity: { icon: Baby, color: '#F783AC', gradient: 'linear-gradient(135deg, #F783AC 0%, #FAA2C1 100%)' },
-    ordination: { icon: Church, color: '#FFA726', gradient: 'linear-gradient(135deg, #FFA726 0%, #FFB74D 100%)' },
-    military: { icon: Shield, color: '#66BB6A', gradient: 'linear-gradient(135deg, #66BB6A 0%, #81C784 100%)' },
-    marriage: { icon: Heart, color: '#FF6B6B', gradient: 'linear-gradient(135deg, #FF6B6B 0%, #FF8E8E 100%)' },
-    funeral: { icon: Users, color: '#78909C', gradient: 'linear-gradient(135deg, #78909C 0%, #90A4AE 100%)' },
-    paternity: { icon: User, color: '#42A5F5', gradient: 'linear-gradient(135deg, #42A5F5 0%, #64B5F6 100%)' },
-    sterilization: { icon: Stethoscope, color: '#26A69A', gradient: 'linear-gradient(135deg, #26A69A 0%, #4DB6AC 100%)' },
-    business: { icon: Car, color: '#845EF7', gradient: 'linear-gradient(135deg, #845EF7 0%, #9775FA 100%)' },
-    unpaid: { icon: Clock, color: '#868E96', gradient: 'linear-gradient(135deg, #868E96 0%, #ADB5BD 100%)' },
-    other: { icon: HelpCircle, color: '#748FFC', gradient: 'linear-gradient(135deg, #748FFC 0%, #91A7FF 100%)' },
-    default: { icon: HelpCircle, color: '#868E96', gradient: 'linear-gradient(135deg, #868E96 0%, #ADB5BD 100%)' },
+    sick: { icon: Health, color: '#5E72E4', gradient: 'linear-gradient(135deg, #5E72E4 0%, #825EE4 100%)' },
+    personal: { icon: Briefcase, color: '#8965E0', gradient: 'linear-gradient(135deg, #8965E0 0%, #BC65E0 100%)' },
+    vacation: { icon: Sun1, color: '#11CDEF', gradient: 'linear-gradient(135deg, #11CDEF 0%, #1171EF 100%)' },
+    annual: { icon: Sun1, color: '#2DCECC', gradient: 'linear-gradient(135deg, #2DCECC 0%, #2D8BCC 100%)' },
+    maternity: { icon: Lovely, color: '#F5365C', gradient: 'linear-gradient(135deg, #F5365C 0%, #F56036 100%)' },
+    ordination: { icon: Building4, color: '#FB6340', gradient: 'linear-gradient(135deg, #FB6340 0%, #FBB140 100%)' },
+    military: { icon: Shield, color: '#5E72E4', gradient: 'linear-gradient(135deg, #5E72E4 0%, #5E9BE4 100%)' },
+    marriage: { icon: Heart, color: '#F3A4B5', gradient: 'linear-gradient(135deg, #F3A4B5 0%, #D66086 100%)' },
+    funeral: { icon: People, color: '#8898AA', gradient: 'linear-gradient(135deg, #8898AA 0%, #6A7A8A 100%)' },
+    paternity: { icon: Profile2User, color: '#11CDEF', gradient: 'linear-gradient(135deg, #11CDEF 0%, #1171EF 100%)' },
+    sterilization: { icon: Health, color: '#2DCECC', gradient: 'linear-gradient(135deg, #2DCECC 0%, #2D8BCC 100%)' },
+    business: { icon: Car, color: '#8965E0', gradient: 'linear-gradient(135deg, #8965E0 0%, #BC65E0 100%)' },
+    unpaid: { icon: Clock, color: '#8898AA', gradient: 'linear-gradient(135deg, #8898AA 0%, #6A7A8A 100%)' },
+    other: { icon: MessageQuestion, color: '#5E72E4', gradient: 'linear-gradient(135deg, #5E72E4 0%, #825EE4 100%)' },
+    default: { icon: MessageQuestion, color: '#8898AA', gradient: 'linear-gradient(135deg, #8898AA 0%, #6A7A8A 100%)' },
 };
+
+// Cache สำหรับเก็บข้อมูล leave types เพื่อป้องกันการ fetch ซ้ำ
+let cachedLeaveTypes: LeaveType[] | null = null;
+let isFetching = false;
 
 const BottomNav: React.FC<BottomNavProps> = ({ activePage = 'home' }) => {
     const router = useRouter();
@@ -48,24 +69,38 @@ const BottomNav: React.FC<BottomNavProps> = ({ activePage = 'home' }) => {
     const [openMenu, setOpenMenu] = useState(false);
     const [animatingOut, setAnimatingOut] = useState(false);
     const [renderMenu, setRenderMenu] = useState(false);
-    const [leaveTypes, setLeaveTypes] = useState<LeaveType[]>([]);
+    const [leaveTypes, setLeaveTypes] = useState<LeaveType[]>(cachedLeaveTypes || []);
     const closeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-    // Fetch leave types from API
+    // Fetch leave types from API - only if not cached
     useEffect(() => {
+        // ถ้ามี cache แล้วไม่ต้อง fetch
+        if (cachedLeaveTypes) {
+            setLeaveTypes(cachedLeaveTypes);
+            return;
+        }
+        
+        // ถ้ากำลัง fetch อยู่ ไม่ต้องทำซ้ำ
+        if (isFetching) return;
+        
         fetchLeaveTypes();
     }, []);
 
     const fetchLeaveTypes = async () => {
+        isFetching = true;
         try {
             const response = await fetch('/api/leave-types');
             if (response.ok) {
                 const data = await response.json();
                 // จำกัดแสดงแค่ 5 ประเภทแรก
-                setLeaveTypes(data.slice(0, 5));
+                const slicedData = data.slice(0, 5);
+                cachedLeaveTypes = slicedData;
+                setLeaveTypes(slicedData);
             }
         } catch (error) {
             console.error('Error fetching leave types:', error);
+        } finally {
+            isFetching = false;
         }
     };
 
@@ -250,7 +285,7 @@ const BottomNav: React.FC<BottomNavProps> = ({ activePage = 'home' }) => {
                                                     },
                                                 }}
                                             >
-                                                <Icon size={22} />
+                                                <Icon size={22} color="white" />
                                             </Box>
                                             <Typography
                                                 variant="body2"
@@ -301,153 +336,229 @@ const BottomNav: React.FC<BottomNavProps> = ({ activePage = 'home' }) => {
                             position: 'absolute',
                             bottom: 0,
                             width: '100%',
-                            height: 65,
-                            bgcolor: 'background.paper',
-                            borderRadius: '16px 16px 0 0',
-                            boxShadow: '0 -10px 30px rgba(0,0,0,0.05)',
+                            height: 70,
+                            bgcolor: 'rgba(237, 233, 254, 0.95)',
+                            borderRadius: '28px 28px 0 0',
+                            boxShadow: '0 -8px 32px rgba(108, 99, 255, 0.08)',
+                            backdropFilter: 'blur(20px)',
                             display: 'grid',
-                            gridTemplateColumns: '1fr 1fr 64px 1fr 1fr',
+                            gridTemplateColumns: '1fr 1fr 80px 1fr 1fr',
                             alignItems: 'center',
-                            px: 2,
+                            px: 3,
                             pointerEvents: 'auto',
                         }}
                     >
                         <Box 
-                            sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.3, cursor: 'pointer', justifySelf: 'center', textAlign: 'center' }}
+                            sx={{ 
+                                display: 'flex', 
+                                flexDirection: 'column', 
+                                alignItems: 'center', 
+                                gap: 0.5, 
+                                cursor: 'pointer', 
+                                justifySelf: 'center', 
+                                textAlign: 'center',
+                                py: 1,
+                            }}
                             onClick={() => {
                                 setOpenMenu(false);
                                 router.push('/');
                             }}
                         >
-                            <IconButton sx={{ 
-                                color: activePage === 'home' ? 'primary.main' : 'text.disabled', 
-                                '&:hover': { color: activePage === 'home' ? 'primary.dark' : 'text.secondary' }, 
-                                p: 0.5 
-                            }}>
-                                <Home size={20} />
-                            </IconButton>
-                            <Typography variant="caption" noWrap sx={{ 
-                                fontSize: '0.6rem', 
-                                fontWeight: activePage === 'home' ? 600 : 500, 
-                                color: activePage === 'home' ? 'primary.main' : 'text.disabled',
-                                maxWidth: 72,
-                                overflow: 'hidden',
-                                textOverflow: 'ellipsis',
-                                lineHeight: 1
-                            }}>
-                                {t('nav_home', 'หน้าหลัก')}
-                            </Typography>
+                            <Box
+                                sx={{
+                                    width: 44,
+                                    height: 44,
+                                    borderRadius: '14px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    bgcolor: activePage === 'home' ? 'rgba(108, 99, 255, 0.15)' : 'transparent',
+                                    transition: 'all 0.3s ease',
+                                    '&:hover': {
+                                        bgcolor: 'rgba(108, 99, 255, 0.1)',
+                                        transform: 'scale(1.05)',
+                                    },
+                                    '&:active': {
+                                        transform: 'scale(0.95)',
+                                    },
+                                }}
+                            >
+                                <Home2 
+                                    size={26} 
+                                    variant={activePage === 'home' ? 'Bold' : 'TwoTone'} 
+                                    color={activePage === 'home' ? '#6C63FF' : '#8B7FC7'} 
+                                />
+                            </Box>
                         </Box>
 
                         <Box 
-                            sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.3, cursor: 'pointer', justifySelf: 'center', textAlign: 'center' }}
-                            onClick={() => {
-                                setOpenMenu(false);
-                                router.push('/messages');
+                            sx={{ 
+                                display: 'flex', 
+                                flexDirection: 'column', 
+                                alignItems: 'center', 
+                                gap: 0.5, 
+                                cursor: 'pointer', 
+                                justifySelf: 'center', 
+                                textAlign: 'center',
+                                py: 1,
                             }}
-                        >
-                            <IconButton sx={{ 
-                                color: activePage === 'messages' ? 'primary.main' : 'text.disabled', 
-                                '&:hover': { color: activePage === 'messages' ? 'primary.dark' : 'text.secondary' }, 
-                                p: 0.5 
-                            }}>
-                                <Mail size={20} />
-                            </IconButton>
-                            <Typography variant="caption" noWrap sx={{ 
-                                fontSize: '0.6rem', 
-                                fontWeight: activePage === 'messages' ? 600 : 500, 
-                                color: activePage === 'messages' ? 'primary.main' : 'text.disabled',
-                                maxWidth: 72,
-                                overflow: 'hidden',
-                                textOverflow: 'ellipsis',
-                                lineHeight: 1
-                            }}>
-                                {t('nav_messages', 'ข้อความ')}
-                            </Typography>
-                        </Box>
-
-                        {/* Spacer for FAB */}
-                        <Box sx={{ width: 64, justifySelf: 'center' }} />
-
-                        <Box 
-                            sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.3, cursor: 'pointer', justifySelf: 'center', textAlign: 'center' }}
                             onClick={() => {
                                 setOpenMenu(false);
                                 router.push('/leave');
                             }}
                         >
-                            <IconButton sx={{ 
-                                color: activePage === 'leave' ? 'primary.main' : 'text.disabled', 
-                                '&:hover': { color: activePage === 'leave' ? 'primary.dark' : 'text.secondary' }, 
-                                p: 0.5 
-                            }}>
-                                <History size={20} />
-                            </IconButton>
-                            <Typography variant="caption" noWrap sx={{ 
-                                fontSize: '0.6rem', 
-                                fontWeight: activePage === 'leave' ? 600 : 500, 
-                                color: activePage === 'leave' ? 'primary.main' : 'text.disabled',
-                                maxWidth: 72,
-                                overflow: 'hidden',
-                                textOverflow: 'ellipsis',
-                                lineHeight: 1
-                            }}>
-                                {t('nav_leave', 'ประวัติการลา')}
-                            </Typography>
+                            <Box
+                                sx={{
+                                    width: 44,
+                                    height: 44,
+                                    borderRadius: '14px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    bgcolor: activePage === 'leave' ? 'rgba(108, 99, 255, 0.15)' : 'transparent',
+                                    transition: 'all 0.3s ease',
+                                    '&:hover': {
+                                        bgcolor: 'rgba(108, 99, 255, 0.1)',
+                                        transform: 'scale(1.05)',
+                                    },
+                                    '&:active': {
+                                        transform: 'scale(0.95)',
+                                    },
+                                }}
+                            >
+                                <Calendar2 
+                                    size={26} 
+                                    variant={activePage === 'leave' ? 'Bold' : 'TwoTone'} 
+                                    color={activePage === 'leave' ? '#6C63FF' : '#8B7FC7'} 
+                                />
+                            </Box>
+                        </Box>
+
+                        {/* Spacer for FAB with curved notch effect */}
+                        <Box sx={{ width: 80, justifySelf: 'center', position: 'relative' }}>
+                            <Box
+                                sx={{
+                                    position: 'absolute',
+                                    top: -35,
+                                    left: '50%',
+                                    transform: 'translateX(-50%)',
+                                    width: 72,
+                                    height: 36,
+                                    bgcolor: 'rgba(237, 233, 254, 0.95)',
+                                    borderRadius: '0 0 36px 36px',
+                                }}
+                            />
+                        </Box>
+
+                        <Box 
+                            sx={{ 
+                                display: 'flex', 
+                                flexDirection: 'column', 
+                                alignItems: 'center', 
+                                gap: 0.5, 
+                                cursor: 'pointer', 
+                                justifySelf: 'center', 
+                                textAlign: 'center',
+                                py: 1,
+                            }}
+                            onClick={() => {
+                                setOpenMenu(false);
+                                router.push('/messages');
+                            }}
+                        >
+                            <Box
+                                sx={{
+                                    width: 44,
+                                    height: 44,
+                                    borderRadius: '14px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    bgcolor: activePage === 'messages' ? 'rgba(108, 99, 255, 0.15)' : 'transparent',
+                                    transition: 'all 0.3s ease',
+                                    '&:hover': {
+                                        bgcolor: 'rgba(108, 99, 255, 0.1)',
+                                        transform: 'scale(1.05)',
+                                    },
+                                    '&:active': {
+                                        transform: 'scale(0.95)',
+                                    },
+                                }}
+                            >
+                                <Message 
+                                    size={26} 
+                                    variant={activePage === 'messages' ? 'Bold' : 'Outline'} 
+                                    color={activePage === 'messages' ? '#6C63FF' : '#8B7FC7'} 
+                                />
+                            </Box>
                         </Box>
 
                         <Box
-                            sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.3, cursor: 'pointer', justifySelf: 'center', textAlign: 'center' }}
+                            sx={{ 
+                                display: 'flex', 
+                                flexDirection: 'column', 
+                                alignItems: 'center', 
+                                gap: 0.5, 
+                                cursor: 'pointer', 
+                                justifySelf: 'center', 
+                                textAlign: 'center',
+                                py: 1,
+                            }}
                             onClick={() => {
                                 setOpenMenu(false);
                                 router.push('/profile');
                             }}
                         >
-                            <IconButton sx={{ 
-                                color: activePage === 'profile' ? 'primary.main' : 'text.disabled', 
-                                '&:hover': { color: activePage === 'profile' ? 'primary.dark' : 'text.secondary' }, 
-                                p: 0.5 
-                            }}>
-                                <User size={20} />
-                            </IconButton>
-                            <Typography variant="caption" noWrap sx={{ 
-                                fontSize: '0.6rem', 
-                                fontWeight: activePage === 'profile' ? 600 : 500, 
-                                color: activePage === 'profile' ? 'primary.main' : 'text.disabled',
-                                maxWidth: 72,
-                                overflow: 'hidden',
-                                textOverflow: 'ellipsis',
-                                lineHeight: 1
-                            }}>
-                                {t('nav_profile', 'โปรไฟล์')}
-                            </Typography>
+                            <Box
+                                sx={{
+                                    width: 44,
+                                    height: 44,
+                                    borderRadius: '14px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    bgcolor: activePage === 'profile' ? 'rgba(108, 99, 255, 0.15)' : 'transparent',
+                                    transition: 'all 0.3s ease',
+                                    '&:hover': {
+                                        bgcolor: 'rgba(108, 99, 255, 0.1)',
+                                        transform: 'scale(1.05)',
+                                    },
+                                    '&:active': {
+                                        transform: 'scale(0.95)',
+                                    },
+                                }}
+                            >
+                                <Profile2User 
+                                    size={26} 
+                                    variant={activePage === 'profile' ? 'Bold' : 'TwoTone'} 
+                                    color={activePage === 'profile' ? '#6C63FF' : '#8B7FC7'} 
+                                />
+                            </Box>
                         </Box>
                     </Paper>
 
                     {/* Floating Action Button */}
-                    <Box sx={{ position: 'absolute', bottom: 24, left: '50%', transform: 'translateX(-50%)', pointerEvents: 'auto' }}>
+                    <Box sx={{ position: 'absolute', bottom: 32, left: '50%', transform: 'translateX(-50%)', pointerEvents: 'auto' }}>
                         <Fab
                             onClick={() => setOpenMenu(!openMenu)}
                             sx={{
-                                width: 56,
-                                height: 56,
-                                bgcolor: 'primary.main',
+                                width: 60,
+                                height: 60,
+                                bgcolor: '#6C63FF',
                                 color: 'white',
                                 boxShadow: openMenu
-                                    ? '0 8px 24px rgba(108, 99, 255, 0.5)'
-                                    : '0 10px 20px rgba(108, 99, 255, 0.4)',
+                                    ? '0 12px 28px rgba(108, 99, 255, 0.55)'
+                                    : '0 8px 24px rgba(108, 99, 255, 0.45)',
                                 '&:hover': {
-                                    bgcolor: 'primary.dark',
-                                    transform: 'scale(1.05)',
+                                    bgcolor: '#5A52E0',
+                                    boxShadow: '0 14px 32px rgba(108, 99, 255, 0.6)',
                                 },
                                 transition: 'all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)',
                                 transform: openMenu ? 'rotate(45deg)' : 'rotate(0deg)',
                             }}
                         >
-                            <Plus size={24} />
-
+                            <Add color="white" size={32} />
                         </Fab>
-
                     </Box>
                 </Box>
             </Box>

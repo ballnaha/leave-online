@@ -23,33 +23,22 @@ export async function POST(request: NextRequest) {
 
     const userId = parseInt(session.user.id);
 
-    // ตรวจสอบว่า playerId นี้มีอยู่แล้วหรือไม่
-    const existingDevice = await prisma.userDevice.findUnique({
+    // ใช้ upsert เพื่อป้องกัน race condition
+    await prisma.userDevice.upsert({
       where: { playerId },
+      update: {
+        userId,
+        deviceType: deviceType || 'web',
+        isActive: true,
+        updatedAt: new Date(),
+      },
+      create: {
+        userId,
+        playerId,
+        deviceType: deviceType || 'web',
+        isActive: true,
+      },
     });
-
-    if (existingDevice) {
-      // ถ้ามีอยู่แล้ว อัพเดตเป็น user ปัจจุบัน
-      await prisma.userDevice.update({
-        where: { playerId },
-        data: {
-          userId,
-          deviceType: deviceType || 'web',
-          isActive: true,
-          updatedAt: new Date(),
-        },
-      });
-    } else {
-      // สร้างใหม่
-      await prisma.userDevice.create({
-        data: {
-          userId,
-          playerId,
-          deviceType: deviceType || 'web',
-          isActive: true,
-        },
-      });
-    }
 
     return NextResponse.json({ success: true });
   } catch (error) {

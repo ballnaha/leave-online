@@ -25,34 +25,49 @@ export async function GET(request: NextRequest) {
             endDate = new Date(year, month, 0, 23, 59, 59);
         }
 
-        const leaves = await prisma.leaveRequest.findMany({
-            where: {
-                userId: Number(session.user.id),
-                startDate: {
-                    gte: startDate,
-                    lte: endDate,
+        // ดึง leave requests และ leave types แยกกัน
+        const [leaves, leaveTypes] = await Promise.all([
+            prisma.leaveRequest.findMany({
+                where: {
+                    userId: Number(session.user.id),
+                    startDate: {
+                        gte: startDate,
+                        lte: endDate,
+                    },
                 },
-            },
-            orderBy: { startDate: 'desc' },
-            include: {
-                attachments: true,
-                approvals: {
-                    include: {
-                        approver: {
-                            select: {
-                                id: true,
-                                firstName: true,
-                                lastName: true,
-                                position: true,
+                orderBy: { startDate: 'desc' },
+                include: {
+                    attachments: true,
+                    approvals: {
+                        include: {
+                            approver: {
+                                select: {
+                                    id: true,
+                                    firstName: true,
+                                    lastName: true,
+                                    position: true,
+                                },
                             },
                         },
+                        orderBy: { level: 'asc' },
                     },
-                    orderBy: { level: 'asc' },
                 },
-            },
-        });
+            }),
+            prisma.leaveType.findMany({
+                where: { isActive: true },
+            }),
+        ]);
 
-        return NextResponse.json({ success: true, data: leaves });
+        // สร้าง map ของ leaveTypes
+        const leaveTypeMap = new Map(leaveTypes.map(lt => [lt.code, lt]));
+
+        // รวม leaveType info เข้ากับ leaves
+        const leavesWithType = leaves.map(leave => ({
+            ...leave,
+            leaveTypeInfo: leaveTypeMap.get(leave.leaveType) || null,
+        }));
+
+        return NextResponse.json({ success: true, data: leavesWithType });
     } catch (error) {
         console.error('Error fetching my leaves:', error);
         return NextResponse.json({ error: 'Failed to fetch leaves' }, { status: 500 });
