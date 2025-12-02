@@ -25,3 +25,36 @@ body {
   /* Prevent pull-to-refresh on mobile */
   touch-action: pan-x pan-y;
 }
+
+/* Hide any loading bars or progress indicators in PWA mode */
+@media all and (display-mode: standalone) {
+  /* Hide browser/system loading indicators */
+  html::before,
+  html::after,
+  body::before,
+  body::after {
+    display: none !important;
+  }
+  
+  /* Ensure no unwanted lines or borders */
+  * {
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+/* Hide nprogress loading bar globally */
+#nprogress {
+  display: none !important;
+}
+
+#nprogress .bar {
+  display: none !important;
+}
+
+#nprogress .peg {
+  display: none !important;
+}
+
+#nprogress .spinner {
+  display: none !important;
+}
