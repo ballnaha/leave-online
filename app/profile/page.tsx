@@ -271,7 +271,7 @@ export default function ProfilePage() {
             <Box
                 sx={{
                     background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                    pt: 'calc(env(safe-area-inset-top, 0px) + 24px)',
+                    pt: 3,
                     pb: 8,
                     px: 2,
                     position: 'relative',
