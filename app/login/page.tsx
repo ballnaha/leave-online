@@ -17,6 +17,7 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { signIn, useSession } from 'next-auth/react';
 import { useToastr } from '@/app/components/Toastr';
+import { APP_VERSION } from '@/lib/version';
 
 function LoginPageContent() {
     const router = useRouter();
@@ -345,7 +346,7 @@ function LoginPageContent() {
                     </Link>
                 </Typography>
                 <Typography variant="caption" sx={{ display: 'block', mt: 2, color: '#aaa' }}>
-                    © 2025 PSC Leave System v1.0
+                    © 2025 PSC Leave System v{APP_VERSION}
                 </Typography>
             </Box>
         </Box>
