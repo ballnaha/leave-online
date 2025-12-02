@@ -189,9 +189,57 @@ export default function ProfilePage() {
                 return type;
         }
     };
+
+    // Get gender symbol
+    const getGenderSymbol = (gender: string | undefined) => {
+        if (gender === 'male') return '♂';
+        if (gender === 'female') return '♀';
+        return '';
+    };
+
+    // Get gender color
+    const getGenderColor = (gender: string | undefined) => {
+        if (gender === 'male') return '#2196F3';
+        if (gender === 'female') return '#E91E63';
+        return '#9E9E9E';
+    };
+
+    // Calculate work duration from start date until now
+    const calculateWorkDuration = (startDateString: string | null) => {
+        if (!startDateString) return null;
+        
+        const startDate = new Date(startDateString);
+        const now = new Date();
+        
+        let years = now.getFullYear() - startDate.getFullYear();
+        let months = now.getMonth() - startDate.getMonth();
+        let days = now.getDate() - startDate.getDate();
+        
+        // Adjust for negative days
+        if (days < 0) {
+            months--;
+            const lastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
+            days += lastMonth.getDate();
+        }
+        
+        // Adjust for negative months
+        if (months < 0) {
+            years--;
+            months += 12;
+        }
+        
+        // Build duration string
+        const parts = [];
+        if (years > 0) parts.push(`${years} ปี`);
+        if (months > 0) parts.push(`${months} เดือน`);
+        if (days > 0) parts.push(`${days} วัน`);
+        
+        return parts.length > 0 ? parts.join(' ') : '0 วัน';
+    };
     
     // Prevent hydration mismatch by always showing loading state until mounted
-    const showLoading = !mounted || userLoading;
+    // But if we already have profile data from cache, show it immediately
+    const showLoading = !mounted && !profile;
 
     // Handle push notification toggle
     const handlePushToggle = async (value: boolean) => {
@@ -271,7 +319,7 @@ export default function ProfilePage() {
             <Box
                 sx={{
                     background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                    pt: 3,
+                    pt: 'calc(env(safe-area-inset-top, 0px) + 24px)',
                     pb: 8,
                     px: 2,
                     position: 'relative',
@@ -331,6 +379,8 @@ export default function ProfilePage() {
                         background: 'white',
                         boxShadow: '0 10px 40px rgba(0, 0, 0, 0.08)',
                         border: '1px solid rgba(0, 0, 0, 0.05)',
+                        transition: 'opacity 0.2s ease-in-out',
+                        opacity: showLoading ? 0.7 : 1,
                     }}
                 >
                     {showLoading ? (
@@ -388,9 +438,23 @@ export default function ProfilePage() {
                             </IconButton>
                         </Box>
                         <Box sx={{ ml: 2, flex: 1 }}>
-                            <Typography variant="h6" sx={{ fontWeight: 700, mb: 0.5 }}>
-                                {profile ? `${profile.firstName} ${profile.lastName}` : '-'}
-                            </Typography>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
+                                <Typography variant="h6" sx={{ fontWeight: 700 }}>
+                                    {profile ? `${profile.firstName} ${profile.lastName}` : '-'}
+                                </Typography>
+                                {profile?.gender && (
+                                    <Typography 
+                                        component="span" 
+                                        sx={{ 
+                                            fontSize: '1.2rem', 
+                                            color: getGenderColor(profile.gender),
+                                            fontWeight: 700,
+                                        }}
+                                    >
+                                        {getGenderSymbol(profile.gender)}
+                                    </Typography>
+                                )}
+                            </Box>
                             <Chip
                                 label={profile ? getEmployeeTypeLabel(profile.employeeType) : t('role_fulltime', 'พนักงานประจำ')}
                                 size="small"
@@ -526,6 +590,11 @@ export default function ProfilePage() {
                                 <Typography variant="body2" sx={{ fontWeight: 600 }}>
                                     {profile ? formatThaiDate(profile.startDate) : '-'}
                                 </Typography>
+                                {profile?.startDate && (
+                                    <Typography variant="caption" sx={{ color: '#388E3C', fontSize: '0.7rem', fontWeight: 500 }}>
+                                        ({calculateWorkDuration(profile.startDate)})
+                                    </Typography>
+                                )}
                             </Box>
                         </Box>
 

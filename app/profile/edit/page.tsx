@@ -114,6 +114,7 @@ export default function EditProfilePage() {
         shift: '',
         startDate: '',
         email: '',
+        gender: '',
     });
 
     const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -153,7 +154,7 @@ export default function EditProfilePage() {
 
     // Drawer states
     const [drawerOpen, setDrawerOpen] = useState(false);
-    const [drawerType, setDrawerType] = useState<'company' | 'employeeType' | 'department' | 'section' | 'shift' | null>(null);
+    const [drawerType, setDrawerType] = useState<'company' | 'employeeType' | 'department' | 'section' | 'shift' | 'gender' | null>(null);
     const [drawerTitle, setDrawerTitle] = useState('');
     const [drawerOptions, setDrawerOptions] = useState<DrawerOption[]>([]);
 
@@ -175,6 +176,7 @@ export default function EditProfilePage() {
                 shift: data.shift || '',
                 startDate: data.startDate ? new Date(data.startDate).toISOString().split('T')[0] : '',
                 email: data.email || '',
+                gender: data.gender || '',
             });
             // Only set avatar preview if there's no pending upload (user hasn't selected a new image)
             setAvatarPreview(prev => {
@@ -581,6 +583,7 @@ export default function EditProfilePage() {
                     department: formData.departmentId,
                     section: formData.sectionId || null,
                     shift: formData.shift || null,
+                    gender: formData.gender || null,
                     avatar: avatarPath,
                     ...(wantsPasswordChange
                         ? {
@@ -606,7 +609,11 @@ export default function EditProfilePage() {
             setNewPassword('');
             setConfirmPassword('');
             setChangePasswordOpen(false);
-            router.back();
+            
+            // Delay navigation to allow toastr to show
+            setTimeout(() => {
+                router.back();
+            }, 800);
 
         } catch (err) {
             toastr.error(err instanceof Error ? err.message : 'เกิดข้อผิดพลาดในการบันทึก');
@@ -615,7 +622,7 @@ export default function EditProfilePage() {
         }
     };
 
-    const openDrawer = (type: 'company' | 'employeeType' | 'department' | 'section' | 'shift') => {
+    const openDrawer = (type: 'company' | 'employeeType' | 'department' | 'section' | 'shift' | 'gender') => {
         setDrawerType(type);
         
         switch (type) {
@@ -647,6 +654,13 @@ export default function EditProfilePage() {
                     
                 ]);
                 break;
+            case 'gender':
+                setDrawerTitle('เลือกเพศ');
+                setDrawerOptions([
+                    { value: 'male', label: 'ชาย' },
+                    { value: 'female', label: 'หญิง' },
+                ]);
+                break;
         }
         setDrawerOpen(true);
     };
@@ -665,11 +679,13 @@ export default function EditProfilePage() {
             setFormData({ ...formData, sectionId: value });
         } else if (drawerType === 'shift') {
             setFormData({ ...formData, shift: value });
+        } else if (drawerType === 'gender') {
+            setFormData({ ...formData, gender: value });
         }
         setDrawerOpen(false);
     };
 
-    const getDisplayValue = (type: 'company' | 'employeeType' | 'department' | 'section' | 'shift') => {
+    const getDisplayValue = (type: 'company' | 'employeeType' | 'department' | 'section' | 'shift' | 'gender') => {
         switch (type) {
             case 'company':
                 const company = companies.find(c => c.code === formData.company);
@@ -685,6 +701,9 @@ export default function EditProfilePage() {
             case 'shift':
                 const shifts: Record<string, string> = { day: 'กะกลางวัน', night: 'กะกลางคืน' };
                 return formData.shift ? shifts[formData.shift] || formData.shift : '';
+            case 'gender':
+                const genders: Record<string, string> = { male: 'ชาย', female: 'หญิง' };
+                return formData.gender ? genders[formData.gender] || formData.gender : '';
         }
     };
 
@@ -715,7 +734,7 @@ export default function EditProfilePage() {
             <Box
                 sx={{
                     background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                    pt: 3,
+                    pt: 'calc(env(safe-area-inset-top, 0px) + 24px)',
                     pb: 4,
                     px: 2,
                     position: 'relative',
@@ -922,6 +941,32 @@ export default function EditProfilePage() {
                                 />
                             </Box>
 
+                            
+                            {/* Gender */}
+                            <Box sx={{ mb: 2.5 }}>
+                                <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, mb: 0.5, display: 'block' }}>
+                                    เพศ
+                                </Typography>
+                                <TextField
+                                    id="edit-gender"
+                                    fullWidth
+                                    size="small"
+                                    value={getDisplayValue('gender')}
+                                    onClick={() => openDrawer('gender')}
+                                    placeholder="เลือกเพศ"
+                                    InputProps={{
+                                        readOnly: true,
+                                        startAdornment: (
+                                            <InputAdornment position="start">
+                                                <User size={18} color="#1b194b" />
+                                            </InputAdornment>
+                                        ),
+                                        endAdornment: <ArrowDown2 size={18} color="#9e9e9e" />,
+                                    }}
+                                    sx={{ cursor: 'pointer' }}
+                                />
+                            </Box>
+
                             {/* Email */}
                             <Box sx={{ mb: 2.5 }}>
                                 <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, mb: 0.5, display: 'block' }}>
@@ -1090,6 +1135,7 @@ export default function EditProfilePage() {
                                     sx={{ cursor: 'pointer' }}
                                 />
                             </Box>
+
 
                             {/* Start Date (Read-only) */}
                             <Box sx={{ mb: 1 }}>
@@ -1286,6 +1332,7 @@ export default function EditProfilePage() {
                         else if (drawerType === 'department') isSelected = formData.departmentId === option.value;
                         else if (drawerType === 'section') isSelected = formData.sectionId === option.value;
                         else if (drawerType === 'shift') isSelected = formData.shift === option.value;
+                        else if (drawerType === 'gender') isSelected = formData.gender === option.value;
 
                         return (
                             <ListItem key={option.value} disablePadding>

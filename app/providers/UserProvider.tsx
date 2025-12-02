@@ -23,6 +23,7 @@ export interface UserProfile {
     role: UserRole;
     isActive: boolean;
     createdAt: string;
+    gender: string;
 }
 
 interface UserContextType {
@@ -58,7 +59,10 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
 
         try {
-            setLoading(true);
+            // Only show loading if we don't have user data yet (initial load)
+            if (!user) {
+                setLoading(true);
+            }
             setError(null);
             const res = await fetch('/api/profile');
             

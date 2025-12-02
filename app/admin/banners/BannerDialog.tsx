@@ -16,8 +16,9 @@ import {
   IconButton,
   alpha,
   useTheme,
+  useMediaQuery,
 } from '@mui/material';
-import { Image as ImageIcon, Upload, X, Calendar, Link as LinkIcon } from 'lucide-react';
+import { Image, ExportSquare, CloseCircle, Calendar, Link21 } from 'iconsax-react';
 
 interface Banner {
   id: number;
@@ -54,6 +55,7 @@ export default function BannerDialog({
   banner,
 }: BannerDialogProps) {
   const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const [loading, setLoading] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -121,9 +123,9 @@ export default function BannerDialog({
       return;
     }
 
-    // Validate file size (max 5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      setErrors((prev) => ({ ...prev, imageUrl: 'ขนาดไฟล์ต้องไม่เกิน 5MB' }));
+    // Validate file size (max 15MB)
+    if (file.size > 15 * 1024 * 1024) {
+      setErrors((prev) => ({ ...prev, imageUrl: 'ขนาดไฟล์ต้องไม่เกิน 15MB' }));
       return;
     }
 
@@ -226,9 +228,10 @@ export default function BannerDialog({
       onClose={onClose} 
       maxWidth="sm" 
       fullWidth
+      fullScreen={isMobile}
       PaperProps={{
         sx: {
-          borderRadius: 1,
+          borderRadius: isMobile ? 0 : 1,
         }
       }}
     >
@@ -240,7 +243,7 @@ export default function BannerDialog({
         borderBottom: '1px solid',
         borderColor: 'divider',
       }}>
-        <ImageIcon size={24} />
+        <Image size={24} variant="Bold" color={theme.palette.primary.main} />
         {banner ? 'แก้ไข Banner' : 'เพิ่ม Banner ใหม่'}
       </DialogTitle>
       <DialogContent sx={{ p: 2, mt: 2 }}>
@@ -265,15 +268,15 @@ export default function BannerDialog({
             />
             
             {previewImage ? (
-              <Box sx={{ position: 'relative', display: 'inline-block' }}>
+              <Box sx={{ position: 'relative', display: 'flex', justifyContent: 'center' }}>
                 <Box
                   component="img"
                   src={previewImage}
                   alt="Preview"
                   sx={{
-                    width: '100%',
+                    maxWidth: '100%',
                     maxHeight: 200,
-                    objectFit: 'cover',
+                    objectFit: 'contain',
                     borderRadius: 1,
                     border: '1px solid',
                     borderColor: 'divider',
@@ -291,7 +294,7 @@ export default function BannerDialog({
                     '&:hover': { bgcolor: 'error.dark' },
                   }}
                 >
-                  <X size={16} />
+                  <CloseCircle size={16} variant="Outline" color="white" />
                 </IconButton>
               </Box>
             ) : (
@@ -321,12 +324,12 @@ export default function BannerDialog({
                   <CircularProgress size={32} />
                 ) : (
                   <>
-                    <Upload size={32} color={theme.palette.text.secondary} />
+                    <ExportSquare size={32} color={theme.palette.text.secondary} />
                     <Typography variant="body2" color="text.secondary">
                       คลิกเพื่ออัพโหลดรูปภาพ
                     </Typography>
                     <Typography variant="caption" color="text.disabled">
-                      รองรับ JPG, PNG, GIF (ขนาดไม่เกิน 5MB)
+                      รองรับ JPG, PNG, GIF (ขนาดไม่เกิน 15MB)
                     </Typography>
                   </>
                 )}
@@ -373,40 +376,126 @@ export default function BannerDialog({
             fullWidth
             placeholder="https://example.com"
             InputProps={{
-              startAdornment: <LinkIcon size={18} style={{ marginRight: 8, color: theme.palette.text.secondary }} />,
+              startAdornment: <Link21 size={18} style={{ marginRight: 8 }} color={theme.palette.text.secondary} />,
             }}
           />
 
           {/* Date Range */}
-          <Box sx={{ display: 'flex', gap: 2 }}>
-            <TextField
-              label="วันที่เริ่มแสดง"
-              name="startDate"
-              type="datetime-local"
-              value={formData.startDate}
-              onChange={handleChange}
-              size="small"
-              fullWidth
-              InputLabelProps={{ shrink: true }}
-              InputProps={{
-                startAdornment: <Calendar size={18} style={{ marginRight: 8, color: theme.palette.text.secondary }} />,
-              }}
-            />
-            <TextField
-              label="วันที่สิ้นสุด"
-              name="endDate"
-              type="datetime-local"
-              value={formData.endDate}
-              onChange={handleChange}
-              error={!!errors.endDate}
-              helperText={errors.endDate}
-              size="small"
-              fullWidth
-              InputLabelProps={{ shrink: true }}
-              InputProps={{
-                startAdornment: <Calendar size={18} style={{ marginRight: 8, color: theme.palette.text.secondary }} />,
-              }}
-            />
+          <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: 2 }}>
+            <Box sx={{ position: 'relative', flex: 1 }}>
+              <TextField
+                label="วันที่เริ่มแสดง"
+                name="startDate"
+                type="datetime-local"
+                value={formData.startDate}
+                onChange={handleChange}
+                size="small"
+                fullWidth
+                InputLabelProps={{ shrink: true }}
+                InputProps={{
+                  startAdornment: <Calendar size={18} style={{ marginRight: 8 }} color={theme.palette.text.secondary} />,
+                }}
+                sx={{
+                  '& input[type="datetime-local"]': {
+                    color: 'transparent',
+                    '&::-webkit-datetime-edit': {
+                      color: 'transparent',
+                    },
+                    '&::-webkit-datetime-edit-fields-wrapper': {
+                      color: 'transparent',
+                    },
+                  },
+                  '& input[type="datetime-local"]::-webkit-calendar-picker-indicator': {
+                    opacity: 1,
+                    cursor: 'pointer',
+                  },
+                }}
+              />
+              {/* แสดงวันที่แบบ dd/mm/YYYY (พ.ศ.) HH:mm */}
+              <Typography 
+                variant="body2" 
+                sx={{ 
+                  position: 'absolute',
+                  left: 44,
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  color: formData.startDate ? 'text.primary' : 'text.disabled',
+                  fontWeight: 400,
+                  fontSize: '0.875rem',
+                  pointerEvents: 'none',
+                  bgcolor: 'background.paper',
+                  paddingRight: 1,
+                }}
+              >
+                {formData.startDate ? (() => {
+                  const date = new Date(formData.startDate);
+                  const day = String(date.getDate()).padStart(2, '0');
+                  const month = String(date.getMonth() + 1).padStart(2, '0');
+                  const year = date.getFullYear() + 543;
+                  const hours = String(date.getHours()).padStart(2, '0');
+                  const minutes = String(date.getMinutes()).padStart(2, '0');
+                  return `${day}/${month}/${year} ${hours}:${minutes}`;
+                })() : 'วว/ดด/ปปปป --:--'}
+              </Typography>
+            </Box>
+            <Box sx={{ position: 'relative', flex: 1 }}>
+              <TextField
+                label="วันที่สิ้นสุด"
+                name="endDate"
+                type="datetime-local"
+                value={formData.endDate}
+                onChange={handleChange}
+                error={!!errors.endDate}
+                helperText={errors.endDate}
+                size="small"
+                fullWidth
+                InputLabelProps={{ shrink: true }}
+                InputProps={{
+                  startAdornment: <Calendar size={18} style={{ marginRight: 8 }} color={theme.palette.text.secondary} />,
+                }}
+                sx={{
+                  '& input[type="datetime-local"]': {
+                    color: 'transparent',
+                    '&::-webkit-datetime-edit': {
+                      color: 'transparent',
+                    },
+                    '&::-webkit-datetime-edit-fields-wrapper': {
+                      color: 'transparent',
+                    },
+                  },
+                  '& input[type="datetime-local"]::-webkit-calendar-picker-indicator': {
+                    opacity: 1,
+                    cursor: 'pointer',
+                  },
+                }}
+              />
+              {/* แสดงวันที่แบบ dd/mm/YYYY (พ.ศ.) HH:mm */}
+              <Typography 
+                variant="body2" 
+                sx={{ 
+                  position: 'absolute',
+                  left: 44,
+                  top: errors.endDate ? 'calc(50% - 10px)' : '50%',
+                  transform: 'translateY(-50%)',
+                  color: formData.endDate ? 'text.primary' : 'text.disabled',
+                  fontWeight: 400,
+                  fontSize: '0.875rem',
+                  pointerEvents: 'none',
+                  bgcolor: 'background.paper',
+                  paddingRight: 1,
+                }}
+              >
+                {formData.endDate ? (() => {
+                  const date = new Date(formData.endDate);
+                  const day = String(date.getDate()).padStart(2, '0');
+                  const month = String(date.getMonth() + 1).padStart(2, '0');
+                  const year = date.getFullYear() + 543;
+                  const hours = String(date.getHours()).padStart(2, '0');
+                  const minutes = String(date.getMinutes()).padStart(2, '0');
+                  return `${day}/${month}/${year} ${hours}:${minutes}`;
+                })() : 'วว/ดด/ปปปป --:--'}
+              </Typography>
+            </Box>
           </Box>
 
           <Typography variant="caption" color="text.secondary" sx={{ mt: -1 }}>
@@ -442,7 +531,16 @@ export default function BannerDialog({
           />
         </Box>
       </DialogContent>
-      <DialogActions sx={{ p: 2, borderTop: '1px solid', borderColor: 'divider' }}>
+      <DialogActions sx={{ 
+        p: 2, 
+        borderTop: '1px solid', 
+        borderColor: 'divider',
+        flexDirection: { xs: 'column-reverse', sm: 'row' },
+        gap: { xs: 1, sm: 0 },
+        '& > button': {
+          width: { xs: '100%', sm: 'auto' },
+        }
+      }}>
         <Button onClick={onClose} disabled={loading}>
           ยกเลิก
         </Button>

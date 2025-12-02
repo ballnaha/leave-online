@@ -36,6 +36,7 @@ export async function GET() {
                 role: true,
                 isActive: true,
                 createdAt: true,
+                gender: true,
             },
         });
 
@@ -106,7 +107,7 @@ export async function PUT(request: Request) {
         }
 
         const body = await request.json();
-        const { firstName, lastName, email, company, employeeType, department, section, shift, avatar, currentPassword, newPassword, confirmPassword } = body;
+        const { firstName, lastName, email, company, employeeType, department, section, shift, avatar, gender, currentPassword, newPassword, confirmPassword } = body;
 
         // Validation
         if (!firstName?.trim()) {
@@ -201,6 +202,7 @@ export async function PUT(request: Request) {
                 department: department || undefined,
                 section: section || null,
                 shift: shift || null,
+                gender: gender || undefined,
                 ...(newPassword && currentPassword && confirmPassword
                     ? { password: await bcrypt.hash(String(newPassword), 12) }
                     : {}),

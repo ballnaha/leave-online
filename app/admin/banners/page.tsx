@@ -27,18 +27,18 @@ import {
   Skeleton,
 } from '@mui/material';
 import {
-  Plus,
-  Pencil,
-  Trash2,
-  Image as ImageIcon,
-  Search,
-  RefreshCw,
-  CheckCircle,
-  XCircle,
+  Add,
+  Edit2,
+  Trash,
+  Image,
+  SearchNormal1,
+  Refresh2,
+  TickCircle,
+  CloseCircle,
   Calendar,
   Clock,
-  ArrowUpDown,
-} from 'lucide-react';
+  ArrangeVertical,
+} from 'iconsax-react';
 import BannerDialog from './BannerDialog';
 import ConfirmDialog from '../components/ConfirmDialog';
 import { useToastr } from '@/app/components/Toastr';
@@ -162,7 +162,7 @@ function isBannerCurrentlyActive(banner: Banner): boolean {
 // Helper function to get banner status
 function getBannerStatus(banner: Banner): { label: string; color: 'success' | 'warning' | 'error' | 'default'; icon: React.ReactNode } {
   if (!banner.isActive) {
-    return { label: 'ปิดใช้งาน', color: 'default', icon: <XCircle size={14} /> };
+    return { label: 'ปิดใช้งาน', color: 'default', icon: <CloseCircle size={14} variant="Bold" color="#9e9e9e" /> };
   }
   
   const now = new Date();
@@ -170,13 +170,13 @@ function getBannerStatus(banner: Banner): { label: string; color: 'success' | 'w
   const end = banner.endDate ? new Date(banner.endDate) : null;
   
   if (start && now < start) {
-    return { label: 'รอเปิด', color: 'warning', icon: <Clock size={14} /> };
+    return { label: 'รอเปิด', color: 'warning', icon: <Clock size={14} variant="Bold" color="#ed6c02" /> };
   }
   if (end && now > end) {
-    return { label: 'หมดเวลา', color: 'error', icon: <XCircle size={14} /> };
+    return { label: 'หมดเวลา', color: 'error', icon: <CloseCircle size={14} variant="Bold" color="#d32f2f" /> };
   }
   
-  return { label: 'เปิดใช้งาน', color: 'success', icon: <CheckCircle size={14} /> };
+  return { label: 'เปิดใช้งาน', color: 'success', icon: <TickCircle size={14} variant="Bold" color="#2e7d32" /> };
 }
 
 // Format date for display
@@ -305,7 +305,7 @@ export default function BannersPage() {
                 color: 'primary.main',
               }}
             >
-              <ImageIcon size={24} />
+              <Image size={24} variant="Bold" color={theme.palette.primary.main} />
             </Avatar>
             <Box>
               <Typography variant="h4" component="h1" fontWeight={700}>
@@ -319,7 +319,7 @@ export default function BannersPage() {
         </Box>
         <Button
           variant="contained"
-          startIcon={<Plus size={18} />}
+          startIcon={<Add size={18} color="white"/>}
           onClick={handleCreate}
           sx={{ 
             borderRadius: 1,
@@ -340,28 +340,28 @@ export default function BannersPage() {
         <StatCard
           title="Banner ทั้งหมด"
           value={banners.length}
-          icon={<ImageIcon size={26} />}
+          icon={<Image size={26} variant="Bold" color={theme.palette.primary.main} />}
           color="primary"
           subtitle="ในระบบ"
         />
         <StatCard
           title="กำลังแสดง"
           value={activeBanners}
-          icon={<CheckCircle size={26} />}
+          icon={<TickCircle size={26} variant="Bold" color={theme.palette.success.main} />}
           color="success"
           subtitle="แสดงอยู่ตอนนี้"
         />
         <StatCard
           title="รอเปิด"
           value={scheduledBanners}
-          icon={<Clock size={26} />}
+          icon={<Clock size={26} variant="Bold" color={theme.palette.warning.main} />}
           color="warning"
           subtitle="ตั้งเวลาไว้"
         />
         <StatCard
           title="ปิดใช้งาน"
           value={inactiveBanners}
-          icon={<XCircle size={26} />}
+          icon={<CloseCircle size={26} variant="Bold" color={theme.palette.secondary.main} />}
           color="secondary"
           subtitle="ไม่ได้แสดง"
         />
@@ -401,7 +401,7 @@ export default function BannersPage() {
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
-                  <Search size={18} color={theme.palette.text.secondary} />
+                  <SearchNormal1 size={18} color={theme.palette.text.secondary} />
                 </InputAdornment>
               ),
             }}
@@ -424,8 +424,9 @@ export default function BannersPage() {
                 '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.1) },
               }}
             >
-              <RefreshCw 
-                size={20} 
+              <Refresh2 
+                size={20}
+                color={theme.palette.primary.main}
                 style={{ 
                   transition: 'transform 0.3s ease',
                   transform: loading ? 'rotate(360deg)' : 'rotate(0deg)',
@@ -472,7 +473,7 @@ export default function BannersPage() {
                 <TableCell sx={{ fontWeight: 600, color: 'text.secondary', py: 2 }}>ช่วงเวลาแสดง</TableCell>
                 <TableCell sx={{ fontWeight: 600, color: 'text.secondary', py: 2, width: 80 }} align="center">
                   <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5 }}>
-                    <ArrowUpDown size={14} />
+                    <ArrangeVertical size={14} color={theme.palette.text.secondary} />
                     ลำดับ
                   </Box>
                 </TableCell>
@@ -495,7 +496,7 @@ export default function BannersPage() {
                           color: 'text.secondary',
                         }}
                       >
-                        <ImageIcon size={40} />
+                        <Image size={40} variant="Bold" color={theme.palette.text.secondary} />
                       </Avatar>
                       <Box sx={{ textAlign: 'center' }}>
                         <Typography variant="h6" fontWeight={600} gutterBottom>
@@ -510,7 +511,7 @@ export default function BannersPage() {
                       {!searchQuery && (
                         <Button
                           variant="contained"
-                          startIcon={<Plus size={18} />}
+                          startIcon={<Add size={18} />}
                           onClick={handleCreate}
                           sx={{ mt: 1, borderRadius: 1 }}
                         >
@@ -626,7 +627,7 @@ export default function BannersPage() {
                                 },
                               }}
                             >
-                              <Pencil size={18} />
+                              <Edit2 size={18} color={theme.palette.primary.main} />
                             </IconButton>
                           </Tooltip>
                           <Tooltip title="ลบ">
@@ -641,7 +642,7 @@ export default function BannersPage() {
                                 },
                               }}
                             >
-                              <Trash2 size={18} />
+                              <Trash size={18} color={theme.palette.error.main} />
                             </IconButton>
                           </Tooltip>
                         </Box>

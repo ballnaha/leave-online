@@ -3,6 +3,7 @@ import React, { useEffect, useRef, useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { Box, Fab, Paper, Typography } from '@mui/material';
 import { useLocale } from '../providers/LocaleProvider';
+import { useUser } from '../providers/UserProvider';
 import { 
     Home2, 
     Message, 
@@ -66,11 +67,29 @@ let isFetching = false;
 const BottomNav: React.FC<BottomNavProps> = ({ activePage = 'home' }) => {
     const router = useRouter();
     const { t } = useLocale();
+    const { user } = useUser();
     const [openMenu, setOpenMenu] = useState(false);
     const [animatingOut, setAnimatingOut] = useState(false);
     const [renderMenu, setRenderMenu] = useState(false);
     const [leaveTypes, setLeaveTypes] = useState<LeaveType[]>(cachedLeaveTypes || []);
     const closeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    // Filter leave types based on gender
+    // maternity (ลาคลอด) is only for female
+    // paternity (ลาดูแลภรรยาคลอด) is only for male
+    const filteredLeaveTypes = useMemo(() => {
+        return leaveTypes.filter(leave => {
+            // ถ้าเป็นเพศชาย ไม่แสดงลาคลอด (maternity)
+            if (user?.gender === 'male' && leave.code === 'maternity') {
+                return false;
+            }
+            // ถ้าเป็นเพศหญิง ไม่แสดงลาดูแลภรรยาคลอด (paternity)
+            if (user?.gender === 'female' && leave.code === 'paternity') {
+                return false;
+            }
+            return true;
+        });
+    }, [leaveTypes, user?.gender]);
 
     // Fetch leave types from API - only if not cached
     useEffect(() => {
@@ -120,7 +139,7 @@ const BottomNav: React.FC<BottomNavProps> = ({ activePage = 'home' }) => {
             if (renderMenu) {
                 setAnimatingOut(true);
                 const outDurationMs = 300; // 0.3s per item animation
-                const maxDelayMs = (leaveTypes.length - 1) * 60; // 0.06s steps in ms
+                const maxDelayMs = (filteredLeaveTypes.length - 1) * 60; // 0.06s steps in ms
                 const totalMs = outDurationMs + maxDelayMs + 100; // buffer
                 closeTimeoutRef.current = setTimeout(() => {
                     setAnimatingOut(false);
@@ -179,11 +198,11 @@ const BottomNav: React.FC<BottomNavProps> = ({ activePage = 'home' }) => {
                             }}
                         >
                             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-                                {leaveTypes.map((leave, index) => {
+                                {filteredLeaveTypes.map((leave, index) => {
                                     const config = getLeaveTypeConfig(leave.code);
                                     const Icon = config.icon;
                                     const delay = index * 0.08; // seconds
-                                    const reverseDelay = (leaveTypes.length - 1 - index) * 0.06; // seconds
+                                    const reverseDelay = (filteredLeaveTypes.length - 1 - index) * 0.06; // seconds
                                     return (
                                         <Box
                                             key={leave.id}

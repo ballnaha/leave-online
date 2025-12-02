@@ -86,8 +86,22 @@ const RecentActivityCard = ({ title, date, status, image, icon, iconColor = '#5E
                 )}
             </Box>
 
-            <Box sx={{ flex: 1 }}>
-                <Typography variant="subtitle1" sx={{ fontWeight: 'bold', lineHeight: 1.2, mb: 0.5, fontSize: '1rem', color: '#2B3674' }}>
+            <Box sx={{ flex: 1, minWidth: 0 }}>
+                <Typography 
+                    variant="subtitle1" 
+                    sx={{ 
+                        fontWeight: 'bold', 
+                        lineHeight: 1.3, 
+                        mb: 0.5, 
+                        fontSize: '1rem', 
+                        color: '#2B3674',
+                        display: '-webkit-box',
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: 'vertical',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                    }}
+                >
                     {title}
                 </Typography>
                 <Typography variant="caption" color="text.secondary" display="block" sx={{ fontSize: '0.8rem' }}>

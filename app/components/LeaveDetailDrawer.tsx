@@ -41,6 +41,7 @@ import {
     ArrowRight2,
     DocumentDownload,
     Gallery,
+    Stop,
 } from 'iconsax-react';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Navigation } from 'swiper/modules';
@@ -605,43 +606,7 @@ const LeaveDetailDrawer: React.FC<LeaveDetailDrawerProps> = ({ open, onClose, le
                             </Box>
                         </Box>
                     </Card>
-
-                    {/* Leave Type Info */}
-                    <Card
-                        sx={{
-                            borderRadius: 1,
-                            p: 2,
-                            mb: 2,
-                            border: '1px solid #F1F5F9',
-                            boxShadow: 'none',
-                            bgcolor: config.lightColor,
-                        }}
-                    >
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                            <Box
-                                sx={{
-                                    width: 36,
-                                    height: 36,
-                                    borderRadius: 1,
-                                    bgcolor: config.color,
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                }}
-                            >
-                                <LeaveIcon size={20} color="white" />
-                            </Box>
-                            <Box>
-                                <Typography sx={{ fontSize: '0.75rem', color: '#64748B', fontWeight: 500 }}>
-                                    ประเภทการลา
-                                </Typography>
-                                <Typography sx={{ fontWeight: 700, color: config.color, fontSize: '1rem' }}>
-                                    {leaveTypeName}
-                                </Typography>
-                            </Box>
-                        </Box>
-                    </Card>
-
+                    
                     {/* Reason */}
                     <Card
                         sx={{
@@ -971,13 +936,13 @@ const LeaveDetailDrawer: React.FC<LeaveDetailDrawerProps> = ({ open, onClose, le
 
                     {/* Cancel Button - Only show for pending status and if onCancel is provided */}
                     {leave.status === 'pending' && onCancel && (
-                        <Box sx={{ mt: 3 }}>
+                        <Box sx={{ mt: 3 , mb:3}}>
                             <Button
                                 fullWidth
                                 variant="outlined"
                                 color="error"
                                 onClick={onCancel}
-                                startIcon={<Trash size={18} />}
+                                startIcon={<CloseSquare size={18} color="#DC2626" />}
                                 sx={{
                                     borderRadius: 1,
                                     py: 1.5,
