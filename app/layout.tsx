@@ -52,8 +52,8 @@ export default function RootLayout({
             showSpinner={false}
             easing="ease"
             speed={200}
-            shadow="0 0 10px #6C63FF,0 0 5px #6C63FF"
-            zIndex={1600}
+            shadow={false}
+            zIndex={9999}
           />
           {children}
         </AppProviders>
