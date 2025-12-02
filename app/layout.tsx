@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import AppProviders from "./providers/AppProviders";
 import { Sarabun } from "next/font/google";
+import NextTopLoader from 'nextjs-toploader';
 import "./globals.css";
 
 const sarabun = Sarabun({
@@ -42,6 +43,18 @@ export default function RootLayout({
           }}
         />
         <AppProviders>
+          <NextTopLoader 
+            color="#6C63FF"
+            initialPosition={0.08}
+            crawlSpeed={200}
+            height={3}
+            crawl={true}
+            showSpinner={false}
+            easing="ease"
+            speed={200}
+            shadow="0 0 10px #6C63FF,0 0 5px #6C63FF"
+            zIndex={1600}
+          />
           {children}
         </AppProviders>
       </body>
