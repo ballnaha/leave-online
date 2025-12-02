@@ -4,7 +4,7 @@ import { useSession, signOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import type { UserRole } from '@/types/user-role';
 
-interface UserProfile {
+export interface UserProfile {
     id: number;
     employeeId: string;
     email: string | null;

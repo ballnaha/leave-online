@@ -5,6 +5,7 @@ import { localeLabel, useLocale } from '../providers/LocaleProvider';
 import { useRouter } from 'next/navigation';
 import type { UserRole } from '@/types/user-role';
 import { useOneSignal } from '../providers/OneSignalProvider';
+import { useUser, type UserProfile } from '../providers/UserProvider';
 import {
     Edit2,
     Logout,
@@ -33,27 +34,7 @@ import BottomNav from '../components/BottomNav';
 import { signOut, useSession } from 'next-auth/react';
 import { useToastr } from '@/app/components/Toastr';
 
-// Type definitions for user profile
-interface UserProfile {
-    id: number;
-    employeeId: string;
-    email: string | null;
-    firstName: string;
-    lastName: string;
-    avatar: string | null;
-    company: string;
-    companyName: string;
-    employeeType: string;
-    department: string;
-    departmentName: string;
-    section: string | null;
-    sectionName: string | null;
-    shift: string | null;
-    startDate: string;
-    role: UserRole;
-    isActive: boolean;
-    createdAt: string;
-}
+
 
 // Type definitions for settings items
 interface SettingsItemBase {
@@ -94,29 +75,15 @@ export default function ProfilePage() {
     const [darkMode, setDarkMode] = useState(false);
     const [emailNotif, setEmailNotif] = useState(true);
     const [openLanguage, setOpenLanguage] = useState(false);
-    const [loading, setLoading] = useState(true);
+    const { user: profile, loading: userLoading } = useUser();
     const [mounted, setMounted] = useState(false);
     const [isLoggingOut, setIsLoggingOut] = useState(false);
-    const [profile, setProfile] = useState<UserProfile | null>(null);
+    
     const languageOptions: Array<{ code: 'th' | 'en' | 'my'; label: string }> = [
         { code: 'th', label: localeLabel.th },
         { code: 'en', label: localeLabel.en },
         { code: 'my', label: localeLabel.my },
     ];
-
-    // Fetch profile data
-    const fetchProfile = useCallback(async () => {
-        try {
-            const res = await fetch('/api/profile');
-            if (!res.ok) throw new Error('Failed to fetch profile');
-            const data = await res.json();
-            setProfile(data);
-        } catch (error) {
-            console.error('Error fetching profile:', error);
-        } finally {
-            setLoading(false);
-        }
-    }, []);
 
     const handleLogout = async () => {
         setIsLoggingOut(true);
@@ -165,8 +132,7 @@ export default function ProfilePage() {
 
     useEffect(() => {
         setMounted(true);
-        fetchProfile();
-    }, [fetchProfile]);
+    }, []);
     
     // Get initials for avatar
     const getInitials = () => {
@@ -179,7 +145,8 @@ export default function ProfilePage() {
     };
 
     // Format date to Thai format
-    const formatThaiDate = (dateString: string) => {
+    const formatThaiDate = (dateString: string | null) => {
+        if (!dateString) return '-';
         const date = new Date(dateString);
         const day = date.getDate();
         const months = ['มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน', 
@@ -202,7 +169,7 @@ export default function ProfilePage() {
     };
     
     // Prevent hydration mismatch by always showing loading state until mounted
-    const showLoading = !mounted || loading;
+    const showLoading = !mounted || userLoading;
 
     // Handle push notification toggle
     const handlePushToggle = async (value: boolean) => {
