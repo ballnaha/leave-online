@@ -26,7 +26,16 @@ const Header = () => {
         <>
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 2, pb: 1 }}>
                 {/* Top Row: Menu, Avatar, Date/Greeting, Notification */}
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Box sx={{ 
+                    display: 'flex', 
+                    justifyContent: 'space-between', 
+                    alignItems: 'center',
+                    position: 'relative',
+                    zIndex: 50,
+                    bgcolor: 'background.default', // Ensure opaque background
+                    mx: -2, // Negative margin to cover full width if inside container with padding
+                    px: 2,  // Restore padding
+                }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
                         {/* แสดง Hamburger Menu เฉพาะ admin หรือ hr */}
                         {isAdminOrHR && (

@@ -14,6 +14,7 @@ import { Swiper, SwiperSlide } from 'swiper/react';
 import 'swiper/css';
 import { useLocale } from './providers/LocaleProvider';
 import { useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import { LeaveRequest } from '@/types/leave';
 import LeaveDetailDrawer from './components/LeaveDetailDrawer';
 
@@ -48,7 +49,15 @@ const leaveTypeConfig: Record<string, { icon: any; color: string }> = {
 
 export default function Home() {
   const { t } = useLocale();
+  const { status } = useSession();
   const router = useRouter();
+  
+  useEffect(() => {
+    if (status === 'unauthenticated') {
+      router.replace('/login');
+    }
+  }, [status, router]);
+
   const [loading, setLoading] = useState(true);
   const [mounted, setMounted] = useState(false);
   const [leaveTypes, setLeaveTypes] = useState<LeaveType[]>([]);
@@ -161,6 +170,15 @@ export default function Home() {
 
   // Prevent hydration mismatch by always showing loading state until mounted
   const showLoading = !mounted || loading;
+
+  if (status === 'loading' || status === 'unauthenticated') {
+    return (
+      <Box sx={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: '#F8F9FA' }}>
+        <Skeleton variant="circular" width={80} height={80} />
+      </Box>
+    );
+  }
+
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: 'background.default', pb: 10 }}>
       <Container maxWidth={false} sx={{ maxWidth: 1200, px: { xs: 2.5, sm: 3, md: 4 } }}>

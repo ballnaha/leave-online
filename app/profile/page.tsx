@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import type { UserRole } from '@/types/user-role';
 import { useOneSignal } from '../providers/OneSignalProvider';
 import { useUser, type UserProfile } from '../providers/UserProvider';
+import { APP_VERSION } from '@/lib/version';
 import {
     Edit2,
     Logout,
@@ -739,7 +740,7 @@ export default function ProfilePage() {
                         </Box>
                     ) : (
                         <Typography variant="caption" sx={{ color: 'text.secondary', textAlign: 'center', display: 'block', mt: 2 }}>
-                            {t('version', 'เวอร์ชัน')} 1.0.0
+                            {t('version', 'เวอร์ชัน')} {APP_VERSION}
                         </Typography>
                     )}
                 </Box>
