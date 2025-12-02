@@ -30,8 +30,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body className={`${sarabun.variable} pre-locale`}>
+    <html lang="en" style={{ overscrollBehavior: 'none' }}>
+      <body className={`${sarabun.variable} pre-locale`} style={{ overscrollBehavior: 'none' }}>
         {/* Prevent language flicker and fade-in once locale applied */}
         <style
           dangerouslySetInnerHTML={{

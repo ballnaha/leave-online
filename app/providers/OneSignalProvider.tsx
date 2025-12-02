@@ -32,7 +32,6 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
   const [playerId, setPlayerId] = useState<string | null>(null);
   const [permission, setPermission] = useState<NotificationPermission | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
-  const [hasRegistered, setHasRegistered] = useState(false);
 
   // Initialize OneSignal
   useEffect(() => {
@@ -162,16 +161,10 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
   };
 
   // Register device to backend
-  const registerDevice = useCallback(async (pid: string, force: boolean = false) => {
+  const registerDevice = useCallback(async (pid: string) => {
     // Don't register if not authenticated
     if (status !== 'authenticated') {
       console.log('🔔 OneSignal: Skipping device registration (not authenticated)');
-      return;
-    }
-
-    // Don't register again if already registered in this session (unless forced)
-    if (hasRegistered && !force) {
-      console.log('🔔 OneSignal: Device already registered in this session, skipping');
       return;
     }
 
@@ -201,19 +194,18 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
       
       const data = await res.json();
       console.log('🔔 OneSignal: Device registered:', data);
-      setHasRegistered(true); // Mark as registered
     } catch (error) {
       console.error('🔔 OneSignal: Error registering device:', error);
     }
-  }, [status, hasRegistered]);
+  }, [status]);
 
-  // Auto-register when conditions are met (only once per session)
+  // Auto-register when conditions are met
   useEffect(() => {
-    if (status === 'authenticated' && playerId && session?.user && !hasRegistered) {
+    if (status === 'authenticated' && playerId && session?.user) {
       console.log('🔔 OneSignal: Auto-registering device for user:', session.user.id);
       registerDevice(playerId);
     }
-  }, [status, playerId, session, hasRegistered, registerDevice]);
+  }, [status, playerId, session, registerDevice]);
 
   const subscribe = useCallback(async () => {
     console.log('🔔 OneSignal: Subscribe called, initialized:', isInitialized);
@@ -242,7 +234,7 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
       if (id) {
         setPlayerId(id);
         setIsSubscribed(true);
-        await registerDevice(id, true); // Force register on manual subscribe
+        await registerDevice(id);
       } else {
         console.warn('🔔 OneSignal: No player ID received after opt-in');
       }

@@ -12,7 +12,7 @@
 }
 
 html, body {
-  /* Disable browser's default pull-to-refresh completely */
+  /* Completely disable browser's pull-to-refresh */
   overscroll-behavior: none;
   overscroll-behavior-y: none;
   -webkit-overflow-scrolling: touch;
@@ -24,12 +24,4 @@ body {
   font-family: var(--font-sans), Arial, Helvetica, sans-serif;
   /* Prevent pull-to-refresh on mobile */
   touch-action: pan-x pan-y;
-}
-
-/* Hide Chrome's pull-to-refresh loading indicator */
-@supports (-webkit-touch-callout: none) {
-  body {
-    /* iOS Safari specific */
-    -webkit-overflow-scrolling: auto;
-  }
 }
