@@ -301,12 +301,10 @@ const AttachmentViewer: React.FC<AttachmentViewerProps> = ({ open, onClose, atta
                     },
                     '& .swiper-button-prev, & .swiper-button-next': {
                         color: 'white',
-                        bgcolor: 'rgba(0, 0, 0, 0.5)',
                         width: 40,
                         height: 40,
-                        borderRadius: '50%',
                         '&::after': {
-                            fontSize: '18px',
+                            fontSize: '24px',
                         },
                     },
                 }}

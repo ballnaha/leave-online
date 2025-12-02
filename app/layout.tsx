@@ -31,6 +31,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" style={{ overscrollBehavior: 'none' }}>
+      <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+        <meta name="theme-color" content="#667eea" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+      </head>
       <body className={`${sarabun.variable} pre-locale`} style={{ overscrollBehavior: 'none' }}>
         {/* Prevent language flicker and fade-in once locale applied */}
         <style

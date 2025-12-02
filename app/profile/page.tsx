@@ -133,6 +133,27 @@ export default function ProfilePage() {
 
     useEffect(() => {
         setMounted(true);
+
+        // Set theme-color for status bar to match header gradient
+        const metaThemeColor = document.querySelector('meta[name="theme-color"]');
+        const originalColor = metaThemeColor?.getAttribute('content') || '#EAF2F8';
+        
+        if (metaThemeColor) {
+            metaThemeColor.setAttribute('content', '#667eea');
+        } else {
+            const newMeta = document.createElement('meta');
+            newMeta.name = 'theme-color';
+            newMeta.content = '#667eea';
+            document.head.appendChild(newMeta);
+        }
+
+        // Cleanup: restore original theme-color when leaving page
+        return () => {
+            const meta = document.querySelector('meta[name="theme-color"]');
+            if (meta) {
+                meta.setAttribute('content', originalColor);
+            }
+        };
     }, []);
     
     // Get initials for avatar
