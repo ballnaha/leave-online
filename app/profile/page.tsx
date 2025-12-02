@@ -255,26 +255,6 @@ export default function ProfilePage() {
                     px: 2,
                     position: 'relative',
                     overflow: 'hidden',
-                    '&::before': {
-                        content: '""',
-                        position: 'absolute',
-                        top: -50,
-                        right: -50,
-                        width: 200,
-                        height: 200,
-                        borderRadius: '50%',
-                        background: 'rgba(255, 255, 255, 0.1)',
-                    },
-                    '&::after': {
-                        content: '""',
-                        position: 'absolute',
-                        bottom: -30,
-                        left: -30,
-                        width: 150,
-                        height: 150,
-                        borderRadius: '50%',
-                        background: 'rgba(255, 255, 255, 0.1)',
-                    },
                 }}
             >
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3, position: 'relative', zIndex: 1 }}>
