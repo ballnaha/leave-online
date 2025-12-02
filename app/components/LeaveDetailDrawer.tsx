@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import {
     Box,
     Typography,
@@ -38,9 +38,15 @@ import {
     Trash,
     Profile2User,
     ArrowLeft2,
+    ArrowRight2,
     DocumentDownload,
     Gallery,
 } from 'iconsax-react';
+import { Swiper, SwiperSlide } from 'swiper/react';
+import { Navigation } from 'swiper/modules';
+import type { Swiper as SwiperType } from 'swiper';
+import 'swiper/css';
+import 'swiper/css/navigation';
 import dayjs from 'dayjs';
 import 'dayjs/locale/th';
 import { LeaveRequest } from '@/types/leave';
@@ -57,24 +63,163 @@ const Transition = React.forwardRef(function Transition(
     return <Slide direction="up" ref={ref} {...props} />;
 });
 
+interface Attachment {
+    id: number;
+    fileName: string;
+    filePath: string;
+    fileSize: number;
+    mimeType: string;
+}
+
 interface AttachmentViewerProps {
     open: boolean;
     onClose: () => void;
-    attachment: {
-        id: number;
-        fileName: string;
-        filePath: string;
-        fileSize: number;
-        mimeType: string;
-    } | null;
+    attachments: Attachment[];
+    initialIndex: number;
 }
 
-// Fullscreen Attachment Viewer Component
-const AttachmentViewer: React.FC<AttachmentViewerProps> = ({ open, onClose, attachment }) => {
-    if (!attachment) return null;
+// Fullscreen Attachment Viewer Component with Swiper
+const AttachmentViewer: React.FC<AttachmentViewerProps> = ({ open, onClose, attachments, initialIndex }) => {
+    const [currentIndex, setCurrentIndex] = useState(initialIndex);
+    const swiperRef = useRef<SwiperType | null>(null);
 
-    const isImage = attachment.mimeType?.startsWith('image/');
-    const isPDF = attachment.mimeType === 'application/pdf';
+    const handleSlideChange = useCallback((swiper: SwiperType) => {
+        setCurrentIndex(swiper.activeIndex);
+    }, []);
+
+    // Filter only image attachments for swiping
+    const imageAttachments = attachments.filter(att => att.mimeType?.startsWith('image/'));
+    const currentAttachment = attachments[initialIndex];
+    const isImage = currentAttachment?.mimeType?.startsWith('image/');
+    const isPDF = currentAttachment?.mimeType === 'application/pdf';
+
+    // If initial attachment is not an image, show single view
+    if (!isImage && currentAttachment) {
+        return (
+            <Dialog
+                fullScreen
+                open={open}
+                onClose={onClose}
+                TransitionComponent={Transition}
+                PaperProps={{
+                    sx: {
+                        bgcolor: '#000',
+                    }
+                }}
+            >
+                {/* Header */}
+                <Box
+                    sx={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        p: 2,
+                        pt: 'calc(env(safe-area-inset-top, 0px) + 16px)',
+                        bgcolor: 'rgba(0, 0, 0, 0.9)',
+                        position: 'fixed',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        zIndex: 10,
+                    }}
+                >
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                        <IconButton onClick={onClose} sx={{ color: 'white' }}>
+                            <ArrowLeft2 size={24} color="white" />
+                        </IconButton>
+                        <Box sx={{ maxWidth: '200px' }}>
+                            <Typography
+                                sx={{
+                                    color: 'white',
+                                    fontWeight: 600,
+                                    fontSize: '0.9rem',
+                                    whiteSpace: 'nowrap',
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                }}
+                            >
+                                {currentAttachment.fileName}
+                            </Typography>
+                            <Typography sx={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.75rem' }}>
+                                {(currentAttachment.fileSize / 1024).toFixed(1)} KB
+                            </Typography>
+                        </Box>
+                    </Box>
+                    <IconButton
+                        component="a"
+                        href={currentAttachment.filePath}
+                        download={currentAttachment.fileName}
+                        sx={{ color: 'white' }}
+                    >
+                        <DocumentDownload size={24} color="white" />
+                    </IconButton>
+                </Box>
+
+                {/* Content */}
+                <Box
+                    sx={{
+                        flex: 1,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        mt: 'calc(env(safe-area-inset-top, 0px) + 72px)',
+                        mb: 2,
+                        px: 2,
+                        overflow: 'auto',
+                    }}
+                >
+                    {isPDF ? (
+                        <Box
+                            component="iframe"
+                            src={currentAttachment.filePath}
+                            sx={{
+                                width: '100%',
+                                height: 'calc(100vh - 120px)',
+                                border: 'none',
+                                borderRadius: 1,
+                                bgcolor: 'white',
+                            }}
+                        />
+                    ) : (
+                        <Box
+                            sx={{
+                                textAlign: 'center',
+                                p: 4,
+                            }}
+                        >
+                            <DocumentText size={80} color="#64748B" />
+                            <Typography sx={{ color: 'white', mt: 2, fontWeight: 600 }}>
+                                {currentAttachment.fileName}
+                            </Typography>
+                            <Typography sx={{ color: 'rgba(255,255,255,0.6)', mt: 1, fontSize: '0.9rem' }}>
+                                ไม่สามารถแสดงตัวอย่างไฟล์นี้ได้
+                            </Typography>
+                            <Button
+                                component="a"
+                                href={currentAttachment.filePath}
+                                download={currentAttachment.fileName}
+                                variant="contained"
+                                startIcon={<DocumentDownload size={20} />}
+                                sx={{
+                                    mt: 3,
+                                    bgcolor: '#667eea',
+                                    '&:hover': { bgcolor: '#5a6fd6' },
+                                }}
+                            >
+                                ดาวน์โหลดไฟล์
+                            </Button>
+                        </Box>
+                    )}
+                </Box>
+            </Dialog>
+        );
+    }
+
+    // Find the initial index in imageAttachments
+    const imageInitialIndex = imageAttachments.findIndex(att => att.id === currentAttachment?.id);
+    const activeImageAttachment = imageAttachments[currentIndex] || imageAttachments[0];
+
+    if (imageAttachments.length === 0) return null;
 
     return (
         <Dialog
@@ -119,24 +264,27 @@ const AttachmentViewer: React.FC<AttachmentViewerProps> = ({ open, onClose, atta
                                 textOverflow: 'ellipsis',
                             }}
                         >
-                            {attachment.fileName}
+                            {activeImageAttachment?.fileName}
                         </Typography>
                         <Typography sx={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.75rem' }}>
-                            {(attachment.fileSize / 1024).toFixed(1)} KB
+                            {imageAttachments.length > 1 
+                                ? `${currentIndex + 1} / ${imageAttachments.length} รูป`
+                                : `${((activeImageAttachment?.fileSize || 0) / 1024).toFixed(1)} KB`
+                            }
                         </Typography>
                     </Box>
                 </Box>
                 <IconButton
                     component="a"
-                    href={attachment.filePath}
-                    download={attachment.fileName}
+                    href={activeImageAttachment?.filePath}
+                    download={activeImageAttachment?.fileName}
                     sx={{ color: 'white' }}
                 >
                     <DocumentDownload size={24} color="white" />
                 </IconButton>
             </Box>
 
-            {/* Content */}
+            {/* Content with Swiper */}
             <Box
                 sx={{
                     flex: 1,
@@ -145,15 +293,29 @@ const AttachmentViewer: React.FC<AttachmentViewerProps> = ({ open, onClose, atta
                     justifyContent: 'center',
                     mt: 'calc(env(safe-area-inset-top, 0px) + 72px)',
                     mb: 2,
-                    px: 2,
-                    overflow: 'auto',
+                    overflow: 'hidden',
+                    position: 'relative',
+                    '& .swiper': {
+                        width: '100%',
+                        height: '100%',
+                    },
+                    '& .swiper-button-prev, & .swiper-button-next': {
+                        color: 'white',
+                        bgcolor: 'rgba(0, 0, 0, 0.5)',
+                        width: 40,
+                        height: 40,
+                        borderRadius: '50%',
+                        '&::after': {
+                            fontSize: '18px',
+                        },
+                    },
                 }}
             >
-                {isImage ? (
+                {imageAttachments.length === 1 ? (
                     <Box
                         component="img"
-                        src={attachment.filePath}
-                        alt={attachment.fileName}
+                        src={imageAttachments[0].filePath}
+                        alt={imageAttachments[0].fileName}
                         sx={{
                             maxWidth: '100%',
                             maxHeight: 'calc(100vh - 120px)',
@@ -161,49 +323,75 @@ const AttachmentViewer: React.FC<AttachmentViewerProps> = ({ open, onClose, atta
                             borderRadius: 1,
                         }}
                     />
-                ) : isPDF ? (
-                    <Box
-                        component="iframe"
-                        src={attachment.filePath}
-                        sx={{
-                            width: '100%',
-                            height: 'calc(100vh - 120px)',
-                            border: 'none',
-                            borderRadius: 1,
-                            bgcolor: 'white',
-                        }}
-                    />
                 ) : (
-                    <Box
-                        sx={{
-                            textAlign: 'center',
-                            p: 4,
-                        }}
+                    <Swiper
+                        modules={[Navigation]}
+                        navigation
+                        initialSlide={imageInitialIndex >= 0 ? imageInitialIndex : 0}
+                        onSwiper={(swiper) => { swiperRef.current = swiper; }}
+                        onSlideChange={handleSlideChange}
+                        style={{ width: '100%', height: 'calc(100vh - 120px)' }}
                     >
-                        <DocumentText size={80} color="#64748B" />
-                        <Typography sx={{ color: 'white', mt: 2, fontWeight: 600 }}>
-                            {attachment.fileName}
-                        </Typography>
-                        <Typography sx={{ color: 'rgba(255,255,255,0.6)', mt: 1, fontSize: '0.9rem' }}>
-                            ไม่สามารถแสดงตัวอย่างไฟล์นี้ได้
-                        </Typography>
-                        <Button
-                            component="a"
-                            href={attachment.filePath}
-                            download={attachment.fileName}
-                            variant="contained"
-                            startIcon={<DocumentDownload size={20} />}
-                            sx={{
-                                mt: 3,
-                                bgcolor: '#667eea',
-                                '&:hover': { bgcolor: '#5a6fd6' },
-                            }}
-                        >
-                            ดาวน์โหลดไฟล์
-                        </Button>
-                    </Box>
+                        {imageAttachments.map((attachment) => (
+                            <SwiperSlide key={attachment.id}>
+                                <Box
+                                    sx={{
+                                        width: '100%',
+                                        height: '100%',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        px: 2,
+                                    }}
+                                >
+                                    <Box
+                                        component="img"
+                                        src={attachment.filePath}
+                                        alt={attachment.fileName}
+                                        sx={{
+                                            maxWidth: '100%',
+                                            maxHeight: '100%',
+                                            objectFit: 'contain',
+                                            borderRadius: 1,
+                                        }}
+                                    />
+                                </Box>
+                            </SwiperSlide>
+                        ))}
+                    </Swiper>
                 )}
             </Box>
+
+            {/* Bottom indicator for multiple images */}
+            {imageAttachments.length > 1 && (
+                <Box
+                    sx={{
+                        position: 'fixed',
+                        bottom: 'calc(env(safe-area-inset-bottom, 0px) + 16px)',
+                        left: 0,
+                        right: 0,
+                        display: 'flex',
+                        justifyContent: 'center',
+                        gap: 1,
+                        zIndex: 10,
+                    }}
+                >
+                    {imageAttachments.map((_, index) => (
+                        <Box
+                            key={index}
+                            onClick={() => swiperRef.current?.slideTo(index)}
+                            sx={{
+                                width: currentIndex === index ? 24 : 8,
+                                height: 8,
+                                borderRadius: 4,
+                                bgcolor: currentIndex === index ? 'white' : 'rgba(255, 255, 255, 0.4)',
+                                cursor: 'pointer',
+                                transition: 'all 0.3s ease',
+                            }}
+                        />
+                    ))}
+                </Box>
+            )}
         </Dialog>
     );
 };
@@ -239,22 +427,15 @@ const leaveTypeConfig: Record<string, { icon: any; color: string; lightColor: st
 const LeaveDetailDrawer: React.FC<LeaveDetailDrawerProps> = ({ open, onClose, leave, onCancel }) => {
     // State for attachment viewer
     const [viewerOpen, setViewerOpen] = useState(false);
-    const [selectedAttachment, setSelectedAttachment] = useState<{
-        id: number;
-        fileName: string;
-        filePath: string;
-        fileSize: number;
-        mimeType: string;
-    } | null>(null);
+    const [selectedAttachmentIndex, setSelectedAttachmentIndex] = useState(0);
 
-    const handleOpenAttachment = (attachment: any) => {
-        setSelectedAttachment(attachment);
+    const handleOpenAttachment = (index: number) => {
+        setSelectedAttachmentIndex(index);
         setViewerOpen(true);
     };
 
     const handleCloseViewer = () => {
         setViewerOpen(false);
-        setSelectedAttachment(null);
     };
 
     // คำนวณค่าต่างๆ เมื่อมี leave
@@ -535,12 +716,12 @@ const LeaveDetailDrawer: React.FC<LeaveDetailDrawerProps> = ({ open, onClose, le
                                 </Typography>
                             </Box>
                             <Stack spacing={1}>
-                                {leave.attachments.map((attachment) => {
+                                {leave.attachments.map((attachment, index) => {
                                     const isImage = attachment.mimeType?.startsWith('image/');
                                     return (
                                     <Box
                                         key={attachment.id}
-                                        onClick={() => handleOpenAttachment(attachment)}
+                                        onClick={() => handleOpenAttachment(index)}
                                         sx={{
                                             display: 'flex',
                                             alignItems: 'center',
@@ -823,7 +1004,8 @@ const LeaveDetailDrawer: React.FC<LeaveDetailDrawerProps> = ({ open, onClose, le
             <AttachmentViewer
                 open={viewerOpen}
                 onClose={handleCloseViewer}
-                attachment={selectedAttachment}
+                attachments={leave?.attachments || []}
+                initialIndex={selectedAttachmentIndex}
             />
         </Drawer>
     );

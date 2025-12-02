@@ -196,6 +196,19 @@ export default function EditProfilePage() {
     useEffect(() => {
         setMounted(true);
         fetchProfile();
+
+        // Set theme-color for status bar to match header gradient
+        const metaThemeColor = document.querySelector('meta[name="theme-color"]');
+        const originalColor = metaThemeColor?.getAttribute('content') || '#EAF2F8';
+        
+        if (metaThemeColor) {
+            metaThemeColor.setAttribute('content', '#667eea');
+        } else {
+            const newMeta = document.createElement('meta');
+            newMeta.name = 'theme-color';
+            newMeta.content = '#667eea';
+            document.head.appendChild(newMeta);
+        }
         
         const fetchCompanies = async () => {
             try {
@@ -210,6 +223,14 @@ export default function EditProfilePage() {
             }
         };
         fetchCompanies();
+
+        // Cleanup: restore original theme-color when leaving page
+        return () => {
+            const meta = document.querySelector('meta[name="theme-color"]');
+            if (meta) {
+                meta.setAttribute('content', originalColor);
+            }
+        };
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
@@ -690,34 +711,53 @@ export default function EditProfilePage() {
 
     return (
         <Box sx={{ minHeight: '100vh', bgcolor: '#F8F9FA' }}>
-            {/* Header */}
+            {/* Header with Gradient */}
             <Box
                 sx={{
                     background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                    pt: 'calc(env(safe-area-inset-top, 0px) + 16px)',
-                    pb: 2,
+                    pt: 'calc(env(safe-area-inset-top, 0px) + 24px)',
+                    pb: 4,
                     px: 2,
-                    position: 'sticky',
-                    top: 0,
-                    zIndex: 100,
+                    position: 'relative',
+                    overflow: 'hidden',
+                    '&::before': {
+                        content: '""',
+                        position: 'absolute',
+                        top: -50,
+                        right: -50,
+                        width: 200,
+                        height: 200,
+                        borderRadius: '50%',
+                        background: 'rgba(255, 255, 255, 0.1)',
+                    },
+                    '&::after': {
+                        content: '""',
+                        position: 'absolute',
+                        bottom: -30,
+                        left: -30,
+                        width: 150,
+                        height: 150,
+                        borderRadius: '50%',
+                        background: 'rgba(255, 255, 255, 0.1)',
+                    },
                 }}
             >
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <IconButton
-                        onClick={() => router.back()}
-                        sx={{
-                            color: 'white',
-                            bgcolor: 'rgba(255, 255, 255, 0.15)',
-                            '&:hover': { bgcolor: 'rgba(255, 255, 255, 0.25)' },
-                            width: 40,
-                            height: 40,
-                        }}
-                    >
-                        <ArrowLeft2 size={22} color="white" />
-                    </IconButton>
-                    <Typography variant="h6" sx={{ color: 'white', fontWeight: 600, flex: 1 }}>
-                        แก้ไขโปรไฟล์
-                    </Typography>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'relative', zIndex: 1 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <IconButton
+                            onClick={() => router.back()}
+                            sx={{
+                                bgcolor: 'rgba(255, 255, 255, 0.2)',
+                                color: 'white',
+                                '&:hover': { bgcolor: 'rgba(255, 255, 255, 0.3)' },
+                            }}
+                        >
+                            <ArrowLeft2 size={20} color="white" />
+                        </IconButton>
+                        <Typography variant="h5" sx={{ color: 'white', fontWeight: 700 }}>
+                            แก้ไขโปรไฟล์
+                        </Typography>
+                    </Box>
                 </Box>
             </Box>
 
