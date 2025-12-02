@@ -1,10 +1,11 @@
 'use client';
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { Box, Typography, Button, Card, CardContent, Skeleton, Container } from '@mui/material';
 import Header from './components/Header';
 import LeaveTypeCard from './components/LeaveTypeCard';
 import RecentActivityCard from './components/RecentActivityCard';
 import BottomNav from './components/BottomNav';
+import PullToRefresh from './components/PullToRefresh';
 import { 
   Calendar2, Activity, Briefcase, Heart, Sun1, Lovely,
   Building4, Shield, People, Car, Clock, MessageQuestion, Health,
@@ -75,7 +76,7 @@ export default function Home() {
     }
   }, []);
 
-  const fetchLeaveTypes = async () => {
+  const fetchLeaveTypes = useCallback(async () => {
     try {
       const response = await fetch('/api/leave-types');
       if (!response.ok) throw new Error('Failed to fetch leave types');
@@ -85,9 +86,9 @@ export default function Home() {
     } catch (error) {
       console.error('Error fetching leave types:', error);
     }
-  };
+  }, []);
 
-  const fetchLeaveRequests = async () => {
+  const fetchLeaveRequests = useCallback(async () => {
     try {
       const response = await fetch('/api/my-leaves');
       if (!response.ok) throw new Error('Failed to fetch leave requests');
@@ -98,7 +99,11 @@ export default function Home() {
     } catch (error) {
       console.error('Error fetching leave requests:', error);
     }
-  };
+  }, []);
+
+  const handleRefresh = useCallback(async () => {
+    await Promise.all([fetchLeaveTypes(), fetchLeaveRequests()]);
+  }, [fetchLeaveTypes, fetchLeaveRequests]);
 
   // Format date for display
   const formatDate = (startDate: string, endDate: string) => {
@@ -162,9 +167,10 @@ export default function Home() {
   // Prevent hydration mismatch by always showing loading state until mounted
   const showLoading = !mounted || loading;
   return (
-    <Box sx={{ minHeight: '100vh', bgcolor: 'background.default', pb: 10 }}>
-      <Container maxWidth={false} sx={{ maxWidth: 1200, px: { xs: 2.5, sm: 3, md: 4 } }}>
-        <Header />
+    <PullToRefresh onRefresh={handleRefresh} disabled={showLoading}>
+      <Box sx={{ minHeight: '100vh', bgcolor: 'background.default', pb: 10 }}>
+        <Container maxWidth={false} sx={{ maxWidth: 1200, px: { xs: 2.5, sm: 3, md: 4 } }}>
+          <Header />
 
         {/* Leave Balance Section */}
         <Box sx={{ mt: 1.5, mb: 3 }}>
@@ -401,6 +407,7 @@ export default function Home() {
         leave={selectedLeave} 
       />
     </Box>
+    </PullToRefresh>
   );
 }
 
