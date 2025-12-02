@@ -11,16 +11,25 @@
   --font-sans: var(--font-sarabun);
 }
 
+html, body {
+  /* Disable browser's default pull-to-refresh completely */
+  overscroll-behavior: none;
+  overscroll-behavior-y: none;
+  -webkit-overflow-scrolling: touch;
+}
+
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans), Arial, Helvetica, sans-serif;
-  /* Disable browser's default pull-to-refresh to prevent overlap with header */
-  overscroll-behavior-y: contain;
+  /* Prevent pull-to-refresh on mobile */
+  touch-action: pan-x pan-y;
 }
 
-/* Custom pull-to-refresh indicator styling for PWA */
-html {
-  /* Ensure pull-to-refresh indicator appears at the very top */
-  overscroll-behavior: none;
+/* Hide Chrome's pull-to-refresh loading indicator */
+@supports (-webkit-touch-callout: none) {
+  body {
+    /* iOS Safari specific */
+    -webkit-overflow-scrolling: auto;
+  }
 }
