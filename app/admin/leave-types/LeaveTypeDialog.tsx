@@ -119,7 +119,7 @@ export default function LeaveTypeDialog({
       });
 
       if (!res.ok) {
-        const data = await res.json();
+        const data = await res.json().catch(() => ({ error: 'เกิดข้อผิดพลาด' }));
         throw new Error(data.error || 'เกิดข้อผิดพลาด');
       }
 

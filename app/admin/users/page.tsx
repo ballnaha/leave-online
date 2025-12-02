@@ -210,11 +210,15 @@ export default function UsersPage() {
       if (deptRes.ok) {
         const deptData = await deptRes.json();
         setDepartments(deptData);
+      } else {
+        console.error('Failed to fetch departments');
       }
       
       if (sectRes.ok) {
         const sectData = await sectRes.json();
         setSections(sectData);
+      } else {
+        console.error('Failed to fetch sections');
       }
     } catch (err) {
       console.error('Error fetching departments/sections:', err);
@@ -274,7 +278,7 @@ export default function UsersPage() {
         method: 'DELETE',
       });
       if (!res.ok) {
-        const data = await res.json();
+        const data = await res.json().catch(() => ({ error: 'Failed to delete' }));
         throw new Error(data.error || 'Failed to delete');
       }
       toastr.success('ลบผู้ใช้งานสำเร็จ');

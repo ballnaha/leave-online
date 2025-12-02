@@ -161,11 +161,10 @@ export default function ApprovalPage() {
     try {
       // Always fetch all to get correct counts
       const response = await fetch(`/api/leaves/pending?status=all`);
-      if (response.ok) {
-        const data = await response.json();
-        setApprovals(data.data);
-        setCounts(data.counts);
-      }
+      if (!response.ok) throw new Error('Failed to fetch approvals');
+      const data = await response.json();
+      setApprovals(data.data);
+      setCounts(data.counts);
     } catch (error) {
       console.error('Error fetching approvals:', error);
     } finally {
@@ -231,14 +230,14 @@ export default function ApprovalPage() {
         }),
       });
 
-      const data = await response.json();
-
-      if (response.ok) {
-        setDialogOpen(false);
-        fetchApprovals();
-      } else {
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({ error: 'เกิดข้อผิดพลาด' }));
         setError(data.error || 'เกิดข้อผิดพลาด');
+        return;
       }
+
+      setDialogOpen(false);
+      fetchApprovals();
     } catch (error) {
       setError('เกิดข้อผิดพลาดในการเชื่อมต่อ');
     } finally {

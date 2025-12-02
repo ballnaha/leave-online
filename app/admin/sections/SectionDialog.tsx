@@ -91,11 +91,10 @@ export default function SectionDialog({
   const fetchDepartments = async () => {
     try {
       const res = await fetch('/api/admin/departments');
-      if (res.ok) {
-        const data = await res.json();
-        // Only get active departments
-        setDepartments(data.filter((d: Department & { isActive: boolean }) => d.isActive));
-      }
+      if (!res.ok) throw new Error('Failed to fetch departments');
+      const data = await res.json();
+      // Only get active departments
+      setDepartments(data.filter((d: Department & { isActive: boolean }) => d.isActive));
     } catch (error) {
       console.error('Error fetching departments:', error);
     }
@@ -196,7 +195,7 @@ export default function SectionDialog({
       });
 
       if (!res.ok) {
-        const data = await res.json();
+        const data = await res.json().catch(() => ({ error: 'เกิดข้อผิดพลาด' }));
         throw new Error(data.error || 'เกิดข้อผิดพลาด');
       }
 

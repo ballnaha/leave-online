@@ -108,12 +108,9 @@ export default function ProfilePage() {
     const fetchProfile = useCallback(async () => {
         try {
             const res = await fetch('/api/profile');
-            if (res.ok) {
-                const data = await res.json();
-                setProfile(data);
-            } else {
-                console.error('Failed to fetch profile');
-            }
+            if (!res.ok) throw new Error('Failed to fetch profile');
+            const data = await res.json();
+            setProfile(data);
         } catch (error) {
             console.error('Error fetching profile:', error);
         } finally {
@@ -675,19 +672,30 @@ export default function ProfilePage() {
                                                         pushLoading && item.label === 'การแจ้งเตือนแบบพุช' ? (
                                                             <CircularProgress size={24} sx={{ color: item.color }} />
                                                         ) : (
-                                                            <Switch
-                                                                checked={item.value}
-                                                                onChange={(e) => item.onChange?.(e.target.checked)}
-                                                                disabled={!pushSupported || !pushInitialized || pushPermission === 'denied'}
-                                                                sx={{
-                                                                    '& .MuiSwitch-switchBase.Mui-checked': {
-                                                                        color: item.color,
-                                                                    },
-                                                                    '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
-                                                                        bgcolor: item.color,
-                                                                    },
-                                                                }}
-                                                            />
+                                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                                {item.label === 'การแจ้งเตือนแบบพุช' && !pushSubscribed && pushSupported && (
+                                                                    <Chip 
+                                                                        label="ไม่ได้เชื่อมต่อ" 
+                                                                        size="small" 
+                                                                        color="error" 
+                                                                        variant="outlined" 
+                                                                        sx={{ height: 20, fontSize: '0.6rem' }}
+                                                                    />
+                                                                )}
+                                                                <Switch
+                                                                    checked={item.value}
+                                                                    onChange={(e) => item.onChange?.(e.target.checked)}
+                                                                    disabled={!pushSupported || !pushInitialized || pushPermission === 'denied'}
+                                                                    sx={{
+                                                                        '& .MuiSwitch-switchBase.Mui-checked': {
+                                                                            color: item.color,
+                                                                        },
+                                                                        '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
+                                                                            bgcolor: item.color,
+                                                                        },
+                                                                    }}
+                                                                />
+                                                            </Box>
                                                         )
                                                     ) : (
                                                         <ArrowRight2 size={20} variant="Bold" color="#999" />

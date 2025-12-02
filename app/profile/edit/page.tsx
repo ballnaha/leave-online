@@ -161,30 +161,29 @@ export default function EditProfilePage() {
     const fetchProfile = useCallback(async () => {
         try {
             const res = await fetch('/api/profile');
-            if (res.ok) {
-                const data = await res.json();
-                setProfile(data);
-                setFormData({
-                    company: data.company || '',
-                    employeeType: data.employeeType || '',
-                    firstName: data.firstName || '',
-                    lastName: data.lastName || '',
-                    employeeId: data.employeeId || '',
-                    departmentId: data.department || '',
-                    sectionId: data.section || '',
-                    shift: data.shift || '',
-                    startDate: data.startDate ? new Date(data.startDate).toISOString().split('T')[0] : '',
-                    email: data.email || '',
-                });
-                // Only set avatar preview if there's no pending upload (user hasn't selected a new image)
-                setAvatarPreview(prev => {
+            if (!res.ok) throw new Error('Failed to fetch profile');
+            const data = await res.json();
+            setProfile(data);
+            setFormData({
+                company: data.company || '',
+                employeeType: data.employeeType || '',
+                firstName: data.firstName || '',
+                lastName: data.lastName || '',
+                employeeId: data.employeeId || '',
+                departmentId: data.department || '',
+                sectionId: data.section || '',
+                shift: data.shift || '',
+                startDate: data.startDate ? new Date(data.startDate).toISOString().split('T')[0] : '',
+                email: data.email || '',
+            });
+            // Only set avatar preview if there's no pending upload (user hasn't selected a new image)
+            setAvatarPreview(prev => {
                     // If there's already a pending upload or a base64 image, don't override
                     if (prev && prev.startsWith('data:')) {
                         return prev;
                     }
                     return data.avatar || prev;
                 });
-            }
         } catch (error) {
             console.error('Error fetching profile:', error);
             toastr.error('ไม่สามารถดึงข้อมูลได้');
@@ -201,6 +200,7 @@ export default function EditProfilePage() {
         const fetchCompanies = async () => {
             try {
                 const res = await fetch('/api/companies');
+                if (!res.ok) throw new Error('Failed to fetch companies');
                 const data = await res.json();
                 setCompanies(data);
             } catch (err) {
@@ -224,6 +224,7 @@ export default function EditProfilePage() {
             setLoadingDepartments(true);
             try {
                 const res = await fetch(`/api/departments?company=${formData.company}`);
+                if (!res.ok) throw new Error('Failed to fetch departments');
                 const data = await res.json();
                 setDepartments(data);
             } catch (err) {
@@ -249,6 +250,7 @@ export default function EditProfilePage() {
             setLoadingSections(true);
             try {
                 const res = await fetch(`/api/sections?departmentId=${dept.id}`);
+                if (!res.ok) throw new Error('Failed to fetch sections');
                 const data = await res.json();
                 setSections(data);
             } catch (err) {
@@ -535,12 +537,12 @@ export default function EditProfilePage() {
                     }),
                 });
 
-                const uploadData = await uploadRes.json();
-
                 if (!uploadRes.ok) {
+                    const uploadData = await uploadRes.json().catch(() => ({ error: 'อัพโหลดรูปภาพไม่สำเร็จ' }));
                     throw new Error(uploadData.error || 'อัพโหลดรูปภาพไม่สำเร็จ');
                 }
-
+                
+                const uploadData = await uploadRes.json();
                 avatarPath = uploadData.path;
             }
 
@@ -569,9 +571,8 @@ export default function EditProfilePage() {
                 }),
             });
 
-            const data = await response.json();
-
             if (!response.ok) {
+                const data = await response.json().catch(() => ({ error: 'เกิดข้อผิดพลาดในการบันทึก' }));
                 throw new Error(data.error || 'เกิดข้อผิดพลาดในการบันทึก');
             }
 

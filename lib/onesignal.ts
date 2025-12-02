@@ -61,11 +61,24 @@ export async function sendPushNotification(
     if (response.ok && result.id) {
       return { success: true, notificationId: result.id };
     } else {
-      return { success: false, error: result.errors?.[0] || 'Unknown error' };
+      // Extract detailed error message
+      let errorMessage = 'Unknown error';
+      if (result.errors) {
+        if (Array.isArray(result.errors)) {
+          errorMessage = result.errors.map((e: any) => typeof e === 'string' ? e : JSON.stringify(e)).join(', ');
+        } else if (typeof result.errors === 'object') {
+          errorMessage = JSON.stringify(result.errors);
+        } else {
+          errorMessage = String(result.errors);
+        }
+      }
+      
+      console.error('OneSignal API Error:', result);
+      return { success: false, error: errorMessage };
     }
   } catch (error) {
     console.error('OneSignal API error:', error);
-    return { success: false, error: String(error) };
+    return { success: false, error: error instanceof Error ? error.message : String(error) };
   }
 }
 
@@ -109,6 +122,19 @@ export async function notifyUser(
   }
 
   const result = await sendPushNotification(playerIds, payload);
+
+  // Handle "All included players are not subscribed" error
+  // This happens when users clear browser data or unsubscribe, but our DB still has the old ID
+  if (!result.success && result.error && result.error.includes('All included players are not subscribed')) {
+    console.warn(`OneSignal: All devices for user ${userId} are unsubscribed. Deactivating devices.`);
+    await prisma.userDevice.updateMany({
+      where: { 
+        userId, 
+        playerId: { in: playerIds } 
+      },
+      data: { isActive: false }
+    });
+  }
 
   // บันทึก log พร้อมผลลัพธ์
   await prisma.notificationLog.create({

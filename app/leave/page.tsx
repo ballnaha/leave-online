@@ -126,11 +126,15 @@ export default function LeavePage() {
             if (typesRes.ok) {
                 const typesData = await typesRes.json();
                 setLeaveTypes(typesData);
+            } else {
+                console.error('Failed to fetch leave types');
             }
 
             if (leavesRes.ok) {
                 const leavesData = await leavesRes.json();
                 setMyLeaves(leavesData.data || []);
+            } else {
+                console.error('Failed to fetch leaves');
             }
         } catch (error) {
             console.error('Error fetching data:', error);
@@ -242,28 +246,28 @@ export default function LeavePage() {
                 body: JSON.stringify({ cancelReason: cancelReason.trim() }),
             });
 
-            if (res.ok) {
-                const data = await res.json();
-                // อัพเดท state
-                setMyLeaves((prev) =>
-                    prev.map((leave) =>
-                        leave.id === selectedLeave.id 
-                            ? { ...leave, status: 'cancelled', cancelReason: cancelReason.trim(), cancelledAt: new Date().toISOString() } 
-                            : leave
-                    )
-                );
-                setSelectedLeave({ 
-                    ...selectedLeave, 
+            if (!res.ok) {
+                const error = await res.json().catch(() => ({ error: 'ไม่สามารถยกเลิกใบลาได้' }));
+                alert(error.error || 'ไม่สามารถยกเลิกใบลาได้');
+                return;
+            }
+            
+            // อัพเดท state
+            setMyLeaves((prev) =>
+                prev.map((leave) =>
+                    leave.id === selectedLeave.id 
+                        ? { ...leave, status: 'cancelled', cancelReason: cancelReason.trim(), cancelledAt: new Date().toISOString() } 
+                        : leave
+                )
+            );
+            setSelectedLeave({ 
+                ...selectedLeave, 
                     status: 'cancelled', 
                     cancelReason: cancelReason.trim(),
                     cancelledAt: new Date().toISOString()
                 });
                 setCancelDialogOpen(false);
                 setCancelReason('');
-            } else {
-                const error = await res.json();
-                alert(error.error || 'ไม่สามารถยกเลิกใบลาได้');
-            }
         } catch (error) {
             console.error('Error cancelling leave:', error);
             alert('เกิดข้อผิดพลาดในการยกเลิกใบลา');

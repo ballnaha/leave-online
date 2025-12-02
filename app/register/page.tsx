@@ -104,6 +104,7 @@ export default function RegisterPage() {
         const fetchCompanies = async () => {
             try {
                 const res = await fetch('/api/companies');
+                if (!res.ok) throw new Error('Failed to fetch companies');
                 const data = await res.json();
                 setCompanies(data);
             } catch (err) {
@@ -126,6 +127,7 @@ export default function RegisterPage() {
             setLoadingDepartments(true);
             try {
                 const res = await fetch(`/api/departments?company=${formData.company}`);
+                if (!res.ok) throw new Error('Failed to fetch departments');
                 const data = await res.json();
                 setDepartments(data);
             } catch (err) {
@@ -152,6 +154,7 @@ export default function RegisterPage() {
             setLoadingSections(true);
             try {
                 const res = await fetch(`/api/sections?departmentId=${formData.departmentId}`);
+                if (!res.ok) throw new Error('Failed to fetch sections');
                 const data = await res.json();
                 setSections(data);
             } catch (err) {
@@ -267,9 +270,8 @@ export default function RegisterPage() {
                 }),
             });
 
-            const data = await response.json();
-
             if (!response.ok) {
+                const data = await response.json().catch(() => ({ error: 'เกิดข้อผิดพลาดในการสมัครสมาชิก' }));
                 throw new Error(data.error || 'เกิดข้อผิดพลาดในการสมัครสมาชิก');
             }
 

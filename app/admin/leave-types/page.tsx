@@ -217,7 +217,7 @@ export default function LeaveTypesPage() {
         method: 'DELETE',
       });
       if (!res.ok) {
-        const data = await res.json();
+        const data = await res.json().catch(() => ({ error: 'Failed to delete' }));
         throw new Error(data.error || 'Failed to delete');
       }
       toastr.success('ลบประเภทการลาสำเร็จ');

@@ -396,11 +396,10 @@ export default function AdminLeavesPage() {
       }
 
       const response = await fetch(`/api/admin/leaves?${params.toString()}`);
-      if (response.ok) {
-        const data = await response.json();
-        setLeaves(data.leaves);
-        setStats(data.stats);
-      }
+      if (!response.ok) throw new Error('Failed to fetch leaves');
+      const data = await response.json();
+      setLeaves(data.leaves);
+      setStats(data.stats);
     } catch (error) {
       console.error('Error fetching leaves:', error);
       toastr.error('เกิดข้อผิดพลาดในการโหลดข้อมูล');

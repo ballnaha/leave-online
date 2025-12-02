@@ -246,14 +246,20 @@ export default function UserApprovalFlowPage() {
       if (companiesRes.ok) {
         const data = await companiesRes.json();
         setCompanies(data);
+      } else {
+        console.error('Failed to fetch companies');
       }
       if (departmentsRes.ok) {
         const data = await departmentsRes.json();
         setDepartments(data);
+      } else {
+        console.error('Failed to fetch departments');
       }
       if (sectionsRes.ok) {
         const data = await sectionsRes.json();
         setSections(data);
+      } else {
+        console.error('Failed to fetch sections');
       }
     } catch (error) {
       console.error('Error fetching master data:', error);
@@ -264,11 +270,10 @@ export default function UserApprovalFlowPage() {
     try {
       setLoading(true);
       const response = await fetch('/api/admin/users');
-      if (response.ok) {
-        const data = await response.json();
-        // Filter to only show employees who can have custom flows
-        setUsers(data.filter((u: UserOption) => !['hr_manager', 'admin'].includes(u.role)));
-      }
+      if (!response.ok) throw new Error('Failed to fetch users');
+      const data = await response.json();
+      // Filter to only show employees who can have custom flows
+      setUsers(data.filter((u: UserOption) => !['hr_manager', 'admin'].includes(u.role)));
     } catch (error) {
       console.error('Error fetching users:', error);
     } finally {
@@ -279,11 +284,10 @@ export default function UserApprovalFlowPage() {
   const fetchApprovers = async () => {
     try {
       const response = await fetch('/api/admin/users');
-      if (response.ok) {
-        const data = await response.json();
-        // Filter to users who can be approvers
-        setAllApprovers(data.filter((u: UserOption) => u.role !== 'employee'));
-      }
+      if (!response.ok) throw new Error('Failed to fetch approvers');
+      const data = await response.json();
+      // Filter to users who can be approvers
+      setAllApprovers(data.filter((u: UserOption) => u.role !== 'employee'));
     } catch (error) {
       console.error('Error fetching approvers:', error);
     }
@@ -295,13 +299,12 @@ export default function UserApprovalFlowPage() {
       const flowSet = new Set<number>();
       for (const user of users) {
         const response = await fetch(`/api/user-approval-flow?userId=${user.id}`);
-        if (response.ok) {
-          const flows = await response.json();
-          // Has custom flow if there are flows other than HR (level 99)
-          const customFlows = flows.filter((f: ApprovalFlow) => f.level !== 99);
-          if (customFlows.length > 0) {
-            flowSet.add(user.id);
-          }
+        if (!response.ok) continue;
+        const flows = await response.json();
+        // Has custom flow if there are flows other than HR (level 99)
+        const customFlows = flows.filter((f: ApprovalFlow) => f.level !== 99);
+        if (customFlows.length > 0) {
+          flowSet.add(user.id);
         }
       }
       setUsersWithFlows(flowSet);
@@ -313,10 +316,9 @@ export default function UserApprovalFlowPage() {
   const fetchUserFlow = useCallback(async (userId: number) => {
     try {
       const response = await fetch(`/api/user-approval-flow?userId=${userId}`);
-      if (response.ok) {
-        const data = await response.json();
-        setApprovalFlows(data.filter((f: ApprovalFlow) => f.level !== 99));
-      }
+      if (!response.ok) throw new Error('Failed to fetch user flow');
+      const data = await response.json();
+      setApprovalFlows(data.filter((f: ApprovalFlow) => f.level !== 99));
     } catch (error) {
       console.error('Error fetching user flow:', error);
     }
@@ -400,16 +402,16 @@ export default function UserApprovalFlowPage() {
         }),
       });
 
-      const data = await response.json();
-
-      if (response.ok) {
-        toastr.success('บันทึก Flow สำเร็จ');
-        handleCloseDialog();
-        fetchUsers();
-        fetchAllUsersFlows();
-      } else {
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({ error: 'เกิดข้อผิดพลาด' }));
         setError(data.error || 'เกิดข้อผิดพลาด');
+        return;
       }
+
+      toastr.success('บันทึก Flow สำเร็จ');
+      handleCloseDialog();
+      fetchUsers();
+      fetchAllUsersFlows();
     } catch (error) {
       setError('เกิดข้อผิดพลาดในการเชื่อมต่อ');
     } finally {
@@ -439,7 +441,7 @@ export default function UserApprovalFlowPage() {
           return newSet;
         });
       } else {
-        const data = await response.json();
+        const data = await response.json().catch(() => ({ error: 'เกิดข้อผิดพลาดในการลบ' }));
         toastr.error(data.error || 'เกิดข้อผิดพลาดในการลบ');
       }
     } catch (error) {

@@ -239,7 +239,7 @@ export default function DepartmentsPage() {
         method: 'DELETE',
       });
       if (!res.ok) {
-        const data = await res.json();
+        const data = await res.json().catch(() => ({ error: 'Failed to delete' }));
         throw new Error(data.error || 'Failed to delete');
       }
       toastr.success('ลบฝ่ายสำเร็จ');

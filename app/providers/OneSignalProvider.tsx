@@ -160,15 +160,14 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  // Register device to backend when user logs in
-  useEffect(() => {
-    if (status === 'authenticated' && playerId && session?.user) {
-      console.log('🔔 OneSignal: Auto-registering device for user:', session.user.id);
-      registerDevice(playerId);
+  // Register device to backend
+  const registerDevice = useCallback(async (pid: string) => {
+    // Don't register if not authenticated
+    if (status !== 'authenticated') {
+      console.log('🔔 OneSignal: Skipping device registration (not authenticated)');
+      return;
     }
-  }, [status, playerId, session]);
 
-  const registerDevice = async (pid: string) => {
     try {
       console.log('🔔 OneSignal: Registering device:', pid);
       const res = await fetch('/api/notifications/register', {
@@ -179,12 +178,34 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
           deviceType: 'web',
         }),
       });
+      
+      // ถ้า unauthorized หรือ error ก็ไม่ต้อง parse response
+      if (!res.ok) {
+        console.warn('🔔 OneSignal: Failed to register device, status:', res.status);
+        return;
+      }
+      
+      // Check if response is JSON
+      const contentType = res.headers.get("content-type");
+      if (!contentType || !contentType.includes("application/json")) {
+        console.warn('🔔 OneSignal: Received non-JSON response:', await res.text());
+        return;
+      }
+      
       const data = await res.json();
       console.log('🔔 OneSignal: Device registered:', data);
     } catch (error) {
       console.error('🔔 OneSignal: Error registering device:', error);
     }
-  };
+  }, [status]);
+
+  // Auto-register when conditions are met
+  useEffect(() => {
+    if (status === 'authenticated' && playerId && session?.user) {
+      console.log('🔔 OneSignal: Auto-registering device for user:', session.user.id);
+      registerDevice(playerId);
+    }
+  }, [status, playerId, session, registerDevice]);
 
   const subscribe = useCallback(async () => {
     console.log('🔔 OneSignal: Subscribe called, initialized:', isInitialized);

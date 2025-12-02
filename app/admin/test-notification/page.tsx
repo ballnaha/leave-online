@@ -91,12 +91,11 @@ export default function TestNotificationPage() {
     try {
       setLoading(true);
       const res = await fetch('/api/admin/test-notification');
-      if (res.ok) {
-        const data = await res.json();
-        setDevices(data.devices || []);
-        setRecentLogs(data.recentLogs || []);
-        setConfig(data.config || { appIdConfigured: false, apiKeyConfigured: false });
-      }
+      if (!res.ok) throw new Error('Failed to fetch data');
+      const data = await res.json();
+      setDevices(data.devices || []);
+      setRecentLogs(data.recentLogs || []);
+      setConfig(data.config || { appIdConfigured: false, apiKeyConfigured: false });
     } catch (error) {
       console.error('Error fetching data:', error);
     } finally {
@@ -127,7 +126,7 @@ export default function TestNotificationPage() {
         body: JSON.stringify(formData),
       });
 
-      const data = await res.json();
+      const data = await res.json().catch(() => ({ error: 'เกิดข้อผิดพลาด' }));
 
       if (res.ok && data.success) {
         toastr.success(data.message || 'ส่งการแจ้งเตือนสำเร็จ');

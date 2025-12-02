@@ -78,11 +78,10 @@ export default function Home() {
   const fetchLeaveTypes = async () => {
     try {
       const response = await fetch('/api/leave-types');
-      if (response.ok) {
-        const data = await response.json();
-        // แสดงเฉพาะ 3 ประเภทแรก
-        setLeaveTypes(data.slice(0, 3));
-      }
+      if (!response.ok) throw new Error('Failed to fetch leave types');
+      const data = await response.json();
+      // แสดงเฉพาะ 3 ประเภทแรก
+      setLeaveTypes(data.slice(0, 3));
     } catch (error) {
       console.error('Error fetching leave types:', error);
     }
@@ -91,11 +90,10 @@ export default function Home() {
   const fetchLeaveRequests = async () => {
     try {
       const response = await fetch('/api/my-leaves');
-      if (response.ok) {
-        const data = await response.json();
-        if (data.success && data.data) {
-          setLeaveRequests(data.data);
-        }
+      if (!response.ok) throw new Error('Failed to fetch leave requests');
+      const data = await response.json();
+      if (data.success && data.data) {
+        setLeaveRequests(data.data);
       }
     } catch (error) {
       console.error('Error fetching leave requests:', error);

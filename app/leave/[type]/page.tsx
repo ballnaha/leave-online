@@ -174,22 +174,20 @@ export default function LeaveFormPage() {
             try {
                 // ดึงข้อมูลผู้ใช้
                 const profileRes = await fetch('/api/profile');
-                if (profileRes.ok) {
-                    const profileData = await profileRes.json();
-                    setUserProfile(profileData);
-                }
+                if (!profileRes.ok) throw new Error('Failed to fetch profile');
+                const profileData = await profileRes.json();
+                setUserProfile(profileData);
 
                 // ดึงข้อมูลประเภทการลา
                 const leaveTypesRes = await fetch('/api/leave-types');
-                if (leaveTypesRes.ok) {
-                    const leaveTypesData = await leaveTypesRes.json();
-                    const selectedType = leaveTypesData.find((lt: LeaveTypeData) => lt.code === leaveCode);
-                    if (selectedType) {
-                        setLeaveType(selectedType);
-                    } else {
-                        toastr.error('ไม่พบประเภทการลาที่เลือก');
-                        router.push('/leave');
-                    }
+                if (!leaveTypesRes.ok) throw new Error('Failed to fetch leave types');
+                const leaveTypesData = await leaveTypesRes.json();
+                const selectedType = leaveTypesData.find((lt: LeaveTypeData) => lt.code === leaveCode);
+                if (selectedType) {
+                    setLeaveType(selectedType);
+                } else {
+                    toastr.error('ไม่พบประเภทการลาที่เลือก');
+                    router.push('/leave');
                 }
             } catch (error) {
                 console.error('Error fetching data:', error);

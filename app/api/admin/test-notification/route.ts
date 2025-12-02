@@ -108,18 +108,30 @@ export async function POST(request: NextRequest) {
         message: `ส่งการแจ้งเตือนไปยัง ${playerIds.length} อุปกรณ์สำเร็จ`,
       });
     } else {
+      // Extract detailed error message
+      let errorMessage = 'เกิดข้อผิดพลาดในการส่ง';
+      if (result.errors) {
+        if (Array.isArray(result.errors)) {
+          errorMessage = result.errors.map((e: any) => typeof e === 'string' ? e : JSON.stringify(e)).join(', ');
+        } else if (typeof result.errors === 'object') {
+          errorMessage = JSON.stringify(result.errors);
+        } else {
+          errorMessage = String(result.errors);
+        }
+      }
+
       return NextResponse.json(
         { 
-          error: result.errors?.[0] || 'เกิดข้อผิดพลาดในการส่ง', 
+          error: errorMessage, 
           details: result 
         },
         { status: 500 }
       );
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error('Test notification error:', error);
     return NextResponse.json(
-      { error: 'เกิดข้อผิดพลาดในการส่งการแจ้งเตือน' },
+      { error: `เกิดข้อผิดพลาด: ${error.message || String(error)}` },
       { status: 500 }
     );
   }

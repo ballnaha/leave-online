@@ -187,9 +187,21 @@ export default function UserDialog({
         fetch('/api/sections'),
       ]);
 
-      if (companiesRes.ok) setCompanies(await companiesRes.json());
-      if (departmentsRes.ok) setDepartments(await departmentsRes.json());
-      if (sectionsRes.ok) setSections(await sectionsRes.json());
+      if (companiesRes.ok) {
+        setCompanies(await companiesRes.json());
+      } else {
+        console.error('Failed to fetch companies');
+      }
+      if (departmentsRes.ok) {
+        setDepartments(await departmentsRes.json());
+      } else {
+        console.error('Failed to fetch departments');
+      }
+      if (sectionsRes.ok) {
+        setSections(await sectionsRes.json());
+      } else {
+        console.error('Failed to fetch sections');
+      }
     } catch (error) {
       console.error('Error fetching options:', error);
     }
@@ -281,7 +293,7 @@ export default function UserDialog({
       });
 
       if (!res.ok) {
-        const data = await res.json();
+        const data = await res.json().catch(() => ({ error: 'เกิดข้อผิดพลาด' }));
         throw new Error(data.error || 'เกิดข้อผิดพลาด');
       }
 

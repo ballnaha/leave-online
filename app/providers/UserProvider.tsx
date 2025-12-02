@@ -71,8 +71,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
             }
             
             if (!res.ok) {
-                const errorData = await res.json().catch(() => ({}));
-                throw new Error(errorData.error || 'Failed to fetch user profile');
+                throw new Error('Failed to fetch user profile');
             }
             
             const data = await res.json();

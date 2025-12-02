@@ -90,13 +90,12 @@ const BottomNav: React.FC<BottomNavProps> = ({ activePage = 'home' }) => {
         isFetching = true;
         try {
             const response = await fetch('/api/leave-types');
-            if (response.ok) {
-                const data = await response.json();
-                // จำกัดแสดงแค่ 5 ประเภทแรก
-                const slicedData = data.slice(0, 5);
-                cachedLeaveTypes = slicedData;
-                setLeaveTypes(slicedData);
-            }
+            if (!response.ok) throw new Error('Failed to fetch leave types');
+            const data = await response.json();
+            // จำกัดแสดงแค่ 5 ประเภทแรก
+            const slicedData = data.slice(0, 5);
+            cachedLeaveTypes = slicedData;
+            setLeaveTypes(slicedData);
         } catch (error) {
             console.error('Error fetching leave types:', error);
         } finally {

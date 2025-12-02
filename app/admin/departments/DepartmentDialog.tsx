@@ -94,10 +94,9 @@ export default function DepartmentDialog({
   const fetchCompanies = async () => {
     try {
       const res = await fetch('/api/companies');
-      if (res.ok) {
-        const data = await res.json();
-        setCompanies(data);
-      }
+      if (!res.ok) throw new Error('Failed to fetch companies');
+      const data = await res.json();
+      setCompanies(data);
     } catch (error) {
       console.error('Error fetching companies:', error);
     }
@@ -192,7 +191,7 @@ export default function DepartmentDialog({
       });
 
       if (!res.ok) {
-        const data = await res.json();
+        const data = await res.json().catch(() => ({ error: 'เกิดข้อผิดพลาด' }));
         throw new Error(data.error || 'เกิดข้อผิดพลาด');
       }
 
