@@ -34,6 +34,7 @@ import {
 import BottomNav from '../components/BottomNav';
 import { signOut, useSession } from 'next-auth/react';
 import { useToastr } from '@/app/components/Toastr';
+import { usePWA } from '../providers/PWAProvider';
 
 
 
@@ -72,6 +73,7 @@ export default function ProfilePage() {
     const router = useRouter();
     const toastr = useToastr();
     const { isSupported: pushSupported, isSubscribed: pushSubscribed, isInitialized: pushInitialized, permission: pushPermission, subscribe: pushSubscribe, unsubscribe: pushUnsubscribe } = useOneSignal();
+    const { isStandalone, deferredPrompt, installPWA, isIOS } = usePWA();
     const [pushLoading, setPushLoading] = useState(false);
     const [darkMode, setDarkMode] = useState(false);
     const [emailNotif, setEmailNotif] = useState(true);
@@ -308,7 +310,7 @@ export default function ProfilePage() {
             title: 'ช่วยเหลือและข้อมูล',
             items: [
                 { icon: MessageQuestion, label: 'ศูนย์ช่วยเหลือ', color: '#00ACC1', link: '#' },
-                
+                ...(!isStandalone ? [{ icon: Mobile, label: 'ติดตั้งแอปพลิเคชัน', color: '#808080', link: '#install' }] : []),
             ],
         },
     ];
@@ -695,6 +697,16 @@ export default function ProfilePage() {
                                                     onClick={() => {
                                                         if (item.label === 'ภาษา') {
                                                             setOpenLanguage(true);
+                                                            return;
+                                                        }
+                                                        if (item.link === '#install') {
+                                                            if (isIOS) {
+                                                                toastr.info('กดปุ่ม แชร์ (Share) แล้วเลือก "เพิ่มในหน้าจอโฮม"');
+                                                            } else if (deferredPrompt) {
+                                                                installPWA();
+                                                            } else {
+                                                                toastr.info('ติดตั้งแล้ว หรือเบราว์เซอร์ไม่รองรับ');
+                                                            }
                                                             return;
                                                         }
                                                         if (item.link && item.link !== '#') {

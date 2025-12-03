@@ -37,9 +37,10 @@ const defaultImages: SlideImage[] = [
 interface ImageSliderProps {
     images?: SlideImage[];
     aspectRatio?: string; // เช่น '16/9', '4/3', '21/9'
+    onEmpty?: () => void; // callback เมื่อไม่มี banner
 }
 
-const ImageSlider: React.FC<ImageSliderProps> = ({ images, aspectRatio = '16/9' }) => {
+const ImageSlider: React.FC<ImageSliderProps> = ({ images, aspectRatio = '16/9', onEmpty }) => {
     const [sliderImages, setSliderImages] = useState<SlideImage[]>(images || []);
     const [loading, setLoading] = useState(!images || images.length === 0);
 
@@ -97,6 +98,7 @@ const ImageSlider: React.FC<ImageSliderProps> = ({ images, aspectRatio = '16/9' 
     }
 
     if (sliderImages.length === 0) {
+        onEmpty?.();
         return null;
     }
 

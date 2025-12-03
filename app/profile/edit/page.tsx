@@ -781,7 +781,7 @@ export default function EditProfilePage() {
             </Box>
 
             {/* Content */}
-            <Box sx={{ p: 2, pb: 12 }}>
+            <Box sx={{ p: 2, pb: 'calc(env(safe-area-inset-bottom, 0px) + 96px)' }}>
                 {showLoading ? (
                     <>
                         {/* Avatar Skeleton */}
@@ -1265,7 +1265,8 @@ export default function EditProfilePage() {
                     borderTop: '1px solid',
                     borderColor: 'grey.200',
                     px: 2,
-                    py: 2,
+                    pt: 2,
+                    pb: 'calc(env(safe-area-inset-bottom, 0px) + 16px)',
                     boxShadow: '0 -4px 20px rgba(0,0,0,0.08)',
                     zIndex: 100,
                 }}

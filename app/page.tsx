@@ -67,6 +67,7 @@ export default function Home() {
   const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>([]);
   const [selectedLeave, setSelectedLeave] = useState<LeaveRequest | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [hasBanners, setHasBanners] = useState(true);
 
   useEffect(() => {
     setMounted(true);
@@ -255,37 +256,39 @@ export default function Home() {
           </Box>
         </Box>
 
-        {/* Banner Section */}
-        <Box sx={{ mb: 3 }}>
-          {showLoading ? (
-            <>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5 }}>
-                <Skeleton variant="text" width={120} height={28} />
-                <Skeleton variant="text" width={60} height={24} />
-              </Box>
-              <Box sx={{ display: 'flex', gap: 1.5, mx: -2.5, px: 2.5 }}>
-                <Skeleton variant="rounded" sx={{ width: '60%', height: 120, borderRadius: 2, flexShrink: 0 }} />
-                <Skeleton variant="rounded" sx={{ width: '40%', height: 120, borderRadius: 2, flexShrink: 0 }} />
-              </Box>
-            </>
-          ) : (
-            <>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5 }}>
-                <Typography variant="h6" sx={{ fontWeight: 'bold', color: 'text.primary' }}>
-                  {t('home_featured', 'ประชาสัมพันธ์')}
-                </Typography>
-                <Button 
-                  size="small" 
-                  sx={{ fontWeight: 'medium' }}
-                  onClick={() => {}} // No action for now or link to all banners
-                >
-                  {t('home_more', 'เพิ่มเติม')}
-                </Button>
-              </Box>
-              <ImageSlider aspectRatio="16/9" />
-            </>
-          )}
-        </Box>
+        {/* Banner Section - ซ่อนหัวข้อถ้าไม่มี banner */}
+        {(showLoading || hasBanners) && (
+          <Box sx={{ mb: 3 }}>
+            {showLoading ? (
+              <>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5 }}>
+                  <Skeleton variant="text" width={120} height={28} />
+                  <Skeleton variant="text" width={60} height={24} />
+                </Box>
+                <Box sx={{ display: 'flex', gap: 1.5, mx: -2.5, px: 2.5 }}>
+                  <Skeleton variant="rounded" sx={{ width: '60%', height: 120, borderRadius: 2, flexShrink: 0 }} />
+                  <Skeleton variant="rounded" sx={{ width: '40%', height: 120, borderRadius: 2, flexShrink: 0 }} />
+                </Box>
+              </>
+            ) : (
+              <>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5 }}>
+                  <Typography variant="h6" sx={{ fontWeight: 'bold', color: 'text.primary' }}>
+                    {t('home_featured', 'ประชาสัมพันธ์')}
+                  </Typography>
+                  <Button 
+                    size="small" 
+                    sx={{ fontWeight: 'medium' }}
+                    onClick={() => {}} // No action for now or link to all banners
+                  >
+                    {t('home_more', 'เพิ่มเติม')}
+                  </Button>
+                </Box>
+                <ImageSlider aspectRatio="16/9" onEmpty={() => setHasBanners(false)} />
+              </>
+            )}
+          </Box>
+        )}
 
 
         {/* Recent Requests Section */}
