@@ -11,8 +11,8 @@ const ONESIGNAL_REST_API_KEY = process.env.ONESIGNAL_REST_API_KEY || '';
 const ONESIGNAL_API_URL = 'https://onesignal.com/api/v1/notifications';
 
 export interface NotificationPayload {
-  title: string;
-  message: string;
+  title: string | Record<string, string>;
+  message: string | Record<string, string>;
   data?: Record<string, any>;
   url?: string;
 }
@@ -40,6 +40,14 @@ export async function sendPushNotification(
   }
 
   try {
+    const headings = typeof payload.title === 'string' 
+      ? { en: payload.title, th: payload.title } 
+      : payload.title;
+      
+    const contents = typeof payload.message === 'string'
+      ? { en: payload.message, th: payload.message }
+      : payload.message;
+
     const response = await fetch(ONESIGNAL_API_URL, {
       method: 'POST',
       headers: {
@@ -49,8 +57,8 @@ export async function sendPushNotification(
       body: JSON.stringify({
         app_id: ONESIGNAL_APP_ID,
         include_player_ids: playerIds,
-        headings: { en: payload.title, th: payload.title },
-        contents: { en: payload.message, th: payload.message },
+        headings: headings,
+        contents: contents,
         data: payload.data || {},
         url: payload.url,
       }),
@@ -107,8 +115,8 @@ export async function notifyUser(
   const logData = {
     userId,
     type,
-    title: payload.title,
-    message: payload.message,
+    title: typeof payload.title === 'string' ? payload.title : (payload.title['th'] || payload.title['en'] || ''),
+    message: typeof payload.message === 'string' ? payload.message : (payload.message['th'] || payload.message['en'] || ''),
     data: payload.data || {},
     status: 'pending' as const,
   };
@@ -254,8 +262,16 @@ export async function notifyLeaveSubmitted(
   leaveType: string
 ): Promise<NotificationResult> {
   return notifyUser(userId, 'submitted', {
-    title: '✅ ส่งใบลาสำเร็จ',
-    message: `คำขอ${leaveType}ของคุณถูกส่งแล้วและกำลังรอการอนุมัติ`,
+    title: {
+      en: '✅ Leave Submitted',
+      th: '✅ ส่งใบลาสำเร็จ',
+      my: '✅ ခွင့်တင်ပြပြီး'
+    },
+    message: {
+      en: `Your ${leaveType} request has been submitted and is pending approval`,
+      th: `คำขอ${leaveType}ของคุณถูกส่งแล้วและกำลังรอการอนุมัติ`,
+      my: `သင်၏ ${leaveType} တောင်းဆိုမှုကို တင်ပြပြီး အတည်ပြုချက်စောင့်ဆိုင်းနေသည်`
+    },
     data: {
       type: 'submitted',
       leaveRequestId,
