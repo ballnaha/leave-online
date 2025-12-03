@@ -1,6 +1,7 @@
 'use client';
 import React, { useEffect, useState } from 'react';
 import { Box, Typography, Skeleton } from '@mui/material';
+import Image from 'next/image';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Autoplay } from 'swiper/modules';
 import 'swiper/css';
@@ -138,13 +139,13 @@ const ImageSlider: React.FC<ImageSliderProps> = ({ images, aspectRatio = '16/9',
                                 boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
                             }}
                         >
-                            <Box
-                                component="img"
+                            <Image
                                 src={image.src}
                                 alt={image.alt}
-                                sx={{
-                                    width: '100%',
-                                    height: '100%',
+                                fill
+                                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                                priority={true}
+                                style={{
                                     objectFit: 'cover',
                                 }}
                             />

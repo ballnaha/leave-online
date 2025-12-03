@@ -48,6 +48,37 @@ function formatDateTimeLocal(dateString?: string): string {
   return localDate.toISOString().slice(0, 16);
 }
 
+// Resize image function
+const resizeImage = (file: File, maxWidth: number = 1200, quality: number = 0.8): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = (event) => {
+      const img = new window.Image();
+      img.src = event.target?.result as string;
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+
+        if (width > maxWidth) {
+          height = (height * maxWidth) / width;
+          width = maxWidth;
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx?.drawImage(img, 0, 0, width, height);
+        
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      };
+      img.onerror = (error) => reject(error);
+    };
+    reader.onerror = (error) => reject(error);
+  });
+};
+
 export default function BannerDialog({
   open,
   onClose,
@@ -133,29 +164,26 @@ export default function BannerDialog({
     setErrors((prev) => ({ ...prev, imageUrl: '' }));
 
     try {
-      // Convert to base64
-      const reader = new FileReader();
-      reader.onload = async (event) => {
-        const base64 = event.target?.result as string;
+      // Resize and convert to base64
+      const base64 = await resizeImage(file, 1200, 0.8);
         
-        // Upload to server
-        const res = await fetch('/api/upload', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ image: base64, type: 'banner' }),
-        });
+      // Upload to server
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ image: base64, type: 'banner' }),
+      });
 
-        if (!res.ok) {
-          const data = await res.json();
-          throw new Error(data.error || 'อัพโหลดรูปภาพไม่สำเร็จ');
-        }
-
+      if (!res.ok) {
         const data = await res.json();
-        setFormData((prev) => ({ ...prev, imageUrl: data.path }));
-        setPreviewImage(data.path);
-        setUploadingImage(false);
-      };
-      reader.readAsDataURL(file);
+        throw new Error(data.error || 'อัพโหลดรูปภาพไม่สำเร็จ');
+      }
+
+      const data = await res.json();
+      setFormData((prev) => ({ ...prev, imageUrl: data.path }));
+      setPreviewImage(data.path);
+      setUploadingImage(false);
+
     } catch (error: any) {
       setErrors((prev) => ({ ...prev, imageUrl: error.message }));
       setUploadingImage(false);

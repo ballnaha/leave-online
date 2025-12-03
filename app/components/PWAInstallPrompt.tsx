@@ -141,7 +141,7 @@ export default function PWAInstallPrompt() {
                 open={openIOSInstructions} 
                 onClose={() => setOpenIOSInstructions(false)}
                 PaperProps={{
-                    sx: { borderRadius: 3, maxWidth: 340, mx: 2 }
+                    sx: { borderRadius: 1, maxWidth: 340, mx: 2 }
                 }}
             >
                 <DialogTitle sx={{ textAlign: 'center', fontWeight: 'bold', pb: 1 }}>
