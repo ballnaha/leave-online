@@ -10,6 +10,37 @@ const ONESIGNAL_APP_ID = process.env.ONESIGNAL_APP_ID || '';
 const ONESIGNAL_REST_API_KEY = process.env.ONESIGNAL_REST_API_KEY || '';
 const ONESIGNAL_API_URL = 'https://onesignal.com/api/v1/notifications';
 
+// Leave type translations
+const leaveTypeTranslations: Record<string, { th: string; en: string; my: string }> = {
+  sick: { th: 'ลาป่วย', en: 'Sick Leave', my: 'ဆေးခွင့်' },
+  personal: { th: 'ลากิจ', en: 'Personal Leave', my: 'ရှောင်တခင်ခွင့်' },
+  vacation: { th: 'ลาพักร้อน', en: 'Vacation Leave', my: 'အပန်းဖြေခွင့်' },
+  annual: { th: 'ลาพักร้อน', en: 'Annual Leave', my: 'လုပ်သက်ခွင့်' },
+  maternity: { th: 'ลาคลอด', en: 'Maternity Leave', my: 'မီးဖွားခွင့်' },
+  ordination: { th: 'ลาอุปสมบท', en: 'Ordination Leave', my: 'ရဟန်းခံခွင့်' },
+  military: { th: 'ลาเกณฑ์ทหาร', en: 'Military Service Leave', my: 'စစ်မှုထမ်းခွင့်' },
+  marriage: { th: 'ลาแต่งงาน', en: 'Marriage Leave', my: 'မင်္ဂလာဆောင်ခွင့်' },
+  funeral: { th: 'ลาฌาปนกิจ', en: 'Funeral Leave', my: 'နာရေးခွင့်' },
+  paternity: { th: 'ลาดูแลภรรยาคลอด', en: 'Paternity Leave', my: 'ဖခင်ခွင့်' },
+  sterilization: { th: 'ลาทำหมัน', en: 'Sterilization Leave', my: 'သားဆက်ခြားခွင့်' },
+  business: { th: 'ลาติดต่อราชการ', en: 'Business Leave', my: 'အလုပ်ကိစ္စခွင့်' },
+  unpaid: { th: 'ลาไม่รับค่าจ้าง', en: 'Unpaid Leave', my: 'လစာမဲ့ခွင့်' },
+  other: { th: 'ลาอื่นๆ', en: 'Other Leave', my: 'အခြားခွင့်' },
+};
+
+/**
+ * แปลงชื่อประเภทการลาตามภาษา
+ */
+function translateLeaveType(leaveType: string, locale: 'th' | 'en' | 'my'): string {
+  const key = leaveType.toLowerCase();
+  const translation = leaveTypeTranslations[key];
+  if (translation) {
+    return translation[locale];
+  }
+  // ถ้าไม่พบในรายการ ให้ใช้ค่าเดิม
+  return leaveType;
+}
+
 export interface NotificationPayload {
   title: string | Record<string, string>;
   message: string | Record<string, string>;
@@ -261,6 +292,10 @@ export async function notifyLeaveSubmitted(
   leaveRequestId: number,
   leaveType: string
 ): Promise<NotificationResult> {
+  const thLeaveType = translateLeaveType(leaveType, 'th');
+  const enLeaveType = translateLeaveType(leaveType, 'en');
+  const myLeaveType = translateLeaveType(leaveType, 'my');
+
   return notifyUser(userId, 'submitted', {
     title: {
       en: '✅ Leave Submitted',
@@ -268,9 +303,9 @@ export async function notifyLeaveSubmitted(
       my: '✅ ခွင့်တင်ပြပြီး'
     },
     message: {
-      en: `Your ${leaveType} request has been submitted and is pending approval`,
-      th: `คำขอ${leaveType}ของคุณถูกส่งแล้วและกำลังรอการอนุมัติ`,
-      my: `သင်၏ ${leaveType} တောင်းဆိုမှုကို တင်ပြပြီး အတည်ပြုချက်စောင့်ဆိုင်းနေသည်`
+      en: `Your ${enLeaveType} request has been submitted and is pending approval`,
+      th: `คำขอ${thLeaveType}ของคุณถูกส่งแล้วและกำลังรอการอนุมัติ`,
+      my: `သင်၏ ${myLeaveType} တောင်းဆိုမှုကို တင်ပြပြီး အတည်ပြုချက်စောင့်ဆိုင်းနေသည်`
     },
     data: {
       type: 'submitted',
