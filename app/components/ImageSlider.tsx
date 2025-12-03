@@ -65,7 +65,7 @@ const ImageSlider: React.FC<ImageSliderProps> = ({ images, aspectRatio = '16/9',
                             src: banner.imageUrl,
                             alt: banner.title,
                             linkUrl: banner.linkUrl,
-                            // date: banner.updatedAt // สามารถใส่วันที่ได้ถ้าต้องการ
+                            date: banner.createdAt || banner.updatedAt, // ใช้วันที่ upload
                         }));
                         setSliderImages(mappedImages);
                     } else {
@@ -102,6 +102,9 @@ const ImageSlider: React.FC<ImageSliderProps> = ({ images, aspectRatio = '16/9',
         return null;
     }
 
+    // ถ้ามีแค่ 1 รูป ให้แสดงเต็มความกว้าง
+    const isSingleImage = sliderImages.length === 1;
+
     return (
         <Box
             sx={{
@@ -113,8 +116,8 @@ const ImageSlider: React.FC<ImageSliderProps> = ({ images, aspectRatio = '16/9',
             <Swiper
                 modules={[Autoplay]}
                 spaceBetween={12}
-                slidesPerView={1.5}
-                autoplay={{
+                slidesPerView={isSingleImage ? 1 : 1.5}
+                autoplay={isSingleImage ? false : {
                     delay: 6000,
                     disableOnInteraction: false,
                 }}
@@ -145,32 +148,34 @@ const ImageSlider: React.FC<ImageSliderProps> = ({ images, aspectRatio = '16/9',
                                     objectFit: 'cover',
                                 }}
                             />
-                            {/* Badge แสดงวันที่ */}
+                            {/* Badge แสดงวันที่ upload */}
                             {image.date && (
                                 <Box
                                     sx={{
                                         position: 'absolute',
-                                        top: 8,
-                                        right: 8,
+                                        opacity: 0.85,
+                                        bottom: 10,
+                                        left: 10,
                                         zIndex: 2,
-                                        bgcolor: 'rgba(0, 0, 0, 0.2)',
-                                        color: 'white',
-                                        px: 1.5,
+                                        bgcolor: 'rgba(255, 255, 255, 0.1)',
+                                        color: 'text.secondary',
+                                        px: 1,
                                         py: 0.5,
-                                        borderRadius: 1,
-                                        backdropFilter: 'blur(1px)',
-                                        boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+                                        borderRadius: 10,
+                                        backdropFilter: 'blur(4px)',
+                                        boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
                                     }}
                                 >
                                     <Typography
                                         variant="caption"
                                         sx={{
-                                            fontWeight: 500,
+                                            fontWeight: 400,
                                             fontSize: '0.7rem',
                                             letterSpacing: 0.3,
+                                            color: '#fff',
                                         }}
                                     >
-                                        📅 {formatThaiDate(image.date)}
+                                        {formatThaiDate(image.date)}
                                     </Typography>
                                 </Box>
                             )}

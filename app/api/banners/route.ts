@@ -42,6 +42,7 @@ export async function GET(request: NextRequest) {
         description: true,
         imageUrl: true,
         linkUrl: true,
+        createdAt: true,
       },
     });
 

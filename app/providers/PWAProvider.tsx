@@ -42,12 +42,21 @@ export default function PWAProvider({ children }: { children: React.ReactNode })
         const isIosDevice = /iphone|ipad|ipod/.test(userAgent);
         setIsIOS(isIosDevice);
 
+        // ตรวจสอบว่าเคยติดตั้งแล้วถอนออกหรือไม่
+        const wasInstalled = localStorage.getItem('pwa_was_installed');
+        if (wasInstalled && !isStandaloneMode) {
+            // ถ้าเคยติดตั้งแต่ตอนนี้ไม่ได้อยู่ใน standalone = ถูกถอนออกแล้ว
+            // ลบ dismissed state เพื่อให้แสดง prompt ใหม่ได้
+            localStorage.removeItem('pwa_prompt_dismissed_at');
+            localStorage.removeItem('pwa_was_installed');
+        }
+
         const shouldShowPrompt = () => {
             const dismissedAt = localStorage.getItem('pwa_prompt_dismissed_at');
             if (!dismissedAt) return true;
             
             const daysSinceDismissal = (Date.now() - parseInt(dismissedAt)) / (1000 * 60 * 60 * 24);
-            return daysSinceDismissal > 7; // Show again after 7 days
+            return daysSinceDismissal > 1; // Show again after 1 day (reduced from 7)
         };
 
         // For iOS, show prompt if not standalone and not dismissed recently
@@ -80,6 +89,9 @@ export default function PWAProvider({ children }: { children: React.ReactNode })
         if (outcome === 'accepted') {
             setDeferredPrompt(null);
             setIsInstallPromptVisible(false);
+            // บันทึกว่าเคยติดตั้งแล้ว
+            localStorage.setItem('pwa_was_installed', 'true');
+            localStorage.removeItem('pwa_prompt_dismissed_at');
         }
     };
 
