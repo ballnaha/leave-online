@@ -1,6 +1,6 @@
 'use client';
 import React, { useEffect, useState, useCallback } from 'react';
-import { Box, Typography, Avatar, Paper, IconButton, Chip, Switch, Divider, Dialog, DialogTitle, List, ListItemButton, ListItemText, Skeleton, CircularProgress } from '@mui/material';
+import { Box, Typography, Avatar, Paper, IconButton, Chip, Switch, Divider, Dialog, DialogTitle, DialogContent, List, ListItemButton, ListItemText, Skeleton, CircularProgress, Button, Stack } from '@mui/material';
 import { localeLabel, useLocale } from '../providers/LocaleProvider';
 import { useRouter } from 'next/navigation';
 import type { UserRole } from '@/types/user-role';
@@ -31,6 +31,7 @@ import {
     HashtagSquare,
     Icon as IconsaxIcon,
 } from 'iconsax-react';
+import { Share, PlusSquare } from 'lucide-react';
 import BottomNav from '../components/BottomNav';
 import { signOut, useSession } from 'next-auth/react';
 import { useToastr } from '@/app/components/Toastr';
@@ -78,6 +79,7 @@ export default function ProfilePage() {
     const [darkMode, setDarkMode] = useState(false);
     const [emailNotif, setEmailNotif] = useState(true);
     const [openLanguage, setOpenLanguage] = useState(false);
+    const [openIOSInstructions, setOpenIOSInstructions] = useState(false);
     const { user: profile, loading: userLoading } = useUser();
     const [mounted, setMounted] = useState(false);
     const [isLoggingOut, setIsLoggingOut] = useState(false);
@@ -701,7 +703,7 @@ export default function ProfilePage() {
                                                         }
                                                         if (item.link === '#install') {
                                                             if (isIOS) {
-                                                                toastr.info('กดปุ่ม แชร์ (Share) แล้วเลือก "เพิ่มในหน้าจอโฮม"');
+                                                                setOpenIOSInstructions(true);
                                                             } else if (deferredPrompt) {
                                                                 installPWA();
                                                             } else {
@@ -865,6 +867,99 @@ export default function ProfilePage() {
                         </ListItemButton>
                     ))}
                 </List>
+            </Dialog>
+
+            {/* iOS Instructions Dialog */}
+            <Dialog 
+                open={openIOSInstructions} 
+                onClose={() => setOpenIOSInstructions(false)}
+                PaperProps={{
+                    sx: { borderRadius: 3, maxWidth: 340, mx: 2 }
+                }}
+            >
+                <DialogTitle sx={{ textAlign: 'center', fontWeight: 'bold', pb: 1 }}>
+                    วิธีติดตั้งบน iPhone/iPad
+                </DialogTitle>
+                <DialogContent>
+                    <Stack spacing={2.5}>
+                        <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2 }}>
+                            <Box sx={{ 
+                                p: 1.5, 
+                                bgcolor: '#007AFF15', 
+                                borderRadius: 2,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                minWidth: 44
+                            }}>
+                                <Share size={24} color="#007AFF" />
+                            </Box>
+                            <Box>
+                                <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                    ขั้นตอนที่ 1
+                                </Typography>
+                                <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                                    กดปุ่ม <b>แชร์</b> (Share) ที่อยู่ด้านล่างของ Safari
+                                </Typography>
+                            </Box>
+                        </Box>
+                        <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2 }}>
+                            <Box sx={{ 
+                                p: 1.5, 
+                                bgcolor: '#34C75915', 
+                                borderRadius: 2,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                minWidth: 44
+                            }}>
+                                <PlusSquare size={24} color="#34C759" />
+                            </Box>
+                            <Box>
+                                <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                    ขั้นตอนที่ 2
+                                </Typography>
+                                <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                                    เลื่อนหา แล้วกด <b>&quot;เพิ่มในหน้าจอโฮม&quot;</b> (Add to Home Screen)
+                                </Typography>
+                            </Box>
+                        </Box>
+                        <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2 }}>
+                            <Box sx={{ 
+                                p: 1.5, 
+                                bgcolor: '#FF950015', 
+                                borderRadius: 2,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                minWidth: 44
+                            }}>
+                                <Typography sx={{ fontSize: 20 }}>✓</Typography>
+                            </Box>
+                            <Box>
+                                <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                    ขั้นตอนที่ 3
+                                </Typography>
+                                <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                                    กด <b>&quot;เพิ่ม&quot;</b> (Add) ที่มุมขวาบน
+                                </Typography>
+                            </Box>
+                        </Box>
+                    </Stack>
+                    <Typography variant="caption" sx={{ display: 'block', mt: 2, color: 'text.secondary', textAlign: 'center' }}>
+                        หมายเหตุ: ต้องเปิดใน Safari เท่านั้น
+                    </Typography>
+                </DialogContent>
+                <Box sx={{ p: 2, pt: 0 }}>
+                    <Button 
+                        fullWidth 
+                        variant="contained" 
+                        onClick={() => setOpenIOSInstructions(false)}
+                        sx={{ borderRadius: 2, bgcolor: '#007AFF', py: 1.2 }}
+                    >
+                        เข้าใจแล้ว
+                    </Button>
+                </Box>
             </Dialog>
 
             {/* Bottom Navigation */}

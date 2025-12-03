@@ -33,9 +33,15 @@ export default function RootLayout({
   return (
     <html lang="en" style={{ overscrollBehavior: 'none' }}>
       <head>
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
         <meta name="theme-color" content="#667eea" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <meta name="apple-mobile-web-app-title" content="Leave Online" />
+        <link rel="apple-touch-icon" href="/images/apple-touch-icon.png" />
+        <link rel="apple-touch-icon" sizes="152x152" href="/images/apple-touch-icon-152.png" />
+        <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-180.png" />
+        <link rel="apple-touch-icon" sizes="167x167" href="/images/apple-touch-icon-167.png" />
       </head>
       <body className={`${sarabun.variable} pre-locale`} style={{ overscrollBehavior: 'none' }}>
         {/* Prevent language flicker and fade-in once locale applied */}

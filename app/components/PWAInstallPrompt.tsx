@@ -141,40 +141,90 @@ export default function PWAInstallPrompt() {
                 open={openIOSInstructions} 
                 onClose={() => setOpenIOSInstructions(false)}
                 PaperProps={{
-                    sx: { borderRadius: 3, maxWidth: 320 }
+                    sx: { borderRadius: 3, maxWidth: 340, mx: 2 }
                 }}
             >
                 <DialogTitle sx={{ textAlign: 'center', fontWeight: 'bold', pb: 1 }}>
-                    Install on iOS
+                    วิธีติดตั้งบน iPhone/iPad
                 </DialogTitle>
                 <DialogContent>
-                    <Stack spacing={2}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                            <Box sx={{ p: 1, bgcolor: '#f5f5f5', borderRadius: '50%' }}>
+                    <Stack spacing={2.5}>
+                        <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2 }}>
+                            <Box sx={{ 
+                                p: 1.5, 
+                                bgcolor: '#007AFF15', 
+                                borderRadius: 2,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                minWidth: 44
+                            }}>
                                 <Share size={24} color="#007AFF" />
                             </Box>
-                            <Typography variant="body2">
-                                1. Tap the <b>Share</b> button in the menu bar.
-                            </Typography>
-                        </Box>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                            <Box sx={{ p: 1, bgcolor: '#f5f5f5', borderRadius: '50%' }}>
-                                <PlusSquare size={24} color="#000" />
+                            <Box>
+                                <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                    ขั้นตอนที่ 1
+                                </Typography>
+                                <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                                    กดปุ่ม <b>แชร์</b> (Share) ที่อยู่ด้านล่างของ Safari
+                                </Typography>
                             </Box>
-                            <Typography variant="body2">
-                                2. Scroll down and select <b>Add to Home Screen</b>.
-                            </Typography>
+                        </Box>
+                        <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2 }}>
+                            <Box sx={{ 
+                                p: 1.5, 
+                                bgcolor: '#34C75915', 
+                                borderRadius: 2,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                minWidth: 44
+                            }}>
+                                <PlusSquare size={24} color="#34C759" />
+                            </Box>
+                            <Box>
+                                <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                    ขั้นตอนที่ 2
+                                </Typography>
+                                <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                                    เลื่อนหา แล้วกด <b>&quot;เพิ่มในหน้าจอโฮม&quot;</b> (Add to Home Screen)
+                                </Typography>
+                            </Box>
+                        </Box>
+                        <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2 }}>
+                            <Box sx={{ 
+                                p: 1.5, 
+                                bgcolor: '#FF950015', 
+                                borderRadius: 2,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                minWidth: 44
+                            }}>
+                                <Typography sx={{ fontSize: 20 }}>✓</Typography>
+                            </Box>
+                            <Box>
+                                <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                    ขั้นตอนที่ 3
+                                </Typography>
+                                <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                                    กด <b>&quot;เพิ่ม&quot;</b> (Add) ที่มุมขวาบน
+                                </Typography>
+                            </Box>
                         </Box>
                     </Stack>
+                    <Typography variant="caption" sx={{ display: 'block', mt: 2, color: 'text.secondary', textAlign: 'center' }}>
+                        หมายเหตุ: ต้องเปิดใน Safari เท่านั้น
+                    </Typography>
                 </DialogContent>
                 <Box sx={{ p: 2, pt: 0 }}>
                     <Button 
                         fullWidth 
                         variant="contained" 
                         onClick={() => setOpenIOSInstructions(false)}
-                        sx={{ borderRadius: 2, bgcolor: '#007AFF' }}
+                        sx={{ borderRadius: 2, bgcolor: '#007AFF', py: 1.2 }}
                     >
-                        Got it
+                        เข้าใจแล้ว
                     </Button>
                 </Box>
             </Dialog>
