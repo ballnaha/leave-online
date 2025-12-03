@@ -612,7 +612,7 @@ export default function EditProfilePage() {
             
             // Delay navigation to allow toastr to show
             setTimeout(() => {
-                router.back();
+                router.push('/profile');
             }, 800);
 
         } catch (err) {
@@ -734,8 +734,7 @@ export default function EditProfilePage() {
             <Box
                 sx={{
                     background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                    pt: 3,
-                    pb: 4,
+                    py: 2,
                     px: 2,
                     position: 'relative',
                     overflow: 'hidden',
