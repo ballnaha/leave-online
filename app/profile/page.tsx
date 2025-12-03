@@ -94,30 +94,52 @@ export default function ProfilePage() {
         setIsLoggingOut(true);
 
         try {
-            // Clear localStorage
+            // 1. Clear localStorage
             localStorage.clear();
 
-            // Clear sessionStorage
+            // 2. Clear sessionStorage
             sessionStorage.clear();
 
-            // Clear all cookies via API
+            // 3. Clear all cookies via API
             await fetch('/api/auth/logout', { method: 'POST' });
 
-            // Clear cookies on client side
+            // 4. Clear cookies on client side (all domains/paths)
             const cookies = document.cookie.split(';');
             for (let i = 0; i < cookies.length; i++) {
                 const cookie = cookies[i];
                 const eqPos = cookie.indexOf('=');
                 const name = eqPos > -1 ? cookie.substr(0, eqPos) : cookie;
-                document.cookie = name.trim() + '=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/';
+                const trimmedName = name.trim();
+                // Clear with different path variations
+                document.cookie = `${trimmedName}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/`;
+                document.cookie = `${trimmedName}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=${window.location.hostname}`;
+                document.cookie = `${trimmedName}=;expires=Thu, 01 Jan 1970 00:00:00 GMT`;
             }
 
-            // Clear cache if supported
+            // 5. Clear all caches
             if ('caches' in window) {
                 const cacheNames = await caches.keys();
                 await Promise.all(
                     cacheNames.map(cacheName => caches.delete(cacheName))
                 );
+            }
+
+            // 6. Unregister all Service Workers
+            if ('serviceWorker' in navigator) {
+                const registrations = await navigator.serviceWorker.getRegistrations();
+                await Promise.all(
+                    registrations.map(registration => registration.unregister())
+                );
+            }
+
+            // 7. Clear IndexedDB databases
+            if ('indexedDB' in window) {
+                const databases = await indexedDB.databases?.() || [];
+                databases.forEach((db: { name?: string }) => {
+                    if (db.name) {
+                        indexedDB.deleteDatabase(db.name);
+                    }
+                });
             }
 
             toastr.success('ออกจากระบบสำเร็จ');
@@ -312,7 +334,13 @@ export default function ProfilePage() {
             title: 'ช่วยเหลือและข้อมูล',
             items: [
                 { icon: MessageQuestion, label: 'ศูนย์ช่วยเหลือ', color: '#00ACC1', link: '#' },
-                ...(!isStandalone ? [{ icon: Mobile, label: 'ติดตั้งแอปพลิเคชัน', color: '#808080', link: '#install' }] : []),
+                ...(!isStandalone ? [{ 
+                    icon: Mobile, 
+                    label: 'ติดตั้งแอปพลิเคชัน', 
+                    subtitle: isIOS ? 'สำหรับ iOS' : 'สำหรับ Android',
+                    color: '#4CAF50', 
+                    link: '#install' 
+                }] : []),
             ],
         },
     ];

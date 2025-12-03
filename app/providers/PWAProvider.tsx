@@ -28,8 +28,16 @@ export default function PWAProvider({ children }: { children: React.ReactNode })
     const [isStandalone, setIsStandalone] = useState(false);
     const [isInstallPromptVisible, setIsInstallPromptVisible] = useState(false);
     const [isIOS, setIsIOS] = useState(false);
+    const [canInstall, setCanInstall] = useState(false);
 
     useEffect(() => {
+        // Register Service Worker
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/sw.js')
+                .then(registration => console.log('SW registered:', registration))
+                .catch(error => console.log('SW registration failed:', error));
+        }
+
         // Check if already in standalone mode
         const isStandaloneMode = window.matchMedia('(display-mode: standalone)').matches || 
                                (window.navigator as any).standalone || 
@@ -42,63 +50,67 @@ export default function PWAProvider({ children }: { children: React.ReactNode })
         const isIosDevice = /iphone|ipad|ipod/.test(userAgent);
         setIsIOS(isIosDevice);
 
-        // ตรวจสอบว่าเคยติดตั้งแล้วถอนออกหรือไม่
-        const wasInstalled = localStorage.getItem('pwa_was_installed');
-        if (wasInstalled && !isStandaloneMode) {
-            // ถ้าเคยติดตั้งแต่ตอนนี้ไม่ได้อยู่ใน standalone = ถูกถอนออกแล้ว
-            // ลบ dismissed state เพื่อให้แสดง prompt ใหม่ได้
-            localStorage.removeItem('pwa_prompt_dismissed_at');
-            localStorage.removeItem('pwa_was_installed');
-        }
-
-        const shouldShowPrompt = () => {
-            const dismissedAt = localStorage.getItem('pwa_prompt_dismissed_at');
-            if (!dismissedAt) return true;
-            
-            const daysSinceDismissal = (Date.now() - parseInt(dismissedAt)) / (1000 * 60 * 60 * 24);
-            return daysSinceDismissal > 1; // Show again after 1 day (reduced from 7)
-        };
-
-        // For iOS, show prompt if not standalone and not dismissed recently
-        if (isIosDevice && !isStandaloneMode && shouldShowPrompt()) {
-            setIsInstallPromptVisible(true);
+        // For iOS, show prompt if not standalone
+        if (isIosDevice && !isStandaloneMode) {
+            // Delay to ensure UI is ready
+            setTimeout(() => {
+                setIsInstallPromptVisible(true);
+            }, 1000);
         }
 
         const handleBeforeInstallPrompt = (e: any) => {
+            console.log('beforeinstallprompt event fired');
             e.preventDefault();
             setDeferredPrompt(e);
-            // Only show if not already installed and not dismissed recently
-            if (!isStandaloneMode && shouldShowPrompt()) {
+            setCanInstall(true);
+            // แสดง prompt เสมอถ้ายังไม่ได้ติดตั้ง
+            if (!isStandaloneMode) {
                 setIsInstallPromptVisible(true);
             }
         };
 
+        const handleAppInstalled = () => {
+            console.log('App was installed');
+            setDeferredPrompt(null);
+            setCanInstall(false);
+            setIsInstallPromptVisible(false);
+        };
+
         window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+        window.addEventListener('appinstalled', handleAppInstalled);
 
         return () => {
             window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+            window.removeEventListener('appinstalled', handleAppInstalled);
         };
     }, []);
 
     const installPWA = async () => {
-        if (!deferredPrompt) return;
+        console.log('installPWA called, deferredPrompt:', !!deferredPrompt);
+        if (!deferredPrompt) {
+            console.log('No deferred prompt available');
+            return;
+        }
 
-        deferredPrompt.prompt();
-        const { outcome } = await deferredPrompt.userChoice;
-        
-        if (outcome === 'accepted') {
-            setDeferredPrompt(null);
-            setIsInstallPromptVisible(false);
-            // บันทึกว่าเคยติดตั้งแล้ว
-            localStorage.setItem('pwa_was_installed', 'true');
-            localStorage.removeItem('pwa_prompt_dismissed_at');
+        try {
+            deferredPrompt.prompt();
+            const { outcome } = await deferredPrompt.userChoice;
+            console.log('User choice:', outcome);
+            
+            if (outcome === 'accepted') {
+                setDeferredPrompt(null);
+                setCanInstall(false);
+                setIsInstallPromptVisible(false);
+            }
+        } catch (error) {
+            console.error('Install error:', error);
         }
     };
 
     const showInstallPrompt = () => setIsInstallPromptVisible(true);
     const hideInstallPrompt = () => {
+        // แค่ซ่อน prompt ไม่บันทึกลง localStorage
         setIsInstallPromptVisible(false);
-        localStorage.setItem('pwa_prompt_dismissed_at', Date.now().toString());
     };
 
     return (
