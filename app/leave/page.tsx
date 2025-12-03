@@ -108,6 +108,7 @@ export default function LeavePage() {
     const [cancelling, setCancelling] = useState(false);
     const [cancelReason, setCancelReason] = useState('');
     const [searchQuery, setSearchQuery] = useState('');
+    const [selectedCalendarDate, setSelectedCalendarDate] = useState<string | null>(null);
 
     // Generate years for dropdown dynamically
     // Shows current year and all previous years from 2024 (พ.ศ. 2567)
@@ -208,8 +209,14 @@ export default function LeavePage() {
         return map;
     }, [holidays]);
 
-    const handlePrevMonth = () => setCurrentDate(currentDate.subtract(1, 'month'));
-    const handleNextMonth = () => setCurrentDate(currentDate.add(1, 'month'));
+    const handlePrevMonth = () => {
+        setCurrentDate(currentDate.subtract(1, 'month'));
+        setSelectedCalendarDate(null); // Clear filter when changing month
+    };
+    const handleNextMonth = () => {
+        setCurrentDate(currentDate.add(1, 'month'));
+        setSelectedCalendarDate(null); // Clear filter when changing month
+    };
 
     const handleYearClick = (event: React.MouseEvent<HTMLElement>) => {
         setYearAnchorEl(event.currentTarget);
@@ -221,7 +228,20 @@ export default function LeavePage() {
 
     const handleYearSelect = (year: number) => {
         setCurrentDate(currentDate.year(year));
+        setSelectedCalendarDate(null); // Clear filter when changing year
         setYearAnchorEl(null);
+    };
+
+    // Handle click on calendar date to filter leaves
+    const handleCalendarDateClick = (dateKey: string, hasLeave: boolean) => {
+        if (hasLeave) {
+            // Toggle: if same date clicked, clear filter; otherwise set filter
+            if (selectedCalendarDate === dateKey) {
+                setSelectedCalendarDate(null);
+            } else {
+                setSelectedCalendarDate(dateKey);
+            }
+        }
     };
 
     const handleSelectLeaveType = (code: string) => {
@@ -301,21 +321,32 @@ export default function LeavePage() {
         }
     };
 
-    // Filter leaves based on search query
+    // Filter leaves based on search query and selected calendar date
     const filteredLeaves = useMemo(() => {
-        if (!searchQuery.trim()) {
-            return myLeaves;
+        let filtered = myLeaves;
+        
+        // Filter by selected calendar date - show leaves that START on this date
+        if (selectedCalendarDate) {
+            filtered = filtered.filter(leave => {
+                const startDate = dayjs(leave.startDate).format('YYYY-MM-DD');
+                return startDate === selectedCalendarDate;
+            });
         }
         
-        const query = searchQuery.toLowerCase();
-        return myLeaves.filter(leave => {
-            const reasonMatch = leave.reason?.toLowerCase().includes(query);
-            const typeMatch = leave.leaveTypeInfo?.name?.toLowerCase().includes(query) || 
-                             leave.leaveType?.toLowerCase().includes(query);
-            const statusMatch = getStatusLabel(leave.status).label.toLowerCase().includes(query);
-            return reasonMatch || typeMatch || statusMatch;
-        });
-    }, [myLeaves, searchQuery]);
+        // Filter by search query
+        if (searchQuery.trim()) {
+            const query = searchQuery.toLowerCase();
+            filtered = filtered.filter(leave => {
+                const reasonMatch = leave.reason?.toLowerCase().includes(query);
+                const typeMatch = leave.leaveTypeInfo?.name?.toLowerCase().includes(query) || 
+                                 leave.leaveType?.toLowerCase().includes(query);
+                const statusMatch = getStatusLabel(leave.status).label.toLowerCase().includes(query);
+                return reasonMatch || typeMatch || statusMatch;
+            });
+        }
+        
+        return filtered;
+    }, [myLeaves, searchQuery, selectedCalendarDate]);
 
     const recentLeaves = filteredLeaves.slice(0, 10);
     const today = dayjs();
@@ -522,6 +553,7 @@ export default function LeavePage() {
                             const hasLeave = leavesOnDay.length > 0;
                             const holiday = holidaysMap[dateKey];
                             const isHoliday = !!holiday;
+                            const isSelected = selectedCalendarDate === dateKey;
 
                             // Get leave colors for this day
                             const leaveColors = leavesOnDay.map((l) => getLeaveConfig(l.leaveType || l.leaveCode || 'default').color);
@@ -530,12 +562,13 @@ export default function LeavePage() {
                             return (
                                 <Tooltip 
                                     key={dateKey}
-                                    title={isHoliday ? holiday.name : ''} 
+                                    title={isHoliday ? holiday.name : hasLeave ? t('click_to_filter', 'คลิกเพื่อดูใบลา') : ''} 
                                     arrow 
                                     placement="top"
-                                    disableHoverListener={!isHoliday}
+                                    disableHoverListener={!isHoliday && !hasLeave}
                                 >
                                 <Box
+                                    onClick={() => handleCalendarDateClick(dateKey, hasLeave)}
                                     sx={{
                                         aspectRatio: '1',
                                         display: 'flex',
@@ -544,20 +577,25 @@ export default function LeavePage() {
                                         justifyContent: 'center',
                                         borderRadius: 2.5,
                                         position: 'relative',
-                                        bgcolor: isToday 
-                                            ? '#667eea' 
-                                            : hasLeave 
-                                                ? 'white' 
-                                                : isHoliday
-                                                    ? '#FEE2E2'
-                                                    : 'transparent',
-                                        border: hasLeave && !isToday 
-                                            ? `2px solid ${primaryColor}` 
-                                            : isHoliday && !isToday
-                                                ? `2px solid #FECACA`
-                                                : 'none',
+                                        bgcolor: isSelected
+                                            ? primaryColor
+                                            : isToday 
+                                                ? '#667eea' 
+                                                : hasLeave 
+                                                    ? 'white' 
+                                                    : isHoliday
+                                                        ? '#FEE2E2'
+                                                        : 'transparent',
+                                        border: isSelected
+                                            ? `2px solid ${primaryColor}`
+                                            : hasLeave && !isToday 
+                                                ? `2px solid ${primaryColor}` 
+                                                : isHoliday && !isToday
+                                                    ? `2px solid #FECACA`
+                                                    : 'none',
                                         cursor: hasLeave ? 'pointer' : 'default',
                                         transition: 'all 0.15s ease',
+                                        boxShadow: isSelected ? `0 4px 12px ${primaryColor}60` : 'none',
                                         '&:hover': hasLeave || isToday || isHoliday
                                             ? { transform: 'scale(1.08)', boxShadow: `0 4px 12px ${hasLeave ? `${primaryColor}40` : isHoliday ? 'rgba(220,38,38,0.2)' : 'rgba(102,126,234,0.3)'}` }
                                             : {},
@@ -565,8 +603,8 @@ export default function LeavePage() {
                                 >
                                     <Typography
                                         sx={{
-                                            fontWeight: isToday || hasLeave || isHoliday ? 600 : 400,
-                                            color: isToday ? 'white' : hasLeave ? primaryColor : isHoliday ? '#DC2626' : '#475569',
+                                            fontWeight: isToday || hasLeave || isHoliday || isSelected ? 600 : 400,
+                                            color: isSelected ? 'white' : isToday ? 'white' : hasLeave ? primaryColor : isHoliday ? '#DC2626' : '#475569',
                                             fontSize: { xs: '0.8rem', sm: '0.9rem' },
                                         }}
                                     >
@@ -651,7 +689,7 @@ export default function LeavePage() {
                                 fontSize: '1rem',
                             }}
                         >
-                            {t('leave_history_title', 'ประวัติการลา')} ({currentDate.format('MMMM')} {currentDate.year() + 543})
+                            {t('leave_history_title', 'ประวัติการลา')} ({currentDate.format('MMMM')} {locale === 'th' ? currentDate.year() + 543 : currentDate.year()})
                         </Typography>
                         <Box
                             sx={{
@@ -667,6 +705,27 @@ export default function LeavePage() {
                             {filteredLeaves.length} {t('leave_items', 'รายการ')}
                         </Box>
                     </Box>
+
+                    {/* Date Filter Chip - Show when a calendar date is selected */}
+                    {selectedCalendarDate && (
+                        <Chip
+                            icon={<CalendarDays size={16} />}
+                            label={`${t('filter_date', 'กรองวันที่')}: ${dayjs(selectedCalendarDate).locale(locale).format('D MMMM')} ${locale === 'th' ? dayjs(selectedCalendarDate).year() + 543 : dayjs(selectedCalendarDate).year()}`}
+                            onDelete={() => setSelectedCalendarDate(null)}
+                            deleteIcon={<X size={16} />}
+                            sx={{
+                                mb: 2,
+                                bgcolor: '#667eea',
+                                color: 'white',
+                                fontWeight: 500,
+                                '& .MuiChip-icon': { color: 'white' },
+                                '& .MuiChip-deleteIcon': { 
+                                    color: 'white', 
+                                    '&:hover': { color: 'rgba(255,255,255,0.7)' } 
+                                },
+                            }}
+                        />
+                    )}
 
                     {/* Search Box */}
                     <TextField
