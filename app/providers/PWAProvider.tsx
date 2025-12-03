@@ -47,7 +47,11 @@ export default function PWAProvider({ children }: { children: React.ReactNode })
 
         // Detect iOS
         const userAgent = window.navigator.userAgent.toLowerCase();
-        const isIosDevice = /iphone|ipad|ipod/.test(userAgent);
+        // iPadOS 13+ requests desktop site by default (Macintosh user agent)
+        // We check for Macintosh and touch points to detect iPad
+        const isIpad = userAgent.includes('macintosh') && (navigator.maxTouchPoints > 1);
+        const isIosDevice = /iphone|ipad|ipod/.test(userAgent) || isIpad;
+        
         setIsIOS(isIosDevice);
 
         // For iOS, show prompt if not standalone
