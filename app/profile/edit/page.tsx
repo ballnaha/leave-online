@@ -734,7 +734,7 @@ export default function EditProfilePage() {
             <Box
                 sx={{
                     background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                    pt: 'calc(env(safe-area-inset-top, 0px) + 24px)',
+                    pt: 3,
                     pb: 4,
                     px: 2,
                     position: 'relative',
@@ -764,7 +764,7 @@ export default function EditProfilePage() {
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'relative', zIndex: 1 }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                         <IconButton
-                            onClick={() => router.back()}
+                            onClick={() => router.push('/profile')}
                             sx={{
                                 bgcolor: 'rgba(255, 255, 255, 0.2)',
                                 color: 'white',

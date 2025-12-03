@@ -16,6 +16,7 @@ html, body {
   overscroll-behavior: none;
   overscroll-behavior-y: none;
   -webkit-overflow-scrolling: touch;
+  min-height: 100dvh;
 }
 
 body {
