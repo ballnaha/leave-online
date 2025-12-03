@@ -48,11 +48,12 @@ import { Navigation } from 'swiper/modules';
 import type { Swiper as SwiperType } from 'swiper';
 import 'swiper/css';
 import 'swiper/css/navigation';
+import { useLocale } from '@/app/providers/LocaleProvider';
 import dayjs from 'dayjs';
 import 'dayjs/locale/th';
+import 'dayjs/locale/en';
+import 'dayjs/locale/my';
 import { LeaveRequest } from '@/types/leave';
-
-dayjs.locale('th');
 
 // Fullscreen transition for mobile
 const Transition = React.forwardRef(function Transition(
@@ -81,6 +82,7 @@ interface AttachmentViewerProps {
 
 // Fullscreen Attachment Viewer Component with Swiper
 const AttachmentViewer: React.FC<AttachmentViewerProps> = ({ open, onClose, attachments, initialIndex }) => {
+    const { t } = useLocale();
     const [currentIndex, setCurrentIndex] = useState(initialIndex);
     const swiperRef = useRef<SwiperType | null>(null);
 
@@ -193,7 +195,7 @@ const AttachmentViewer: React.FC<AttachmentViewerProps> = ({ open, onClose, atta
                                 {currentAttachment.fileName}
                             </Typography>
                             <Typography sx={{ color: 'rgba(255,255,255,0.6)', mt: 1, fontSize: '0.9rem' }}>
-                                ไม่สามารถแสดงตัวอย่างไฟล์นี้ได้
+                                {t('preview_error', 'ไม่สามารถแสดงตัวอย่างไฟล์นี้ได้')}
                             </Typography>
                             <Button
                                 component="a"
@@ -207,7 +209,7 @@ const AttachmentViewer: React.FC<AttachmentViewerProps> = ({ open, onClose, atta
                                     '&:hover': { bgcolor: '#5a6fd6' },
                                 }}
                             >
-                                ดาวน์โหลดไฟล์
+                                {t('download_file', 'ดาวน์โหลดไฟล์')}
                             </Button>
                         </Box>
                     )}
@@ -269,7 +271,7 @@ const AttachmentViewer: React.FC<AttachmentViewerProps> = ({ open, onClose, atta
                         </Typography>
                         <Typography sx={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.75rem' }}>
                             {imageAttachments.length > 1 
-                                ? `${currentIndex + 1} / ${imageAttachments.length} รูป`
+                                ? `${currentIndex + 1} / ${imageAttachments.length} ${t('image_unit', 'รูป')}`
                                 : `${((activeImageAttachment?.fileSize || 0) / 1024).toFixed(1)} KB`
                             }
                         </Typography>
@@ -395,8 +397,6 @@ const AttachmentViewer: React.FC<AttachmentViewerProps> = ({ open, onClose, atta
     );
 };
 
-dayjs.locale('th');
-
 interface LeaveDetailDrawerProps {
     open: boolean;
     onClose: () => void;
@@ -424,6 +424,7 @@ const leaveTypeConfig: Record<string, { icon: any; color: string; lightColor: st
 };
 
 const LeaveDetailDrawer: React.FC<LeaveDetailDrawerProps> = ({ open, onClose, leave, onCancel }) => {
+    const { t, locale } = useLocale();
     // State for attachment viewer
     const [viewerOpen, setViewerOpen] = useState(false);
     const [selectedAttachmentIndex, setSelectedAttachmentIndex] = useState(0);
@@ -443,22 +444,22 @@ const LeaveDetailDrawer: React.FC<LeaveDetailDrawerProps> = ({ open, onClose, le
     const LeaveIcon = config.icon;
 
     // ใช้ชื่อประเภทการลาจาก leaveTypeInfo.name (ถ้ามี) หรือ label จาก config
-    const leaveTypeName = leave?.leaveTypeInfo?.name || config.label;
+    const leaveTypeName = t(`leave_${leaveTypeCode}`, leave?.leaveTypeInfo?.name || config.label);
 
-    const startDate = leave ? dayjs(leave.startDate) : dayjs();
-    const endDate = leave ? dayjs(leave.endDate) : dayjs();
+    const startDate = leave ? dayjs(leave.startDate).locale(locale) : dayjs().locale(locale);
+    const endDate = leave ? dayjs(leave.endDate).locale(locale) : dayjs().locale(locale);
     const isSameDay = startDate.isSame(endDate, 'day');
 
     const getStatusInfo = (status: string) => {
         switch (status.toLowerCase()) {
             case 'approved':
-                return { label: 'อนุมัติแล้ว', color: '#2DCE89', bgColor: '#E6FFFA', icon: TickCircle, textColor: '#2DCE89' };
+                return { label: t('status_approved', 'อนุมัติแล้ว'), color: '#2DCE89', bgColor: '#E6FFFA', icon: TickCircle, textColor: '#2DCE89' };
             case 'pending':
-                return { label: 'รออนุมัติ', color: '#F59E0B', bgColor: '#FFFBEB', icon: Danger, textColor: '#F59E0B' };
+                return { label: t('status_pending', 'รออนุมัติ'), color: '#F59E0B', bgColor: '#FFFBEB', icon: Danger, textColor: '#F59E0B' };
             case 'rejected':
-                return { label: 'ไม่อนุมัติ', color: '#F5365C', bgColor: '#FFF0F3', icon: CloseSquare, textColor: '#F5365C' };
+                return { label: t('status_rejected', 'ไม่อนุมัติ'), color: '#F5365C', bgColor: '#FFF0F3', icon: CloseSquare, textColor: '#F5365C' };
             case 'cancelled':
-                return { label: 'ยกเลิกแล้ว', color: '#8898AA', bgColor: '#F6F9FC', icon: Forbidden2, textColor: '#8898AA' };
+                return { label: t('status_cancelled', 'ยกเลิกแล้ว'), color: '#8898AA', bgColor: '#F6F9FC', icon: Forbidden2, textColor: '#8898AA' };
             default:
                 return { label: status, color: '#8898AA', bgColor: '#F6F9FC', icon: MessageQuestion, textColor: '#8898AA' };
         }
@@ -515,11 +516,11 @@ const LeaveDetailDrawer: React.FC<LeaveDetailDrawerProps> = ({ open, onClose, le
                 >
                     <Box>
                         <Typography variant="h6" sx={{ fontWeight: 700, color: '#1E293B' }}>
-                            รายละเอียดใบลา
+                            {t('leave_details', 'รายละเอียดใบลา')}
                         </Typography>
                         {leave.leaveCode && (
                             <Typography sx={{ fontSize: '0.8rem', color: '#64748B' }}>
-                                รหัส: {leave.leaveCode}
+                                {t('leave_code', 'รหัส')}: {leave.leaveCode}
                             </Typography>
                         )}
                     </Box>
@@ -598,7 +599,7 @@ const LeaveDetailDrawer: React.FC<LeaveDetailDrawerProps> = ({ open, onClose, le
                                     }
                                 </Typography>
                                 <Typography sx={{ fontSize: '0.8rem', color: '#64748B' }}>
-                                    รวม {leave.totalDays} วัน
+                                    {t('total_days_label', 'รวม')} {leave.totalDays} {t('leave_days_unit', 'วัน')}
                                     {leave.startTime && leave.endTime && 
                                         ` (${leave.startTime} - ${leave.endTime})`
                                     }
@@ -620,7 +621,7 @@ const LeaveDetailDrawer: React.FC<LeaveDetailDrawerProps> = ({ open, onClose, le
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
                             <DocumentText size={18} color="#64748B" />
                             <Typography sx={{ fontWeight: 600, color: '#475569', fontSize: '0.9rem' }}>
-                                เหตุผลการลา
+                                {t('leave_reason', 'เหตุผลการลา')}
                             </Typography>
                         </Box>
                         <Typography sx={{ color: '#1E293B', fontSize: '0.95rem', pl: 3.5 }}>
@@ -640,7 +641,7 @@ const LeaveDetailDrawer: React.FC<LeaveDetailDrawerProps> = ({ open, onClose, le
                             }}
                         >
                             <Typography sx={{ fontWeight: 600, color: '#475569', fontSize: '0.9rem', mb: 1.5 }}>
-                                ข้อมูลติดต่อระหว่างลา
+                                {t('contact_info', 'ข้อมูลติดต่อระหว่างลา')}
                             </Typography>
                             {leave.contactPhone && (
                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
@@ -675,7 +676,7 @@ const LeaveDetailDrawer: React.FC<LeaveDetailDrawerProps> = ({ open, onClose, le
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 }}>
                                 <Paperclip2 size={18} color="#64748B" />
                                 <Typography sx={{ fontWeight: 600, color: '#475569', fontSize: '0.9rem' }}>
-                                    เอกสารแนบ ({leave.attachments.length})
+                                    {t('leave_attachments', 'เอกสารแนบ')} ({leave.attachments.length})
                                 </Typography>
                             </Box>
                             <Stack spacing={1}>
@@ -780,7 +781,7 @@ const LeaveDetailDrawer: React.FC<LeaveDetailDrawerProps> = ({ open, onClose, le
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
                                 <CloseSquare size={18} color="#DC2626" />
                                 <Typography sx={{ fontWeight: 600, color: '#DC2626', fontSize: '0.9rem' }}>
-                                    เหตุผลที่ไม่อนุมัติ
+                                    {t('reject_reason', 'เหตุผลที่ไม่อนุมัติ')}
                                 </Typography>
                             </Box>
                             <Typography sx={{ color: '#991B1B', fontSize: '0.9rem', pl: 3.5 }}>
@@ -804,17 +805,17 @@ const LeaveDetailDrawer: React.FC<LeaveDetailDrawerProps> = ({ open, onClose, le
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
                                 <Forbidden2 size={18} color="#EA580C" />
                                 <Typography sx={{ fontWeight: 600, color: '#EA580C', fontSize: '0.9rem' }}>
-                                    ยกเลิกใบลาแล้ว
+                                    {t('status_cancelled', 'ยกเลิกใบลาแล้ว')}
                                 </Typography>
                             </Box>
                             {leave.cancelReason && (
                                 <Typography sx={{ color: '#9A3412', fontSize: '0.9rem', pl: 3.5, mb: 1 }}>
-                                    <strong>เหตุผล:</strong> {leave.cancelReason}
+                                    <strong>{t('cancel_reason_label', 'เหตุผล')}:</strong> {leave.cancelReason}
                                 </Typography>
                             )}
                             {leave.cancelledAt && (
                                 <Typography sx={{ color: '#C2410C', fontSize: '0.8rem', pl: 3.5 }}>
-                                    ยกเลิกเมื่อ {dayjs(leave.cancelledAt).format('D MMMM YYYY เวลา HH:mm น.')}
+                                    {t('cancelled_at', 'ยกเลิกเมื่อ')} {dayjs(leave.cancelledAt).locale(locale).format('D MMMM YYYY HH:mm')}
                                 </Typography>
                             )}
                         </Card>
@@ -831,7 +832,7 @@ const LeaveDetailDrawer: React.FC<LeaveDetailDrawerProps> = ({ open, onClose, le
                             }}
                         >
                             <Typography sx={{ fontWeight: 600, color: '#475569', fontSize: '0.9rem', mb: 2 }}>
-                                สถานะการอนุมัติ
+                                {t('approval_status', 'สถานะการอนุมัติ')}
                             </Typography>
                             <Stack spacing={0}>
                                 {leave.approvals.map((approval, index) => {
@@ -874,7 +875,7 @@ const LeaveDetailDrawer: React.FC<LeaveDetailDrawerProps> = ({ open, onClose, le
                                             <Box sx={{ flex: 1, pb: isLast ? 0 : 2 }}>
                                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
                                                     <Typography sx={{ fontWeight: 600, color: '#1E293B', fontSize: '0.9rem' }}>
-                                                        ลำดับที่ {index + 1}
+                                                        {t('order_no', 'ลำดับที่')} {index + 1}
                                                     </Typography>
                                                     <Chip
                                                         label={approvalStatus.label}
@@ -891,7 +892,7 @@ const LeaveDetailDrawer: React.FC<LeaveDetailDrawerProps> = ({ open, onClose, le
                                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
                                                     
                                                     <Typography sx={{ color: '#475569', fontSize: '0.85rem' }}>
-                                                        {approval.approver ? `${approval.approver.firstName} ${approval.approver.lastName}` : 'ไม่ระบุ'}
+                                                        {approval.approver ? `${approval.approver.firstName} ${approval.approver.lastName}` : t('not_specified', 'ไม่ระบุ')}
                                                         {approval.approver?.position && (
                                                             <Typography component="span" sx={{ color: '#94A3B8', fontSize: '0.8rem' }}>
                                                                 {' '}• {approval.approver.position}
@@ -901,7 +902,7 @@ const LeaveDetailDrawer: React.FC<LeaveDetailDrawerProps> = ({ open, onClose, le
                                                 </Box>
                                                 {approval.actionAt && (
                                                     <Typography sx={{ color: '#94A3B8', fontSize: '0.8rem' }}>
-                                                        {dayjs(approval.actionAt).format('D MMM YYYY HH:mm น.')}
+                                                        {dayjs(approval.actionAt).locale(locale).format('D MMM YYYY HH:mm')}
                                                     </Typography>
                                                 )}
                                                 {approval.comment && (
@@ -930,7 +931,7 @@ const LeaveDetailDrawer: React.FC<LeaveDetailDrawerProps> = ({ open, onClose, le
                     {/* Created Date */}
                     <Box sx={{ mt: 2, textAlign: 'center' }}>
                         <Typography sx={{ color: '#94A3B8', fontSize: '0.8rem' }}>
-                            ยื่นเมื่อ {dayjs(leave.createdAt).format('D MMMM YYYY เวลา HH:mm น.')}
+                            {t('submitted_at', 'ยื่นเมื่อ')} {dayjs(leave.createdAt).locale(locale).format('D MMMM YYYY HH:mm')}
                         </Typography>
                     </Box>
 
@@ -955,7 +956,7 @@ const LeaveDetailDrawer: React.FC<LeaveDetailDrawerProps> = ({ open, onClose, le
                                     },
                                 }}
                             >
-                                ยกเลิกใบลา
+                                {t('cancel_leave_btn', 'ยกเลิกใบลา')}
                             </Button>
                         </Box>
                     )}

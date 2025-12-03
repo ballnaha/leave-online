@@ -350,7 +350,7 @@ const BottomNav: React.FC<BottomNavProps> = ({ activePage = 'home' }) => {
                                                     },
                                                 }}
                                             >
-                                                {leave.name}
+                                                {t(`leave_${leave.code}`, leave.name)}
                                             </Typography>
                                         </Box>
                                     );

@@ -215,7 +215,7 @@ export default function Home() {
             {[
               { label: t('leave_sick', 'ลาป่วย'), icon: Health, color: '#5E72E4', gradient: 'linear-gradient(135deg, #5E72E4 0%, #825EE4 100%)', path: '/leave/sick' },
               { label: t('leave_personal', 'ลากิจ'), icon: Briefcase, color: '#8965E0', gradient: 'linear-gradient(135deg, #8965E0 0%, #BC65E0 100%)', path: '/leave/personal' },
-              { label: t('leave_vacation', 'พักร้อน'), icon: Sun1, color: '#2DCECC', gradient: 'linear-gradient(135deg, #2DCECC 0%, #2D8BCC 100%)', path: '/leave/vacation' },
+              { label: t('leave_annual', 'ลาพักร้อน'), icon: Sun1, color: '#2DCECC', gradient: 'linear-gradient(135deg, #2DCECC 0%, #2D8BCC 100%)', path: '/leave/vacation' },
               { label: t('leave_other', 'ลาอื่นๆ'), icon: HelpCircle, color: '#8898AA', gradient: 'linear-gradient(135deg, #8898AA 0%, #6A7A8A 100%)', path: '/leave/other' },
             ].map((action, index) => (
               <Box 
@@ -274,14 +274,14 @@ export default function Home() {
               <>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5 }}>
                   <Typography variant="h6" sx={{ fontWeight: 'bold', color: 'text.primary' }}>
-                    {t('home_featured', 'ประชาสัมพันธ์')}
+                    {t('home_information', 'ประชาสัมพันธ์')}
                   </Typography>
                   <Button 
                     size="small" 
                     sx={{ fontWeight: 'medium' }}
                     onClick={() => {}} // No action for now or link to all banners
                   >
-                    {t('home_more', 'เพิ่มเติม')}
+                    {t('home_see_all', 'ดูทั้งหมด')}
                   </Button>
                 </Box>
                 <ImageSlider aspectRatio="16/9" onEmpty={() => setHasBanners(false)} />
@@ -331,7 +331,7 @@ export default function Home() {
                   return (
                     <Box key={leave.id} onClick={() => handleLeaveClick(leave)}>
                       <RecentActivityCard
-                        title={leave.reason || leave.leaveTypeInfo?.name || 'การลา'}
+                        title={t(`leave_${leave.leaveType || leave.leaveCode}`, leave.leaveTypeInfo?.name || 'การลา')}
                         date={formatDate(leave.startDate, leave.endDate)}
                         status={mapStatus(leave.status)}
                         image={leave.attachments?.[0]?.filePath}

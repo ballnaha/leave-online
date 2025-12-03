@@ -52,6 +52,9 @@ import { useSession } from 'next-auth/react';
 import { useToastr } from '@/app/components/Toastr';
 import dayjs from 'dayjs';
 import 'dayjs/locale/th';
+import 'dayjs/locale/en';
+import 'dayjs/locale/my';
+import { useLocale } from '@/app/providers/LocaleProvider';
 
 // สีหลักของระบบ
 const PRIMARY_COLOR = '#1976d2';
@@ -131,6 +134,7 @@ export default function LeaveFormPage() {
     const params = useParams();
     const toastr = useToastr();
     const { data: session } = useSession();
+    const { t, locale } = useLocale();
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const leaveCode = params.type as string;
@@ -563,7 +567,7 @@ export default function LeaveFormPage() {
                         
                         <Box sx={{ flex: 1 }}>
                             <Typography variant="h6" sx={{ fontWeight: 'bold', lineHeight: 1.2, color: 'white' }}>
-                                {leaveType.name}
+                                {t(`leave_${leaveType.code}`, leaveType.name)}
                             </Typography>
                             <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.85)' }}>
                                 {leaveType.description}
@@ -599,40 +603,40 @@ export default function LeaveFormPage() {
                                 <User size={15} color={config.color} />
                             </Box>
                             <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
-                                ข้อมูลผู้ขอลา
+                                {t('leave_info', 'ข้อมูลผู้ขอลา')}
                             </Typography>
                         </Box>
                         
                         <Box sx={{ display: 'grid', gap: 1.5 }}>
                                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                    <Typography variant="body2" color="text.secondary">ชื่อ-นามสกุล</Typography>
+                                    <Typography variant="body2" color="text.secondary">{t('profile_name', 'ชื่อ-นามสกุล')}</Typography>
                                     <Typography variant="body2" fontWeight={600}>
                                         {userProfile?.firstName} {userProfile?.lastName}
                                     </Typography>
                                 </Box>
                                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                    <Typography variant="body2" color="text.secondary">รหัสพนักงาน</Typography>
+                                    <Typography variant="body2" color="text.secondary">{t('employee_id', 'รหัสพนักงาน')}</Typography>
                                     <Chip size="small" label={userProfile?.employeeId} sx={{ bgcolor: 'grey.100', fontWeight: 500, fontSize: '0.75rem' }} />
                                 </Box>
                                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                    <Typography variant="body2" color="text.secondary">บริษัท</Typography>
+                                    <Typography variant="body2" color="text.secondary">{t('company', 'บริษัท')}</Typography>
                                     <Typography variant="body2" fontWeight={500}>{userProfile?.companyName}</Typography>
                                 </Box>
                                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                    <Typography variant="body2" color="text.secondary">ฝ่าย</Typography>
+                                    <Typography variant="body2" color="text.secondary">{t('division', 'ฝ่าย')}</Typography>
                                     <Typography variant="body2" fontWeight={500}>{userProfile?.sectionName || '-'}</Typography>
                                 </Box>
                                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                    <Typography variant="body2" color="text.secondary">แผนก</Typography>
+                                    <Typography variant="body2" color="text.secondary">{t('profile_department', 'แผนก')}</Typography>
                                     <Typography variant="body2" fontWeight={500}>{userProfile?.departmentName || '-'}</Typography>
                                 </Box>
                                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                    <Typography variant="body2" color="text.secondary">ตำแหน่ง</Typography>
+                                    <Typography variant="body2" color="text.secondary">{t('position', 'ตำแหน่ง')}</Typography>
                                     <Typography variant="body2" fontWeight={500}>{userProfile?.position || '-'}</Typography>
                                 </Box>
                                 {userProfile?.shift && (
                                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                        <Typography variant="body2" color="text.secondary">กะ</Typography>
+                                        <Typography variant="body2" color="text.secondary">{t('shift', 'กะ')}</Typography>
                                         <Typography variant="body2" fontWeight={500}>{userProfile.shift}</Typography>
                                     </Box>
                                 )}
@@ -653,7 +657,7 @@ export default function LeaveFormPage() {
                                 <Calendar size={15} color={config.color} />
                             </Box>
                             <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
-                                รายละเอียดการลา
+                                {t('leave_details', 'รายละเอียดการลา')}
                             </Typography>
                         </Box>
 
@@ -668,10 +672,10 @@ export default function LeaveFormPage() {
                                 borderColor: 'grey.200',
                             }}>
                                 <Typography variant="body2" color="text.secondary">
-                                    วันที่เขียนใบลา
+                                    {t('leave_date_write', 'วันที่เขียนใบลา')}
                                 </Typography>
                                 <Typography variant="body2" fontWeight={600} color={config.color}>
-                                    {dayjs().locale('th').format('DD MMMM')} {dayjs().year() + 543}
+                                    {dayjs().locale(locale).format('DD MMMM')} {locale === 'th' ? dayjs().year() + 543 : dayjs().year()}
                                 </Typography>
                             </Box>
 
@@ -681,7 +685,7 @@ export default function LeaveFormPage() {
                                 <Box sx={{ position: 'relative', flex: 1 }}>
                                     <TextField
                                         fullWidth
-                                        label="วันที่เริ่มลา"
+                                        label={t('leave_start_date', 'วันที่เริ่มลา')}
                                         type="date"
                                         value={formData.startDate}
                                         onChange={(e) => handleFormChange('startDate', e.target.value)}
@@ -735,12 +739,10 @@ export default function LeaveFormPage() {
                                         }}
                                     >
                                         {formData.startDate ? (() => {
-                                            const date = new Date(formData.startDate);
-                                            const day = String(date.getDate()).padStart(2, '0');
-                                            const month = String(date.getMonth() + 1).padStart(2, '0');
-                                            const year = date.getFullYear() + 543;
-                                            return `${day}/${month}/${year}`;
-                                        })() : 'วว/ดด/ปปปป'}
+                                            const date = dayjs(formData.startDate);
+                                            const year = locale === 'th' ? date.year() + 543 : date.year();
+                                            return `${date.format('DD/MM')}/${year}`;
+                                        })() : (locale === 'th' ? 'วว/ดด/ปปปป' : 'dd/mm/yyyy')}
                                     </Typography>
                                 </Box>
 
@@ -748,7 +750,7 @@ export default function LeaveFormPage() {
                                 <Box sx={{ width: 110 }}>
                                     <TextField
                                         fullWidth
-                                        label="เวลา"
+                                        label={t('leave_time', 'เวลา')}
                                         type="time"
                                         value={formData.startTime}
                                         onChange={(e) => handleFormChange('startTime', e.target.value)}
@@ -779,7 +781,7 @@ export default function LeaveFormPage() {
                                 <Box sx={{ position: 'relative', flex: 1 }}>
                                     <TextField
                                         fullWidth
-                                        label="วันที่สิ้นสุด"
+                                        label={t('leave_end_date', 'วันที่สิ้นสุด')}
                                         type="date"
                                         value={formData.endDate}
                                         onChange={(e) => handleFormChange('endDate', e.target.value)}
@@ -836,12 +838,10 @@ export default function LeaveFormPage() {
                                         }}
                                     >
                                         {formData.endDate ? (() => {
-                                            const date = new Date(formData.endDate);
-                                            const day = String(date.getDate()).padStart(2, '0');
-                                            const month = String(date.getMonth() + 1).padStart(2, '0');
-                                            const year = date.getFullYear() + 543;
-                                            return `${day}/${month}/${year}`;
-                                        })() : 'วว/ดด/ปปปป'}
+                                            const date = dayjs(formData.endDate);
+                                            const year = locale === 'th' ? date.year() + 543 : date.year();
+                                            return `${date.format('DD/MM')}/${year}`;
+                                        })() : (locale === 'th' ? 'วว/ดด/ปปปป' : 'dd/mm/yyyy')}
                                     </Typography>
                                 </Box>
 
@@ -849,7 +849,7 @@ export default function LeaveFormPage() {
                                 <Box sx={{ width: 110 }}>
                                     <TextField
                                         fullWidth
-                                        label="เวลา"
+                                        label={t('leave_time', 'เวลา')}
                                         type="time"
                                         value={formData.endTime}
                                         onChange={(e) => handleFormChange('endTime', e.target.value)}
@@ -888,7 +888,7 @@ export default function LeaveFormPage() {
                                 <Calendar size={15} color={config.color} />
                             </Box>
                             <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
-                                จำนวนวันลา
+                                {t('leave_total_days', 'จำนวนวันลา')}
                             </Typography>
                         </Box>
 
@@ -937,7 +937,7 @@ export default function LeaveFormPage() {
                                     {formData.totalDays || '0'}
                                 </Typography>
                                 <Typography sx={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.9)' }}>
-                                    วัน
+                                    {t('leave_days_unit', 'วัน')}
                                 </Typography>
                             </Box>
 
@@ -976,14 +976,14 @@ export default function LeaveFormPage() {
                         >
                             {errors.totalDays || (
                                 maxLeaveDaysByRange 
-                                    ? `กดปุ่ม +/- เพื่อปรับทีละ 0.5 วัน (สูงสุด ${maxLeaveDaysByRange} วัน)`
-                                    : 'กดปุ่ม +/- เพื่อปรับทีละ 0.5 วัน'
+                                    ? `${t('leave_adjust_hint', 'กดปุ่ม +/- เพื่อปรับทีละ 0.5 วัน')} (${t('max', 'สูงสุด')} ${maxLeaveDaysByRange} ${t('leave_days_unit', 'วัน')})`
+                                    : t('leave_adjust_hint', 'กดปุ่ม +/- เพื่อปรับทีละ 0.5 วัน')
                             )}
                         </Typography>
 
                             {leaveType.maxDaysPerYear && (
                                 <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block', textAlign: 'center' }}>
-                                    สิทธิ์การลาสูงสุด: {leaveType.maxDaysPerYear} วัน/ปี โดยไม่หักเงิน
+                                    {t('leave_max_quota', 'สิทธิ์การลาสูงสุด: {days} วัน/ปี โดยไม่หักเงิน').replace('{days}', leaveType.maxDaysPerYear.toString())}
                                 </Typography>
                             )}
                     </Box>
@@ -1001,7 +1001,7 @@ export default function LeaveFormPage() {
                                 <FileText size={15} color={config.color} />
                             </Box>
                             <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
-                                เหตุผลการลา
+                                {t('leave_reason', 'เหตุผลการลา')}
                             </Typography>
                         </Box>
 
@@ -1009,7 +1009,7 @@ export default function LeaveFormPage() {
                                 multiline
                                 rows={3}
                                 fullWidth
-                                placeholder="ระบุเหตุผลการลา..."
+                                placeholder={t('leave_reason_placeholder', 'ระบุเหตุผลการลา...')}
                                 value={formData.reason}
                                 onChange={(e) => handleFormChange('reason', e.target.value)}
                                 error={!!errors.reason}
@@ -1036,7 +1036,7 @@ export default function LeaveFormPage() {
                                 <Paperclip size={15} color={config.color} />
                             </Box>
                             <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
-                                ไฟล์แนบ
+                                {t('leave_attachments', 'ไฟล์แนบ')}
                             </Typography>
                         </Box>
 
@@ -1076,10 +1076,10 @@ export default function LeaveFormPage() {
                                 }}
                             >
                                 {processingAttachments
-                                    ? 'กำลังประมวลผลไฟล์...'
+                                    ? t('leave_upload_processing', 'กำลังประมวลผลไฟล์...')
                                     : formData.attachments.length >= MAX_FILES
-                                        ? `แนบไฟล์ครบ ${MAX_FILES} ไฟล์แล้ว`
-                                        : `อัพโหลดไฟล์แนบ (${formData.attachments.length}/${MAX_FILES})`}
+                                        ? t('leave_upload_complete', `แนบไฟล์ครบ ${MAX_FILES} ไฟล์แล้ว`)
+                                        : t('leave_upload_btn', `อัพโหลดไฟล์แนบ (${formData.attachments.length}/${MAX_FILES})`)}
                             </Button>
 
                             {errors.attachments && (
@@ -1204,7 +1204,7 @@ export default function LeaveFormPage() {
                             )}
 
                         <Typography variant="caption" color="text.secondary">
-                            รองรับไฟล์ .pdf, .jpg, .jpeg, .png (สูงสุด {MAX_FILES} ไฟล์, ไฟล์ละไม่เกิน 15MB)
+                            {t('leave_attachments_hint', `รองรับไฟล์ .pdf, .jpg, .jpeg, .png (สูงสุด ${MAX_FILES} ไฟล์, ไฟล์ละไม่เกิน 15MB)`)}
                         </Typography>
 
                         {/* แจ้งเตือนลาป่วยเกิน 3 วัน */}
@@ -1214,7 +1214,7 @@ export default function LeaveFormPage() {
                                 icon={<AlertCircle size={18} />}
                                 sx={{ mt: 2, borderRadius: 2 }}
                             >
-                                ลาป่วยเกิน 3 วัน กรุณาแนบใบรับรองแพทย์
+                                {t('sick_leave_warning', 'ลาป่วยเกิน 3 วัน กรุณาแนบใบรับรองแพทย์')}
                             </Alert>
                         )}
                     </Box>
@@ -1256,7 +1256,7 @@ export default function LeaveFormPage() {
                             },
                         }}
                     >
-                        {submitting ? 'กำลังส่ง...' : 'ส่งคำขอลา'}
+                        {submitting ? t('leave_submitting', 'กำลังส่ง...') : t('leave_submit', 'ส่งคำขอลา')}
                     </Button>
                 </Box>
             </Box>
@@ -1292,29 +1292,35 @@ export default function LeaveFormPage() {
                         </Box>
                     </Box>
                     <Typography variant="h6" fontWeight="bold" textAlign="center">
-                        ยืนยันส่งคำขอลา?
+                        {t('leave_confirm_title', 'ยืนยันส่งคำขอลา?')}
                     </Typography>
                     <Typography variant="body2" color="text.secondary" textAlign="center" sx={{ mt: 1, mb: 3 }}>
-                        ระบบจะส่งคำขอไปยังผู้อนุมัติทันทีเมื่อกดยืนยัน
+                        {t('leave_confirm_desc', 'ระบบจะส่งคำขอไปยังผู้อนุมัติทันทีเมื่อกดยืนยัน')}
                     </Typography>
 
                     <Box sx={{ bgcolor: 'grey.50', borderRadius: 1, p: 1.5, mb: 3, border: '1px solid', borderColor: 'grey.200' }}>
                         <Typography variant="subtitle2" fontWeight="bold" sx={{ mb: 0.5 }}>
-                            {leaveType.name}
+                            {t(`leave_${leaveType.code}`, leaveType.name)}
                         </Typography>
                         <Typography variant="body2" color="text.secondary">
                             {formData.startDate && formData.endDate
-                                ? `${dayjs(formData.startDate).locale('th').format('D MMM YYYY')} - ${dayjs(formData.endDate).locale('th').format('D MMM YYYY')}`
-                                : 'ยังไม่ได้เลือกช่วงวัน'}
+                                ? (() => {
+                                    const start = dayjs(formData.startDate).locale(locale);
+                                    const end = dayjs(formData.endDate).locale(locale);
+                                    const startYear = locale === 'th' ? start.year() + 543 : start.year();
+                                    const endYear = locale === 'th' ? end.year() + 543 : end.year();
+                                    return `${start.format('D MMM')} ${startYear} - ${end.format('D MMM')} ${endYear}`;
+                                  })()
+                                : t('leave_no_date_selected', 'ยังไม่ได้เลือกช่วงวัน')}
                         </Typography>
                         {formData.totalDays && (
                             <Typography variant="body2" color="text.secondary">
-                                จำนวนวันลา {formData.totalDays} วัน
+                                {t('leave_total_days', 'จำนวนวันลา')} {formData.totalDays} {t('leave_days_unit', 'วัน')}
                             </Typography>
                         )}
                         {formData.reason && (
                             <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-                                เหตุผล: {formData.reason}
+                                {t('leave_reason', 'เหตุผล')}: {formData.reason}
                             </Typography>
                         )}
                     </Box>
@@ -1331,7 +1337,7 @@ export default function LeaveFormPage() {
                                 color: 'grey.700',
                             }}
                         >
-                            ยกเลิก
+                            {t('cancel', 'ยกเลิก')}
                         </Button>
                         <Button
                             variant="contained"
@@ -1349,7 +1355,7 @@ export default function LeaveFormPage() {
                                 },
                             }}
                         >
-                            {submitting ? 'กำลังส่ง...' : 'ยืนยัน'}
+                            {submitting ? t('leave_submitting', 'กำลังส่ง...') : t('confirm', 'ยืนยัน')}
                         </Button>
                     </Box>
                 </Box>

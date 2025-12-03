@@ -36,11 +36,16 @@ import BottomNav from '../components/BottomNav';
 import { signOut, useSession } from 'next-auth/react';
 import { useToastr } from '@/app/components/Toastr';
 import { usePWA } from '../providers/PWAProvider';
+import dayjs from 'dayjs';
+import 'dayjs/locale/th';
+import 'dayjs/locale/en';
+import 'dayjs/locale/my';
 
 
 
 // Type definitions for settings items
 interface SettingsItemBase {
+    id?: string;
     icon: IconsaxIcon;
     label: string;
     color: string;
@@ -142,7 +147,7 @@ export default function ProfilePage() {
                 });
             }
 
-            toastr.success('ออกจากระบบสำเร็จ');
+            toastr.success(t('logout_success', 'ออกจากระบบสำเร็จ'));
 
             // Sign out from NextAuth and redirect to login
             await signOut({
@@ -152,7 +157,7 @@ export default function ProfilePage() {
 
         } catch (error) {
             console.error('Logout error:', error);
-            toastr.error('เกิดข้อผิดพลาดในการออกจากระบบ');
+            toastr.error(t('logout_error', 'เกิดข้อผิดพลาดในการออกจากระบบ'));
             setIsLoggingOut(false);
         }
     };
@@ -192,25 +197,21 @@ export default function ProfilePage() {
         return '';
     };
 
-    // Format date to Thai format
-    const formatThaiDate = (dateString: string | null) => {
+    // Format date
+    const formatDate = (dateString: string | null) => {
         if (!dateString) return '-';
-        const date = new Date(dateString);
-        const day = date.getDate();
-        const months = ['มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน', 
-                       'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'];
-        const month = months[date.getMonth()];
-        const year = date.getFullYear() + 543; // Convert to Buddhist Era
-        return `${day} ${month} ${year}`;
+        const date = dayjs(dateString).locale(locale);
+        const year = locale === 'th' ? date.year() + 543 : date.year();
+        return `${date.format('D MMMM')} ${year}`;
     };
 
     // Get employee type label
     const getEmployeeTypeLabel = (type: string) => {
         switch (type) {
             case 'monthly':
-                return 'พนักงานรายเดือน';
+                return t('employee_type_monthly', 'พนักงานรายเดือน');
             case 'daily':
-                return 'พนักงานรายวัน';
+                return t('employee_type_daily', 'พนักงานรายวัน');
             default:
                 return type;
         }
@@ -256,11 +257,11 @@ export default function ProfilePage() {
         
         // Build duration string
         const parts = [];
-        if (years > 0) parts.push(`${years} ปี`);
-        if (months > 0) parts.push(`${months} เดือน`);
-        if (days > 0) parts.push(`${days} วัน`);
+        if (years > 0) parts.push(`${years} ${t('year', 'ปี')}`);
+        if (months > 0) parts.push(`${months} ${t('month', 'เดือน')}`);
+        if (days > 0) parts.push(`${days} ${t('day', 'วัน')}`);
         
-        return parts.length > 0 ? parts.join(' ') : '0 วัน';
+        return parts.length > 0 ? parts.join(' ') : `0 ${t('day', 'วัน')}`;
     };
     
     // Prevent hydration mismatch by always showing loading state until mounted
@@ -273,18 +274,18 @@ export default function ProfilePage() {
         try {
             if (value) {
                 await pushSubscribe();
-                toastr.success('เปิดการแจ้งเตือนสำเร็จ');
+                toastr.success(t('push_enabled_success', 'เปิดการแจ้งเตือนสำเร็จ'));
             } else {
                 await pushUnsubscribe();
-                toastr.info('ปิดการแจ้งเตือนแล้ว');
+                toastr.info(t('push_disabled_success', 'ปิดการแจ้งเตือนแล้ว'));
             }
         } catch (error: any) {
             console.error('Push toggle error:', error);
             const errorMsg = error?.message || 'เกิดข้อผิดพลาด';
             if (errorMsg.includes('not initialized') || errorMsg.includes('not loaded')) {
-                toastr.error('ระบบแจ้งเตือนยังไม่พร้อม กรุณารีเฟรชหน้า');
+                toastr.error(t('push_not_ready', 'ระบบแจ้งเตือนยังไม่พร้อม กรุณารีเฟรชหน้า'));
             } else {
-                toastr.error('เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง');
+                toastr.error(t('error_retry', 'เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง'));
             }
         } finally {
             setPushLoading(false);
@@ -293,27 +294,28 @@ export default function ProfilePage() {
 
     // Get push notification subtitle based on status
     const getPushSubtitle = () => {
-        if (!pushSupported) return 'เบราว์เซอร์ไม่รองรับ';
-        if (!pushInitialized) return 'กำลังโหลด...';
-        if (pushPermission === 'denied') return 'ถูกบล็อก - กรุณาเปิดในการตั้งค่าเบราว์เซอร์';
-        if (pushSubscribed) return 'เปิดใช้งาน';
-        return 'ปิดอยู่';
+        if (!pushSupported) return t('browser_not_supported', 'เบราว์เซอร์ไม่รองรับ');
+        if (!pushInitialized) return t('status_loading', 'กำลังโหลด...');
+        if (pushPermission === 'denied') return t('blocked_notifications', 'ถูกบล็อก - กรุณาเปิดในการตั้งค่าเบราว์เซอร์');
+        if (pushSubscribed) return t('status_enabled', 'เปิดใช้งาน');
+        return t('status_disabled', 'ปิดอยู่');
     };
 
     const settingsSections: SettingsSection[] = [
         {
-            title: 'บัญชี',
+            title: t('account', 'บัญชี'),
             items: [
-                { icon: Profile2User, label: 'แก้ไขโปรไฟล์', color: '#667eea', link: '/profile/edit' },
+                { icon: Profile2User, label: t('edit_profile', 'แก้ไขโปรไฟล์'), color: '#667eea', link: '/profile/edit' },
                 
             ],
         },
         {
-            title: 'การแจ้งเตือน',
+            title: t('notifications', 'การแจ้งเตือน'),
             items: [
                 { 
+                    id: 'notifications',
                     icon: Notification, 
-                    label: 'การแจ้งเตือนแบบพุช', 
+                    label: t('notifications', 'การแจ้งเตือน'), 
                     color: '#FFD93D', 
                     toggle: true, 
                     value: pushSubscribed, 
@@ -324,20 +326,20 @@ export default function ProfilePage() {
             ],
         },
         {
-            title: 'การตั้งค่าทั่วไป',
+            title: t('general_settings', 'การตั้งค่าทั่วไป'),
             items: [
                 
-                { icon: Global, label: 'ภาษา', color: '#1976D2', subtitle: localeLabel[locale], link: '#' },
+                { id: 'language', icon: Global, label: t('common_language', 'ภาษา'), color: '#1976D2', subtitle: localeLabel[locale], link: '#' },
             ],
         },
         {
-            title: 'ช่วยเหลือและข้อมูล',
+            title: t('help_info', 'ช่วยเหลือและข้อมูล'),
             items: [
-                { icon: MessageQuestion, label: 'ศูนย์ช่วยเหลือ', color: '#00ACC1', link: '#' },
+                { icon: MessageQuestion, label: t('help_center', 'ศูนย์ช่วยเหลือ'), color: '#00ACC1', link: '#' },
                 ...(!isStandalone ? [{ 
                     icon: Mobile, 
-                    label: 'ติดตั้งแอปพลิเคชัน', 
-                    subtitle: isIOS ? 'สำหรับ iOS' : 'สำหรับ Android',
+                    label: t('install_app', 'ติดตั้งแอปพลิเคชัน'), 
+                    subtitle: isIOS ? t('for_ios', 'สำหรับ iOS') : t('for_android', 'สำหรับ Android'),
                     color: '#4CAF50', 
                     link: '#install' 
                 }] : []),
@@ -519,7 +521,7 @@ export default function ProfilePage() {
                             </Box>
                             <Box>
                                 <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.7rem' }}>
-                                    รหัสพนักงาน
+                                    {t('employee_id', 'รหัสพนักงาน')}
                                 </Typography>
                                 <Typography variant="body2" sx={{ fontWeight: 600 }}>
                                     {profile?.employeeId || '-'}
@@ -543,7 +545,7 @@ export default function ProfilePage() {
                             </Box>
                             <Box>
                                 <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.7rem' }}>
-                                    บริษัท
+                                    {t('company', 'บริษัท')}
                                 </Typography>
                                 <Typography variant="body2" sx={{ fontWeight: 600 }}>
                                     {profile?.companyName || '-'}
@@ -567,7 +569,7 @@ export default function ProfilePage() {
                             </Box>
                             <Box>
                                 <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.7rem' }}>
-                                    ฝ่าย
+                                    {t('department', 'ฝ่าย')}
                                 </Typography>
                                 <Typography variant="body2" sx={{ fontWeight: 600 }}>
                                     {profile?.departmentName || '-'}
@@ -592,7 +594,7 @@ export default function ProfilePage() {
                                 </Box>
                                 <Box>
                                     <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.7rem' }}>
-                                        แผนก
+                                        {t('section', 'แผนก')}
                                     </Typography>
                                     <Typography variant="body2" sx={{ fontWeight: 600 }}>
                                         {profile.sectionName}
@@ -620,7 +622,7 @@ export default function ProfilePage() {
                                     {t('profile_started', 'วันที่เริ่มงาน')}
                                 </Typography>
                                 <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                                    {profile ? formatThaiDate(profile.startDate) : '-'}
+                                    {profile ? formatDate(profile.startDate) : '-'}
                                 </Typography>
                                 {profile?.startDate && (
                                     <Typography variant="caption" sx={{ color: '#388E3C', fontSize: '0.7rem', fontWeight: 500 }}>
@@ -725,7 +727,7 @@ export default function ProfilePage() {
                                                         '&:hover': item.link ? { bgcolor: '#F8F9FA' } : {},
                                                     }}
                                                     onClick={() => {
-                                                        if (item.label === 'ภาษา') {
+                                                        if (item.id === 'language') {
                                                             setOpenLanguage(true);
                                                             return;
                                                         }
@@ -735,7 +737,7 @@ export default function ProfilePage() {
                                                             } else if (deferredPrompt) {
                                                                 installPWA();
                                                             } else {
-                                                                toastr.info('ติดตั้งแล้ว หรือเบราว์เซอร์ไม่รองรับ');
+                                                                toastr.info(t('pwa_installed_or_unsupported', 'ติดตั้งแล้ว หรือเบราว์เซอร์ไม่รองรับ'));
                                                             }
                                                             return;
                                                         }
@@ -769,13 +771,13 @@ export default function ProfilePage() {
                                                         )}
                                                     </Box>
                                                     {item.toggle ? (
-                                                        pushLoading && item.label === 'การแจ้งเตือนแบบพุช' ? (
+                                                        pushLoading && item.id === 'notifications' ? (
                                                             <CircularProgress size={24} sx={{ color: item.color }} />
                                                         ) : (
                                                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                                                {item.label === 'การแจ้งเตือนแบบพุช' && !pushSubscribed && pushSupported && (
+                                                                {item.id === 'notifications' && !pushSubscribed && pushSupported && (
                                                                     <Chip 
-                                                                        label="ไม่ได้เชื่อมต่อ" 
+                                                                        label={t('status_disconnected', 'ไม่ได้เชื่อมต่อ')}
                                                                         size="small" 
                                                                         color="error" 
                                                                         variant="outlined" 
@@ -859,7 +861,7 @@ export default function ProfilePage() {
                                     )}
                                 </Box>
                                 <Typography variant="body2" sx={{ fontWeight: 600, color: '#D32F2F', flex: 1 }}>
-                                    {isLoggingOut ? 'กำลังออกจากระบบ...' : 'ออกจากระบบ'}
+                                    {isLoggingOut ? t('logging_out', 'กำลังออกจากระบบ...') : t('logout', 'ออกจากระบบ')}
                                 </Typography>
                             </Box>
                         )}
@@ -880,7 +882,7 @@ export default function ProfilePage() {
             
             {/* Language Selector Dialog */}
             <Dialog open={openLanguage} onClose={() => setOpenLanguage(false)} fullWidth maxWidth="xs">
-                <DialogTitle>เลือกภาษา</DialogTitle>
+                <DialogTitle>{t('select_language', 'เลือกภาษา')}</DialogTitle>
                 <List>
                     {languageOptions.map((opt) => (
                         <ListItemButton
@@ -906,7 +908,7 @@ export default function ProfilePage() {
                 }}
             >
                 <DialogTitle sx={{ textAlign: 'center', fontWeight: 'bold', pb: 1 }}>
-                    วิธีติดตั้งบน iPhone
+                    {t('ios_install_title', 'วิธีติดตั้งบน iPhone')}
                 </DialogTitle>
                 <DialogContent>
                     <Stack spacing={2.5}>
@@ -924,10 +926,10 @@ export default function ProfilePage() {
                             </Box>
                             <Box>
                                 <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                                    ขั้นตอนที่ 1
+                                    {t('step_1', 'ขั้นตอนที่ 1')}
                                 </Typography>
                                 <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                                    กดปุ่ม <b>แชร์</b> (Share) ที่อยู่ด้านล่างของ Safari
+                                    {t('press_button', 'กดปุ่ม')} <b>{t('share', 'แชร์')}</b> (Share) {t('at_bottom_safari', 'ที่อยู่ด้านล่างของ Safari')}
                                 </Typography>
                             </Box>
                         </Box>
@@ -945,10 +947,10 @@ export default function ProfilePage() {
                             </Box>
                             <Box>
                                 <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                                    ขั้นตอนที่ 2
+                                    {t('step_2', 'ขั้นตอนที่ 2')}
                                 </Typography>
                                 <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                                    เลื่อนหา แล้วกด <b>&quot;เพิ่มในหน้าจอโฮม&quot;</b> (Add to Home Screen)
+                                    {t('scroll_and_press', 'เลื่อนหา แล้วกด')} <b>&quot;{t('add_to_home_screen', 'เพิ่มในหน้าจอโฮม')}&quot;</b> (Add to Home Screen)
                                 </Typography>
                             </Box>
                         </Box>
@@ -966,16 +968,16 @@ export default function ProfilePage() {
                             </Box>
                             <Box>
                                 <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                                    ขั้นตอนที่ 3
+                                    {t('step_3', 'ขั้นตอนที่ 3')}
                                 </Typography>
                                 <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                                    กด <b>&quot;เพิ่ม&quot;</b> (Add) ที่มุมขวาบน
+                                    {t('press_button', 'กดปุ่ม')} <b>&quot;{t('add', 'เพิ่ม')}&quot;</b> (Add) {t('at_top_right', 'ที่มุมขวาบน')}
                                 </Typography>
                             </Box>
                         </Box>
                     </Stack>
                     <Typography variant="caption" sx={{ display: 'block', mt: 2, color: 'text.secondary', textAlign: 'center' }}>
-                        หมายเหตุ: ต้องเปิดใน Safari เท่านั้น
+                        {t('ios_note_safari', 'หมายเหตุ: ต้องเปิดใน Safari เท่านั้น')}
                     </Typography>
                 </DialogContent>
                 <Box sx={{ p: 2, pt: 0 }}>
@@ -985,7 +987,7 @@ export default function ProfilePage() {
                         onClick={() => setOpenIOSInstructions(false)}
                         sx={{ borderRadius: 2, bgcolor: '#007AFF', py: 1.2 }}
                     >
-                        เข้าใจแล้ว
+                        {t('understood', 'เข้าใจแล้ว')}
                     </Button>
                 </Box>
             </Dialog>

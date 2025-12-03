@@ -60,10 +60,11 @@ import { useRouter } from 'next/navigation';
 import BottomNav from '@/app/components/BottomNav';
 import dayjs from 'dayjs';
 import 'dayjs/locale/th';
+import 'dayjs/locale/en';
+import 'dayjs/locale/my';
 import { LeaveRequest, LeaveApproval, LeaveAttachment } from '@/types/leave';
 import LeaveDetailDrawer from '@/app/components/LeaveDetailDrawer';
-
-dayjs.locale('th');
+import { useLocale } from '@/app/providers/LocaleProvider';
 
 // กำหนด icon และสีสำหรับแต่ละประเภทการลา (สีแบบ balloon)
 const leaveTypeConfig: Record<string, { icon: any; color: string; lightColor: string; label: string }> = {
@@ -87,6 +88,7 @@ interface LeaveType {
 
 export default function LeavePage() {
     const router = useRouter();
+    const { t, locale } = useLocale();
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
@@ -144,8 +146,8 @@ export default function LeavePage() {
     };
 
     // Calendar logic - Mon to Sun with Today label
-    const daysOfWeekFull = ['Mon', 'Tue', 'Today', 'Thu', 'Fri', 'Sat', 'Sun'];
-    const daysOfWeek = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    const daysOfWeekFull = [t('day_mon'), t('day_tue'), t('leave_today'), t('day_thu'), t('day_fri'), t('day_sat'), t('day_sun')];
+    const daysOfWeek = [t('day_mon'), t('day_tue'), t('day_wed'), t('day_thu'), t('day_fri'), t('day_sat'), t('day_sun')];
     const startOfMonth = currentDate.startOf('month');
     const endOfMonth = currentDate.endOf('month');
     const startDayOfWeek = startOfMonth.day() === 0 ? 6 : startOfMonth.day() - 1;
@@ -208,13 +210,13 @@ export default function LeavePage() {
     const getStatusLabel = (status: string) => {
         switch (status) {
             case 'approved':
-                return { label: 'อนุมัติแล้ว', color: 'success' as const, icon: CheckCircle, bgColor: '#ECFDF5', textColor: '#059669' };
+                return { label: t('status_approved', 'อนุมัติแล้ว'), color: 'success' as const, icon: CheckCircle, bgColor: '#ECFDF5', textColor: '#059669' };
             case 'rejected':
-                return { label: 'ไม่อนุมัติ', color: 'error' as const, icon: XCircle, bgColor: '#FEF2F2', textColor: '#DC2626' };
+                return { label: t('status_rejected', 'ไม่อนุมัติ'), color: 'error' as const, icon: XCircle, bgColor: '#FEF2F2', textColor: '#DC2626' };
             case 'cancelled':
-                return { label: 'ยกเลิกแล้ว', color: 'warning' as const, icon: Ban, bgColor: '#FFF7ED', textColor: '#EA580C' };
+                return { label: t('status_cancelled', 'ยกเลิกแล้ว'), color: 'warning' as const, icon: Ban, bgColor: '#FFF7ED', textColor: '#EA580C' };
             default:
-                return { label: 'รออนุมัติ', color: 'warning' as const, icon: Clock, bgColor: '#FFFBEB', textColor: '#D97706' };
+                return { label: t('status_pending', 'รออนุมัติ'), color: 'warning' as const, icon: Clock, bgColor: '#FFFBEB', textColor: '#D97706' };
         }
     };
 
@@ -232,7 +234,7 @@ export default function LeavePage() {
         if (!selectedLeave) return;
         
         if (!cancelReason.trim()) {
-            alert('กรุณาระบุเหตุผลการยกเลิก');
+            alert(t('cancel_reason_required'));
             return;
         }
 
@@ -247,8 +249,8 @@ export default function LeavePage() {
             });
 
             if (!res.ok) {
-                const error = await res.json().catch(() => ({ error: 'ไม่สามารถยกเลิกใบลาได้' }));
-                alert(error.error || 'ไม่สามารถยกเลิกใบลาได้');
+                const error = await res.json().catch(() => ({ error: t('cancel_failed') }));
+                alert(error.error || t('cancel_failed'));
                 return;
             }
             
@@ -270,7 +272,7 @@ export default function LeavePage() {
                 setCancelReason('');
         } catch (error) {
             console.error('Error cancelling leave:', error);
-            alert('เกิดข้อผิดพลาดในการยกเลิกใบลา');
+            alert(t('cancel_error'));
         } finally {
             setCancelling(false);
         }
@@ -332,7 +334,7 @@ export default function LeavePage() {
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                         
                         <Typography variant="h5" sx={{ color: 'white', fontWeight: 700 }}>
-                            ประวัติการลา
+                            {t('leave_history_title', 'ประวัติการลา')}
                         </Typography>
                     </Box>
                 </Box>
@@ -368,7 +370,7 @@ export default function LeavePage() {
                                     fontSize: '1.1rem',
                                 }}
                             >
-                                {currentDate.format('MMMM')}
+                                {currentDate.locale(locale).format('MMMM')}
                             </Typography>
                             <Button
                                 onClick={handleYearClick}
@@ -384,7 +386,7 @@ export default function LeavePage() {
                                     '&:hover': { bgcolor: 'rgba(102, 126, 234, 0.08)' },
                                 }}
                             >
-                                {currentDate.year() + 543}
+                                {locale === 'th' ? currentDate.year() + 543 : currentDate.year()}
                             </Button>
                             <Menu
                                 anchorEl={yearAnchorEl}
@@ -408,7 +410,7 @@ export default function LeavePage() {
                                             color: year === currentDate.year() ? '#667eea' : 'inherit',
                                         }}
                                     >
-                                        {year + 543}
+                                        {locale === 'th' ? year + 543 : year}
                                     </MenuItem>
                                 ))}
                             </Menu>
@@ -528,10 +530,10 @@ export default function LeavePage() {
                                         <Box
                                             sx={{
                                                 position: 'absolute',
-                                                top: 0,
+                                                top: -8,
                                                 right: 0,
-                                                width: 24,
-                                                height: 24,
+                                                width: 20,
+                                                height: 20,
                                                 borderRadius: '50%',
                                                 bgcolor: '#FF6B6B',
                                                 color: 'white',
@@ -554,19 +556,19 @@ export default function LeavePage() {
                     {/* Legend - Color meanings */}
                     <Box sx={{ mt: 2.5, pt: 2, borderTop: '1px solid #F1F5F9' }}>
                         <Typography variant="caption" sx={{ color: '#94A3B8', fontWeight: 500, mb: 1, display: 'block' }}>
-                            คำอธิบายสี
+                            {t('leave_legend', 'คำอธิบายสี')}
                         </Typography>
                         <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5 }}>
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                                 <Box sx={{ width: 12, height: 12, borderRadius: '50%', bgcolor: '#667eea' }} />
-                                <Typography variant="caption" sx={{ color: '#64748B' }}>วันนี้</Typography>
+                                <Typography variant="caption" sx={{ color: '#64748B' }}>{t('leave_today', 'วันนี้')}</Typography>
                             </Box>
                             {Object.entries(leaveTypeConfig)
                                 .filter(([key]) => key !== 'default')
                                 .map(([key, config]) => (
                                     <Box key={key} sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                                         <Box sx={{ width: 12, height: 12, borderRadius: '50%', bgcolor: 'white', border: `2px solid ${config.color}` }} />
-                                        <Typography variant="caption" sx={{ color: '#64748B' }}>{config.label}</Typography>
+                                        <Typography variant="caption" sx={{ color: '#64748B' }}>{t(`leave_${key}`, config.label)}</Typography>
                                     </Box>
                                 ))}
                         </Box>
@@ -584,7 +586,7 @@ export default function LeavePage() {
                                 fontSize: '1rem',
                             }}
                         >
-                            ประวัติการลา ({currentDate.format('MMMM')} {currentDate.year() + 543})
+                            {t('leave_history_title', 'ประวัติการลา')} ({currentDate.format('MMMM')} {currentDate.year() + 543})
                         </Typography>
                         <Box
                             sx={{
@@ -597,7 +599,7 @@ export default function LeavePage() {
                                 fontWeight: 600,
                             }}
                         >
-                            {filteredLeaves.length} รายการ
+                            {filteredLeaves.length} {t('leave_items', 'รายการ')}
                         </Box>
                     </Box>
 
@@ -605,7 +607,7 @@ export default function LeavePage() {
                     <TextField
                         fullWidth
                         size="small"
-                        placeholder="ค้นหาใบลา..."
+                        placeholder={t('leave_search_placeholder', 'ค้นหาใบลา...')}
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         InputProps={{
@@ -641,7 +643,7 @@ export default function LeavePage() {
                             }}
                         >
                             <Typography variant="body2" color="text.secondary">
-                                {searchQuery ? 'ไม่พบใบลาที่ตรงกับการค้นหา' : 'ยังไม่มีประวัติการลาในเดือนนี้'}
+                                {searchQuery ? t('leave_not_found', 'ไม่พบใบลาที่ตรงกับการค้นหา') : t('leave_no_history', 'ยังไม่มีประวัติการลาในเดือนนี้')}
                             </Typography>
                         </Card>
                     ) : (
@@ -718,7 +720,7 @@ export default function LeavePage() {
                                                         }} 
                                                         noWrap
                                                     >
-                                                        {config.label}
+                                                        {t(`leave_${leave.leaveType || leave.leaveCode}`, config.label)}
                                                     </Typography>
                                                     {/* Status Badge */}
                                                     <Box
@@ -810,19 +812,19 @@ export default function LeavePage() {
                             <AlertTriangle size={22} color="#DC2626" />
                         </Box>
                         <Typography sx={{ fontWeight: 700, color: '#1E293B' }}>
-                            ยืนยันการยกเลิกใบลา
+                            {t('cancel_leave_title', 'ยืนยันการยกเลิกใบลา')}
                         </Typography>
                     </Box>
                 </DialogTitle>
                 <DialogContent>
                     <Typography sx={{ color: '#64748B', fontSize: '0.95rem', mb: 2 }}>
-                        กรุณาระบุเหตุผลที่ต้องการยกเลิกใบลา
+                        {t('cancel_leave_desc', 'กรุณาระบุเหตุผลที่ต้องการยกเลิกใบลา')}
                     </Typography>
                     <TextField
                         fullWidth
                         multiline
                         rows={3}
-                        placeholder="ระบุเหตุผล..."
+                        placeholder={t('cancel_leave_placeholder', 'ระบุเหตุผล...')}
                         value={cancelReason}
                         onChange={(e) => setCancelReason(e.target.value)}
                         disabled={cancelling}
@@ -846,7 +848,7 @@ export default function LeavePage() {
                             fontWeight: 500,
                         }}
                     >
-                        ยกเลิก
+                        {t('cancel', 'ยกเลิก')}
                     </Button>
                     <Button
                         onClick={handleCancelLeave}
@@ -863,7 +865,7 @@ export default function LeavePage() {
                         {cancelling ? (
                             <CircularProgress size={20} color="inherit" />
                         ) : (
-                            'ยืนยันยกเลิก'
+                            t('cancel_leave_confirm', 'ยืนยันยกเลิก')
                         )}
                     </Button>
                 </DialogActions>

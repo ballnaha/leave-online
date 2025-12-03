@@ -734,31 +734,12 @@ export default function EditProfilePage() {
             <Box
                 sx={{
                     background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                    pt: 'calc(env(safe-area-inset-top, 0px) + 24px)',
-                    pb: 3,
+                    py: 2,
                     px: 2,
-                    position: 'relative',
-                    overflow: 'hidden',
-                    '&::before': {
-                        content: '""',
-                        position: 'absolute',
-                        top: -50,
-                        right: -50,
-                        width: 200,
-                        height: 200,
-                        borderRadius: '50%',
-                        background: 'rgba(255, 255, 255, 0.1)',
-                    },
-                    '&::after': {
-                        content: '""',
-                        position: 'absolute',
-                        bottom: -30,
-                        left: -30,
-                        width: 150,
-                        height: 150,
-                        borderRadius: '50%',
-                        background: 'rgba(255, 255, 255, 0.1)',
-                    },
+                    position: 'sticky',
+                    top: 0,
+                    zIndex: 100,
+                    boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
                 }}
             >
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'relative', zIndex: 1 }}>
@@ -773,7 +754,7 @@ export default function EditProfilePage() {
                         >
                             <ArrowLeft2 size={20} color="white" />
                         </IconButton>
-                        <Typography variant="h5" sx={{ color: 'white', fontWeight: 700 }}>
+                        <Typography variant="h6" sx={{ color: 'white', fontWeight: 500 , fontSize: '1rem'}}>
                             แก้ไขโปรไฟล์
                         </Typography>
                     </Box>

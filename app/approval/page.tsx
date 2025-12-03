@@ -48,6 +48,7 @@ import {
 import { useRouter } from 'next/navigation';
 import BottomNav from '../components/BottomNav';
 import Sidebar from '../components/Sidebar';
+import { useLocale } from '@/app/providers/LocaleProvider';
 
 interface ApprovalItem {
   approvalId: number;
@@ -121,6 +122,7 @@ const statusConfig: Record<string, { label: string; color: 'warning' | 'success'
 
 export default function ApprovalPage() {
   const router = useRouter();
+  const { t } = useLocale();
   const [loading, setLoading] = useState(true);
   const [approvals, setApprovals] = useState<ApprovalItem[]>([]);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -708,7 +710,7 @@ export default function ApprovalPage() {
                               fontWeight: 500,
                             }}
                           >
-                            {leaveTypeNames[approval.leaveRequest.leaveType] || approval.leaveRequest.leaveType}
+                            {t(`leave_${approval.leaveRequest.leaveType}`, approval.leaveRequest.leaveType)}
                           </Box>
                           <Typography sx={{ fontSize: '0.8rem', color: '#999' }}>
                             {approval.leaveRequest.totalDays}วัน
@@ -1050,7 +1052,7 @@ export default function ApprovalPage() {
                 พนักงาน: <strong>{selectedApproval.leaveRequest.user.firstName} {selectedApproval.leaveRequest.user.lastName}</strong>
               </Typography>
               <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
-                ประเภท: {leaveTypeNames[selectedApproval.leaveRequest.leaveType]}
+                ประเภท: {t(`leave_${selectedApproval.leaveRequest.leaveType}`, selectedApproval.leaveRequest.leaveType)}
               </Typography>
               <Typography variant="body2" color="text.secondary">
                 วันที่: {formatDate(selectedApproval.leaveRequest.startDate)} ({selectedApproval.leaveRequest.totalDays} วัน)
