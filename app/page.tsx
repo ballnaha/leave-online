@@ -2,6 +2,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { Box, Typography, Button, Card, CardContent, Skeleton, Container } from '@mui/material';
 import Header from './components/Header';
+import ImageSlider from './components/ImageSlider';
 import LeaveTypeCard from './components/LeaveTypeCard';
 import RecentActivityCard from './components/RecentActivityCard';
 import BottomNav from './components/BottomNav';
@@ -17,6 +18,7 @@ import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { LeaveRequest } from '@/types/leave';
 import LeaveDetailDrawer from './components/LeaveDetailDrawer';
+import { HelpCircle } from 'lucide-react';
 
 interface LeaveType {
   id: number;
@@ -59,6 +61,7 @@ export default function Home() {
   }, [status, router]);
 
   const [loading, setLoading] = useState(true);
+  const [dataLoading, setDataLoading] = useState(true);
   const [mounted, setMounted] = useState(false);
   const [leaveTypes, setLeaveTypes] = useState<LeaveType[]>([]);
   const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>([]);
@@ -67,8 +70,22 @@ export default function Home() {
 
   useEffect(() => {
     setMounted(true);
-    fetchLeaveTypes();
-    fetchLeaveRequests();
+    
+    const loadData = async () => {
+      try {
+        await Promise.all([
+          fetchLeaveTypes(),
+          fetchLeaveRequests()
+        ]);
+      } catch (error) {
+        console.error('Error loading data:', error);
+      } finally {
+        setDataLoading(false);
+      }
+    };
+    
+    loadData();
+
     const hasLoaded = sessionStorage.getItem('home_loaded') === 'true';
     
     if (hasLoaded) {
@@ -169,7 +186,7 @@ export default function Home() {
   };
 
   // Prevent hydration mismatch by always showing loading state until mounted
-  const showLoading = !mounted || loading;
+  const showLoading = !mounted || loading || dataLoading;
 
   if (status === 'loading' || status === 'unauthenticated') {
     return (
@@ -184,167 +201,92 @@ export default function Home() {
       <Container maxWidth={false} sx={{ maxWidth: 1200, px: { xs: 2.5, sm: 3, md: 4 } }}>
         <Header />
 
-        {/* Leave Balance Section */}
+        {/* Quick Actions Section */}
         <Box sx={{ mt: 1.5, mb: 3 }}>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', mb: 1.5 }}>
-            {showLoading ? (
-              <>
-                <Skeleton variant="text" width={140} height={28} />
-                <Skeleton variant="rounded" width={64} height={24} />
-              </>
-            ) : (
-              <>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <Typography variant="h6" sx={{ fontWeight: 'bold', color: 'text.primary' }}>
-                    {t('home_leave_types', 'ประเภทการลา')}
-                  </Typography>
-                  <Box
-                    sx={{
-                      
-                      color: 'primary.main',
-                      width: 24,
-                      height: 24,
-                      borderRadius: '50%',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: '0.75rem',
-                      fontWeight: 'bold',
-                      bgcolor: '#E8EAF6'
-                    }}
-                  >
-                    {leaveTypes.length}
-                  </Box>
-                </Box>
-                <Button 
-                  size="small" 
-                  sx={{ fontWeight: 'medium' }}
-                  onClick={() => router.push('/leave')}
-                >
-                  {t('home_see_all', 'ดูทั้งหมด')}
-                </Button>
-              </>
-            )}
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5 }}>
+            <Typography variant="h6" sx={{ fontWeight: 'bold', color: 'text.primary' }}>
+              {t('home_quick_actions', 'ลาด่วน')}
+            </Typography>
+            
           </Box>
-
-          <Box sx={{ mx: -2.5, px: 2.5 }}>
-            {showLoading || leaveTypes.length === 0 ? (
-              <Box sx={{ display: 'flex', gap: 1.5, pb: 1.5 }}>
-                {[1,2,3].map(i => (
-                  <Skeleton key={i} variant="rounded" width={220} height={110} sx={{ borderRadius: 3, flexShrink: 0 }} />
-                ))}
-              </Box>
-            ) : (
-              <Swiper
-                spaceBetween={12}
-                slidesPerView={1.5}
-                grabCursor={true}
-                style={{ paddingBottom: 12 }}
+          
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', px: 1 }}>
+            {[
+              { label: t('leave_sick', 'ลาป่วย'), icon: Health, color: '#5E72E4', gradient: 'linear-gradient(135deg, #5E72E4 0%, #825EE4 100%)', path: '/leave/sick' },
+              { label: t('leave_personal', 'ลากิจ'), icon: Briefcase, color: '#8965E0', gradient: 'linear-gradient(135deg, #8965E0 0%, #BC65E0 100%)', path: '/leave/personal' },
+              { label: t('leave_vacation', 'พักร้อน'), icon: Sun1, color: '#2DCECC', gradient: 'linear-gradient(135deg, #2DCECC 0%, #2D8BCC 100%)', path: '/leave/vacation' },
+              { label: t('leave_other', 'ลาอื่นๆ'), icon: HelpCircle, color: '#8898AA', gradient: 'linear-gradient(135deg, #8898AA 0%, #6A7A8A 100%)', path: '/leave/other' },
+            ].map((action, index) => (
+              <Box 
+                key={index} 
+                onClick={() => router.push(action.path)}
+                sx={{ 
+                  display: 'flex', 
+                  flexDirection: 'column', 
+                  alignItems: 'center', 
+                  gap: 1,
+                  cursor: 'pointer'
+                }}
               >
-                {leaveTypes.map((leaveType) => {
-                  const config = getLeaveTypeConfig(leaveType.code);
-                  const IconComponent = config.icon;
-                  return (
-                    <SwiperSlide key={leaveType.id}>
-                      <Box onClick={() => router.push(`/leave/${leaveType.code}`)} sx={{ cursor: 'pointer' }}>
-                        <LeaveTypeCard
-                          title={leaveType.name}
-                          count={leaveType.maxDaysPerYear ? Math.floor(leaveType.maxDaysPerYear * 0.8) : 0}
-                          total={leaveType.maxDaysPerYear || 0}
-                          color={config.color}
-                          icon={<IconComponent size={24} />}
-                        />
-                      </Box>
-                    </SwiperSlide>
-                  );
-                })}
-              </Swiper>
-            )}
+                <Box
+                  sx={{
+                    width: 56,
+                    height: 56,
+                    borderRadius: '50%',
+                    background: action.gradient,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    boxShadow: `0 4px 16px ${action.color}40`,
+                    transition: 'transform 0.2s, box-shadow 0.2s',
+                    '&:hover': {
+                      transform: 'scale(1.1)',
+                      boxShadow: `0 6px 20px ${action.color}50`,
+                    }
+                  }}
+                >
+                  <action.icon size={28} color="white" />
+                </Box>
+                <Typography variant="caption" sx={{ fontWeight: 500, color: 'text.secondary' }}>
+                  {action.label}
+                </Typography>
+              </Box>
+            ))}
           </Box>
         </Box>
 
-        {/* Featured/Announcement Card -> Main Purple Card */}
-        {showLoading ? (
-          <Skeleton variant="rounded" height={160} sx={{ borderRadius: 3, mb: 3 }} />
-        ) : (
-          <Card
-            sx={{
-              mb: 3,
-              position: 'relative',
-              overflow: 'hidden',
-              borderRadius: '30px',
-              boxShadow: '0 10px 30px rgba(94, 114, 228, 0.3)',
-              background: 'linear-gradient(135deg, #5E72E4 0%, #825EE4 100%)',
-              color: 'white'
-            }}
-          >
-            <Box
-              sx={{
-                position: 'absolute',
-                top: 20,
-                right: 20,
-                zIndex: 2
-              }}
-            >
-              <Box sx={{ width: 4, height: 4, bgcolor: 'white', borderRadius: '50%', boxShadow: '6px 0 0 white, -6px 0 0 white' }} />
-            </Box>
-            
-            <CardContent sx={{ position: 'relative', zIndex: 1, p: 3 }}>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <Box>
-                  <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 0.5, fontSize: '1.1rem', maxWidth: '70%' }}>
-                    วันลาพักร้อนคงเหลือของคุณ
-                  </Typography>
-                  <Button
-                    variant="contained"
-                    sx={{
-                      mt: 2,
-                      bgcolor: 'white',
-                      color: '#5E72E4',
-                      borderRadius: '12px',
-                      textTransform: 'none',
-                      fontWeight: 'bold',
-                      boxShadow: 'none',
-                      '&:hover': {
-                        bgcolor: 'rgba(255,255,255,0.9)',
-                      }
-                    }}
-                    onClick={() => router.push('/leave/annual')}
-                  >
-                    ใช้สิทธิ์ลา
-                  </Button>
-                </Box>
-                
-                <Box sx={{ position: 'relative', width: 80, height: 80, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <svg width="80" height="80" viewBox="0 0 100 100" style={{ transform: 'rotate(-90deg)' }}>
-                    <circle
-                      cx="50"
-                      cy="50"
-                      r="40"
-                      fill="transparent"
-                      stroke="rgba(255,255,255,0.2)"
-                      strokeWidth="8"
-                    />
-                    <circle
-                      cx="50"
-                      cy="50"
-                      r="40"
-                      fill="transparent"
-                      stroke="white"
-                      strokeWidth="8"
-                      strokeDasharray={`${2 * Math.PI * 40}`}
-                      strokeDashoffset={`${2 * Math.PI * 40 * (1 - 0.85)}`}
-                      strokeLinecap="round"
-                    />
-                  </svg>
-                  <Typography sx={{ position: 'absolute', fontWeight: 'bold', fontSize: '1.2rem' }}>
-                    85%
-                  </Typography>
-                </Box>
+        {/* Banner Section */}
+        <Box sx={{ mb: 3 }}>
+          {showLoading ? (
+            <>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5 }}>
+                <Skeleton variant="text" width={120} height={28} />
+                <Skeleton variant="text" width={60} height={24} />
               </Box>
-            </CardContent>
-          </Card>
-        )}
+              <Box sx={{ display: 'flex', gap: 1.5, mx: -2.5, px: 2.5 }}>
+                <Skeleton variant="rounded" sx={{ width: '60%', height: 120, borderRadius: 2, flexShrink: 0 }} />
+                <Skeleton variant="rounded" sx={{ width: '40%', height: 120, borderRadius: 2, flexShrink: 0 }} />
+              </Box>
+            </>
+          ) : (
+            <>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5 }}>
+                <Typography variant="h6" sx={{ fontWeight: 'bold', color: 'text.primary' }}>
+                  {t('home_featured', 'ประชาสัมพันธ์')}
+                </Typography>
+                <Button 
+                  size="small" 
+                  sx={{ fontWeight: 'medium' }}
+                  onClick={() => {}} // No action for now or link to all banners
+                >
+                  {t('home_more', 'เพิ่มเติม')}
+                </Button>
+              </Box>
+              <ImageSlider aspectRatio="16/9" />
+            </>
+          )}
+        </Box>
+
 
         {/* Recent Requests Section */}
         <Box>
@@ -361,7 +303,7 @@ export default function Home() {
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                   <Typography variant="h6" sx={{ fontWeight: 'bold', color: 'text.primary' }}>
-                    {t('home_recent_requests', 'คำขอล่าสุด')}
+                    {t('home_recent_requests', 'การลาล่าสุด')}
                   </Typography>
                   
                 </Box>

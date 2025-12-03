@@ -63,7 +63,7 @@ const leaveTypeConfig: Record<string, { icon: any; color: string; lightColor: st
     personal: { icon: Briefcase, color: '#8965E0', lightColor: '#F0E9FF' },
     vacation: { icon: Umbrella, color: '#11CDEF', lightColor: '#E3F9FC' },
     annual: { icon: Sun, color: '#2DCECC', lightColor: '#E3FAF9' },
-    maternity: { icon: Baby, color: '#F3A4B5', lightColor: '#FDEEF1' },
+    maternity: { icon: Baby, color: '#F5365C', lightColor: '#FFF0F3' },
     ordination: { icon: Church, color: '#FB6340', lightColor: '#FFEFE9' },
     military: { icon: Shield, color: '#5E72E4', lightColor: '#E9ECFF' },
     marriage: { icon: Heart, color: '#F3A4B5', lightColor: '#FDEEF1' },

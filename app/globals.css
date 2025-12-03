@@ -56,7 +56,15 @@ body {
   left: 0;
   width: 100%;
   height: 4px !important;
+  display: none; /* Hide by default, show only when needed via JS if specific logic required, or remove this line to show always */
 }
+
+/* Hide nprogress on specific routes if needed, but generally to hide it completely: */
+/* 
+#nprogress .bar {
+  display: none !important;
+} 
+*/
 
 #nprogress .peg {
   display: none !important;

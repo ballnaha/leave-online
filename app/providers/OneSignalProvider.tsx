@@ -97,16 +97,28 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
     try {
       console.log('🔔 OneSignal: Initializing...');
       
-      await OneSignal.init({
-        appId: ONESIGNAL_APP_ID,
-        safari_web_id: ONESIGNAL_SAFARI_WEB_ID || undefined,
-        allowLocalhostAsSecureOrigin: true,
-        notifyButton: {
-          enable: false, // Disabled - using custom toggle in profile page
-        },
-      });
+      // Check if already initialized to avoid error
+      // Note: OneSignal v16 doesn't have a public initialized property we can rely on easily
+      // but we can try-catch the init call
+      try {
+          await OneSignal.init({
+            appId: ONESIGNAL_APP_ID,
+            safari_web_id: ONESIGNAL_SAFARI_WEB_ID || undefined,
+            allowLocalhostAsSecureOrigin: true,
+            notifyButton: {
+              enable: false, // Disabled - using custom toggle in profile page
+            },
+          });
+          console.log('🔔 OneSignal: Initialized successfully');
+      } catch (initError: any) {
+          // Ignore "SDK already initialized" error
+          if (initError?.message?.includes('SDK already initialized')) {
+              console.log('🔔 OneSignal: SDK already initialized, continuing...');
+          } else {
+              throw initError;
+          }
+      }
 
-      console.log('🔔 OneSignal: Initialized successfully');
       setIsInitialized(true);
 
       // Check subscription status

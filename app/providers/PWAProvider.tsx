@@ -7,6 +7,7 @@ interface PWAContextType {
     hideInstallPrompt: () => void;
     deferredPrompt: any;
     isStandalone: boolean;
+    isIOS: boolean;
     installPWA: () => Promise<void>;
 }
 
@@ -16,6 +17,7 @@ const PWAContext = createContext<PWAContextType>({
     hideInstallPrompt: () => {},
     deferredPrompt: null,
     isStandalone: false,
+    isIOS: false,
     installPWA: async () => {},
 });
 
@@ -25,6 +27,7 @@ export default function PWAProvider({ children }: { children: React.ReactNode })
     const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
     const [isStandalone, setIsStandalone] = useState(false);
     const [isInstallPromptVisible, setIsInstallPromptVisible] = useState(false);
+    const [isIOS, setIsIOS] = useState(false);
 
     useEffect(() => {
         // Check if already in standalone mode
@@ -34,11 +37,29 @@ export default function PWAProvider({ children }: { children: React.ReactNode })
         
         setIsStandalone(isStandaloneMode);
 
+        // Detect iOS
+        const userAgent = window.navigator.userAgent.toLowerCase();
+        const isIosDevice = /iphone|ipad|ipod/.test(userAgent);
+        setIsIOS(isIosDevice);
+
+        const shouldShowPrompt = () => {
+            const dismissedAt = localStorage.getItem('pwa_prompt_dismissed_at');
+            if (!dismissedAt) return true;
+            
+            const daysSinceDismissal = (Date.now() - parseInt(dismissedAt)) / (1000 * 60 * 60 * 24);
+            return daysSinceDismissal > 7; // Show again after 7 days
+        };
+
+        // For iOS, show prompt if not standalone and not dismissed recently
+        if (isIosDevice && !isStandaloneMode && shouldShowPrompt()) {
+            setIsInstallPromptVisible(true);
+        }
+
         const handleBeforeInstallPrompt = (e: any) => {
             e.preventDefault();
             setDeferredPrompt(e);
-            // Only show if not already installed
-            if (!isStandaloneMode) {
+            // Only show if not already installed and not dismissed recently
+            if (!isStandaloneMode && shouldShowPrompt()) {
                 setIsInstallPromptVisible(true);
             }
         };
@@ -63,7 +84,10 @@ export default function PWAProvider({ children }: { children: React.ReactNode })
     };
 
     const showInstallPrompt = () => setIsInstallPromptVisible(true);
-    const hideInstallPrompt = () => setIsInstallPromptVisible(false);
+    const hideInstallPrompt = () => {
+        setIsInstallPromptVisible(false);
+        localStorage.setItem('pwa_prompt_dismissed_at', Date.now().toString());
+    };
 
     return (
         <PWAContext.Provider value={{ 
@@ -72,6 +96,7 @@ export default function PWAProvider({ children }: { children: React.ReactNode })
             hideInstallPrompt, 
             deferredPrompt, 
             isStandalone,
+            isIOS,
             installPWA 
         }}>
             {children}

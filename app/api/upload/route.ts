@@ -46,10 +46,10 @@ export async function POST(request: NextRequest) {
         const base64Data = matches[2];
         const buffer = Buffer.from(base64Data, 'base64');
 
-        // Validate file size (max 2MB after base64 decode)
-        if (buffer.length > 2 * 1024 * 1024) {
+        // Validate file size (max 15MB after base64 decode)
+        if (buffer.length > 15 * 1024 * 1024) {
             return NextResponse.json(
-                { error: 'Image size exceeds 2MB limit' },
+                { error: 'Image size exceeds 15MB limit' },
                 { status: 400 }
             );
         }
@@ -67,15 +67,17 @@ export async function POST(request: NextRequest) {
             await mkdir(uploadDir, { recursive: true });
         }
 
-        // Delete old files for this user (cleanup old avatars)
-        try {
-            const files = await readdir(uploadDir);
-            const userFiles = files.filter(f => f.startsWith(`${type}_${userId}_`) && !f.endsWith('.gitkeep'));
-            for (const file of userFiles) {
-                await unlink(path.join(uploadDir, file));
+        // Delete old files for this user ONLY if type is avatar
+        if (type === 'avatar') {
+            try {
+                const files = await readdir(uploadDir);
+                const userFiles = files.filter(f => f.startsWith(`${type}_${userId}_`) && !f.endsWith('.gitkeep'));
+                for (const file of userFiles) {
+                    await unlink(path.join(uploadDir, file));
+                }
+            } catch {
+                // Ignore errors during cleanup
             }
-        } catch {
-            // Ignore errors during cleanup
         }
 
         // Write new file

@@ -446,7 +446,7 @@ export default function ProfilePage() {
                                     <Typography 
                                         component="span" 
                                         sx={{ 
-                                            fontSize: '1.2rem', 
+                                            fontSize: '1.7rem', 
                                             color: getGenderColor(profile.gender),
                                             fontWeight: 700,
                                         }}

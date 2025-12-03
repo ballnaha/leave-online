@@ -27,6 +27,7 @@ import {
     Clock as ClockTimer,
     
 } from 'iconsax-react';
+import { HelpCircle } from 'lucide-react';
 
 interface BottomNavProps {
     activePage?: 'home' | 'messages' | 'leave' | 'profile';
@@ -57,7 +58,7 @@ const leaveTypeConfig: Record<string, { icon: any; color: string; gradient: stri
     sterilization: { icon: Health, color: '#2DCECC', gradient: 'linear-gradient(135deg, #2DCECC 0%, #2D8BCC 100%)' },
     business: { icon: Car, color: '#8965E0', gradient: 'linear-gradient(135deg, #8965E0 0%, #BC65E0 100%)' },
     unpaid: { icon: Clock, color: '#8898AA', gradient: 'linear-gradient(135deg, #8898AA 0%, #6A7A8A 100%)' },
-    other: { icon: MessageQuestion, color: '#5E72E4', gradient: 'linear-gradient(135deg, #5E72E4 0%, #825EE4 100%)' },
+    other: { icon: HelpCircle, color: '#5E72E4', gradient: 'linear-gradient(135deg, #8898AA 0%, #6A7A8A 100%)'},
     default: { icon: MessageQuestion, color: '#8898AA', gradient: 'linear-gradient(135deg, #8898AA 0%, #6A7A8A 100%)' },
 };
 

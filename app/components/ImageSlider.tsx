@@ -1,16 +1,16 @@
 'use client';
-import React from 'react';
-import { Box, Typography } from '@mui/material';
+import React, { useEffect, useState } from 'react';
+import { Box, Typography, Skeleton } from '@mui/material';
 import { Swiper, SwiperSlide } from 'swiper/react';
-import { Autoplay, Pagination } from 'swiper/modules';
+import { Autoplay } from 'swiper/modules';
 import 'swiper/css';
-import 'swiper/css/pagination';
 
 interface SlideImage {
     id: number;
     src: string;
     alt: string;
     date?: string; // วันที่ของข่าว เช่น '2025-11-27' หรือ '27 พ.ย. 2568'
+    linkUrl?: string | null;
 }
 
 // ฟังก์ชันแปลงวันที่เป็นรูปแบบไทย
@@ -31,22 +31,7 @@ const formatThaiDate = (dateStr: string): string => {
 };
 
 const defaultImages: SlideImage[] = [
-    {
-        id: 1,
-        src: 'images/banner-1.png',
-        alt: 'Office workspace',
-        date: new Date().toISOString().split('T')[0], // วันที่ปัจจุบัน
-    },
-    // {
-    //     id: 2,
-    //     src: 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=800&q=80',
-    //     alt: 'Team collaboration',
-    // },
-    // {
-    //     id: 3,
-    //     src: 'https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?auto=format&fit=crop&w=800&q=80',
-    //     alt: 'Working together',
-    // },
+
 ];
 
 interface ImageSliderProps {
@@ -54,68 +39,98 @@ interface ImageSliderProps {
     aspectRatio?: string; // เช่น '16/9', '4/3', '21/9'
 }
 
-const ImageSlider: React.FC<ImageSliderProps> = ({ images = defaultImages, aspectRatio = '16/9' }) => {
+const ImageSlider: React.FC<ImageSliderProps> = ({ images, aspectRatio = '16/9' }) => {
+    const [sliderImages, setSliderImages] = useState<SlideImage[]>(images || []);
+    const [loading, setLoading] = useState(!images || images.length === 0);
+
+    useEffect(() => {
+        // ถ้ามีการส่ง images เข้ามา ให้ใช้ images ที่ส่งมา
+        if (images && images.length > 0) {
+            setSliderImages(images);
+            setLoading(false);
+            return;
+        }
+
+        // ถ้าไม่มี images ให้ดึงจาก API
+        const fetchBanners = async () => {
+            try {
+                setLoading(true);
+                const response = await fetch('/api/banners');
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.length > 0) {
+                        const mappedImages = data.map((banner: any) => ({
+                            id: banner.id,
+                            src: banner.imageUrl,
+                            alt: banner.title,
+                            linkUrl: banner.linkUrl,
+                            // date: banner.updatedAt // สามารถใส่วันที่ได้ถ้าต้องการ
+                        }));
+                        setSliderImages(mappedImages);
+                    } else {
+                        // ถ้าไม่มีข้อมูลจาก API ให้ใช้ defaultImages
+                        setSliderImages(defaultImages);
+                    }
+                }
+            } catch (error) {
+                console.error('Error fetching banners:', error);
+                setSliderImages(defaultImages);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchBanners();
+    }, [images]);
+
+    if (loading) {
+        return (
+            <Skeleton 
+                variant="rectangular" 
+                width="100%" 
+                sx={{ 
+                    aspectRatio: aspectRatio, 
+                    borderRadius: 1 
+                }} 
+            />
+        );
+    }
+
+    if (sliderImages.length === 0) {
+        return null;
+    }
+
     return (
         <Box
             sx={{
-                borderRadius: 1,
+                width: 'calc(100% + 40px)',
+                ml: -2.5,
                 overflow: 'hidden',
-                boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
-                width: '100%',
-                aspectRatio: aspectRatio,
-                '& .swiper': {
-                    borderRadius: 1,
-                    width: '100%',
-                    height: '100%',
-                },
-                '& .swiper-pagination': {
-                    bottom: '8px !important',
-                },
-                '& .swiper-pagination-bullet': {
-                    width: 8,
-                    height: 8,
-                    bgcolor: 'white',
-                    opacity: 0.5,
-                    transition: 'all 0.3s ease',
-                },
-                '& .swiper-pagination-bullet-active': {
-                    opacity: 1,
-                    width: 20,
-                    borderRadius: 4,
-                },
             }}
         >
             <Swiper
-                modules={[Autoplay, Pagination]}
-                spaceBetween={0}
-                slidesPerView={1}
+                modules={[Autoplay]}
+                spaceBetween={12}
+                slidesPerView={1.5}
                 autoplay={{
                     delay: 6000,
                     disableOnInteraction: false,
                 }}
-                pagination={{
-                    clickable: true,
-                }}
-                loop={true}
-                style={{ width: '100%', height: '100%' }}
+                loop={sliderImages.length > 2}
+                style={{ paddingLeft: 20, paddingRight: 20, paddingBottom: 8 }}
             >
-                {images.map((image) => (
+                {sliderImages.map((image) => (
                     <SwiperSlide key={image.id}>
                         <Box
+                            onClick={() => image.linkUrl && window.open(image.linkUrl, '_blank')}
                             sx={{
                                 width: '100%',
-                                height: '100%',
+                                aspectRatio: aspectRatio,
                                 position: 'relative',
-                                '&::after': {
-                                    content: '""',
-                                    position: 'absolute',
-                                    top: 0,
-                                    left: 0,
-                                    right: 0,
-                                    bottom: 0,
-                                    background: 'linear-gradient(to bottom, transparent 50%, rgba(0,0,0,0.3) 100%)',
-                                    pointerEvents: 'none',
-                                },
+                                cursor: image.linkUrl ? 'pointer' : 'default',
+                                borderRadius: '16px',
+                                overflow: 'hidden',
+                                boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
                             }}
                         >
                             <Box

@@ -148,9 +148,6 @@ const Header = () => {
                         </Badge>
                     </IconButton>
                 </Box>
-
-                {/* Image Slider */}
-                <ImageSlider />
             </Box>
 
             {/* แสดง Sidebar เฉพาะ admin หรือ hr */}
