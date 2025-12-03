@@ -13,8 +13,31 @@ import {
   Switch,
   CircularProgress,
   InputAdornment,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  FormHelperText,
 } from '@mui/material';
 import { Calendar } from 'iconsax-react';
+
+// ตัวเลือก leave type ที่กำหนดไว้ในระบบ
+const leaveTypeOptions = [
+  { code: 'sick', name: 'ลาป่วย' },
+  { code: 'personal', name: 'ลากิจ' },
+  { code: 'vacation', name: 'ลาพักร้อน' },
+  { code: 'annual', name: 'ลาพักผ่อนประจำปี' },
+  { code: 'maternity', name: 'ลาคลอด' },
+  { code: 'ordination', name: 'ลาอุปสมบท' },
+  { code: 'military', name: 'ลารับราชการทหาร' },
+  { code: 'marriage', name: 'ลาสมรส' },
+  { code: 'funeral', name: 'ลางานศพ' },
+  { code: 'paternity', name: 'ลาดูแลภรรยาคลอด' },
+  { code: 'sterilization', name: 'ลาทำหมัน' },
+  { code: 'business', name: 'ลาไปราชการ' },
+  { code: 'unpaid', name: 'ลาไม่รับค่าจ้าง' },
+  { code: 'other', name: 'อื่นๆ' },
+];
 
 interface LeaveType {
   id: number;
@@ -155,35 +178,72 @@ export default function LeaveTypeDialog({
         {leaveType ? 'แก้ไขประเภทการลา' : 'เพิ่มประเภทการลาใหม่'}
       </DialogTitle>
       <DialogContent sx={{ p: 2 }}>
-        <Box sx={{ pt: 1, display: 'flex', flexDirection: 'column', gap: 2 }}>
+        <Box sx={{ pt: 3, display: 'flex', flexDirection: 'column', gap: 2 }}>
           {errors.submit && (
             <Box sx={{ color: 'error.main', mb: 1 }}>{errors.submit}</Box>
           )}
 
-          <TextField
-            label="รหัสประเภทการลา"
-            name="code"
-            value={formData.code}
-            onChange={handleChange}
-            error={!!errors.code}
-            helperText={errors.code || 'เช่น SICK, PERSONAL, VACATION'}
-            size="small"
-            fullWidth
-            required
-          />
-          
+          <FormControl size="small" fullWidth error={!!errors.code} required>
+            <InputLabel>รหัสประเภทการลา</InputLabel>
+            <Select
+              name="code"
+              value={formData.code}
+              onChange={(e) => {
+                const selectedCode = e.target.value;
+                const selectedOption = leaveTypeOptions.find(opt => opt.code === selectedCode);
+                setFormData((prev) => ({
+                  ...prev,
+                  code: selectedCode,
+                  name: selectedOption?.name || prev.name,
+                }));
+                if (errors.code) {
+                  setErrors((prev) => ({ ...prev, code: '' }));
+                }
+                if (errors.name) {
+                  setErrors((prev) => ({ ...prev, name: '' }));
+                }
+              }}
+              label="รหัสประเภทการลา"
+            >
+              {leaveTypeOptions.map((option) => (
+                <MenuItem key={option.code} value={option.code}>
+                  {option.code.toUpperCase()}
+                </MenuItem>
+              ))}
+            </Select>
+            <FormHelperText>{errors.code || 'เลือกรหัสประเภทการลา'}</FormHelperText>
+          </FormControl>
 
-          <TextField
-            label="ชื่อประเภทการลา"
-            name="name"
-            value={formData.name}
-            onChange={handleChange}
-            error={!!errors.name}
-            helperText={errors.name || 'เช่น ลาป่วย, ลากิจ, ลาพักร้อน'}
-            size="small"
-            fullWidth
-            required
-          />
+          <FormControl size="small" fullWidth error={!!errors.name} required>
+            <InputLabel>ชื่อประเภทการลา</InputLabel>
+            <Select
+              name="name"
+              value={formData.name}
+              onChange={(e) => {
+                const selectedName = e.target.value;
+                const selectedOption = leaveTypeOptions.find(opt => opt.name === selectedName);
+                setFormData((prev) => ({
+                  ...prev,
+                  name: selectedName,
+                  code: selectedOption?.code || prev.code,
+                }));
+                if (errors.name) {
+                  setErrors((prev) => ({ ...prev, name: '' }));
+                }
+                if (errors.code) {
+                  setErrors((prev) => ({ ...prev, code: '' }));
+                }
+              }}
+              label="ชื่อประเภทการลา"
+            >
+              {leaveTypeOptions.map((option) => (
+                <MenuItem key={option.code} value={option.name}>
+                  {option.name}
+                </MenuItem>
+              ))}
+            </Select>
+            <FormHelperText>{errors.name || 'เลือกชื่อประเภทการลา'}</FormHelperText>
+          </FormControl>
 
           <TextField
             label="คำอธิบาย"

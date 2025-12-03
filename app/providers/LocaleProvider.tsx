@@ -122,7 +122,7 @@ const messages: Record<LocaleCode, Record<string, string>> = {
     leave_reason: "เหตุผลการลา",
     leave_reason_placeholder: "ระบุเหตุผลการลา...",
     leave_attachments: "ไฟล์แนบ",
-    leave_attachments_hint: "รองรับไฟล์ .pdf, .jpg, .jpeg, .png (สูงสุด 5 ไฟล์, ไฟล์ละไม่เกิน 15MB)",
+    leave_attachments_hint: "รองรับไฟล์ .pdf, .jpg, .jpeg, .png (สูงสุด 3 ไฟล์, ไฟล์ละไม่เกิน 15MB)",
     leave_upload_btn: "อัพโหลดไฟล์แนบ",
     leave_upload_processing: "กำลังประมวลผลไฟล์...",
     leave_upload_complete: "แนบไฟล์ครบแล้ว",
@@ -131,7 +131,7 @@ const messages: Record<LocaleCode, Record<string, string>> = {
     leave_confirm_title: "ยืนยันส่งคำขอลา?",
     leave_confirm_desc: "ระบบจะส่งคำขอไปยังผู้อนุมัติทันทีเมื่อกดยืนยัน",
     leave_no_date_selected: "ยังไม่ได้เลือกช่วงวัน",
-    leave_max_quota: "สิทธิ์การลาสูงสุด: {days} วัน/ปี โดยไม่หักเงิน",
+    leave_max_quota: "สิทธิ์ลา {days} วัน/ปี (ส่วนที่เกินจะถูกหักเงิน)",
     leave_days_unit: "วัน",
     leave_adjust_hint: "กดปุ่ม +/- เพื่อปรับทีละ 0.5 วัน",
     

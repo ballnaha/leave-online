@@ -279,26 +279,7 @@ export default function HolidaysPage() {
       </Box>
 
       {/* Stats */}
-      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr 1fr', md: 'repeat(4, 1fr)' }, gap: 2, mb: 4 }}>
-        <StatCard
-          title="วันหยุดทั้งหมด"
-          value={stats.total}
-          icon={<Calendar size={28} variant="Bold" color="#6C63FF" />}
-          color="primary"
-          subtitle={`ปี ${selectedYear + 543}`}
-        />
-        <StatCard
-          title="วันหยุดราชการ"
-          value={stats.national}
-          icon={<Global size={28} variant="Bold" color="#F44336" />}
-          color="error"
-        />
-        <StatCard
-          title="วันหยุดชดเชย"
-          value={stats.substitute}
-          icon={<Calendar size={28} variant="Bold" color="#F57C00" />}
-          color="warning"
-        />
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: 'repeat(4, 1fr)' }, gap: 2, mb: 4 }}>
         <StatCard
           title="วันหยุดบริษัท"
           value={stats.company}

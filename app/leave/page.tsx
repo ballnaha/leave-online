@@ -583,16 +583,12 @@ export default function LeavePage() {
                                                 ? '#667eea' 
                                                 : hasLeave 
                                                     ? 'white' 
-                                                    : isHoliday
-                                                        ? '#FEE2E2'
-                                                        : 'transparent',
+                                                    : 'transparent',
                                         border: isSelected
                                             ? `2px solid ${primaryColor}`
                                             : hasLeave && !isToday 
                                                 ? `2px solid ${primaryColor}` 
-                                                : isHoliday && !isToday
-                                                    ? `2px solid #FECACA`
-                                                    : 'none',
+                                                : 'none',
                                         cursor: hasLeave ? 'pointer' : 'default',
                                         transition: 'all 0.15s ease',
                                         boxShadow: isSelected ? `0 4px 12px ${primaryColor}60` : 'none',
@@ -603,8 +599,8 @@ export default function LeavePage() {
                                 >
                                     <Typography
                                         sx={{
-                                            fontWeight: isToday || hasLeave || isHoliday || isSelected ? 600 : 400,
-                                            color: isSelected ? 'white' : isToday ? 'white' : hasLeave ? primaryColor : isHoliday ? '#DC2626' : '#475569',
+                                            fontWeight: isToday || hasLeave || isSelected ? 600 : 400,
+                                            color: isSelected ? 'white' : isToday ? 'white' : hasLeave ? primaryColor : '#475569',
                                             fontSize: { xs: '0.8rem', sm: '0.9rem' },
                                         }}
                                     >
@@ -671,7 +667,7 @@ export default function LeavePage() {
                                     </Box>
                                 ))}
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                <Box sx={{ width: 12, height: 12, borderRadius: '50%', bgcolor: '#FEE2E2', border: '2px solid #FECACA' }} />
+                                <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: '#DC2626' }} />
                                 <Typography variant="caption" sx={{ color: '#64748B' }}>{t('leave_holiday', 'วันหยุด')}</Typography>
                             </Box>
                         </Box>

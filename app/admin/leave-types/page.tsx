@@ -666,8 +666,8 @@ export default function LeaveTypesPage() {
                     <TableCell align="center">
                       <Chip
                         icon={leaveType.isActive 
-                          ? <TickCircle size={14} /> 
-                          : <CloseCircle size={14} />
+                          ? <TickCircle size={14} color="#4CAF50" /> 
+                          : <CloseCircle size={14} color="#F44336" />
                         }
                         label={leaveType.isActive ? 'เปิดใช้งาน' : 'ปิดใช้งาน'}
                         size="small"
@@ -699,7 +699,7 @@ export default function LeaveTypesPage() {
                               },
                             }}
                           >
-                            <Edit2 size={18} />
+                            <Edit2 size={18} color="#6C63FF" />
                           </IconButton>
                         </Tooltip>
                         <Tooltip title="ลบ">
@@ -714,7 +714,7 @@ export default function LeaveTypesPage() {
                               },
                             }}
                           >
-                            <Trash size={18} />
+                            <Trash size={18} color="#FF6B6B" />
                           </IconButton>
                         </Tooltip>
                       </Box>

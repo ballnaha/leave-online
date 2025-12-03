@@ -414,9 +414,14 @@ export default function LeaveFormPage() {
             newErrors.reason = 'กรุณาระบุเหตุผลการลา';
         }
 
-        // ตรวจสอบใบรับรองแพทย์สำหรับลาป่วยเกิน 3 วัน
-        if (leaveCode === 'sick' && totalDaysNum > 3 && formData.attachments.length === 0) {
-            newErrors.attachments = 'กรุณาแนบใบรับรองแพทย์เนื่องจากลาเกิน 3 วัน';
+        // ตรวจสอบใบรับรองแพทย์สำหรับลาป่วยตั้งแต่ 3 วันขึ้นไป
+        if (leaveCode === 'sick' && totalDaysNum >= 3 && formData.attachments.length === 0) {
+            newErrors.attachments = 'กรุณาแนบใบรับรองแพทย์เนื่องจากลาป่วยตั้งแต่ 3 วันขึ้นไป';
+        }
+
+        // ตรวจสอบหลักฐานสำหรับลากิจ
+        if (leaveCode === 'business' && formData.attachments.length === 0) {
+            newErrors.attachments = 'กรุณาแนบหลักฐานการลากิจ';
         }
 
         setErrors(newErrors);
@@ -689,13 +694,16 @@ export default function LeaveFormPage() {
                                 </Typography>
                             </Box>
 
-                            {/* วันที่และเวลาเริ่มลา */}
-                            <Box sx={{ display: 'flex', gap: 1.5, mb: 2 }}>
-                                {/* วันที่เริ่มลา */}
-                                <Box sx={{ flex: 1 }}>
+                            {/* ส่วนเริ่มลา */}
+                            <Box sx={{ mb: 3 }}>
+                                <Typography variant="subtitle2" sx={{ mb: 1.5, color: 'text.secondary', display: 'flex', alignItems: 'center', gap: 1 }}>
+                                    <Box component="span" sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: '#4caf50', boxShadow: '0 0 0 2px rgba(76, 175, 80, 0.2)' }} />
+                                    {t('leave_start_section', 'เริ่มลา')}
+                                </Typography>
+                                <Box sx={{ pl: 2, borderLeft: '2px solid', borderColor: '#f0f0f0', display: 'flex', flexDirection: 'column', gap: 2 }}>
                                     <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale={locale}>
                                         <DatePicker
-                                            label={t('leave_start_date', 'วันที่เริ่มลา')}
+                                            label={t('leave_start_date', 'วันที่')}
                                             value={startDateValue}
                                             onChange={(newValue) => {
                                                 setStartDateValue(newValue);
@@ -721,14 +729,8 @@ export default function LeaveFormPage() {
                                                 },
                                             }}
                                         />
-                                    </LocalizationProvider>
-                                </Box>
-
-                                {/* เวลาเริ่มลา */}
-                                <Box sx={{ width: 130 }}>
-                                    <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale={locale}>
                                         <TimePicker
-                                            label={t('leave_time', 'เวลา')}
+                                            label={t('leave_start_time', 'เวลา')}
                                             value={startTimeValue}
                                             onChange={(newValue) => {
                                                 setStartTimeValue(newValue);
@@ -754,13 +756,16 @@ export default function LeaveFormPage() {
                                 </Box>
                             </Box>
 
-                            {/* วันที่และเวลาสิ้นสุด */}
-                            <Box sx={{ display: 'flex', gap: 1.5, mb: 2 }}>
-                                {/* วันที่สิ้นสุด */}
-                                <Box sx={{ flex: 1 }}>
+                            {/* ส่วนสิ้นสุด */}
+                            <Box sx={{ mb: 1 }}>
+                                <Typography variant="subtitle2" sx={{ mb: 1.5, color: 'text.secondary', display: 'flex', alignItems: 'center', gap: 1 }}>
+                                    <Box component="span" sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: '#ef5350', boxShadow: '0 0 0 2px rgba(239, 83, 80, 0.2)' }} />
+                                    {t('leave_end_section', 'ถึงวันที่')}
+                                </Typography>
+                                <Box sx={{ pl: 2, borderLeft: '2px solid', borderColor: '#f0f0f0', display: 'flex', flexDirection: 'column', gap: 2 }}>
                                     <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale={locale}>
                                         <DatePicker
-                                            label={t('leave_end_date', 'วันที่สิ้นสุด')}
+                                            label={t('leave_end_date', 'วันที่')}
                                             value={endDateValue}
                                             onChange={(newValue) => {
                                                 setEndDateValue(newValue);
@@ -787,14 +792,8 @@ export default function LeaveFormPage() {
                                                 },
                                             }}
                                         />
-                                    </LocalizationProvider>
-                                </Box>
-
-                                {/* เวลาสิ้นสุด */}
-                                <Box sx={{ width: 130 }}>
-                                    <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale={locale}>
                                         <TimePicker
-                                            label={t('leave_time', 'เวลา')}
+                                            label={t('leave_end_time', 'เวลา')}
                                             value={endTimeValue}
                                             onChange={(newValue) => {
                                                 setEndTimeValue(newValue);
@@ -928,8 +927,12 @@ export default function LeaveFormPage() {
                         </Typography>
 
                             {leaveType.maxDaysPerYear && (
-                                <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block', textAlign: 'center' }}>
-                                    {t('leave_max_quota', 'สิทธิ์การลาสูงสุด: {days} วัน/ปี โดยไม่หักเงิน').replace('{days}', leaveType.maxDaysPerYear.toString())}
+                                <Typography 
+                                    variant="caption" 
+                                    color={(parseFloat(formData.totalDays) || 0) > leaveType.maxDaysPerYear ? 'error.main' : 'text.secondary'}
+                                    sx={{ mt: 1, display: 'block', textAlign: 'center', fontWeight: (parseFloat(formData.totalDays) || 0) > leaveType.maxDaysPerYear ? 'bold' : 'normal' }}
+                                >
+                                    {t('leave_max_quota', 'สิทธิ์ลา {days} วัน/ปี (ส่วนที่เกินจะถูกหักเงิน)').replace('{days}', leaveType.maxDaysPerYear.toString())}
                                 </Typography>
                             )}
                     </Box>

@@ -211,16 +211,34 @@ export default function HolidayDialog({
           />
 
           {/* Name */}
-          <TextField
-            label="ชื่อวันหยุด *"
-            value={formData.name}
-            onChange={(e) => handleChange('name', e.target.value)}
-            error={!!errors.name}
-            helperText={errors.name || 'ระบบจะแปลภาษาอัตโนมัติตามการตั้งค่าของผู้ใช้'}
-            placeholder="เช่น วันขึ้นปีใหม่"
-            size="small"
-            fullWidth
-          />
+          <FormControl fullWidth size="small" error={!!errors.name}>
+            <InputLabel>ชื่อวันหยุด *</InputLabel>
+            <Select
+              value={formData.name}
+              label="ชื่อวันหยุด *"
+              onChange={(e) => handleChange('name', e.target.value)}
+            >
+              <MenuItem value="New Year's Day">วันขึ้นปีใหม่ (New Year's Day)</MenuItem>
+              <MenuItem value="Makha Bucha Day">วันมาฆบูชา (Makha Bucha Day)</MenuItem>
+              <MenuItem value="Chakri Memorial Day">วันจักรี (Chakri Memorial Day)</MenuItem>
+              <MenuItem value="Songkran Festival">วันสงกรานต์ (Songkran Festival)</MenuItem>
+              <MenuItem value="Labor Day">วันแรงงานแห่งชาติ (Labor Day)</MenuItem>
+              <MenuItem value="Coronation Day">วันฉัตรมงคล (Coronation Day)</MenuItem>
+              <MenuItem value="Visakha Bucha Day">วันวิสาขบูชา (Visakha Bucha Day)</MenuItem>
+              <MenuItem value="H.M. Queen Suthida's Birthday">วันเฉลิมพระชนมพรรษาพระราชินี (H.M. Queen Suthida's Birthday)</MenuItem>
+              <MenuItem value="Asalha Bucha Day">วันอาสาฬหบูชา (Asalha Bucha Day)</MenuItem>
+              <MenuItem value="Buddhist Lent Day">วันเข้าพรรษา (Buddhist Lent Day)</MenuItem>
+              <MenuItem value="H.M. King Maha Vajiralongkorn's Birthday">วันเฉลิมพระชนมพรรษา ร.10 (H.M. King Maha Vajiralongkorn's Birthday)</MenuItem>
+              <MenuItem value="H.M. Queen Sirikit The Queen Mother's Birthday">วันแม่แห่งชาติ (H.M. Queen Sirikit The Queen Mother's Birthday)</MenuItem>
+              <MenuItem value="H.M. King Bhumibol Adulyadej The Great Memorial Day">วันคล้ายวันสวรรคต ร.9 (H.M. King Bhumibol Adulyadej The Great Memorial Day)</MenuItem>
+              <MenuItem value="Chulalongkorn Day">วันปิยมหาราช (Chulalongkorn Day)</MenuItem>
+              <MenuItem value="H.M. King Bhumibol Adulyadej The Great's Birthday">วันพ่อแห่งชาติ (H.M. King Bhumibol Adulyadej The Great's Birthday)</MenuItem>
+              <MenuItem value="Constitution Day">วันรัฐธรรมนูญ (Constitution Day)</MenuItem>
+              <MenuItem value="New Year's Eve">วันสิ้นปี (New Year's Eve)</MenuItem>
+              <MenuItem value="Company Holiday">วันหยุดบริษัท (Company Holiday)</MenuItem>
+            </Select>
+            {errors.name && <Typography variant="caption" color="error">{errors.name}</Typography>}
+          </FormControl>
 
           {/* Type */}
           <FormControl fullWidth size="small">
@@ -230,9 +248,7 @@ export default function HolidayDialog({
               label="ประเภทวันหยุด"
               onChange={(e) => handleChange('type', e.target.value)}
             >
-              <MenuItem value="national">วันหยุดราชการ</MenuItem>
-              <MenuItem value="substitute">วันหยุดชดเชย</MenuItem>
-              <MenuItem value="special">วันหยุดพิเศษ</MenuItem>
+              
               <MenuItem value="company">วันหยุดบริษัท</MenuItem>
             </Select>
           </FormControl>
