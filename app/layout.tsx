@@ -16,7 +16,7 @@ export const metadata: Metadata = {
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
-    statusBarStyle: "default",
+    statusBarStyle: "black-translucent",
     title: "Leave Online",
   },
   formatDetection: {
@@ -34,7 +34,7 @@ export default function RootLayout({
       <head>
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta name="theme-color" content="#667eea" />
-        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
       </head>
       <body className={`${sarabun.variable} pre-locale`} style={{ overscrollBehavior: 'none' }}>
         {/* Prevent language flicker and fade-in once locale applied */}
