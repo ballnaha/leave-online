@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { Box, Fab, Paper, Typography } from '@mui/material';
 import { useLocale } from '../providers/LocaleProvider';
 import { useUser } from '../providers/UserProvider';
+import { usePWA } from '../providers/PWAProvider';
 import { 
     Home2, 
     Message, 
@@ -68,6 +69,7 @@ const BottomNav: React.FC<BottomNavProps> = ({ activePage = 'home' }) => {
     const router = useRouter();
     const { t } = useLocale();
     const { user } = useUser();
+    const { isInstallPromptVisible } = usePWA();
     const [openMenu, setOpenMenu] = useState(false);
     const [animatingOut, setAnimatingOut] = useState(false);
     const [renderMenu, setRenderMenu] = useState(false);
@@ -183,8 +185,17 @@ const BottomNav: React.FC<BottomNavProps> = ({ activePage = 'home' }) => {
                     }}
                 />
             )}
-
-            <Box sx={{ position: 'fixed', bottom: 0, left: '50%', transform: 'translateX(-50%)', pointerEvents: 'none', zIndex: 1000, width: '100%', maxWidth: 560 }}>
+            <Box sx={{ 
+                position: 'fixed', 
+                bottom: isInstallPromptVisible ? 'calc(80px + env(safe-area-inset-bottom, 20px))' : 0, 
+                left: '50%', 
+                transform: 'translateX(-50%)', 
+                pointerEvents: 'none', 
+                zIndex: 1000, 
+                width: '100%', 
+                maxWidth: 560,
+                transition: 'bottom 0.3s ease'
+            }}>
                 <Box sx={{ position: 'relative', height: 70, width: '100%' }}>
                     {/* Leave Type Menu Balloon - Right Side (render with exit animation) */}
                     {renderMenu && (
