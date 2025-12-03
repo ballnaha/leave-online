@@ -165,7 +165,7 @@ export default function Home() {
       // Find the first pending approval
       const pendingApproval = leave.approvals.find(a => a.status === 'pending');
       if (pendingApproval) {
-        return `${t('status_waiting_for', 'รอการอนุมัติจาก')} ${pendingApproval.approver?.firstName || 'หัวหน้างาน'}`;
+        return `${t('status_waiting_for', 'รอการอนุมัติจาก')} ${pendingApproval.approver?.firstName || t('supervisor', 'หัวหน้างาน')}`;
       }
     }
     

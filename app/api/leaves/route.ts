@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { createApprovalSteps } from '@/lib/escalation';
+import { notifyLeaveSubmitted } from '@/lib/onesignal';
 
 interface AttachmentPayload {
     fileName: string;
@@ -146,6 +147,9 @@ export async function POST(request: Request) {
 
         // สร้าง approval steps ตาม flow ที่กำหนด
         await createApprovalSteps(leaveRequest.id, Number(session.user.id));
+
+        // แจ้งเตือนผู้ขอว่าส่งใบลาสำเร็จ
+        await notifyLeaveSubmitted(Number(session.user.id), leaveRequest.id, leaveType);
 
         return NextResponse.json({ success: true, data: leaveRequest }, { status: 201 });
     } catch (error) {

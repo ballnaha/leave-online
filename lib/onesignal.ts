@@ -244,3 +244,21 @@ export async function notifyApprovalReminder(
     },
   });
 }
+
+/**
+ * แจ้งเตือนเมื่อส่งใบลาสำเร็จ (แจ้งผู้ขอ)
+ */
+export async function notifyLeaveSubmitted(
+  userId: number,
+  leaveRequestId: number,
+  leaveType: string
+): Promise<NotificationResult> {
+  return notifyUser(userId, 'submitted', {
+    title: '✅ ส่งใบลาสำเร็จ',
+    message: `คำขอ${leaveType}ของคุณถูกส่งแล้วและกำลังรอการอนุมัติ`,
+    data: {
+      type: 'submitted',
+      leaveRequestId,
+    },
+  });
+}

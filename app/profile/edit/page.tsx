@@ -49,6 +49,11 @@ import { useSession } from 'next-auth/react';
 import { useToastr } from '@/app/components/Toastr';
 import { useUser } from '@/app/providers/UserProvider';
 import type { UserRole } from '@/types/user-role';
+import { useLocale } from '@/app/providers/LocaleProvider';
+import dayjs from 'dayjs';
+import 'dayjs/locale/th';
+import 'dayjs/locale/en';
+import 'dayjs/locale/my';
 
 interface Company {
     id: number;
@@ -96,6 +101,7 @@ interface UserProfile {
 }
 
 export default function EditProfilePage() {
+    const { t, locale } = useLocale();
     const router = useRouter();
     const toastr = useToastr();
     const { data: session } = useSession();
@@ -188,11 +194,11 @@ export default function EditProfilePage() {
                 });
         } catch (error) {
             console.error('Error fetching profile:', error);
-            toastr.error('ไม่สามารถดึงข้อมูลได้');
+            toastr.error(t('error_fetch_profile', 'ไม่สามารถดึงข้อมูลได้'));
         } finally {
             setLoadingProfile(false);
         }
-    }, [toastr]);
+    }, [toastr, t]);
 
     // Fetch companies on mount - only run once
     useEffect(() => {
@@ -296,13 +302,13 @@ export default function EditProfilePage() {
 
         // Check file type
         if (!file.type.startsWith('image/')) {
-            toastr.error('กรุณาเลือกไฟล์รูปภาพ');
+            toastr.error(t('error_select_image', 'กรุณาเลือกไฟล์รูปภาพ'));
             return;
         }
 
         // Check file size (max 15MB)
         if (file.size > 15 * 1024 * 1024) {
-            toastr.error('ไฟล์รูปภาพต้องมีขนาดไม่เกิน 15MB');
+            toastr.error(t('error_image_size', 'ไฟล์รูปภาพต้องมีขนาดไม่เกิน 15MB'));
             return;
         }
 
@@ -468,7 +474,7 @@ export default function EditProfilePage() {
             setImageEditorOpen(false);
             
         } else {
-            toastr.error('ไม่สามารถประมวลผลรูปภาพได้ กรุณาลองใหม่อีกครั้ง');
+            toastr.error(t('error_process_image', 'ไม่สามารถประมวลผลรูปภาพได้ กรุณาลองใหม่อีกครั้ง'));
         }
     };
 
@@ -511,13 +517,13 @@ export default function EditProfilePage() {
     const handleSubmit = async () => {
         // Validate first name
         if (!formData.firstName.trim()) {
-            toastr.warning('กรุณากรอกชื่อ');
+            toastr.warning(t('error_first_name_required', 'กรุณากรอกชื่อ'));
             return;
         }
 
         // Validate last name
         if (!formData.lastName.trim()) {
-            toastr.warning('กรุณากรอกนามสกุล');
+            toastr.warning(t('error_last_name_required', 'กรุณากรอกนามสกุล'));
             return;
         }
 
@@ -525,19 +531,19 @@ export default function EditProfilePage() {
         const wantsPasswordChange = changePasswordOpen || currentPassword || newPassword || confirmPassword;
         if (wantsPasswordChange) {
             if (!currentPassword) {
-                toastr.warning('กรุณากรอกรหัสผ่านปัจจุบัน');
+                toastr.warning(t('error_current_password_required', 'กรุณากรอกรหัสผ่านปัจจุบัน'));
                 return;
             }
             if (!newPassword) {
-                toastr.warning('กรุณากรอกรหัสผ่านใหม่');
+                toastr.warning(t('error_new_password_required', 'กรุณากรอกรหัสผ่านใหม่'));
                 return;
             }
             if (newPassword.length < 6) {
-                toastr.warning('รหัสผ่านใหม่ต้องมีอย่างน้อย 6 ตัวอักษร');
+                toastr.warning(t('error_password_length', 'รหัสผ่านใหม่ต้องมีอย่างน้อย 6 ตัวอักษร'));
                 return;
             }
             if (newPassword !== confirmPassword) {
-                toastr.warning('รหัสผ่านใหม่และยืนยันไม่ตรงกัน');
+                toastr.warning(t('error_password_mismatch', 'รหัสผ่านใหม่และยืนยันไม่ตรงกัน'));
                 return;
             }
         }
@@ -561,8 +567,8 @@ export default function EditProfilePage() {
                 });
 
                 if (!uploadRes.ok) {
-                    const uploadData = await uploadRes.json().catch(() => ({ error: 'อัพโหลดรูปภาพไม่สำเร็จ' }));
-                    throw new Error(uploadData.error || 'อัพโหลดรูปภาพไม่สำเร็จ');
+                    const uploadData = await uploadRes.json().catch(() => ({ error: t('error_upload_image', 'อัพโหลดรูปภาพไม่สำเร็จ') }));
+                    throw new Error(uploadData.error || t('error_upload_image', 'อัพโหลดรูปภาพไม่สำเร็จ'));
                 }
                 
                 const uploadData = await uploadRes.json();
@@ -596,14 +602,14 @@ export default function EditProfilePage() {
             });
 
             if (!response.ok) {
-                const data = await response.json().catch(() => ({ error: 'เกิดข้อผิดพลาดในการบันทึก' }));
-                throw new Error(data.error || 'เกิดข้อผิดพลาดในการบันทึก');
+                const data = await response.json().catch(() => ({ error: t('error_save_profile', 'เกิดข้อผิดพลาดในการบันทึก') }));
+                throw new Error(data.error || t('error_save_profile', 'เกิดข้อผิดพลาดในการบันทึก'));
             }
 
             // Refresh user data in global context
             await refetchUser();
 
-            toastr.success('บันทึกข้อมูลสำเร็จ');
+            toastr.success(t('success_save_profile', 'บันทึกข้อมูลสำเร็จ'));
             // Reset password fields
             setCurrentPassword('');
             setNewPassword('');
@@ -616,7 +622,7 @@ export default function EditProfilePage() {
             }, 800);
 
         } catch (err) {
-            toastr.error(err instanceof Error ? err.message : 'เกิดข้อผิดพลาดในการบันทึก');
+            toastr.error(err instanceof Error ? err.message : t('error_save_profile', 'เกิดข้อผิดพลาดในการบันทึก'));
         } finally {
             setIsSaving(false);
         }
@@ -627,38 +633,38 @@ export default function EditProfilePage() {
         
         switch (type) {
             case 'company':
-                setDrawerTitle('เลือกบริษัท');
+                setDrawerTitle(t('select_company', 'เลือกบริษัท'));
                 setDrawerOptions(companies.map(c => ({ value: c.code, label: c.name })));
                 break;
             case 'employeeType':
-                setDrawerTitle('เลือกประเภทพนักงาน');
+                setDrawerTitle(t('select_employee_type', 'เลือกประเภทพนักงาน'));
                 setDrawerOptions([
-                    { value: 'daily', label: 'รายวัน' },
-                    { value: 'monthly', label: 'รายเดือน' },
+                    { value: 'daily', label: t('employee_type_daily', 'รายวัน') },
+                    { value: 'monthly', label: t('employee_type_monthly', 'รายเดือน') },
                 ]);
                 break;
             case 'department':
-                setDrawerTitle('เลือกฝ่าย');
+                setDrawerTitle(t('select_department', 'เลือกฝ่าย'));
                 setDrawerOptions(departments.map(d => ({ value: d.code, label: d.name })));
                 break;
             case 'section':
-                setDrawerTitle('เลือกแผนก');
+                setDrawerTitle(t('select_section', 'เลือกแผนก'));
                 setDrawerOptions(sections.map(s => ({ value: s.code, label: s.name })));
                 break;
             case 'shift':
-                setDrawerTitle('เลือกกะทำงาน');
+                setDrawerTitle(t('select_shift', 'เลือกกะทำงาน'));
                 setDrawerOptions([
-                    { value: '', label: 'ไม่ระบุ' },
-                    { value: 'day', label: 'กะกลางวัน' },
-                    { value: 'night', label: 'กะกลางคืน' },
+                    { value: '', label: t('not_specified', 'ไม่ระบุ') },
+                    { value: 'day', label: t('shift_day', 'กะกลางวัน') },
+                    { value: 'night', label: t('shift_night', 'กะกลางคืน') },
                     
                 ]);
                 break;
             case 'gender':
-                setDrawerTitle('เลือกเพศ');
+                setDrawerTitle(t('select_gender', 'เลือกเพศ'));
                 setDrawerOptions([
-                    { value: 'male', label: 'ชาย' },
-                    { value: 'female', label: 'หญิง' },
+                    { value: 'male', label: t('gender_male', 'ชาย') },
+                    { value: 'female', label: t('gender_female', 'หญิง') },
                 ]);
                 break;
         }
@@ -691,7 +697,7 @@ export default function EditProfilePage() {
                 const company = companies.find(c => c.code === formData.company);
                 return company?.name || profile?.companyName || '';
             case 'employeeType':
-                return formData.employeeType === 'daily' ? 'รายวัน' : formData.employeeType === 'monthly' ? 'รายเดือน' : '';
+                return formData.employeeType === 'daily' ? t('employee_type_daily', 'รายวัน') : formData.employeeType === 'monthly' ? t('employee_type_monthly', 'รายเดือน') : '';
             case 'department':
                 const dept = departments.find(d => d.code === formData.departmentId || d.name === formData.departmentId);
                 return dept?.name || profile?.departmentName || '';
@@ -699,10 +705,10 @@ export default function EditProfilePage() {
                 const sec = sections.find(s => s.code === formData.sectionId || s.name === formData.sectionId);
                 return sec?.name || profile?.sectionName || '';
             case 'shift':
-                const shifts: Record<string, string> = { day: 'กะกลางวัน', night: 'กะกลางคืน' };
+                const shifts: Record<string, string> = { day: t('shift_day', 'กะกลางวัน'), night: t('shift_night', 'กะกลางคืน') };
                 return formData.shift ? shifts[formData.shift] || formData.shift : '';
             case 'gender':
-                const genders: Record<string, string> = { male: 'ชาย', female: 'หญิง' };
+                const genders: Record<string, string> = { male: t('gender_male', 'ชาย'), female: t('gender_female', 'หญิง') };
                 return formData.gender ? genders[formData.gender] || formData.gender : '';
         }
     };
@@ -717,13 +723,9 @@ export default function EditProfilePage() {
     // Format date for display
     const formatThaiDate = (dateString: string) => {
         if (!dateString) return '';
-        const date = new Date(dateString);
-        const day = date.getDate();
-        const months = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 
-                       'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
-        const month = months[date.getMonth()];
-        const year = date.getFullYear() + 543;
-        return `${day} ${month} ${year}`;
+        const date = dayjs(dateString).locale(locale);
+        const year = locale === 'th' ? date.year() + 543 : date.year();
+        return `${date.date()} ${date.format('MMMM')} ${year}`;
     };
 
     const showLoading = !mounted || loadingProfile;
@@ -734,7 +736,8 @@ export default function EditProfilePage() {
             <Box
                 sx={{
                     background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                    py: 2,
+                    pt: 'calc(env(safe-area-inset-top, 0px) + 24px)',
+                    pb: 2,
                     px: 2,
                     position: 'sticky',
                     top: 0,
@@ -755,7 +758,7 @@ export default function EditProfilePage() {
                             <ArrowLeft2 size={20} color="white" />
                         </IconButton>
                         <Typography variant="h6" sx={{ color: 'white', fontWeight: 500 , fontSize: '1rem'}}>
-                            แก้ไขโปรไฟล์
+                            {t('edit_profile_title', 'แก้ไขโปรไฟล์')}
                         </Typography>
                     </Box>
                 </Box>
@@ -825,7 +828,7 @@ export default function EditProfilePage() {
                         </Box>
 
                         <Typography variant="caption" sx={{ display: 'block', textAlign: 'center', color: 'text.secondary', mb: 3 }}>
-                            แตะที่ไอคอนกล้องเพื่อเปลี่ยนรูปโปรไฟล์
+                            {t('tap_camera_to_change', 'แตะที่ไอคอนกล้องเพื่อเปลี่ยนรูปโปรไฟล์')}
                         </Typography>
 
                         {/* Form */}
@@ -841,7 +844,7 @@ export default function EditProfilePage() {
                             {/* Employee ID (Read-only) */}
                             <Box sx={{ mb: 2.5 }}>
                                 <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, mb: 0.5, display: 'block' }}>
-                                    รหัสพนักงาน
+                                    {t('employee_id', 'รหัสพนักงาน')}
                                 </Typography>
                                 <TextField
                                     id="edit-employeeId"
@@ -867,7 +870,7 @@ export default function EditProfilePage() {
                             {/* First Name */}
                             <Box sx={{ mb: 2.5 }}>
                                 <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, mb: 0.5, display: 'block' }}>
-                                    ชื่อ *
+                                    {t('first_name_required', 'ชื่อ *')}
                                 </Typography>
                                 <TextField
                                     id="edit-firstName"
@@ -875,7 +878,7 @@ export default function EditProfilePage() {
                                     size="small"
                                     value={formData.firstName}
                                     onChange={handleChange('firstName')}
-                                    placeholder="กรอกชื่อ"
+                                    placeholder={t('placeholder_first_name', 'กรอกชื่อ')}
                                     InputProps={{
                                         startAdornment: (
                                             <InputAdornment position="start">
@@ -896,7 +899,7 @@ export default function EditProfilePage() {
                             {/* Last Name */}
                             <Box sx={{ mb: 2.5 }}>
                                 <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, mb: 0.5, display: 'block' }}>
-                                    นามสกุล *
+                                    {t('last_name_required', 'นามสกุล *')}
                                 </Typography>
                                 <TextField
                                     id="edit-lastName"
@@ -904,7 +907,7 @@ export default function EditProfilePage() {
                                     size="small"
                                     value={formData.lastName}
                                     onChange={handleChange('lastName')}
-                                    placeholder="กรอกนามสกุล"
+                                    placeholder={t('placeholder_last_name', 'กรอกนามสกุล')}
                                     InputProps={{
                                         startAdornment: (
                                             <InputAdornment position="start">
@@ -926,7 +929,7 @@ export default function EditProfilePage() {
                             {/* Gender */}
                             <Box sx={{ mb: 2.5 }}>
                                 <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, mb: 0.5, display: 'block' }}>
-                                    เพศ
+                                    {t('gender', 'เพศ')}
                                 </Typography>
                                 <TextField
                                     id="edit-gender"
@@ -934,7 +937,7 @@ export default function EditProfilePage() {
                                     size="small"
                                     value={getDisplayValue('gender')}
                                     onClick={() => openDrawer('gender')}
-                                    placeholder="เลือกเพศ"
+                                    placeholder={t('placeholder_gender', 'เลือกเพศ')}
                                     InputProps={{
                                         readOnly: true,
                                         startAdornment: (
@@ -951,7 +954,7 @@ export default function EditProfilePage() {
                             {/* Email */}
                             <Box sx={{ mb: 2.5 }}>
                                 <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, mb: 0.5, display: 'block' }}>
-                                    อีเมล
+                                    {t('email', 'อีเมล')}
                                 </Typography>
                                 <TextField
                                     id="edit-email"
@@ -981,7 +984,7 @@ export default function EditProfilePage() {
                             {/* Company */}
                             <Box sx={{ mb: 2.5 }}>
                                 <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, mb: 0.5, display: 'block' }}>
-                                    บริษัท
+                                    {t('company', 'บริษัท')}
                                 </Typography>
                                 <TextField
                                     id="edit-company"
@@ -989,7 +992,7 @@ export default function EditProfilePage() {
                                     size="small"
                                     value={getDisplayValue('company')}
                                     onClick={() => openDrawer('company')}
-                                    placeholder="เลือกบริษัท"
+                                    placeholder={t('placeholder_company', 'เลือกบริษัท')}
                                     InputProps={{
                                         readOnly: true,
                                         startAdornment: (
@@ -1010,7 +1013,7 @@ export default function EditProfilePage() {
                             {/* Employee Type */}
                             <Box sx={{ mb: 2.5 }}>
                                 <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, mb: 0.5, display: 'block' }}>
-                                    ประเภทพนักงาน
+                                    {t('employee_type', 'ประเภทพนักงาน')}
                                 </Typography>
                                 <TextField
                                     id="edit-employeeType"
@@ -1018,7 +1021,7 @@ export default function EditProfilePage() {
                                     size="small"
                                     value={getDisplayValue('employeeType')}
                                     onClick={() => openDrawer('employeeType')}
-                                    placeholder="เลือกประเภทพนักงาน"
+                                    placeholder={t('placeholder_employee_type', 'เลือกประเภทพนักงาน')}
                                     InputProps={{
                                         readOnly: true,
                                         startAdornment: (
@@ -1035,7 +1038,7 @@ export default function EditProfilePage() {
                             {/* Department */}
                             <Box sx={{ mb: 2.5 }}>
                                 <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, mb: 0.5, display: 'block' }}>
-                                    ฝ่าย
+                                    {t('department', 'ฝ่าย')}
                                 </Typography>
                                 <TextField
                                     id="edit-department"
@@ -1043,7 +1046,7 @@ export default function EditProfilePage() {
                                     size="small"
                                     value={getDisplayValue('department')}
                                     onClick={() => formData.company && openDrawer('department')}
-                                    placeholder={formData.company ? 'เลือกฝ่าย' : 'กรุณาเลือกบริษัทก่อน'}
+                                    placeholder={formData.company ? t('placeholder_department', 'เลือกฝ่าย') : t('select_company_first', 'กรุณาเลือกบริษัทก่อน')}
                                     disabled={!formData.company}
                                     InputProps={{
                                         readOnly: true,
@@ -1065,7 +1068,7 @@ export default function EditProfilePage() {
                             {/* Section */}
                             <Box sx={{ mb: 2.5 }}>
                                 <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, mb: 0.5, display: 'block' }}>
-                                    แผนก
+                                    {t('section', 'แผนก')}
                                 </Typography>
                                 <TextField
                                     id="edit-section"
@@ -1073,7 +1076,7 @@ export default function EditProfilePage() {
                                     size="small"
                                     value={getDisplayValue('section')}
                                     onClick={() => formData.departmentId && sections.length > 0 && openDrawer('section')}
-                                    placeholder={formData.departmentId ? (sections.length > 0 ? 'เลือกแผนก' : 'ไม่มีแผนก') : 'กรุณาเลือกฝ่ายก่อน'}
+                                    placeholder={formData.departmentId ? (sections.length > 0 ? t('placeholder_section', 'เลือกแผนก') : t('no_section', 'ไม่มีแผนก')) : t('select_department_first', 'กรุณาเลือกฝ่ายก่อน')}
                                     disabled={!formData.departmentId || sections.length === 0}
                                     InputProps={{
                                         readOnly: true,
@@ -1095,7 +1098,7 @@ export default function EditProfilePage() {
                             {/* Shift */}
                             <Box sx={{ mb: 2.5 }}>
                                 <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, mb: 0.5, display: 'block' }}>
-                                    กะทำงาน
+                                    {t('shift', 'กะทำงาน')}
                                 </Typography>
                                 <TextField
                                     id="edit-shift"
@@ -1103,7 +1106,7 @@ export default function EditProfilePage() {
                                     size="small"
                                     value={getDisplayValue('shift')}
                                     onClick={() => openDrawer('shift')}
-                                    placeholder="เลือกกะทำงาน"
+                                    placeholder={t('placeholder_shift', 'เลือกกะทำงาน')}
                                     InputProps={{
                                         readOnly: true,
                                         startAdornment: (
@@ -1121,7 +1124,7 @@ export default function EditProfilePage() {
                             {/* Start Date (Read-only) */}
                             <Box sx={{ mb: 1 }}>
                                 <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, mb: 0.5, display: 'block' }}>
-                                    วันที่เริ่มงาน
+                                    {t('start_date', 'วันที่เริ่มงาน')}
                                 </Typography>
                                 <TextField
                                     id="edit-startDate"
@@ -1148,7 +1151,7 @@ export default function EditProfilePage() {
                                 <Box sx={{ mt: 3 }}>
                                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
                                         <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600 }}>
-                                            เปลี่ยนรหัสผ่าน
+                                            {t('change_password', 'เปลี่ยนรหัสผ่าน')}
                                         </Typography>
                                         <Button
                                             variant="outlined"
@@ -1156,7 +1159,7 @@ export default function EditProfilePage() {
                                             onClick={() => setChangePasswordOpen((v) => !v)}
                                             sx={{ borderColor: '#1b194b', color: '#1b194b' }}
                                         >
-                                            {changePasswordOpen ? 'ซ่อน' : 'แสดง'}
+                                            {changePasswordOpen ? t('hide', 'ซ่อน') : t('show', 'แสดง')}
                                         </Button>
                                     </Box>
 
@@ -1171,7 +1174,7 @@ export default function EditProfilePage() {
                                                     type={showCurrent ? 'text' : 'password'}
                                                     value={currentPassword}
                                                     onChange={(e) => setCurrentPassword(e.target.value)}
-                                                    placeholder="รหัสผ่านปัจจุบัน"
+                                                    placeholder={t('current_password', 'รหัสผ่านปัจจุบัน')}
                                                     InputProps={{
                                                         endAdornment: (
                                                             <InputAdornment position="end">
@@ -1193,7 +1196,7 @@ export default function EditProfilePage() {
                                                     type={showNew ? 'text' : 'password'}
                                                     value={newPassword}
                                                     onChange={(e) => setNewPassword(e.target.value)}
-                                                    placeholder="รหัสผ่านใหม่ (อย่างน้อย 6 ตัวอักษร)"
+                                                    placeholder={t('new_password_placeholder', 'รหัสผ่านใหม่ (อย่างน้อย 6 ตัวอักษร)')}
                                                     InputProps={{
                                                         endAdornment: (
                                                             <InputAdornment position="end">
@@ -1215,7 +1218,7 @@ export default function EditProfilePage() {
                                                     type={showConfirm ? 'text' : 'password'}
                                                     value={confirmPassword}
                                                     onChange={(e) => setConfirmPassword(e.target.value)}
-                                                    placeholder="ยืนยันรหัสผ่านใหม่"
+                                                    placeholder={t('confirm_new_password', 'ยืนยันรหัสผ่านใหม่')}
                                                     InputProps={{
                                                         endAdornment: (
                                                             <InputAdornment position="end">
@@ -1273,7 +1276,7 @@ export default function EditProfilePage() {
                             },
                         }}
                     >
-                        {isSaving ? 'กำลังบันทึก...' : 'บันทึกข้อมูล'}
+                        {isSaving ? t('saving', 'กำลังบันทึก...') : t('save', 'บันทึกข้อมูล')}
                     </Button>
                 </Box>
             </Box>
@@ -1356,7 +1359,7 @@ export default function EditProfilePage() {
             >
                 <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pb: 1 }}>
                     <Typography component="span" variant="h6" sx={{ fontWeight: 700 }}>
-                        ปรับแต่งรูปภาพ
+                        {t('edit_image', 'ปรับแต่งรูปภาพ')}
                     </Typography>
                     <IconButton onClick={() => setImageEditorOpen(false)} size="small">
                         <CloseCircle size={20} />
@@ -1470,7 +1473,7 @@ export default function EditProfilePage() {
                         {/* Controls */}
                         <Box sx={{ width: '100%', p: 2, pt: 2 }}>
                             <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', textAlign: 'center', mb: 2 }}>
-                                ลากเพื่อปรับตำแหน่ง • ใช้ slider เพื่อซูม
+                                {t('drag_to_adjust', 'ลากเพื่อปรับตำแหน่ง • ใช้ slider เพื่อซูม')}
                             </Typography>
 
                             {/* Zoom Control */}
@@ -1501,7 +1504,7 @@ export default function EditProfilePage() {
                                     startIcon={<RotateRight size={16} style={{ transform: 'scaleX(-1)' }} />}
                                     sx={{ borderColor: '#1b194b', color: '#1b194b' }}
                                 >
-                                    หมุนซ้าย
+                                    {t('rotate_left', 'หมุนซ้าย')}
                                 </Button>
                                 <Button
                                     variant="outlined"
@@ -1513,7 +1516,7 @@ export default function EditProfilePage() {
                                     }}
                                     sx={{ borderColor: '#999', color: '#666' }}
                                 >
-                                    รีเซ็ต
+                                    {t('reset', 'รีเซ็ต')}
                                 </Button>
                                 <Button
                                     variant="outlined"
@@ -1522,7 +1525,7 @@ export default function EditProfilePage() {
                                     startIcon={<RotateRight size={16} />}
                                     sx={{ borderColor: '#1b194b', color: '#1b194b' }}
                                 >
-                                    หมุนขวา
+                                    {t('rotate_right', 'หมุนขวา')}
                                 </Button>
                             </Box>
                         </Box>
@@ -1533,7 +1536,7 @@ export default function EditProfilePage() {
                         onClick={() => setImageEditorOpen(false)}
                         sx={{ color: '#666' }}
                     >
-                        ยกเลิก
+                        {t('cancel', 'ยกเลิก')}
                     </Button>
                     <Button
                         variant="contained"
@@ -1543,7 +1546,7 @@ export default function EditProfilePage() {
                             '&:hover': { bgcolor: '#2d2a6e' },
                         }}
                     >
-                        บันทึกรูปภาพ
+                        {t('save_image', 'บันทึกรูปภาพ')}
                     </Button>
                 </DialogActions>
             </Dialog>

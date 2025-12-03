@@ -742,7 +742,7 @@ export default function ProfilePage() {
                                                             return;
                                                         }
                                                         if (item.link && item.link !== '#') {
-                                                            window.location.href = item.link;
+                                                            router.push(item.link);
                                                         }
                                                     }}
                                                 >

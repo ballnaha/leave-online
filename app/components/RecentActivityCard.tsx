@@ -1,5 +1,7 @@
+'use client';
 import React from 'react';
 import { Box, Typography, Card, Chip, CircularProgress } from '@mui/material';
+import { useLocale } from '../providers/LocaleProvider';
 
 interface RecentActivityCardProps {
     title: string;
@@ -14,6 +16,8 @@ interface RecentActivityCardProps {
 }
 
 const RecentActivityCard = ({ title, date, status, image, icon, iconColor = '#5E72E4', approvalStatus, currentLevel, totalLevels }: RecentActivityCardProps) => {
+    const { t } = useLocale();
+
     // คำนวณ progress จาก workflow จริง
     const calculateProgress = () => {
         if (status === 'Approved') return 100;
@@ -32,10 +36,10 @@ const RecentActivityCard = ({ title, date, status, image, icon, iconColor = '#5E
     const progress = calculateProgress();
 
     const statusColors = {
-        Approved: { color: '#00C853', bgcolor: '#E8F5E9', label: 'อนุมัติ' },
-        Pending: { color: '#FFAB00', bgcolor: '#FFF8E1', label: 'รออนุมัติ' },
-        Rejected: { color: '#FF1744', bgcolor: '#FFEBEE', label: 'ปฏิเสธ' },
-        Cancelled: { color: '#9E9E9E', bgcolor: '#F5F5F5', label: 'ยกเลิก' },
+        Approved: { color: '#00C853', bgcolor: '#E8F5E9', label: t('status_approved', 'อนุมัติแล้ว') },
+        Pending: { color: '#FFAB00', bgcolor: '#FFF8E1', label: t('status_pending', 'รออนุมัติ') },
+        Rejected: { color: '#FF1744', bgcolor: '#FFEBEE', label: t('status_rejected', 'ไม่อนุมัติ') },
+        Cancelled: { color: '#9E9E9E', bgcolor: '#F5F5F5', label: t('status_cancelled', 'ยกเลิก') },
     };
 
     const currentStatus = statusColors[status] || statusColors.Pending;
