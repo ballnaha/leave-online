@@ -33,7 +33,7 @@ export default function PWAProvider({ children }: { children: React.ReactNode })
     useEffect(() => {
         // Register Service Worker
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('/sw.js')
+            navigator.serviceWorker.register('/OneSignalSDKWorker.js')
                 .then(registration => console.log('SW registered:', registration))
                 .catch(error => console.log('SW registration failed:', error));
         }
@@ -67,8 +67,14 @@ export default function PWAProvider({ children }: { children: React.ReactNode })
             e.preventDefault();
             setDeferredPrompt(e);
             setCanInstall(true);
-            // แสดง prompt เสมอถ้ายังไม่ได้ติดตั้ง
-            if (!isStandaloneMode) {
+
+            // Check if mobile device
+            const ua = window.navigator.userAgent.toLowerCase();
+            const isMobile = /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini|mobile/i.test(ua) || 
+                           (ua.includes('macintosh') && navigator.maxTouchPoints > 1);
+
+            // แสดง prompt เสมอถ้ายังไม่ได้ติดตั้ง และเป็น Mobile เท่านั้น
+            if (!isStandaloneMode && isMobile) {
                 setIsInstallPromptVisible(true);
             }
         };

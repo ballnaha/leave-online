@@ -1,5 +1,5 @@
 // App version configuration
-export const APP_VERSION = '1.0.3';
+export const APP_VERSION = '1.0.4';
 export const BUILD_NUMBER = '20251202'; // YYYYMMDD format
 
 export const getFullVersion = () => {

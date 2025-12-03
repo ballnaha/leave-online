@@ -734,7 +734,8 @@ export default function EditProfilePage() {
             <Box
                 sx={{
                     background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                    py: 2,
+                    pt: 'calc(env(safe-area-inset-top, 0px) + 24px)',
+                    pb: 3,
                     px: 2,
                     position: 'relative',
                     overflow: 'hidden',

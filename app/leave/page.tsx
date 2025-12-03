@@ -530,8 +530,8 @@ export default function LeavePage() {
                                                 position: 'absolute',
                                                 top: 0,
                                                 right: 0,
-                                                width: 16,
-                                                height: 16,
+                                                width: 24,
+                                                height: 24,
                                                 borderRadius: '50%',
                                                 bgcolor: '#FF6B6B',
                                                 color: 'white',
@@ -539,7 +539,7 @@ export default function LeavePage() {
                                                 display: 'flex',
                                                 alignItems: 'center',
                                                 justifyContent: 'center',
-                                                fontWeight: 700,
+                                                fontWeight: 600,
                                                 border: '2px solid white',
                                             }}
                                         >

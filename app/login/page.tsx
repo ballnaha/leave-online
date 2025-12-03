@@ -210,6 +210,7 @@ function LoginPageContent() {
 
                 {/* Username Field */}
                 <TextField
+                    id="username"
                     fullWidth
                     label="รหัสพนักงาน"
                     type="text"
@@ -230,6 +231,7 @@ function LoginPageContent() {
 
                 {/* Password Field */}
                 <TextField
+                    id="password"
                     fullWidth
                     label="รหัสผ่าน"
                     type={showPassword ? 'text' : 'password'}
