@@ -130,7 +130,7 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
           }
       }
 
-      setIsInitialized(true);
+      // setIsInitialized(true); // Moved to finally block
 
       // Check subscription status
       const subscribed = await OneSignal.User.PushSubscription.optedIn;
@@ -138,6 +138,19 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
       
       console.log('🔔 OneSignal: Subscription status:', { subscribed, playerId: id });
       
+      // ถ้ามี ID แต่ไม่พบในระบบ (กรณีถูกลบจาก Dashboard) ให้ลอง Login ใหม่
+      if (id && subscribed) {
+        // Force update subscription to ensure it exists on OneSignal
+        try {
+            // Login with external ID if available (using user ID)
+            if (session?.user?.id) {
+                await OneSignal.login(session.user.id);
+            }
+        } catch (e) {
+            console.warn('🔔 OneSignal: Login/Update failed', e);
+        }
+      }
+
       setIsSubscribed(subscribed);
       if (id) {
         setPlayerId(id);
@@ -180,6 +193,8 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
       }
       
       console.error('🔔 OneSignal initialization error:', error);
+    } finally {
+      setIsInitialized(true);
     }
   };
 
