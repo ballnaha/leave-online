@@ -18,6 +18,7 @@ export interface UserProfile {
     departmentName: string;
     section: string | null;
     sectionName: string | null;
+    position: string | null;
     shift: string | null;
     startDate: string | null;
     role: UserRole;

@@ -107,7 +107,7 @@ export async function PUT(request: Request) {
         }
 
         const body = await request.json();
-        const { firstName, lastName, email, company, employeeType, department, section, shift, avatar, gender, currentPassword, newPassword, confirmPassword } = body;
+        const { firstName, lastName, email, company, employeeType, department, section, position, shift, avatar, gender, currentPassword, newPassword, confirmPassword } = body;
 
         // Validation
         if (!firstName?.trim()) {
@@ -201,6 +201,7 @@ export async function PUT(request: Request) {
                 employeeType: employeeType || undefined,
                 department: department || undefined,
                 section: section || null,
+                position: position || null,
                 shift: shift || null,
                 gender: gender || undefined,
                 ...(newPassword && currentPassword && confirmPassword

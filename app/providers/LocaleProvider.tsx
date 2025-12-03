@@ -174,6 +174,7 @@ const messages: Record<LocaleCode, Record<string, string>> = {
     leave_business: "ลาติดต่อราชการ",
     leave_unpaid: "ลาไม่รับค่าจ้าง",
     leave_other: "ลาอื่นๆ",
+    leave_holiday: "วันหยุด",
     sick_leave_warning: "ลาป่วยเกิน 3 วัน กรุณาแนบใบรับรองแพทย์",
     days_per_year: "วัน/ปี",
     remaining: "คงเหลือ",
@@ -184,6 +185,17 @@ const messages: Record<LocaleCode, Record<string, string>> = {
     status_cancelled: "ยกเลิก",
     status_waiting_for: "รอการอนุมัติจาก",
     supervisor: "หัวหน้างาน",
+
+    // Holiday
+    holiday_title: "วันหยุดประจำปี",
+    holiday_type_national: "วันหยุดราชการ",
+    holiday_type_substitute: "วันหยุดชดเชย",
+    holiday_type_special: "วันหยุดพิเศษ",
+    holiday_count: "วันหยุด",
+    holiday_substitute_count: "วันชดเชย",
+    holiday_days: "วัน",
+    holiday_weekend: "ตรงวันหยุด",
+    holiday_no_data: "ไม่มีข้อมูลวันหยุดสำหรับปีนี้",
 
     // Edit Profile
     edit_profile_title: "แก้ไขโปรไฟล์",
@@ -420,6 +432,7 @@ const messages: Record<LocaleCode, Record<string, string>> = {
     leave_business: "Business Leave",
     leave_unpaid: "Unpaid Leave",
     leave_other: "Other",
+    leave_holiday: "Holiday",
     sick_leave_warning: "Sick leave exceeding 3 days requires a medical certificate",
     days_per_year: "Days/Year",
     remaining: "Remaining",
@@ -429,6 +442,17 @@ const messages: Record<LocaleCode, Record<string, string>> = {
     status_waiting_for: "Waiting for approval from",
     supervisor: "Supervisor",
     status_rejected: "Rejected",
+
+    // Holiday
+    holiday_title: "Annual Holidays",
+    holiday_type_national: "National Holiday",
+    holiday_type_substitute: "Substitute Holiday",
+    holiday_type_special: "Special Holiday",
+    holiday_count: "Holidays",
+    holiday_substitute_count: "Substitute days",
+    holiday_days: "days",
+    holiday_weekend: "Falls on weekend",
+    holiday_no_data: "No holiday data available for this year",
   
 
     // Edit Profile
@@ -725,6 +749,7 @@ const messages: Record<LocaleCode, Record<string, string>> = {
     leave_business: "အလုပ်ကိစ္စခွင့်",
     leave_unpaid: "လစာမဲ့ခွင့်",
     leave_other: "အခြား",
+    leave_holiday: "ရုံးပိတ်ရက်",
     sick_leave_warning: "၃ ရက်ထက်ကျော်လွန်သော ဆေးခွင့်အတွက် ဆေးစာရွက်စာတမ်း လိုအပ်ပါသည်",
     days_per_year: "ရက်/နှစ်",
     remaining: "ကျန်ရှိ",
@@ -734,6 +759,17 @@ const messages: Record<LocaleCode, Record<string, string>> = {
     status_rejected: "ပယ်ချပြီး",
     status_waiting_for: "ထံမှ အတည်ပြုချက် စောင့်ဆိုင်းနေသည်",
     supervisor: "ကြီးကြပ်ရေးမှူး",
+
+    // Holiday
+    holiday_title: "နှစ်စဉ်ရုံးပိတ်ရက်များ",
+    holiday_type_national: "အမျိုးသားပိတ်ရက်",
+    holiday_type_substitute: "အစားထိုးပိတ်ရက်",
+    holiday_type_special: "အထူးပိတ်ရက်",
+    holiday_count: "ပိတ်ရက်",
+    holiday_substitute_count: "အစားထိုးရက်",
+    holiday_days: "ရက်",
+    holiday_weekend: "စနေ/တနင်္ဂနွေနှင့် ရက်တိုက်",
+    holiday_no_data: "ဤနှစ်အတွက် ပိတ်ရက်အချက်အလက် မရှိပါ",
     
     // Auth & Actions
     login: "ဝင်ရောက်ရန်",

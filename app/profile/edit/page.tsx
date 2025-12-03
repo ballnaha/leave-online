@@ -94,6 +94,7 @@ interface UserProfile {
     departmentName: string;
     section: string | null;
     sectionName: string | null;
+    position: string | null;
     shift: string | null;
     startDate: string;
     role: UserRole;
@@ -117,6 +118,7 @@ export default function EditProfilePage() {
         employeeId: '',
         departmentId: '',
         sectionId: '',
+        position: '',
         shift: '',
         startDate: '',
         email: '',
@@ -179,6 +181,7 @@ export default function EditProfilePage() {
                 employeeId: data.employeeId || '',
                 departmentId: data.department || '',
                 sectionId: data.section || '',
+                position: data.position || '',
                 shift: data.shift || '',
                 startDate: data.startDate ? new Date(data.startDate).toISOString().split('T')[0] : '',
                 email: data.email || '',
@@ -588,6 +591,7 @@ export default function EditProfilePage() {
                     employeeType: formData.employeeType,
                     department: formData.departmentId,
                     section: formData.sectionId || null,
+                    position: formData.position || null,
                     shift: formData.shift || null,
                     gender: formData.gender || null,
                     avatar: avatarPath,
@@ -1092,6 +1096,35 @@ export default function EditProfilePage() {
                                         ),
                                     }}
                                     sx={{ cursor: formData.departmentId && sections.length > 0 ? 'pointer' : 'default' }}
+                                />
+                            </Box>
+
+                            {/* Position */}
+                            <Box sx={{ mb: 2.5 }}>
+                                <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, mb: 0.5, display: 'block' }}>
+                                    {t('position', 'ตำแหน่ง')}
+                                </Typography>
+                                <TextField
+                                    id="edit-position"
+                                    fullWidth
+                                    size="small"
+                                    value={formData.position}
+                                    onChange={handleChange('position')}
+                                    placeholder={t('placeholder_position', 'ระบุตำแหน่งงาน')}
+                                    InputProps={{
+                                        startAdornment: (
+                                            <InputAdornment position="start">
+                                                <Briefcase size={18} color="#1b194b" />
+                                            </InputAdornment>
+                                        ),
+                                    }}
+                                    sx={{
+                                        '& .MuiOutlinedInput-root': {
+                                            '&:focus-within': {
+                                                '& fieldset': { borderColor: '#1b194b' },
+                                            },
+                                        },
+                                    }}
                                 />
                             </Box>
 

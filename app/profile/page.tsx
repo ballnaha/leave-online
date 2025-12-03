@@ -575,6 +575,7 @@ export default function ProfilePage() {
                                     {profile?.departmentName || '-'}
                                 </Typography>
                             </Box>
+                            
                         </Box>
 
                         {profile?.sectionName && (
@@ -602,6 +603,33 @@ export default function ProfilePage() {
                                 </Box>
                             </Box>
                         )}
+
+                        
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                            <Box
+                                sx={{
+                                    width: 36,
+                                    height: 36,
+                                    borderRadius: 1.5,
+                                    bgcolor: '#FFF3E0',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                }}
+                            >
+                                <Briefcase size={18} variant="Bold" color="#F57C00" />
+                            </Box>
+                            <Box>
+                                <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.7rem' }}>
+                                    {t('position', 'ตำแหน่ง')}
+                                </Typography>
+                                <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                    {profile?.position || '-'}
+                                </Typography>
+                            </Box>
+                            
+                        </Box>
+
 
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
                             <Box

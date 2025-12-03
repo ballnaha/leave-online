@@ -19,6 +19,10 @@ import {
     Container,
     Divider,
 } from '@mui/material';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import { TimePicker } from '@mui/x-date-pickers/TimePicker';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { 
     ArrowLeft,
     Calendar,
@@ -50,7 +54,7 @@ import {
 import { useRouter, useParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { useToastr } from '@/app/components/Toastr';
-import dayjs from 'dayjs';
+import dayjs, { Dayjs } from 'dayjs';
 import 'dayjs/locale/th';
 import 'dayjs/locale/en';
 import 'dayjs/locale/my';
@@ -154,6 +158,12 @@ export default function LeaveFormPage() {
         contactAddress: '',
         attachments: [],
     });
+    // Dayjs state for DatePicker and TimePicker
+    const [startDateValue, setStartDateValue] = useState<Dayjs | null>(null);
+    const [endDateValue, setEndDateValue] = useState<Dayjs | null>(null);
+    const [startTimeValue, setStartTimeValue] = useState<Dayjs | null>(dayjs().hour(8).minute(0));
+    const [endTimeValue, setEndTimeValue] = useState<Dayjs | null>(dayjs().hour(17).minute(0));
+    
     const [processingAttachments, setProcessingAttachments] = useState(false);
     const [errors, setErrors] = useState<Record<string, string>>({});
     const [previewImage, setPreviewImage] = useState<string | null>(null);
@@ -682,197 +692,133 @@ export default function LeaveFormPage() {
                             {/* วันที่และเวลาเริ่มลา */}
                             <Box sx={{ display: 'flex', gap: 1.5, mb: 2 }}>
                                 {/* วันที่เริ่มลา */}
-                                <Box sx={{ position: 'relative', flex: 1 }}>
-                                    <TextField
-                                        fullWidth
-                                        label={t('leave_start_date', 'วันที่เริ่มลา')}
-                                        type="date"
-                                        value={formData.startDate}
-                                        onChange={(e) => handleFormChange('startDate', e.target.value)}
-                                        size="small"
-                                        error={!!errors.startDate}
-                                        sx={{
-                                            '& .MuiOutlinedInput-root': {
-                                                '& fieldset': { borderColor: '#e5e7eb' },
-                                                '&:hover fieldset': { borderColor: config.color },
-                                            },
-                                            '& input[type="date"]': {
-                                                color: 'transparent',
-                                                '&::-webkit-datetime-edit': {
-                                                    color: 'transparent',
+                                <Box sx={{ flex: 1 }}>
+                                    <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale={locale}>
+                                        <DatePicker
+                                            label={t('leave_start_date', 'วันที่เริ่มลา')}
+                                            value={startDateValue}
+                                            onChange={(newValue) => {
+                                                setStartDateValue(newValue);
+                                                if (newValue && newValue.isValid()) {
+                                                    handleFormChange('startDate', newValue.format('YYYY-MM-DD'));
+                                                } else {
+                                                    handleFormChange('startDate', '');
+                                                }
+                                            }}
+                                            format="DD MMMM YYYY"
+                                            slotProps={{
+                                                textField: {
+                                                    size: 'small',
+                                                    fullWidth: true,
+                                                    error: !!errors.startDate,
+                                                    helperText: errors.startDate,
+                                                    sx: {
+                                                        '& .MuiOutlinedInput-root': {
+                                                            '& fieldset': { borderColor: '#e5e7eb' },
+                                                            '&:hover fieldset': { borderColor: config.color },
+                                                        },
+                                                    },
                                                 },
-                                                '&::-webkit-datetime-edit-fields-wrapper': {
-                                                    color: 'transparent',
-                                                },
-                                            },
-                                            '& input[type="date"]::-webkit-calendar-picker-indicator': {
-                                                opacity: 1,
-                                                cursor: 'pointer',
-                                            },
-                                        }}
-                                        slotProps={{
-                                            input: {
-                                                startAdornment: (
-                                                    <InputAdornment position="start">
-                                                        <Calendar size={16} color={config.color} />
-                                                    </InputAdornment>
-                                                ),
-                                            },
-                                            inputLabel: {
-                                                shrink: true,
-                                            },
-                                        }}
-                                    />
-                                    {/* แสดงวันที่แบบ dd/mm/YYYY (พ.ศ.) */}
-                                    <Typography 
-                                        variant="body2" 
-                                        sx={{ 
-                                            position: 'absolute',
-                                            left: 38,
-                                            top: 8,
-                                            color: formData.startDate ? '#1f2937' : '#9ca3af',
-                                            fontWeight: 400,
-                                            fontSize: '0.8rem',
-                                            pointerEvents: 'none',
-                                            bgcolor: 'white',
-                                            paddingRight: 1,
-                                        }}
-                                    >
-                                        {formData.startDate ? (() => {
-                                            const date = dayjs(formData.startDate);
-                                            const year = locale === 'th' ? date.year() + 543 : date.year();
-                                            return `${date.format('DD/MM')}/${year}`;
-                                        })() : (locale === 'th' ? 'วว/ดด/ปปปป' : 'dd/mm/yyyy')}
-                                    </Typography>
+                                            }}
+                                        />
+                                    </LocalizationProvider>
                                 </Box>
 
                                 {/* เวลาเริ่มลา */}
-                                <Box sx={{ width: 110 }}>
-                                    <TextField
-                                        fullWidth
-                                        label={t('leave_time', 'เวลา')}
-                                        type="time"
-                                        value={formData.startTime}
-                                        onChange={(e) => handleFormChange('startTime', e.target.value)}
-                                        size="small"
-                                        sx={{
-                                            '& .MuiOutlinedInput-root': {
-                                                '& fieldset': { borderColor: '#e5e7eb' },
-                                                '&:hover fieldset': { borderColor: config.color },
-                                            },
-                                        }}
-                                        slotProps={{
-                                            inputLabel: {
-                                                shrink: true,
-                                            },
-                                        }}
-                                    />
+                                <Box sx={{ width: 130 }}>
+                                    <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale={locale}>
+                                        <TimePicker
+                                            label={t('leave_time', 'เวลา')}
+                                            value={startTimeValue}
+                                            onChange={(newValue) => {
+                                                setStartTimeValue(newValue);
+                                                if (newValue && newValue.isValid()) {
+                                                    handleFormChange('startTime', newValue.format('HH:mm'));
+                                                }
+                                            }}
+                                            ampm={false}
+                                            slotProps={{
+                                                textField: {
+                                                    size: 'small',
+                                                    fullWidth: true,
+                                                    sx: {
+                                                        '& .MuiOutlinedInput-root': {
+                                                            '& fieldset': { borderColor: '#e5e7eb' },
+                                                            '&:hover fieldset': { borderColor: config.color },
+                                                        },
+                                                    },
+                                                },
+                                            }}
+                                        />
+                                    </LocalizationProvider>
                                 </Box>
                             </Box>
-                            {errors.startDate && (
-                                <Typography variant="caption" color="error" sx={{ mt: -1.5, mb: 1, display: 'block' }}>
-                                    {errors.startDate}
-                                </Typography>
-                            )}
 
                             {/* วันที่และเวลาสิ้นสุด */}
                             <Box sx={{ display: 'flex', gap: 1.5, mb: 2 }}>
                                 {/* วันที่สิ้นสุด */}
-                                <Box sx={{ position: 'relative', flex: 1 }}>
-                                    <TextField
-                                        fullWidth
-                                        label={t('leave_end_date', 'วันที่สิ้นสุด')}
-                                        type="date"
-                                        value={formData.endDate}
-                                        onChange={(e) => handleFormChange('endDate', e.target.value)}
-                                        size="small"
-                                        error={!!errors.endDate}
-                                        sx={{
-                                            '& .MuiOutlinedInput-root': {
-                                                '& fieldset': { borderColor: '#e5e7eb' },
-                                                '&:hover fieldset': { borderColor: config.color },
-                                            },
-                                            '& input[type="date"]': {
-                                                color: 'transparent',
-                                                '&::-webkit-datetime-edit': {
-                                                    color: 'transparent',
+                                <Box sx={{ flex: 1 }}>
+                                    <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale={locale}>
+                                        <DatePicker
+                                            label={t('leave_end_date', 'วันที่สิ้นสุด')}
+                                            value={endDateValue}
+                                            onChange={(newValue) => {
+                                                setEndDateValue(newValue);
+                                                if (newValue && newValue.isValid()) {
+                                                    handleFormChange('endDate', newValue.format('YYYY-MM-DD'));
+                                                } else {
+                                                    handleFormChange('endDate', '');
+                                                }
+                                            }}
+                                            minDate={startDateValue || undefined}
+                                            format="DD MMMM YYYY"
+                                            slotProps={{
+                                                textField: {
+                                                    size: 'small',
+                                                    fullWidth: true,
+                                                    error: !!errors.endDate,
+                                                    helperText: errors.endDate,
+                                                    sx: {
+                                                        '& .MuiOutlinedInput-root': {
+                                                            '& fieldset': { borderColor: '#e5e7eb' },
+                                                            '&:hover fieldset': { borderColor: config.color },
+                                                        },
+                                                    },
                                                 },
-                                                '&::-webkit-datetime-edit-fields-wrapper': {
-                                                    color: 'transparent',
-                                                },
-                                            },
-                                            '& input[type="date"]::-webkit-calendar-picker-indicator': {
-                                                opacity: 1,
-                                                cursor: 'pointer',
-                                            },
-                                        }}
-                                        slotProps={{
-                                            input: {
-                                                startAdornment: (
-                                                    <InputAdornment position="start">
-                                                        <Calendar size={16} color={config.color} />
-                                                    </InputAdornment>
-                                                ),
-                                            },
-                                            inputLabel: {
-                                                shrink: true,
-                                            },
-                                            htmlInput: {
-                                                min: formData.startDate,
-                                            }
-                                        }}
-                                    />
-                                    {/* แสดงวันที่แบบ dd/mm/YYYY (พ.ศ.) */}
-                                    <Typography 
-                                        variant="body2" 
-                                        sx={{ 
-                                            position: 'absolute',
-                                            left: 38,
-                                            top: 8,
-                                            color: formData.endDate ? '#1f2937' : '#9ca3af',
-                                            fontWeight: 400,
-                                            fontSize: '0.8rem',
-                                            pointerEvents: 'none',
-                                            bgcolor: 'white',
-                                            paddingRight: 1,
-                                        }}
-                                    >
-                                        {formData.endDate ? (() => {
-                                            const date = dayjs(formData.endDate);
-                                            const year = locale === 'th' ? date.year() + 543 : date.year();
-                                            return `${date.format('DD/MM')}/${year}`;
-                                        })() : (locale === 'th' ? 'วว/ดด/ปปปป' : 'dd/mm/yyyy')}
-                                    </Typography>
+                                            }}
+                                        />
+                                    </LocalizationProvider>
                                 </Box>
 
                                 {/* เวลาสิ้นสุด */}
-                                <Box sx={{ width: 110 }}>
-                                    <TextField
-                                        fullWidth
-                                        label={t('leave_time', 'เวลา')}
-                                        type="time"
-                                        value={formData.endTime}
-                                        onChange={(e) => handleFormChange('endTime', e.target.value)}
-                                        size="small"
-                                        sx={{
-                                            '& .MuiOutlinedInput-root': {
-                                                '& fieldset': { borderColor: '#e5e7eb' },
-                                                '&:hover fieldset': { borderColor: config.color },
-                                            },
-                                        }}
-                                        slotProps={{
-                                            inputLabel: {
-                                                shrink: true,
-                                            },
-                                        }}
-                                    />
+                                <Box sx={{ width: 130 }}>
+                                    <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale={locale}>
+                                        <TimePicker
+                                            label={t('leave_time', 'เวลา')}
+                                            value={endTimeValue}
+                                            onChange={(newValue) => {
+                                                setEndTimeValue(newValue);
+                                                if (newValue && newValue.isValid()) {
+                                                    handleFormChange('endTime', newValue.format('HH:mm'));
+                                                }
+                                            }}
+                                            ampm={false}
+                                            slotProps={{
+                                                textField: {
+                                                    size: 'small',
+                                                    fullWidth: true,
+                                                    sx: {
+                                                        '& .MuiOutlinedInput-root': {
+                                                            '& fieldset': { borderColor: '#e5e7eb' },
+                                                            '&:hover fieldset': { borderColor: config.color },
+                                                        },
+                                                    },
+                                                },
+                                            }}
+                                        />
+                                    </LocalizationProvider>
                                 </Box>
                             </Box>
-                            {errors.endDate && (
-                                <Typography variant="caption" color="error" sx={{ mt: -1.5, mb: 1, display: 'block' }}>
-                                    {errors.endDate}
-                                </Typography>
-                            )}
                     </Box>
 
                     <Divider sx={{ my: 3 }} />

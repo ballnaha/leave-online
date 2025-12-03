@@ -92,6 +92,12 @@ const menuGroups: MenuGroup[] = [
                 iconColor: '#6C63FF',
                 path: '/admin/leave-types',
             },
+            {
+                text: 'วันหยุด',
+                icon: Calendar,
+                iconColor: '#6C63FF',
+                path: '/admin/holidays',
+            },
         ],
     },
     {

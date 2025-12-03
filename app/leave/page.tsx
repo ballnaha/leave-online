@@ -21,6 +21,7 @@ import {
     DialogContent,
     DialogActions,
     TextField,
+    Tooltip,
 } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
 import {
@@ -55,6 +56,7 @@ import {
     Trash2,
     AlertTriangle,
     Search,
+    Calendar,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import BottomNav from '@/app/components/BottomNav';
@@ -64,6 +66,7 @@ import 'dayjs/locale/en';
 import 'dayjs/locale/my';
 import { LeaveRequest, LeaveApproval, LeaveAttachment } from '@/types/leave';
 import LeaveDetailDrawer from '@/app/components/LeaveDetailDrawer';
+import HolidayDrawer, { Holiday } from '@/app/components/HolidayDrawer';
 import { useLocale } from '@/app/providers/LocaleProvider';
 
 // กำหนด icon และสีสำหรับแต่ละประเภทการลา (สีแบบ balloon)
@@ -95,10 +98,12 @@ export default function LeavePage() {
     const [loading, setLoading] = useState(true);
     const [leaveTypes, setLeaveTypes] = useState<LeaveType[]>([]);
     const [myLeaves, setMyLeaves] = useState<LeaveRequest[]>([]);
+    const [holidays, setHolidays] = useState<Holiday[]>([]);
     const [currentDate, setCurrentDate] = useState(dayjs());
     const [yearAnchorEl, setYearAnchorEl] = useState<null | HTMLElement>(null);
     const [selectedLeave, setSelectedLeave] = useState<LeaveRequest | null>(null);
     const [drawerOpen, setDrawerOpen] = useState(false);
+    const [holidayDrawerOpen, setHolidayDrawerOpen] = useState(false);
     const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
     const [cancelling, setCancelling] = useState(false);
     const [cancelReason, setCancelReason] = useState('');
@@ -120,9 +125,10 @@ export default function LeavePage() {
     const fetchData = async () => {
         setLoading(true);
         try {
-            const [typesRes, leavesRes] = await Promise.all([
+            const [typesRes, leavesRes, holidaysRes] = await Promise.all([
                 fetch('/api/leave-types'),
                 fetch(`/api/my-leaves?year=${currentDate.year()}&month=${currentDate.month() + 1}`),
+                fetch(`/api/holidays?year=${currentDate.year()}`),
             ]);
 
             if (typesRes.ok) {
@@ -137,6 +143,13 @@ export default function LeavePage() {
                 setMyLeaves(leavesData.data || []);
             } else {
                 console.error('Failed to fetch leaves');
+            }
+
+            if (holidaysRes.ok) {
+                const holidaysData = await holidaysRes.json();
+                setHolidays(holidaysData);
+            } else {
+                console.error('Failed to fetch holidays');
             }
         } catch (error) {
             console.error('Error fetching data:', error);
@@ -184,6 +197,16 @@ export default function LeavePage() {
         });
         return map;
     }, [myLeaves]);
+
+    // Map holidays for the current year
+    const holidaysMap = useMemo(() => {
+        const map: Record<string, Holiday> = {};
+        holidays.forEach((holiday) => {
+            const dateKey = dayjs(holiday.date).format('YYYY-MM-DD');
+            map[dateKey] = holiday;
+        });
+        return map;
+    }, [holidays]);
 
     const handlePrevMonth = () => setCurrentDate(currentDate.subtract(1, 'month'));
     const handleNextMonth = () => setCurrentDate(currentDate.add(1, 'month'));
@@ -337,6 +360,18 @@ export default function LeavePage() {
                             {t('leave_history_title', 'ประวัติการลา')}
                         </Typography>
                     </Box>
+                    <Tooltip title={t('holiday_title', 'วันหยุดประจำปี')}>
+                        <IconButton 
+                            onClick={() => setHolidayDrawerOpen(true)}
+                            sx={{ 
+                                color: 'white',
+                                bgcolor: 'rgba(255,255,255,0.15)',
+                                '&:hover': { bgcolor: 'rgba(255,255,255,0.25)' },
+                            }}
+                        >
+                            <Calendar size={22} />
+                        </IconButton>
+                    </Tooltip>
                 </Box>
             </Box>
 
@@ -485,14 +520,22 @@ export default function LeavePage() {
                             const leavesOnDay = leaveDatesMap[dateKey] || [];
                             const isToday = day.isSame(today, 'day');
                             const hasLeave = leavesOnDay.length > 0;
+                            const holiday = holidaysMap[dateKey];
+                            const isHoliday = !!holiday;
 
                             // Get leave colors for this day
                             const leaveColors = leavesOnDay.map((l) => getLeaveConfig(l.leaveType || l.leaveCode || 'default').color);
-                            const primaryColor = hasLeave ? leaveColors[0] : null;
+                            const primaryColor = hasLeave ? leaveColors[0] : isHoliday ? '#DC2626' : null;
 
                             return (
-                                <Box
+                                <Tooltip 
                                     key={dateKey}
+                                    title={isHoliday ? holiday.name : ''} 
+                                    arrow 
+                                    placement="top"
+                                    disableHoverListener={!isHoliday}
+                                >
+                                <Box
                                     sx={{
                                         aspectRatio: '1',
                                         display: 'flex',
@@ -505,26 +548,43 @@ export default function LeavePage() {
                                             ? '#667eea' 
                                             : hasLeave 
                                                 ? 'white' 
-                                                : 'transparent',
+                                                : isHoliday
+                                                    ? '#FEE2E2'
+                                                    : 'transparent',
                                         border: hasLeave && !isToday 
                                             ? `2px solid ${primaryColor}` 
-                                            : 'none',
+                                            : isHoliday && !isToday
+                                                ? `2px solid #FECACA`
+                                                : 'none',
                                         cursor: hasLeave ? 'pointer' : 'default',
                                         transition: 'all 0.15s ease',
-                                        '&:hover': hasLeave || isToday
-                                            ? { transform: 'scale(1.08)', boxShadow: `0 4px 12px ${hasLeave ? `${primaryColor}40` : 'rgba(102,126,234,0.3)'}` }
+                                        '&:hover': hasLeave || isToday || isHoliday
+                                            ? { transform: 'scale(1.08)', boxShadow: `0 4px 12px ${hasLeave ? `${primaryColor}40` : isHoliday ? 'rgba(220,38,38,0.2)' : 'rgba(102,126,234,0.3)'}` }
                                             : {},
                                     }}
                                 >
                                     <Typography
                                         sx={{
-                                            fontWeight: isToday || hasLeave ? 600 : 400,
-                                            color: isToday ? 'white' : hasLeave ? primaryColor : '#475569',
+                                            fontWeight: isToday || hasLeave || isHoliday ? 600 : 400,
+                                            color: isToday ? 'white' : hasLeave ? primaryColor : isHoliday ? '#DC2626' : '#475569',
                                             fontSize: { xs: '0.8rem', sm: '0.9rem' },
                                         }}
                                     >
                                         {day.date()}
                                     </Typography>
+                                    {/* Holiday indicator */}
+                                    {isHoliday && !hasLeave && !isToday && (
+                                        <Box
+                                            sx={{
+                                                position: 'absolute',
+                                                bottom: 2,
+                                                width: 4,
+                                                height: 4,
+                                                borderRadius: '50%',
+                                                bgcolor: '#DC2626',
+                                            }}
+                                        />
+                                    )}
                                     {/* Badge for multiple leaves */}
                                     {leavesOnDay.length > 1 && (
                                         <Box
@@ -549,6 +609,7 @@ export default function LeavePage() {
                                         </Box>
                                     )}
                                 </Box>
+                                </Tooltip>
                             );
                         })}
                     </Box>
@@ -571,6 +632,10 @@ export default function LeavePage() {
                                         <Typography variant="caption" sx={{ color: '#64748B' }}>{t(`leave_${key}`, config.label)}</Typography>
                                     </Box>
                                 ))}
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                <Box sx={{ width: 12, height: 12, borderRadius: '50%', bgcolor: '#FEE2E2', border: '2px solid #FECACA' }} />
+                                <Typography variant="caption" sx={{ color: '#64748B' }}>{t('leave_holiday', 'วันหยุด')}</Typography>
+                            </Box>
                         </Box>
                     </Box>
                 </Card>
@@ -870,6 +935,13 @@ export default function LeavePage() {
                     </Button>
                 </DialogActions>
             </Dialog>
+
+            {/* Holiday Drawer */}
+            <HolidayDrawer
+                open={holidayDrawerOpen}
+                onClose={() => setHolidayDrawerOpen(false)}
+                initialYear={currentDate.year()}
+            />
         </Box>
     );
 }

@@ -1,0 +1,553 @@
+'use client';
+
+import React, { useEffect, useState } from 'react';
+import {
+  Box,
+  Typography,
+  Button,
+  Paper,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  IconButton,
+  Chip,
+  TextField,
+  InputAdornment,
+  Card,
+  CardContent,
+  Avatar,
+  alpha,
+  useTheme,
+  Fade,
+  Skeleton,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+} from '@mui/material';
+import {
+  Add,
+  Edit2,
+  Trash,
+  Calendar,
+  SearchNormal1,
+  Refresh2,
+  TickCircle,
+  CloseCircle,
+  Building,
+  Global,
+} from 'iconsax-react';
+import HolidayDialog from './HolidayDialog';
+import ConfirmDialog from '../components/ConfirmDialog';
+import { useToastr } from '@/app/components/Toastr';
+import dayjs from 'dayjs';
+import 'dayjs/locale/th';
+
+interface Holiday {
+  id: number;
+  date: string;
+  name: string;
+  type: string;
+  companyId?: number | null;
+  isActive: boolean;
+}
+
+interface StatCardProps {
+  title: string;
+  value: number;
+  icon: React.ReactNode;
+  color: 'primary' | 'success' | 'warning' | 'error' | 'secondary';
+  subtitle?: string;
+}
+
+function StatCard({ title, value, icon, color, subtitle }: StatCardProps) {
+  const theme = useTheme();
+  
+  const colorMap = {
+    primary: { main: theme.palette.primary.main, light: alpha(theme.palette.primary.main, 0.1) },
+    success: { main: theme.palette.success.main, light: theme.palette.success.light },
+    warning: { main: theme.palette.warning.main, light: theme.palette.warning.light },
+    error: { main: theme.palette.error.main, light: theme.palette.error.light },
+    secondary: { main: theme.palette.secondary.main, light: alpha(theme.palette.secondary.main, 0.1) },
+  };
+
+  return (
+    <Card 
+      sx={{ 
+        borderRadius: 1,
+        border: '1px solid',
+        borderColor: 'divider',
+        boxShadow: '0 4px 20px rgba(0,0,0,0.04)',
+        transition: 'all 0.3s ease',
+        '&:hover': {
+          transform: 'translateY(-4px)',
+          boxShadow: '0 8px 30px rgba(0,0,0,0.08)',
+        },
+      }}
+    >
+      <CardContent sx={{ p: 3 }}>
+        <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+          <Box>
+            <Typography variant="body2" color="text.secondary" fontWeight={500} gutterBottom>
+              {title}
+            </Typography>
+            <Typography variant="h3" fontWeight={700} sx={{ color: colorMap[color].main }}>
+              {value}
+            </Typography>
+            {subtitle && (
+              <Typography variant="caption" color="text.secondary">
+                {subtitle}
+              </Typography>
+            )}
+          </Box>
+          <Avatar
+            sx={{
+              width: 56,
+              height: 56,
+              bgcolor: colorMap[color].light,
+              color: colorMap[color].main,
+            }}
+          >
+            {icon}
+          </Avatar>
+        </Box>
+      </CardContent>
+    </Card>
+  );
+}
+
+function TableSkeleton() {
+  return (
+    <TableBody>
+      {[1, 2, 3, 4, 5].map((row) => (
+        <TableRow key={row}>
+          <TableCell><Skeleton variant="text" width={80} /></TableCell>
+          <TableCell><Skeleton variant="text" width={150} /></TableCell>
+          <TableCell><Skeleton variant="text" width={150} /></TableCell>
+          <TableCell><Skeleton variant="rounded" width={80} height={24} /></TableCell>
+          <TableCell><Skeleton variant="text" width={80} /></TableCell>
+          <TableCell align="right">
+            <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
+              <Skeleton variant="circular" width={32} height={32} />
+              <Skeleton variant="circular" width={32} height={32} />
+            </Box>
+          </TableCell>
+        </TableRow>
+      ))}
+    </TableBody>
+  );
+}
+
+const typeLabels: Record<string, { label: string; color: 'error' | 'warning' | 'info' | 'success' }> = {
+  national: { label: 'วันหยุดราชการ', color: 'error' },
+  substitute: { label: 'วันหยุดชดเชย', color: 'warning' },
+  special: { label: 'วันหยุดพิเศษ', color: 'info' },
+  company: { label: 'วันหยุดบริษัท', color: 'success' },
+};
+
+export default function HolidaysPage() {
+  const theme = useTheme();
+  const toastr = useToastr();
+  const [holidays, setHolidays] = useState<Holiday[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedYear, setSelectedYear] = useState(dayjs().year());
+  const [availableYears, setAvailableYears] = useState<number[]>([]);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [selectedHoliday, setSelectedHoliday] = useState<Holiday | undefined>();
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [holidayToDelete, setHolidayToDelete] = useState<Holiday | null>(null);
+
+  // Fetch available years from database
+  const fetchAvailableYears = async () => {
+    try {
+      const res = await fetch('/api/admin/holidays/years');
+      if (res.ok) {
+        const years = await res.json();
+        setAvailableYears(years);
+      }
+    } catch (error) {
+      console.error('Error fetching years:', error);
+    }
+  };
+
+  useEffect(() => {
+    fetchAvailableYears();
+  }, []);
+
+  useEffect(() => {
+    fetchHolidays();
+  }, [selectedYear]);
+
+  const fetchHolidays = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/admin/holidays?year=${selectedYear}`);
+      if (res.ok) {
+        const data = await res.json();
+        setHolidays(data);
+      }
+    } catch (error) {
+      console.error('Error fetching holidays:', error);
+      toastr.error('ไม่สามารถโหลดข้อมูลวันหยุดได้');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAdd = () => {
+    setSelectedHoliday(undefined);
+    setDialogOpen(true);
+  };
+
+  const handleEdit = (holiday: Holiday) => {
+    setSelectedHoliday(holiday);
+    setDialogOpen(true);
+  };
+
+  const handleDelete = (holiday: Holiday) => {
+    setHolidayToDelete(holiday);
+    setDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!holidayToDelete) return;
+
+    try {
+      const res = await fetch(`/api/admin/holidays/${holidayToDelete.id}`, {
+        method: 'DELETE',
+      });
+
+      if (res.ok) {
+        toastr.success('ลบวันหยุดสำเร็จ');
+        fetchHolidays();
+      } else {
+        toastr.error('ไม่สามารถลบวันหยุดได้');
+      }
+    } catch (error) {
+      toastr.error('เกิดข้อผิดพลาด');
+    } finally {
+      setDeleteDialogOpen(false);
+      setHolidayToDelete(null);
+    }
+  };
+
+  const filteredHolidays = holidays.filter((h) => {
+    if (!searchQuery) return true;
+    const query = searchQuery.toLowerCase();
+    return (
+      h.name.toLowerCase().includes(query) ||
+      h.date.includes(query)
+    );
+  });
+
+  // Stats
+  const stats = {
+    total: holidays.length,
+    national: holidays.filter((h) => h.type === 'national').length,
+    substitute: holidays.filter((h) => h.type === 'substitute').length,
+    company: holidays.filter((h) => h.type === 'company').length,
+  };
+
+  return (
+    <Box>
+      {/* Header */}
+      <Box sx={{ mb: 4 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
+          <Avatar
+            sx={{
+              width: 48,
+              height: 48,
+              bgcolor: alpha(theme.palette.primary.main, 0.1),
+              color: 'primary.main',
+            }}
+          >
+            <Calendar size={24} variant="Bold" color="#6C63FF" />
+          </Avatar>
+          <Box>
+            <Typography variant="h5" fontWeight={700} color="text.primary">
+              จัดการวันหยุด
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              จัดการวันหยุดราชการและวันหยุดบริษัท
+            </Typography>
+          </Box>
+        </Box>
+      </Box>
+
+      {/* Stats */}
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr 1fr', md: 'repeat(4, 1fr)' }, gap: 2, mb: 4 }}>
+        <StatCard
+          title="วันหยุดทั้งหมด"
+          value={stats.total}
+          icon={<Calendar size={28} variant="Bold" color="#6C63FF" />}
+          color="primary"
+          subtitle={`ปี ${selectedYear + 543}`}
+        />
+        <StatCard
+          title="วันหยุดราชการ"
+          value={stats.national}
+          icon={<Global size={28} variant="Bold" color="#F44336" />}
+          color="error"
+        />
+        <StatCard
+          title="วันหยุดชดเชย"
+          value={stats.substitute}
+          icon={<Calendar size={28} variant="Bold" color="#F57C00" />}
+          color="warning"
+        />
+        <StatCard
+          title="วันหยุดบริษัท"
+          value={stats.company}
+          icon={<Building size={28} variant="Bold" color="#4CAF50" />}
+          color="success"
+        />
+      </Box>
+
+      {/* Toolbar */}
+      <Paper
+        sx={{
+          p: 2,
+          mb: 3,
+          borderRadius: 1,
+          display: 'flex',
+          flexDirection: { xs: 'column', md: 'row' },
+          gap: 2,
+          alignItems: { xs: 'stretch', md: 'center' },
+          justifyContent: 'space-between',
+        }}
+      >
+        <Box sx={{ display: 'flex', gap: 2, flex: 1 }}>
+          <TextField
+            placeholder="ค้นหาวันหยุด..."
+            size="small"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchNormal1 size={18} color="#6C63FF" />
+                </InputAdornment>
+              ),
+            }}
+            sx={{ minWidth: 250 }}
+          />
+          <FormControl size="small" sx={{ minWidth: 120 }}>
+            <InputLabel>ปี</InputLabel>
+            <Select
+              value={selectedYear}
+              label="ปี"
+              onChange={(e) => setSelectedYear(Number(e.target.value))}
+            >
+              {availableYears.map((year) => (
+                <MenuItem key={year} value={year}>
+                  {year + 543}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        </Box>
+        <Box sx={{ display: 'flex', gap: 1 }}>
+          <Button
+            variant="outlined"
+            startIcon={<Refresh2 size={18} color="#6C63FF" />}
+            onClick={fetchHolidays}
+            sx={{ borderRadius: 1 }}
+          >
+            รีเฟรช
+          </Button>
+          <Button
+            variant="contained"
+            startIcon={<Add size={18} color="#fff" />}
+            onClick={handleAdd}
+            sx={{
+              borderRadius: 1,
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            }}
+          >
+            เพิ่มวันหยุด
+          </Button>
+        </Box>
+      </Paper>
+
+      {/* Table */}
+      <Fade in>
+        <TableContainer
+          component={Paper}
+          sx={{
+            borderRadius: 1,
+            border: '1px solid',
+            borderColor: 'divider',
+          }}
+        >
+          <Table>
+            <TableHead>
+              <TableRow sx={{ bgcolor: alpha(theme.palette.primary.main, 0.04) }}>
+                <TableCell sx={{ fontWeight: 600 }}>วันที่</TableCell>
+                <TableCell sx={{ fontWeight: 600 }}>ชื่อวันหยุด</TableCell>
+                <TableCell sx={{ fontWeight: 600 }}>ประเภท</TableCell>
+                <TableCell sx={{ fontWeight: 600 }}>ขอบเขต</TableCell>
+                <TableCell align="right" sx={{ fontWeight: 600 }}>จัดการ</TableCell>
+              </TableRow>
+            </TableHead>
+            {loading ? (
+              <TableSkeleton />
+            ) : (
+              <TableBody>
+                {filteredHolidays.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={5} align="center" sx={{ py: 8 }}>
+                      <Box sx={{ textAlign: 'center' }}>
+                        <Calendar size={48} color="#9e9e9e" variant="Bulk" />
+                        <Typography color="text.secondary" sx={{ mt: 2 }}>
+                          {searchQuery ? 'ไม่พบวันหยุดที่ค้นหา' : 'ยังไม่มีวันหยุดในปีนี้'}
+                        </Typography>
+                        {!searchQuery && (
+                          <Button
+                            variant="contained"
+                            startIcon={<Add size={18} color="#fff" />}
+                            onClick={handleAdd}
+                            sx={{ mt: 2, borderRadius: 1 }}
+                          >
+                            เพิ่มวันหยุด
+                          </Button>
+                        )}
+                      </Box>
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  filteredHolidays.map((holiday) => {
+                    const typeInfo = typeLabels[holiday.type] || typeLabels.national;
+                    const holidayDate = dayjs(holiday.date);
+                    const isPast = holidayDate.isBefore(dayjs(), 'day');
+
+                    return (
+                      <TableRow
+                        key={holiday.id}
+                        sx={{
+                          opacity: isPast ? 0.6 : 1,
+                          '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.02) },
+                        }}
+                      >
+                        <TableCell>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <Box
+                              sx={{
+                                width: 40,
+                                height: 40,
+                                borderRadius: 1,
+                                bgcolor: alpha(theme.palette.error.main, 0.1),
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                              }}
+                            >
+                              <Typography
+                                sx={{ fontWeight: 700, fontSize: '0.9rem', color: 'error.main', lineHeight: 1 }}
+                              >
+                                {holidayDate.date()}
+                              </Typography>
+                              <Typography sx={{ fontSize: '0.65rem', color: 'error.main' }}>
+                                {holidayDate.locale('th').format('MMM')}
+                              </Typography>
+                            </Box>
+                            <Typography variant="body2" color="text.secondary">
+                              {holidayDate.locale('th').format('dddd')}
+                            </Typography>
+                          </Box>
+                        </TableCell>
+                        <TableCell>
+                          <Typography fontWeight={500}>{holiday.name}</Typography>
+                        </TableCell>
+                        <TableCell>
+                          <Chip
+                            label={typeInfo.label}
+                            color={typeInfo.color}
+                            size="small"
+                            sx={{ fontWeight: 500 }}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          {holiday.companyId ? (
+                            <Chip
+                              icon={<Building size={14} color="#F57C00" />}
+                              label="เฉพาะบริษัท"
+                              size="small"
+                              variant="outlined"
+                              color="warning"
+                            />
+                          ) : (
+                            <Chip
+                              icon={<Global size={14} color="#6C63FF" />}
+                              label="ทุกบริษัท"
+                              size="small"
+                              color="primary"
+                              variant="outlined"
+                            />
+                          )}
+                        </TableCell>
+                        <TableCell align="right">
+                          <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 0.5 }}>
+                            <IconButton
+                              size="small"
+                              onClick={() => handleEdit(holiday)}
+                              sx={{
+                                color: 'primary.main',
+                                '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.1) },
+                              }}
+                            >
+                              <Edit2 size={18} color="#6C63FF" />
+                            </IconButton>
+                            <IconButton
+                              size="small"
+                              onClick={() => handleDelete(holiday)}
+                              sx={{
+                                color: 'error.main',
+                                '&:hover': { bgcolor: alpha(theme.palette.error.main, 0.1) },
+                              }}
+                            >
+                              <Trash size={18} color="#F44336" />
+                            </IconButton>
+                          </Box>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
+                )}
+              </TableBody>
+            )}
+          </Table>
+        </TableContainer>
+      </Fade>
+
+      {/* Holiday Dialog */}
+      <HolidayDialog
+        open={dialogOpen}
+        onClose={() => setDialogOpen(false)}
+        onSave={() => {
+          setDialogOpen(false);
+          fetchHolidays();
+          fetchAvailableYears(); // Refresh years in case a new year was added
+        }}
+        holiday={selectedHoliday}
+      />
+
+      {/* Delete Confirmation */}
+      <ConfirmDialog
+        open={deleteDialogOpen}
+        title="ยืนยันการลบ"
+        message={`ต้องการลบวันหยุด "${holidayToDelete?.name}" หรือไม่?`}
+        onConfirm={confirmDelete}
+        onClose={() => {
+          setDeleteDialogOpen(false);
+          setHolidayToDelete(null);
+        }}
+        type="delete"
+      />
+    </Box>
+  );
+}
