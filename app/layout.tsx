@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import AppProviders from "./providers/AppProviders";
 import PWAInstallPrompt from "./components/PWAInstallPrompt";
 import { Sarabun } from "next/font/google";
@@ -10,6 +10,15 @@ const sarabun = Sarabun({
   variable: '--font-sarabun',
   display: 'swap',
 });
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  viewportFit: "cover",
+  themeColor: "#667eea",
+};
 
 export const metadata: Metadata = {
   title: "Leave Online",
@@ -33,11 +42,6 @@ export default function RootLayout({
   return (
     <html lang="en" style={{ overscrollBehavior: 'none' }}>
       <head>
-        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
-        <meta name="theme-color" content="#667eea" />
-        <meta name="apple-mobile-web-app-capable" content="yes" />
-        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-        <meta name="apple-mobile-web-app-title" content="Leave Online" />
         <link rel="apple-touch-icon" href="/images/apple-touch-icon.png" />
         <link rel="apple-touch-icon" sizes="152x152" href="/images/apple-touch-icon-152.png" />
         <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-180.png" />

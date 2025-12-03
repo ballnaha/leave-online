@@ -906,7 +906,7 @@ export default function ProfilePage() {
                 }}
             >
                 <DialogTitle sx={{ textAlign: 'center', fontWeight: 'bold', pb: 1 }}>
-                    วิธีติดตั้งบน iPhone/iPad
+                    วิธีติดตั้งบน iPhone
                 </DialogTitle>
                 <DialogContent>
                     <Stack spacing={2.5}>
@@ -914,7 +914,7 @@ export default function ProfilePage() {
                             <Box sx={{ 
                                 p: 1.5, 
                                 bgcolor: '#007AFF15', 
-                                borderRadius: 2,
+                                borderRadius: 1,
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
