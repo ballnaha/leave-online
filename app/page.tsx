@@ -1,6 +1,6 @@
 'use client';
 import React, { useEffect, useState, useMemo } from 'react';
-import { Box, Typography, Button, Card, CardContent, Skeleton, Container } from '@mui/material';
+import { Box, Typography, Button, Card, CardContent, Skeleton, Container, Dialog, DialogTitle, DialogContent, DialogActions, TextField } from '@mui/material';
 import Image from 'next/image';
 import Header from './components/Header';
 import ImageSlider from './components/ImageSlider';
@@ -10,7 +10,7 @@ import BottomNav from './components/BottomNav';
 import { 
   Calendar2, Activity, Briefcase, Heart, Sun1, Lovely,
   Building4, Shield, People, Car, Clock, MessageQuestion, Health,
-  Profile2User
+  Profile2User, Danger
 } from 'iconsax-react';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import 'swiper/css';
@@ -19,7 +19,7 @@ import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { LeaveRequest } from '@/types/leave';
 import LeaveDetailDrawer from './components/LeaveDetailDrawer';
-import { HelpCircle } from 'lucide-react';
+import { HelpCircle, AlertTriangle } from 'lucide-react';
 import { useUser } from './providers/UserProvider';
 import DashboardCard from './components/DashboardCard';
 
@@ -89,6 +89,9 @@ export default function Home() {
   const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>([]);
   const [selectedLeave, setSelectedLeave] = useState<LeaveRequest | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
+  const [cancelReason, setCancelReason] = useState('');
   const [hasBanners, setHasBanners] = useState(true);
   const [year, setYear] = useState(new Date().getFullYear());
 
@@ -97,7 +100,7 @@ export default function Home() {
     
     const loadData = async () => {
       try {
-        await fetchLeaveTypes();
+        await fetchLeaveTypes(year);
         // fetchLeaveRequests will be called by the year effect
       } catch (error) {
         console.error('Error loading data:', error);
@@ -125,11 +128,12 @@ export default function Home() {
 
   useEffect(() => {
     fetchLeaveRequests(year);
+    fetchLeaveTypes(year);
   }, [year]);
 
-  const fetchLeaveTypes = async () => {
+  const fetchLeaveTypes = async (selectedYear: number) => {
     try {
-      const response = await fetch('/api/leave-types');
+      const response = await fetch(`/api/leave-types?year=${selectedYear}`);
       if (!response.ok) throw new Error('Failed to fetch leave types');
       const data = await response.json();
       // แสดงทั้งหมด
@@ -209,6 +213,59 @@ export default function Home() {
   const handleLeaveClick = (leave: LeaveRequest) => {
     setSelectedLeave(leave);
     setDrawerOpen(true);
+  };
+
+  const handleCloseDrawer = () => {
+    setDrawerOpen(false);
+    setTimeout(() => setSelectedLeave(null), 300);
+  };
+
+  const handleCancelLeave = async () => {
+    if (!selectedLeave) return;
+    
+    if (!cancelReason.trim()) {
+      alert(t('cancel_reason_required', 'กรุณาระบุเหตุผลการยกเลิก'));
+      return;
+    }
+
+    setCancelling(true);
+    try {
+      const res = await fetch(`/api/leaves/${selectedLeave.id}/cancel`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ cancelReason: cancelReason.trim() }),
+      });
+
+      if (!res.ok) {
+        const error = await res.json().catch(() => ({ error: t('cancel_failed', 'ยกเลิกไม่สำเร็จ') }));
+        alert(error.error || t('cancel_failed', 'ยกเลิกไม่สำเร็จ'));
+        return;
+      }
+      
+      // อัพเดท state
+      setLeaveRequests((prev) =>
+        prev.map((leave) =>
+          leave.id === selectedLeave.id 
+            ? { ...leave, status: 'cancelled', cancelReason: cancelReason.trim(), cancelledAt: new Date().toISOString() } 
+            : leave
+        )
+      );
+      setSelectedLeave({ 
+        ...selectedLeave, 
+        status: 'cancelled', 
+        cancelReason: cancelReason.trim(),
+        cancelledAt: new Date().toISOString()
+      });
+      setCancelDialogOpen(false);
+      setCancelReason('');
+    } catch (error) {
+      console.error('Error cancelling leave:', error);
+      alert(t('cancel_error', 'เกิดข้อผิดพลาด'));
+    } finally {
+      setCancelling(false);
+    }
   };
 
   // Prevent hydration mismatch by always showing loading state until mounted
@@ -419,9 +476,89 @@ export default function Home() {
       
       <LeaveDetailDrawer 
         open={drawerOpen} 
-        onClose={() => setDrawerOpen(false)} 
-        leave={selectedLeave} 
+        onClose={handleCloseDrawer} 
+        leave={selectedLeave}
+        onCancel={() => setCancelDialogOpen(true)}
       />
+
+      {/* Cancel Confirmation Dialog */}
+      <Dialog
+        open={cancelDialogOpen}
+        onClose={() => {
+          if (!cancelling) {
+            setCancelDialogOpen(false);
+            setCancelReason('');
+          }
+        }}
+        PaperProps={{
+          sx: {
+            borderRadius: 1,
+            maxWidth: 400,
+            width: '90%',
+          },
+        }}
+      >
+        <DialogTitle sx={{ pb: 1 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+            <Box
+              sx={{
+                width: 40,
+                height: 40,
+                borderRadius: 1,
+                bgcolor: '#FEF2F2',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <AlertTriangle size={22} color="#DC2626" />
+            </Box>
+            <Typography sx={{ fontWeight: 700, color: '#1E293B' }}>
+              {t('cancel_leave_title', 'ยืนยันการยกเลิกใบลา')}
+            </Typography>
+          </Box>
+        </DialogTitle>
+        <DialogContent>
+          <Typography sx={{ color: '#64748B', fontSize: '0.95rem', mb: 2 }}>
+            {t('cancel_leave_desc', 'กรุณาระบุเหตุผลที่ต้องการยกเลิกใบลา')}
+          </Typography>
+          <TextField
+            fullWidth
+            multiline
+            rows={3}
+            placeholder={t('cancel_reason_placeholder', 'ระบุเหตุผล...')}
+            value={cancelReason}
+            onChange={(e) => setCancelReason(e.target.value)}
+            disabled={cancelling}
+            sx={{
+              '& .MuiOutlinedInput-root': {
+                borderRadius: 1,
+              },
+            }}
+          />
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button
+            onClick={() => {
+              setCancelDialogOpen(false);
+              setCancelReason('');
+            }}
+            disabled={cancelling}
+            sx={{ color: '#64748B' }}
+          >
+            {t('btn_back', 'ย้อนกลับ')}
+          </Button>
+          <Button
+            variant="contained"
+            color="error"
+            onClick={handleCancelLeave}
+            disabled={cancelling || !cancelReason.trim()}
+            sx={{ borderRadius: 1 }}
+          >
+            {cancelling ? t('cancelling', 'กำลังยกเลิก...') : t('btn_confirm_cancel', 'ยืนยันยกเลิก')}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }

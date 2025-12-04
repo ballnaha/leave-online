@@ -79,7 +79,7 @@ export default function NotificationToggle({
         }
         onClick={handleToggle}
         disabled={loading}
-        sx={{ borderRadius: 2 }}
+        sx={{ borderRadius: 1 }}
       >
         {isSubscribed ? 'ปิดการแจ้งเตือน' : 'เปิดการแจ้งเตือน'}
       </Button>
@@ -90,7 +90,7 @@ export default function NotificationToggle({
     return (
       <Card
         sx={{
-          borderRadius: 2,
+          borderRadius: 1,
           border: '1px solid',
           borderColor: isSubscribed ? 'success.main' : 'divider',
           bgcolor: isSubscribed ? alpha(theme.palette.success.main, 0.05) : 'background.paper',
@@ -102,7 +102,7 @@ export default function NotificationToggle({
               sx={{
                 width: 44,
                 height: 44,
-                borderRadius: 2,
+                borderRadius: 1,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',

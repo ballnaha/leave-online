@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { createApprovalSteps } from '@/lib/escalation';
 import { notifyLeaveSubmitted } from '@/lib/onesignal';
+import { calculateVacationDays } from '@/lib/vacationCalculator';
 
 interface AttachmentPayload {
     fileName: string;
@@ -126,6 +127,52 @@ export async function POST(request: Request) {
             if (serviceYears < 1) {
                  return NextResponse.json(
                     { error: 'Ordination leave requires at least 1 year of service' },
+                    { status: 400 }
+                );
+            }
+        }
+
+        // Validation for Vacation Leave - ตรวจสอบสิทธิ์ลาพักร้อน
+        if (leaveType === 'vacation') {
+            const leaveYear = start.getFullYear();
+            const vacationType = await prisma.leaveType.findUnique({
+                where: { code: 'vacation' },
+                select: { maxDaysPerYear: true }
+            });
+            
+            const maxVacationDays = calculateVacationDays(
+                user.startDate,
+                leaveYear,
+                vacationType?.maxDaysPerYear || 6
+            );
+
+            if (maxVacationDays === 0) {
+                return NextResponse.json(
+                    { error: 'คุณยังไม่มีสิทธิ์ลาพักร้อนในปีนี้ (ต้องทำงานครบ 1 ปีก่อน)' },
+                    { status: 400 }
+                );
+            }
+
+            // ตรวจสอบวันลาที่ใช้ไปแล้วในปีนี้
+            const usedVacationDays = await prisma.leaveRequest.aggregate({
+                where: {
+                    userId: Number(session.user.id),
+                    leaveType: 'vacation',
+                    status: { in: ['approved', 'pending', 'in_progress'] },
+                    startDate: {
+                        gte: new Date(leaveYear, 0, 1),
+                        lt: new Date(leaveYear + 1, 0, 1)
+                    }
+                },
+                _sum: { totalDays: true }
+            });
+
+            const usedDays = usedVacationDays._sum.totalDays || 0;
+            const remainingDays = maxVacationDays - usedDays;
+
+            if (Number(totalDays) > remainingDays) {
+                return NextResponse.json(
+                    { error: `สิทธิ์ลาพักร้อนไม่เพียงพอ (เหลือ ${remainingDays} วัน จากทั้งหมด ${maxVacationDays} วัน)` },
                     { status: 400 }
                 );
             }

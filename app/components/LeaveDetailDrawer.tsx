@@ -606,38 +606,24 @@ const LeaveDetailDrawer: React.FC<LeaveDetailDrawerProps> = ({ open, onClose, le
             anchor="bottom"
             open={open}
             onClose={onClose}
-            disableScrollLock={false}
-            SlideProps={{
-                appear: true,
-            }}
-            transitionDuration={{
-                enter: 300,
-                exit: 200,
-            }}
             ModalProps={{
-                // Custom backdrop opacity based on drag
                 slotProps: {
                     backdrop: {
                         sx: {
                             bgcolor: `rgba(0, 0, 0, ${backdropOpacity})`,
-                            transition: isDragging ? 'none' : 'background-color 0.3s ease-out',
                         }
                     }
                 }
             }}
             PaperProps={{
                 sx: {
-                    borderTopLeftRadius: 24,
-                    borderTopRightRadius: 24,
+                    borderTopLeftRadius: 16,
+                    borderTopRightRadius: 16,
                     maxHeight: '90vh',
-                    overflow: 'hidden',
-                    transform: dragY > 0 ? `translateY(${dragY}px)` : 'none',
-                    transition: isDragging 
-                        ? 'none' 
-                        : isClosing 
-                            ? 'transform 0.2s ease-in' 
-                            : 'transform 0.4s cubic-bezier(0.22, 1, 0.36, 1)',
-                    willChange: 'transform',
+                    ...(dragY > 0 && {
+                        transform: `translateY(${dragY}px)`,
+                        transition: isDragging ? 'none' : 'transform 0.2s ease-out',
+                    }),
                 }
             }}
         >

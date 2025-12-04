@@ -131,7 +131,7 @@ export default function LeavePage() {
         setLoading(true);
         try {
             const [typesRes, leavesRes, holidaysRes] = await Promise.all([
-                fetch('/api/leave-types'),
+                fetch(`/api/leave-types?year=${currentDate.year()}`),
                 fetch(`/api/my-leaves?year=${currentDate.year()}&month=${currentDate.month() + 1}`),
                 fetch(`/api/holidays?year=${currentDate.year()}`),
             ]);

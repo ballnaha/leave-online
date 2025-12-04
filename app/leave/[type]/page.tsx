@@ -377,8 +377,9 @@ export default function LeaveFormPage() {
                 const profileData = await profileRes.json();
                 setUserProfile(profileData);
 
-                // ดึงข้อมูลประเภทการลา
-                const leaveTypesRes = await fetch('/api/leave-types');
+                // ดึงข้อมูลประเภทการลา (ส่งปีปัจจุบันเพื่อคำนวณสิทธิ์ลาพักร้อน)
+                const currentYear = new Date().getFullYear();
+                const leaveTypesRes = await fetch(`/api/leave-types?year=${currentYear}`);
                 if (!leaveTypesRes.ok) throw new Error('Failed to fetch leave types');
                 const leaveTypesData = await leaveTypesRes.json();
                 const selectedType = leaveTypesData.find((lt: LeaveTypeData) => lt.code === leaveCode);

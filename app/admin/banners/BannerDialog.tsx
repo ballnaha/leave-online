@@ -18,6 +18,15 @@ import {
   useTheme,
   useMediaQuery,
 } from '@mui/material';
+import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
+import dayjs, { Dayjs } from 'dayjs';
+import 'dayjs/locale/th';
+import buddhistEra from 'dayjs/plugin/buddhistEra';
+
+dayjs.extend(buddhistEra);
+
 import { Image, ExportSquare, CloseCircle, Calendar, Link21 } from 'iconsax-react';
 
 interface Banner {
@@ -37,15 +46,6 @@ interface BannerDialogProps {
   onClose: () => void;
   onSave: () => void;
   banner?: Banner;
-}
-
-// Format date for datetime-local input
-function formatDateTimeLocal(dateString?: string): string {
-  if (!dateString) return '';
-  const date = new Date(dateString);
-  const offset = date.getTimezoneOffset();
-  const localDate = new Date(date.getTime() - offset * 60 * 1000);
-  return localDate.toISOString().slice(0, 16);
 }
 
 // Resize image function
@@ -90,13 +90,22 @@ export default function BannerDialog({
   const [loading, setLoading] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{
+    title: string;
+    description: string;
+    imageUrl: string;
+    linkUrl: string;
+    startDate: Dayjs | null;
+    endDate: Dayjs | null;
+    displayOrder: number;
+    isActive: boolean;
+  }>({
     title: '',
     description: '',
     imageUrl: '',
     linkUrl: '',
-    startDate: '',
-    endDate: '',
+    startDate: null,
+    endDate: null,
     displayOrder: 0,
     isActive: true,
   });
@@ -110,8 +119,8 @@ export default function BannerDialog({
         description: banner.description || '',
         imageUrl: banner.imageUrl || '',
         linkUrl: banner.linkUrl || '',
-        startDate: formatDateTimeLocal(banner.startDate),
-        endDate: formatDateTimeLocal(banner.endDate),
+        startDate: banner.startDate ? dayjs(banner.startDate) : null,
+        endDate: banner.endDate ? dayjs(banner.endDate) : null,
         displayOrder: banner.displayOrder ?? 0,
         isActive: banner.isActive ?? true,
       });
@@ -122,8 +131,8 @@ export default function BannerDialog({
         description: '',
         imageUrl: '',
         linkUrl: '',
-        startDate: '',
-        endDate: '',
+        startDate: null,
+        endDate: null,
         displayOrder: 0,
         isActive: true,
       });
@@ -207,7 +216,7 @@ export default function BannerDialog({
       newErrors.imageUrl = 'กรุณาอัพโหลดรูปภาพ';
     }
     if (formData.startDate && formData.endDate) {
-      if (new Date(formData.startDate) > new Date(formData.endDate)) {
+      if (formData.startDate.isAfter(formData.endDate)) {
         newErrors.endDate = 'วันที่สิ้นสุดต้องมากกว่าวันที่เริ่มต้น';
       }
     }
@@ -227,8 +236,8 @@ export default function BannerDialog({
 
       const submitData = {
         ...formData,
-        startDate: formData.startDate ? new Date(formData.startDate).toISOString() : null,
-        endDate: formData.endDate ? new Date(formData.endDate).toISOString() : null,
+        startDate: formData.startDate ? formData.startDate.toISOString() : null,
+        endDate: formData.endDate ? formData.endDate.toISOString() : null,
       };
 
       const res = await fetch(url, {
@@ -254,7 +263,7 @@ export default function BannerDialog({
     <Dialog 
       open={open} 
       onClose={onClose} 
-      maxWidth="sm" 
+      maxWidth="md" 
       fullWidth
       fullScreen={isMobile}
       PaperProps={{
@@ -409,122 +418,61 @@ export default function BannerDialog({
           />
 
           {/* Date Range */}
-          <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: 2 }}>
-            <Box sx={{ position: 'relative', flex: 1 }}>
-              <TextField
+          <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale="th">
+            <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: 2 }}>
+              <DateTimePicker
                 label="วันที่เริ่มแสดง"
-                name="startDate"
-                type="datetime-local"
                 value={formData.startDate}
-                onChange={handleChange}
-                size="small"
-                fullWidth
-                InputLabelProps={{ shrink: true }}
-                InputProps={{
-                  startAdornment: <Calendar size={18} style={{ marginRight: 8 }} color={theme.palette.text.secondary} />,
+                onChange={(newValue) => {
+                  setFormData((prev) => ({ ...prev, startDate: newValue }));
+                  if (errors.startDate) {
+                    setErrors((prev) => ({ ...prev, startDate: '' }));
+                  }
                 }}
-                sx={{
-                  '& input[type="datetime-local"]': {
-                    color: 'transparent',
-                    '&::-webkit-datetime-edit': {
-                      color: 'transparent',
+                format="DD/MM/YYYY HH:mm"
+                ampm={false}
+                slotProps={{
+                  textField: {
+                    size: 'small',
+                    fullWidth: true,
+                    InputProps: {
+                      startAdornment: <Calendar size={18} style={{ marginRight: 8 }} color={theme.palette.text.secondary} />,
                     },
-                    '&::-webkit-datetime-edit-fields-wrapper': {
-                      color: 'transparent',
+                    inputProps: {
+                      value: formData.startDate ? formData.startDate.format('DD/MM/') + (formData.startDate.year() + 543) + formData.startDate.format(' HH:mm') : '',
                     },
-                  },
-                  '& input[type="datetime-local"]::-webkit-calendar-picker-indicator': {
-                    opacity: 1,
-                    cursor: 'pointer',
                   },
                 }}
               />
-              {/* แสดงวันที่แบบ dd/mm/YYYY (พ.ศ.) HH:mm */}
-              <Typography 
-                variant="body2" 
-                sx={{ 
-                  position: 'absolute',
-                  left: 44,
-                  top: '50%',
-                  transform: 'translateY(-50%)',
-                  color: formData.startDate ? 'text.primary' : 'text.disabled',
-                  fontWeight: 400,
-                  fontSize: '0.875rem',
-                  pointerEvents: 'none',
-                  bgcolor: 'background.paper',
-                  paddingRight: 1,
-                }}
-              >
-                {formData.startDate ? (() => {
-                  const date = new Date(formData.startDate);
-                  const day = String(date.getDate()).padStart(2, '0');
-                  const month = String(date.getMonth() + 1).padStart(2, '0');
-                  const year = date.getFullYear() + 543;
-                  const hours = String(date.getHours()).padStart(2, '0');
-                  const minutes = String(date.getMinutes()).padStart(2, '0');
-                  return `${day}/${month}/${year} ${hours}:${minutes}`;
-                })() : 'วว/ดด/ปปปป --:--'}
-              </Typography>
-            </Box>
-            <Box sx={{ position: 'relative', flex: 1 }}>
-              <TextField
+              <DateTimePicker
                 label="วันที่สิ้นสุด"
-                name="endDate"
-                type="datetime-local"
                 value={formData.endDate}
-                onChange={handleChange}
-                error={!!errors.endDate}
-                helperText={errors.endDate}
-                size="small"
-                fullWidth
-                InputLabelProps={{ shrink: true }}
-                InputProps={{
-                  startAdornment: <Calendar size={18} style={{ marginRight: 8 }} color={theme.palette.text.secondary} />,
+                onChange={(newValue) => {
+                  setFormData((prev) => ({ ...prev, endDate: newValue }));
+                  if (errors.endDate) {
+                    setErrors((prev) => ({ ...prev, endDate: '' }));
+                  }
                 }}
-                sx={{
-                  '& input[type="datetime-local"]': {
-                    color: 'transparent',
-                    '&::-webkit-datetime-edit': {
-                      color: 'transparent',
+                format="DD/MM/YYYY HH:mm"
+                ampm={false}
+                minDateTime={formData.startDate || undefined}
+                slotProps={{
+                  textField: {
+                    size: 'small',
+                    fullWidth: true,
+                    error: !!errors.endDate,
+                    helperText: errors.endDate,
+                    InputProps: {
+                      startAdornment: <Calendar size={18} style={{ marginRight: 8 }} color={theme.palette.text.secondary} />,
                     },
-                    '&::-webkit-datetime-edit-fields-wrapper': {
-                      color: 'transparent',
+                    inputProps: {
+                      value: formData.endDate ? formData.endDate.format('DD/MM/') + (formData.endDate.year() + 543) + formData.endDate.format(' HH:mm') : '',
                     },
-                  },
-                  '& input[type="datetime-local"]::-webkit-calendar-picker-indicator': {
-                    opacity: 1,
-                    cursor: 'pointer',
                   },
                 }}
               />
-              {/* แสดงวันที่แบบ dd/mm/YYYY (พ.ศ.) HH:mm */}
-              <Typography 
-                variant="body2" 
-                sx={{ 
-                  position: 'absolute',
-                  left: 44,
-                  top: errors.endDate ? 'calc(50% - 10px)' : '50%',
-                  transform: 'translateY(-50%)',
-                  color: formData.endDate ? 'text.primary' : 'text.disabled',
-                  fontWeight: 400,
-                  fontSize: '0.875rem',
-                  pointerEvents: 'none',
-                  bgcolor: 'background.paper',
-                  paddingRight: 1,
-                }}
-              >
-                {formData.endDate ? (() => {
-                  const date = new Date(formData.endDate);
-                  const day = String(date.getDate()).padStart(2, '0');
-                  const month = String(date.getMonth() + 1).padStart(2, '0');
-                  const year = date.getFullYear() + 543;
-                  const hours = String(date.getHours()).padStart(2, '0');
-                  const minutes = String(date.getMinutes()).padStart(2, '0');
-                  return `${day}/${month}/${year} ${hours}:${minutes}`;
-                })() : 'วว/ดด/ปปปป --:--'}
-              </Typography>
             </Box>
-          </Box>
+          </LocalizationProvider>
 
           <Typography variant="caption" color="text.secondary" sx={{ mt: -1 }}>
             * หากไม่ระบุวันที่ Banner จะแสดงตลอดเวลา

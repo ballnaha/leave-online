@@ -1,11 +1,13 @@
 'use client';
-import React, { useState, useMemo, useEffect } from 'react';
-import { Box, Typography, Paper, IconButton, Select, MenuItem } from '@mui/material';
-import { Health, Briefcase, Sun1, ArrowRight, DocumentText, Calendar, Clock, Archive, Building4, Lovely, Car, MessageQuestion, Shield, Heart, People, Profile2User } from 'iconsax-react';
+import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
+import { Box, Typography, Paper, IconButton, Select, MenuItem, Drawer, Divider, Chip } from '@mui/material';
+import { Health, Briefcase, Sun1, ArrowRight, DocumentText, Calendar, Clock, Archive, Building4, Lovely, Car, MessageQuestion, Shield, Heart, People, Profile2User, CloseCircle, TickCircle, Timer, Forbidden2 } from 'iconsax-react';
 import { useLocale } from '../providers/LocaleProvider';
-import { HelpCircle } from 'lucide-react';
+import { HelpCircle, X } from 'lucide-react';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend } from 'chart.js';
 import { Doughnut } from 'react-chartjs-2';
+import dayjs from 'dayjs';
+import 'dayjs/locale/th';
 
 // Register Chart.js components
 ChartJS.register(ArcElement, Tooltip, Legend);
@@ -27,6 +29,8 @@ interface LeaveRequest {
     totalDays: number;
     status: string;
     startDate: string;
+    endDate: string;
+    reason: string;
 }
 
 interface DashboardCardProps {
@@ -58,8 +62,56 @@ const leaveTypeConfig: Record<string, { icon: any; color: string }> = {
 };
 
 const DashboardCard: React.FC<DashboardCardProps> = ({ leaveTypes, leaveRequests, year, onYearChange }) => {
-    const { t } = useLocale();
+    const { t, locale } = useLocale();
     const [selectedCode, setSelectedCode] = useState<string>('');
+    const [drilldownOpen, setDrilldownOpen] = useState(false);
+    const [drilldownStatus, setDrilldownStatus] = useState<'approved' | 'pending' | 'rejected' | 'cancelled' | null>(null);
+    
+    // Drag-to-dismiss states
+    const [dragY, setDragY] = useState(0);
+    const [isDragging, setIsDragging] = useState(false);
+    const dragStartY = useRef(0);
+    const dragHandleRef = useRef<HTMLDivElement>(null);
+    const DISMISS_THRESHOLD = 100;
+
+    // Calculate backdrop opacity based on drag
+    const backdropOpacity = useMemo(() => {
+        if (dragY <= 0) return 0.5;
+        const maxDrag = 200;
+        const opacity = 0.5 * (1 - Math.min(dragY / maxDrag, 1));
+        return Math.max(0, opacity);
+    }, [dragY]);
+
+    // Touch handlers for drag-to-dismiss
+    const handleTouchStart = useCallback((e: React.TouchEvent) => {
+        dragStartY.current = e.touches[0].clientY;
+        setIsDragging(true);
+    }, []);
+
+    const handleTouchMove = useCallback((e: React.TouchEvent) => {
+        if (!isDragging) return;
+        const currentY = e.touches[0].clientY;
+        const diff = currentY - dragStartY.current;
+        if (diff > 0) {
+            setDragY(diff);
+        }
+    }, [isDragging]);
+
+    const handleTouchEnd = useCallback(() => {
+        setIsDragging(false);
+        if (dragY > DISMISS_THRESHOLD) {
+            setDrilldownOpen(false);
+        }
+        setDragY(0);
+    }, [dragY]);
+
+    // Reset drag state when drawer closes
+    useEffect(() => {
+        if (!drilldownOpen) {
+            setDragY(0);
+            setIsDragging(false);
+        }
+    }, [drilldownOpen]);
 
     // Generate year options (current year - 2 to current year + 1)
     const currentYear = new Date().getFullYear();
@@ -123,6 +175,59 @@ const DashboardCard: React.FC<DashboardCardProps> = ({ leaveTypes, leaveRequests
         return result;
     }, [leaveTypes, leaveRequests, year]);
 
+    // Get filtered requests for drilldown
+    const drilldownRequests = useMemo(() => {
+        if (!drilldownStatus || !selectedCode) return [];
+        
+        return leaveRequests.filter(req => {
+            const matchType = req.leaveType === selectedCode;
+            let matchStatus = false;
+            
+            if (drilldownStatus === 'pending') {
+                matchStatus = ['pending', 'in_progress'].includes(req.status);
+            } else {
+                matchStatus = req.status === drilldownStatus;
+            }
+            
+            return matchType && matchStatus;
+        });
+    }, [leaveRequests, selectedCode, drilldownStatus]);
+
+    // Format date for display
+    const formatDate = (startDate: string, endDate: string) => {
+        dayjs.locale(locale === 'th' ? 'th' : locale === 'my' ? 'my' : 'en');
+        const start = dayjs(startDate);
+        const end = dayjs(endDate);
+        
+        if (start.isSame(end, 'day')) {
+            return start.format('D MMM YYYY');
+        }
+        return `${start.format('D MMM')} - ${end.format('D MMM YYYY')}`;
+    };
+
+    // Handle drilldown click
+    const handleDrilldownClick = (status: 'approved' | 'pending' | 'rejected' | 'cancelled') => {
+        setDrilldownStatus(status);
+        setDrilldownOpen(true);
+    };
+
+    // Get status config
+    const getStatusConfig = (status: string) => {
+        switch (status) {
+            case 'approved':
+                return { label: t('status_approved', 'อนุมัติแล้ว'), color: '#4CAF50', bgColor: '#E8F5E9', icon: TickCircle };
+            case 'pending':
+            case 'in_progress':
+                return { label: t('status_pending', 'รออนุมัติ'), color: '#FFC107', bgColor: '#FFF8E1', icon: Timer };
+            case 'rejected':
+                return { label: t('status_rejected', 'ไม่อนุมัติ'), color: '#FF8FA3', bgColor: '#FCE4EC', icon: Forbidden2 };
+            case 'cancelled':
+                return { label: t('status_cancelled', 'ยกเลิก'), color: '#9E9E9E', bgColor: '#F5F5F5', icon: CloseCircle };
+            default:
+                return { label: status, color: '#9E9E9E', bgColor: '#F5F5F5', icon: Clock };
+        }
+    };
+
     const currentBalance = balances[selectedCode] || { total: 0, used: 0, approved: 0, pending: 0, rejected: 0, cancelled: 0, remaining: 0, name: '', isPaid: true };
     const isUnlimited = currentBalance.total === 0;
     
@@ -165,11 +270,11 @@ const DashboardCard: React.FC<DashboardCardProps> = ({ leaveTypes, leaveRequests
         }
 
         if (isOverLimit) {
-            // Over limit - show full circle in red
+            // Over limit - show full circle in coral/salmon color that matches purple bg
             return {
                 datasets: [{
                     data: [100],
-                    backgroundColor: ['#FF4D4D'],
+                    backgroundColor: ['#FF6B9D'],
                     borderWidth: 0,
                     cutout: '75%',
                     borderRadius: 4,
@@ -243,8 +348,18 @@ const DashboardCard: React.FC<DashboardCardProps> = ({ leaveTypes, leaveRequests
                     background: 'rgba(255, 255, 255, 0.05)',
                 }} />
 
-                {/* Year Selector */}
-                <Box sx={{ position: 'absolute', top: 16, right: 16, zIndex: 10 }}>
+                {/* Header: Leave Type Name + Year Selector */}
+                <Box sx={{ 
+                    display: 'flex', 
+                    justifyContent: 'space-between', 
+                    alignItems: 'center', 
+                    mb: 2,
+                    position: 'relative',
+                    zIndex: 10
+                }}>
+                    <Typography variant="subtitle1" sx={{ fontWeight: 600, fontSize: '1rem' , color:'#FFFFFF;' }}>
+                        {t(`leave_${selectedCode}`, currentBalance.name)}
+                    </Typography>
                     <Select
                         value={year}
                         onChange={(e) => onYearChange(Number(e.target.value))}
@@ -277,10 +392,10 @@ const DashboardCard: React.FC<DashboardCardProps> = ({ leaveTypes, leaveRequests
                     </Select>
                 </Box>
 
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 3 }}>
                     {/* Left Side: Circular Progress with Chart.js */}
-                    <Box sx={{ width: '40%', display: 'flex', justifyContent: 'center' }}>
-                        <Box sx={{ position: 'relative', width: 120, height: 120 }}>
+                    <Box sx={{ width: '45%', display: 'flex', justifyContent: 'center' }}>
+                        <Box sx={{ position: 'relative', width: 150, height: 150 }}>
                             {/* Chart.js Doughnut */}
                             <Doughnut data={chartData} options={chartOptions} />
 
@@ -299,13 +414,13 @@ const DashboardCard: React.FC<DashboardCardProps> = ({ leaveTypes, leaveRequests
                                 zIndex: 1,
                                 pointerEvents: 'none'
                             }}>
-                                <Typography variant="caption" sx={{ fontSize: '0.7rem', color: 'white', mb: -0.5 }}>
+                                <Typography variant="caption" sx={{ fontSize: '0.75rem', color: 'white', mb: -0.5 }}>
                                     {isOverLimit ? t('dashboard_over_limit', 'เกินสิทธิ์') : t('dashboard_remaining', 'คงเหลือ')}
                                 </Typography>
-                                <Typography variant="h4" sx={{ fontWeight: 'bold', color: isOverLimit ? '#FF4D4D' : 'white' }}>
+                                <Typography variant="h3" sx={{ fontWeight: 'bold', color: isOverLimit ? '#FF6B9D' : 'white' }}>
                                     {isOverLimit ? Math.abs(currentBalance.remaining) : currentBalance.remaining}
                                 </Typography>
-                                <Typography variant="caption" sx={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.7)' }}>
+                                <Typography variant="caption" sx={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.7)' }}>
                                     {isUnlimited ? t('dashboard_unlimited', 'ไม่จำกัด') : t('dashboard_from_total', 'จาก {{total}} วัน').replace('{{total}}', String(currentBalance.total))}
                                 </Typography>
                             </Box>
@@ -313,14 +428,7 @@ const DashboardCard: React.FC<DashboardCardProps> = ({ leaveTypes, leaveRequests
                     </Box>
 
                     {/* Right Side: Stats */}
-                    <Box sx={{ width: '60%' }}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                            <Typography variant="body2" sx={{ opacity: 0.9, fontSize: '0.85rem', fontWeight: 600 }}>
-                                {t(`leave_${selectedCode}`, currentBalance.name)}
-                            </Typography>
-                            
-                        </Box>
-                        
+                    <Box sx={{ width: '55%' }}>
                         {/* แสดงสิทธิ์คงเหลือในปีนี้ */}
                         <Typography variant="caption" sx={{ display: 'block', mb: 1.5, opacity: 0.8, fontSize: '0.75rem' }}>
                             {isUnlimited 
@@ -333,70 +441,125 @@ const DashboardCard: React.FC<DashboardCardProps> = ({ leaveTypes, leaveRequests
                         </Typography>
                         
                         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                            {/* อนุมัติแล้ว */}
+                            <Box 
+                                onClick={() => currentBalance.approved > 0 && handleDrilldownClick('approved')}
+                                sx={{ 
+                                    display: 'flex', 
+                                    alignItems: 'center', 
+                                    gap: 1.5,
+                                    cursor: currentBalance.approved > 0 ? 'pointer' : 'default',
+                                    p: 0.5,
+                                    mx: -0.5,
+                                    borderRadius: 1,
+                                    transition: 'background-color 0.2s',
+                                    '&:hover': currentBalance.approved > 0 ? { bgcolor: 'rgba(255,255,255,0.1)' } : {}
+                                }}
+                            >
                                 <Box sx={{ 
                                     width: 8, 
                                     height: 8, 
                                     borderRadius: '50%', 
                                     bgcolor: '#4CAF50' 
                                 }} />
-                                <Typography variant="body2" sx={{ fontSize: '0.85rem' }}>
-                                    {t('dashboard_approved', 'อนุมัติแล้ว {{days}} วัน').replace('{{days}}', String(currentBalance.approved))}
+                                <Typography variant="body2" sx={{ fontSize: '0.85rem', flex: 1 }}>
+                                    {t('dashboard_approved', 'อนุมัติแล้ว {{days}} วัน').replace('{{days}}', currentBalance.approved > 0 ? String(currentBalance.approved) : '-')}
                                 </Typography>
+                                {currentBalance.approved > 0 && <ArrowRight size={16} color="rgba(255,255,255,0.5)" />}
                             </Box>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                            {/* เหลือ / เกินสิทธิ์ */}
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, p: 0.5, mx: -0.5 }}>
                                 <Box sx={{ 
                                     width: 8, 
                                     height: 8, 
                                     borderRadius: '50%', 
-                                    bgcolor: isOverLimit ? '#FF4D4D' : 'rgba(255,255,255,0.5)' 
+                                    bgcolor: isOverLimit ? '#FF6B9D' : 'rgba(255,255,255,0.5)' 
                                 }} />
                                 <Typography variant="body2" sx={{ fontSize: '0.85rem' }}>
                                     {isOverLimit 
                                         ? t('dashboard_exceeded', 'เกิน {{days}} วัน').replace('{{days}}', String(Math.abs(currentBalance.remaining)))
-                                        : t('dashboard_left', 'เหลือ {{days}} วัน').replace('{{days}}', String(currentBalance.remaining))
+                                        : t('dashboard_left', 'เหลือ {{days}} วัน').replace('{{days}}', isUnlimited ? '-' : String(currentBalance.remaining))
                                     }
                                 </Typography>
                             </Box>
-                            {currentBalance.pending > 0 && (
-                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                                    <Box sx={{ 
-                                        width: 8, 
-                                        height: 8, 
-                                        borderRadius: '50%', 
-                                        bgcolor: '#FFC107'
-                                    }} />
-                                    <Typography variant="body2" sx={{ fontSize: '0.85rem' }}>
-                                        {t('dashboard_pending', 'รออนุมัติ {{days}} วัน').replace('{{days}}', String(currentBalance.pending))}
-                                    </Typography>
-                                </Box>
-                            )}
-                            {currentBalance.rejected > 0 && (
-                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                                    <Box sx={{ 
-                                        width: 8, 
-                                        height: 8, 
-                                        borderRadius: '50%', 
-                                        bgcolor: '#FF5252'
-                                    }} />
-                                    <Typography variant="body2" sx={{ fontSize: '0.85rem' }}>
-                                        {t('dashboard_rejected', 'ไม่อนุมัติ {{days}} วัน').replace('{{days}}', String(currentBalance.rejected))}
-                                    </Typography>
-                                </Box>
-                            )}
-                            {currentBalance.cancelled > 0 && (
-                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                                    <Box sx={{ 
-                                        width: 8, 
-                                        height: 8, 
-                                        borderRadius: '50%', 
-                                        bgcolor: '#9E9E9E'
-                                    }} />
-                                    <Typography variant="body2" sx={{ fontSize: '0.85rem' }}>
-                                        {t('dashboard_cancelled', 'ยกเลิก {{days}} วัน').replace('{{days}}', String(currentBalance.cancelled))}
-                                    </Typography>
-                                </Box>
-                            )}
+                            {/* รออนุมัติ */}
+                            <Box 
+                                onClick={() => currentBalance.pending > 0 && handleDrilldownClick('pending')}
+                                sx={{ 
+                                    display: 'flex', 
+                                    alignItems: 'center', 
+                                    gap: 1.5,
+                                    cursor: currentBalance.pending > 0 ? 'pointer' : 'default',
+                                    p: 0.5,
+                                    mx: -0.5,
+                                    borderRadius: 1,
+                                    transition: 'background-color 0.2s',
+                                    '&:hover': currentBalance.pending > 0 ? { bgcolor: 'rgba(255,255,255,0.1)' } : {}
+                                }}
+                            >
+                                <Box sx={{ 
+                                    width: 8, 
+                                    height: 8, 
+                                    borderRadius: '50%', 
+                                    bgcolor: '#FFC107'
+                                }} />
+                                <Typography variant="body2" sx={{ fontSize: '0.85rem', flex: 1 }}>
+                                    {t('dashboard_pending', 'รออนุมัติ {{days}} วัน').replace('{{days}}', currentBalance.pending > 0 ? String(currentBalance.pending) : '-')}
+                                </Typography>
+                                {currentBalance.pending > 0 && <ArrowRight size={16} color="rgba(255,255,255,0.5)" />}
+                            </Box>
+                            {/* ไม่อนุมัติ */}
+                            <Box 
+                                onClick={() => currentBalance.rejected > 0 && handleDrilldownClick('rejected')}
+                                sx={{ 
+                                    display: 'flex', 
+                                    alignItems: 'center', 
+                                    gap: 1.5,
+                                    cursor: currentBalance.rejected > 0 ? 'pointer' : 'default',
+                                    p: 0.5,
+                                    mx: -0.5,
+                                    borderRadius: 1,
+                                    transition: 'background-color 0.2s',
+                                    '&:hover': currentBalance.rejected > 0 ? { bgcolor: 'rgba(255,255,255,0.1)' } : {}
+                                }}
+                            >
+                                <Box sx={{ 
+                                    width: 8, 
+                                    height: 8, 
+                                    borderRadius: '50%', 
+                                    bgcolor: '#FF8FA3'
+                                }} />
+                                <Typography variant="body2" sx={{ fontSize: '0.85rem', flex: 1 }}>
+                                    {t('dashboard_rejected', 'ไม่อนุมัติ {{days}} วัน').replace('{{days}}', currentBalance.rejected > 0 ? String(currentBalance.rejected) : '-')}
+                                </Typography>
+                                {currentBalance.rejected > 0 && <ArrowRight size={16} color="rgba(255,255,255,0.5)" />}
+                            </Box>
+                            {/* ยกเลิก */}
+                            <Box 
+                                onClick={() => currentBalance.cancelled > 0 && handleDrilldownClick('cancelled')}
+                                sx={{ 
+                                    display: 'flex', 
+                                    alignItems: 'center', 
+                                    gap: 1.5,
+                                    cursor: currentBalance.cancelled > 0 ? 'pointer' : 'default',
+                                    p: 0.5,
+                                    mx: -0.5,
+                                    borderRadius: 1,
+                                    transition: 'background-color 0.2s',
+                                    '&:hover': currentBalance.cancelled > 0 ? { bgcolor: 'rgba(255,255,255,0.1)' } : {}
+                                }}
+                            >
+                                <Box sx={{ 
+                                    width: 8, 
+                                    height: 8, 
+                                    borderRadius: '50%', 
+                                    bgcolor: '#9E9E9E'
+                                }} />
+                                <Typography variant="body2" sx={{ fontSize: '0.85rem', flex: 1 }}>
+                                    {t('dashboard_cancelled', 'ยกเลิก {{days}} วัน').replace('{{days}}', currentBalance.cancelled > 0 ? String(currentBalance.cancelled) : '-')}
+                                </Typography>
+                                {currentBalance.cancelled > 0 && <ArrowRight size={16} color="rgba(255,255,255,0.5)" />}
+                            </Box>
                         </Box>
                     </Box>
                 </Box>
@@ -474,6 +637,158 @@ const DashboardCard: React.FC<DashboardCardProps> = ({ leaveTypes, leaveRequests
                     </Box>
                 </Box>
             </Paper>
+
+            {/* Drilldown Drawer */}
+            <Drawer
+                anchor="bottom"
+                open={drilldownOpen}
+                onClose={() => setDrilldownOpen(false)}
+                ModalProps={{
+                    slotProps: {
+                        backdrop: {
+                            sx: {
+                                bgcolor: `rgba(0, 0, 0, ${backdropOpacity})`,
+                            }
+                        }
+                    }
+                }}
+                PaperProps={{
+                    sx: {
+                        borderTopLeftRadius: 16,
+                        borderTopRightRadius: 16,
+                        maxHeight: '70vh',
+                        ...(dragY > 0 && {
+                            transform: `translateY(${dragY}px)`,
+                            transition: isDragging ? 'none' : 'transform 0.2s ease-out',
+                        }),
+                    }
+                }}
+            >
+                <Box 
+                    sx={{ width: '100%', bgcolor: 'white' }}
+                    onTouchStart={handleTouchStart}
+                    onTouchMove={handleTouchMove}
+                    onTouchEnd={handleTouchEnd}
+                >
+                    {/* Drag Handle */}
+                    <Box 
+                        ref={dragHandleRef}
+                        sx={{ 
+                            display: 'flex', 
+                            justifyContent: 'center', 
+                            pt: 1.5, 
+                            pb: 1,
+                            cursor: 'grab',
+                            touchAction: 'none',
+                        }}
+                    >
+                        <Box
+                            sx={{
+                                width: isDragging ? 48 : 40,
+                                height: 5,
+                                borderRadius: 2.5,
+                                bgcolor: isDragging ? '#94A3B8' : '#CBD5E1',
+                                transition: 'all 0.2s ease',
+                            }}
+                        />
+                    </Box>
+                <Box sx={{ p: 2, pt: 0 }}>
+                    {/* Header */}
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                            {drilldownStatus && (() => {
+                                const statusConfig = getStatusConfig(drilldownStatus);
+                                const StatusIcon = statusConfig.icon;
+                                return (
+                                    <>
+                                        <Box sx={{
+                                            width: 36,
+                                            height: 36,
+                                            borderRadius: 1,
+                                            bgcolor: statusConfig.bgColor,
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center'
+                                        }}>
+                                            <StatusIcon size={20} color={statusConfig.color} variant="Bold" />
+                                        </Box>
+                                        <Box>
+                                            <Typography variant="subtitle1" sx={{ fontWeight: 600, color: '#1E293B' }}>
+                                                {statusConfig.label}
+                                            </Typography>
+                                            <Typography variant="caption" sx={{ color: '#64748B' }}>
+                                                {t(`leave_${selectedCode}`, currentBalance.name)} - {drilldownRequests.length} {t('items', 'รายการ')}
+                                            </Typography>
+                                        </Box>
+                                    </>
+                                );
+                            })()}
+                        </Box>
+                        <IconButton onClick={() => setDrilldownOpen(false)} size="small">
+                            <X size={20} />
+                        </IconButton>
+                    </Box>
+
+                    <Divider sx={{ mb: 2 }} />
+
+                    {/* List of leaves */}
+                    <Box sx={{ maxHeight: 'calc(70vh - 120px)', overflowY: 'auto' }}>
+                        {drilldownRequests.length > 0 ? (
+                            drilldownRequests.map((leave, index) => {
+                                const statusConfig = getStatusConfig(leave.status);
+                                return (
+                                    <Box 
+                                        key={leave.id}
+                                        sx={{ 
+                                            p: 2, 
+                                            mb: 1.5, 
+                                            bgcolor: '#F8FAFC', 
+                                            borderRadius: 1,
+                                            border: '1px solid #E2E8F0'
+                                        }}
+                                    >
+                                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
+                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                <Calendar size={16} color="#64748B" />
+                                                <Typography variant="body2" sx={{ fontWeight: 600, color: '#1E293B' }}>
+                                                    {formatDate(leave.startDate, leave.endDate)}
+                                                </Typography>
+                                            </Box>
+                                            <Chip 
+                                                label={`${leave.totalDays} ${t('days', 'วัน')}`}
+                                                size="small"
+                                                sx={{ 
+                                                    bgcolor: statusConfig.bgColor,
+                                                    color: statusConfig.color,
+                                                    fontWeight: 600,
+                                                    fontSize: '0.75rem'
+                                                }}
+                                            />
+                                        </Box>
+                                        {leave.reason && (
+                                            <Typography variant="body2" sx={{ color: '#64748B', fontSize: '0.85rem' }}>
+                                                {leave.reason.length > 80 ? `${leave.reason.substring(0, 80)}...` : leave.reason}
+                                            </Typography>
+                                        )}
+                                        {leave.leaveCode && (
+                                            <Typography variant="caption" sx={{ color: '#94A3B8', display: 'block', mt: 0.5 }}>
+                                                {t('leave_code', 'รหัสใบลา')}: {leave.leaveCode}
+                                            </Typography>
+                                        )}
+                                    </Box>
+                                );
+                            })
+                        ) : (
+                            <Box sx={{ textAlign: 'center', py: 4, color: '#64748B' }}>
+                                <Typography variant="body2">
+                                    {t('no_leave_records', 'ไม่มีรายการ')}
+                                </Typography>
+                            </Box>
+                        )}
+                    </Box>
+                </Box>
+                </Box>
+            </Drawer>
         </Box>
     );
 };

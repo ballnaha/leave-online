@@ -1,16 +1,30 @@
 'use client';
-import React, { useMemo, useState } from 'react';
-import { Box, Typography, IconButton, Badge, Avatar, Skeleton } from '@mui/material';
+import React, { useMemo, useState, useEffect, useCallback } from 'react';
+import { Box, Typography, IconButton, Badge, Avatar, Skeleton, Popover, List, ListItem, ListItemText, Divider, Button } from '@mui/material';
 import { Notification } from 'iconsax-react';
 import Sidebar from './Sidebar';
 import ImageSlider from './ImageSlider';
 import { useLocale } from '../providers/LocaleProvider';
 import { useUser } from '../providers/UserProvider';
 
+interface NotificationItem {
+    id: number;
+    type: string;
+    title: string;
+    message: string;
+    isRead: boolean;
+    createdAt: string;
+}
+
 const Header = () => {
     const { t, locale } = useLocale();
     const { user, loading } = useUser();
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+    const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+    const [unreadCount, setUnreadCount] = useState(0);
+    const [anchorEl, setAnchorEl] = useState<HTMLButtonElement | null>(null);
+    const [loadingNotifications, setLoadingNotifications] = useState(false);
+
     const dateLocale = useMemo(() => (locale === 'th' ? 'th-TH' : locale === 'my' ? 'my-MM' : 'en-US'), [locale]);
     const currentDate = new Date().toLocaleDateString(dateLocale, {
         weekday: 'short',
@@ -18,6 +32,74 @@ const Header = () => {
         month: 'short',
         year: 'numeric',
     });
+
+    // Fetch notifications
+    const fetchNotifications = useCallback(async () => {
+        if (!user) return;
+        try {
+            setLoadingNotifications(true);
+            const res = await fetch('/api/notifications?limit=10');
+            if (res.ok) {
+                const data = await res.json();
+                setNotifications(data.data || []);
+                setUnreadCount(data.unreadCount || 0);
+            }
+        } catch (error) {
+            console.error('Error fetching notifications:', error);
+        } finally {
+            setLoadingNotifications(false);
+        }
+    }, [user]);
+
+    useEffect(() => {
+        fetchNotifications();
+        // Refresh every 30 seconds
+        const interval = setInterval(fetchNotifications, 30000);
+        return () => clearInterval(interval);
+    }, [fetchNotifications]);
+
+    // Mark all as read
+    const markAllAsRead = async () => {
+        try {
+            const res = await fetch('/api/notifications', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ markAllAsRead: true }),
+            });
+            if (res.ok) {
+                setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+                setUnreadCount(0);
+            }
+        } catch (error) {
+            console.error('Error marking notifications as read:', error);
+        }
+    };
+
+    // Format time ago
+    const formatTimeAgo = (dateString: string) => {
+        const date = new Date(dateString);
+        const now = new Date();
+        const diffMs = now.getTime() - date.getTime();
+        const diffMins = Math.floor(diffMs / 60000);
+        const diffHours = Math.floor(diffMs / 3600000);
+        const diffDays = Math.floor(diffMs / 86400000);
+
+        if (diffMins < 1) return 'เมื่อสักครู่';
+        if (diffMins < 60) return `${diffMins} นาทีที่แล้ว`;
+        if (diffHours < 24) return `${diffHours} ชั่วโมงที่แล้ว`;
+        if (diffDays < 7) return `${diffDays} วันที่แล้ว`;
+        return date.toLocaleDateString(dateLocale);
+    };
+
+    const handleNotificationClick = (event: React.MouseEvent<HTMLButtonElement>) => {
+        setAnchorEl(event.currentTarget);
+    };
+
+    const handleClose = () => {
+        setAnchorEl(null);
+    };
+
+    const open = Boolean(anchorEl);
 
     // แสดง Sidebar สำหรับทุกคนยกเว้น employee
     const showSidebar = !!user && user.role !== 'employee';
@@ -30,7 +112,6 @@ const Header = () => {
                 gap: 2, 
                 pt: 3, 
                 pb: 1,
-                
                 mx: { xs: -2, md: 0 },
                 px: 2,
                 borderBottom: '1px solid #f0f0f0',
@@ -49,7 +130,8 @@ const Header = () => {
                     maxWidth: 1200,
                     mx: 'auto',
                     width: '100%',
-                    px: 2,
+                    pl: 2,
+                    pr: 0,
                 }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
                         {/* แสดง Hamburger Menu สำหรับทุกคนยกเว้น employee */}
@@ -150,6 +232,7 @@ const Header = () => {
                     </Box>
 
                     <IconButton
+                        onClick={handleNotificationClick}
                         sx={{
                             bgcolor: 'white',
                             boxShadow: 'none',
@@ -158,10 +241,117 @@ const Header = () => {
                             '&:hover': { bgcolor: 'rgba(0,0,0,0.04)' }
                         }}
                     >
-                        <Badge variant="dot" color="error" overlap="circular">
+                        <Badge 
+                            badgeContent={unreadCount > 0 ? unreadCount : undefined}
+                            color="error" 
+                            overlap="circular"
+                            variant={unreadCount > 0 ? "standard" : undefined}
+                            sx={{
+                                '& .MuiBadge-badge': {
+                                    fontSize: '0.65rem',
+                                    minWidth: 16,
+                                    height: 16,
+                                }
+                            }}
+                        >
                             <Notification size={20} variant="Outline" color="#64748B" />
                         </Badge>
                     </IconButton>
+
+                    {/* Notification Popover */}
+                    <Popover
+                        open={open}
+                        anchorEl={anchorEl}
+                        onClose={handleClose}
+                        anchorOrigin={{
+                            vertical: 'bottom',
+                            horizontal: 'right',
+                        }}
+                        transformOrigin={{
+                            vertical: 'top',
+                            horizontal: 'right',
+                        }}
+                        PaperProps={{
+                            sx: {
+                                width: 320,
+                                maxHeight: 400,
+                                mt: 1,
+                                borderRadius: 1,
+                                boxShadow: '0 10px 40px rgba(0,0,0,0.15)',
+                            }
+                        }}
+                    >
+                        <Box sx={{ p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #f0f0f0' }}>
+                            <Typography variant="subtitle1" fontWeight={600}>
+                                {t('notifications', 'การแจ้งเตือน')}
+                            </Typography>
+                            {unreadCount > 0 && (
+                                <Button size="small" onClick={markAllAsRead} sx={{ fontSize: '0.75rem' }}>
+                                    {t('mark_all_read', 'อ่านทั้งหมด')}
+                                </Button>
+                            )}
+                        </Box>
+
+                        {loadingNotifications ? (
+                            <Box sx={{ p: 2 }}>
+                                {[1, 2, 3].map(i => (
+                                    <Skeleton key={i} variant="rectangular" height={60} sx={{ mb: 1, borderRadius: 1 }} />
+                                ))}
+                            </Box>
+                        ) : notifications.length === 0 ? (
+                            <Box sx={{ 
+                                p: 4, 
+                                display: 'flex', 
+                                flexDirection: 'column', 
+                                alignItems: 'center', 
+                                justifyContent: 'center' 
+                            }}>
+                                <Notification size={40} color="#ccc" variant="Bulk" />
+                                <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                                    {t('no_notifications', 'ไม่มีการแจ้งเตือน')}
+                                </Typography>
+                            </Box>
+                        ) : (
+                            <List sx={{ p: 0, maxHeight: 300, overflow: 'auto' }}>
+                                {notifications.map((notification, index) => (
+                                    <React.Fragment key={notification.id}>
+                                        <ListItem
+                                            sx={{
+                                                bgcolor: notification.isRead ? 'transparent' : 'rgba(108, 99, 255, 0.05)',
+                                                '&:hover': { bgcolor: 'rgba(0,0,0,0.02)' },
+                                                cursor: 'pointer',
+                                            }}
+                                        >
+                                            <ListItemText
+                                                primary={
+                                                    <Typography variant="body2" fontWeight={notification.isRead ? 400 : 600} sx={{ fontSize: '0.85rem' }}>
+                                                        {notification.title}
+                                                    </Typography>
+                                                }
+                                                secondary={
+                                                    <Box>
+                                                        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', fontSize: '0.75rem' }}>
+                                                            {notification.message.length > 60 
+                                                                ? notification.message.substring(0, 60) + '...' 
+                                                                : notification.message
+                                                            }
+                                                        </Typography>
+                                                        <Typography variant="caption" color="primary" sx={{ fontSize: '0.7rem', mt: 0.5, display: 'block' }}>
+                                                            {formatTimeAgo(notification.createdAt)}
+                                                        </Typography>
+                                                    </Box>
+                                                }
+                                            />
+                                            {!notification.isRead && (
+                                                <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: 'primary.main', ml: 1 }} />
+                                            )}
+                                        </ListItem>
+                                        {index < notifications.length - 1 && <Divider />}
+                                    </React.Fragment>
+                                ))}
+                            </List>
+                        )}
+                    </Popover>
                 </Box>
             </Box>
 
