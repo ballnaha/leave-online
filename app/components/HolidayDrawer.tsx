@@ -85,14 +85,8 @@ export default function HolidayDrawer({ open, onClose, initialYear }: HolidayDra
 
     const getTypeColor = (type: string) => {
         switch (type) {
-            case 'national':
-                return { bg: '#FEE2E2', text: '#DC2626' };
-            case 'substitute':
-                return { bg: '#FEF3C7', text: '#D97706' };
-            case 'special':
-                return { bg: '#DBEAFE', text: '#2563EB' };
             case 'company':
-                return { bg: '#D1FAE5', text: '#059669' };
+                return { bg: '#D1FAE5', text: '#DC2626' };
             default:
                 return { bg: '#F3F4F6', text: '#6B7280' };
         }
@@ -100,12 +94,6 @@ export default function HolidayDrawer({ open, onClose, initialYear }: HolidayDra
 
     const getTypeLabel = (type: string) => {
         switch (type) {
-            case 'national':
-                return t('holiday_type_national', 'วันหยุดราชการ');
-            case 'substitute':
-                return t('holiday_type_substitute', 'วันหยุดชดเชย');
-            case 'special':
-                return t('holiday_type_special', 'วันหยุดพิเศษ');
             case 'company':
                 return t('holiday_type_company', 'วันหยุดบริษัท');
             default:
@@ -117,8 +105,6 @@ export default function HolidayDrawer({ open, onClose, initialYear }: HolidayDra
 
     // Stats
     const stats = {
-        national: holidays.filter((h) => h.type === 'national').length,
-        substitute: holidays.filter((h) => h.type === 'substitute').length,
         company: holidays.filter((h) => h.type === 'company').length,
     };
 

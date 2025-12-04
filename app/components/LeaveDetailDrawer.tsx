@@ -440,24 +440,25 @@ const LeaveDetailDrawer: React.FC<LeaveDetailDrawerProps> = ({ open, onClose, le
     const contentRef = useRef<HTMLDivElement>(null);
     const dragHandleRef = useRef<HTMLDivElement>(null);
     
-    const DISMISS_THRESHOLD = 80; // pixels to pull down to dismiss
-    const VELOCITY_THRESHOLD = 0.5; // velocity threshold for quick swipe dismiss
+    const DISMISS_THRESHOLD = 120; // Increased threshold for stability
+    const VELOCITY_THRESHOLD = 0.5; // Velocity threshold for quick swipe
 
-    // Calculate drag progress (0 to 1)
-    const dragProgress = Math.min(dragY / DISMISS_THRESHOLD, 1);
-    
-    // Background opacity based on drag progress
-    const backdropOpacity = isClosing ? 0 : Math.max(0.5 - dragProgress * 0.5, 0);
+    // Calculate drag progress for opacity
+    const windowHeight = typeof window !== 'undefined' ? window.innerHeight : 800;
+    // Fade out backdrop as we drag down (linear fade up to 40% of screen height)
+    const backdropOpacity = isClosing ? 0 : Math.max(0.5 * (1 - dragY / (windowHeight * 0.4)), 0);
 
     // Handle touch start
     const handleTouchStart = useCallback((e: React.TouchEvent) => {
-        // Check if touch started on drag handle or if content is at top
         const touchY = e.touches[0].clientY;
         const dragHandleRect = dragHandleRef.current?.getBoundingClientRect();
-        const isOnDragHandle = dragHandleRect && 
-            touchY >= dragHandleRect.top && 
-            touchY <= dragHandleRect.bottom + 30; // Extended touch area
         
+        // Check if touching the handle area (generous hit box)
+        const isOnDragHandle = dragHandleRect && 
+            touchY >= dragHandleRect.top - 20 && 
+            touchY <= dragHandleRect.bottom + 20;
+        
+        // Check if content is scrolled to top
         const isAtTop = contentRef.current && contentRef.current.scrollTop <= 0;
         
         if (isOnDragHandle || isAtTop) {
@@ -477,29 +478,27 @@ const LeaveDetailDrawer: React.FC<LeaveDetailDrawerProps> = ({ open, onClose, le
         const currentTime = Date.now();
         const diff = currentY - startYRef.current;
         
-        // Calculate velocity (pixels per millisecond)
+        // Calculate velocity
         const timeDelta = currentTime - lastTimeRef.current;
         if (timeDelta > 0) {
             const instantVelocity = (currentY - lastYRef.current) / timeDelta;
             // Smooth velocity with exponential moving average
-            velocityRef.current = velocityRef.current * 0.7 + instantVelocity * 0.3;
+            velocityRef.current = velocityRef.current * 0.6 + instantVelocity * 0.4;
         }
         
         lastYRef.current = currentY;
         lastTimeRef.current = currentTime;
         
-        // Only allow pulling down (positive diff)
         if (diff > 0) {
-            // Apply easing resistance - gets harder to pull as you go further
-            const maxDrag = 200;
-            const resistance = 1 - Math.pow(diff / maxDrag, 0.5) * 0.6;
-            const easedDrag = diff * Math.max(resistance, 0.3);
-            setDragY(easedDrag);
+            // Native feel: 1:1 movement (no resistance) when dragging down
+            // This feels more responsive like iOS sheet
+            setDragY(diff);
             
-            // Prevent default scroll when dragging down
-            e.preventDefault();
+            if (e.cancelable) {
+                e.preventDefault();
+            }
         } else {
-            // Allow scrolling up normally
+            // If pulling up, allow scroll (reset drag)
             setDragY(0);
         }
     }, [isDragging]);
@@ -509,28 +508,31 @@ const LeaveDetailDrawer: React.FC<LeaveDetailDrawerProps> = ({ open, onClose, le
         if (!isDragging) return;
         
         const velocity = velocityRef.current;
-        const shouldDismiss = dragY > DISMISS_THRESHOLD || velocity > VELOCITY_THRESHOLD;
+        // Dismiss if dragged far enough OR flicked fast enough (with some minimal drag)
+        const shouldDismiss = dragY > DISMISS_THRESHOLD || (dragY > 30 && velocity > VELOCITY_THRESHOLD);
         
         if (shouldDismiss) {
-            // Animate close with momentum
             setIsClosing(true);
-            setDragY(window.innerHeight); // Animate to bottom
+            // Animate off screen
+            setDragY(windowHeight); 
             
-            // Wait for animation then close
             setTimeout(() => {
                 onClose();
-                setIsClosing(false);
-                setDragY(0);
+                // Reset after close
+                setTimeout(() => {
+                    setIsClosing(false);
+                    setDragY(0);
+                }, 50);
             }, 200);
         } else {
-            // Snap back with spring animation
+            // Snap back
             setDragY(0);
         }
         
         setIsDragging(false);
         startYRef.current = 0;
         velocityRef.current = 0;
-    }, [isDragging, dragY, onClose]);
+    }, [isDragging, dragY, onClose, windowHeight]);
 
     // Reset drag state when drawer closes/opens
     React.useEffect(() => {
@@ -585,6 +587,7 @@ const LeaveDetailDrawer: React.FC<LeaveDetailDrawerProps> = ({ open, onClose, le
             anchor="bottom"
             open={open}
             onClose={onClose}
+            disableScrollLock={false}
             SlideProps={{
                 appear: true,
             }}
@@ -613,8 +616,8 @@ const LeaveDetailDrawer: React.FC<LeaveDetailDrawerProps> = ({ open, onClose, le
                     transition: isDragging 
                         ? 'none' 
                         : isClosing 
-                            ? 'transform 0.2s ease-out' 
-                            : 'transform 0.35s cubic-bezier(0.32, 0.72, 0, 1)',
+                            ? 'transform 0.2s ease-in' 
+                            : 'transform 0.4s cubic-bezier(0.22, 1, 0.36, 1)',
                     willChange: 'transform',
                 }
             }}
@@ -645,7 +648,7 @@ const LeaveDetailDrawer: React.FC<LeaveDetailDrawerProps> = ({ open, onClose, le
                             borderRadius: 2.5,
                             bgcolor: isDragging 
                                 ? '#94A3B8' 
-                                : dragProgress > 0.5 
+                                : dragY > DISMISS_THRESHOLD / 2
                                     ? '#667eea' 
                                     : '#E2E8F0',
                             transition: isDragging ? 'none' : 'all 0.2s ease',
@@ -683,7 +686,14 @@ const LeaveDetailDrawer: React.FC<LeaveDetailDrawerProps> = ({ open, onClose, le
                 {/* Content */}
                 <Box 
                     ref={contentRef}
-                    sx={{ px: 2.5, py: 2, overflowY: 'auto', overflowX: 'hidden', maxHeight: 'calc(90vh - 80px)' }}
+                    sx={{ 
+                        px: 2.5, 
+                        py: 2, 
+                        overflowY: 'auto', 
+                        overflowX: 'hidden', 
+                        maxHeight: 'calc(90vh - 80px)',
+                        overscrollBehavior: 'contain'
+                    }}
                 >
                     {/* Leave Type & Status Card */}
                     <Card

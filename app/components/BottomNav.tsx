@@ -568,7 +568,7 @@ const BottomNav: React.FC<BottomNavProps> = ({ activePage = 'home' }) => {
                     </Paper>
 
                     {/* Floating Action Button */}
-                    <Box sx={{ position: 'absolute', bottom: 32, left: '50%', transform: 'translateX(-50%)', pointerEvents: 'auto' }}>
+                    <Box sx={{ position: 'absolute', bottom: 20, left: '50%', transform: 'translateX(-50%)', pointerEvents: 'auto' }}>
                         <Fab
                             onClick={() => setOpenMenu(!openMenu)}
                             sx={{

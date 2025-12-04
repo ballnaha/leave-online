@@ -142,9 +142,6 @@ function TableSkeleton() {
 }
 
 const typeLabels: Record<string, { label: string; color: 'error' | 'warning' | 'info' | 'success' }> = {
-  national: { label: 'วันหยุดราชการ', color: 'error' },
-  substitute: { label: 'วันหยุดชดเชย', color: 'warning' },
-  special: { label: 'วันหยุดพิเศษ', color: 'info' },
   company: { label: 'วันหยุดบริษัท', color: 'success' },
 };
 
@@ -247,8 +244,6 @@ export default function HolidaysPage() {
   // Stats
   const stats = {
     total: holidays.length,
-    national: holidays.filter((h) => h.type === 'national').length,
-    substitute: holidays.filter((h) => h.type === 'substitute').length,
     company: holidays.filter((h) => h.type === 'company').length,
   };
 

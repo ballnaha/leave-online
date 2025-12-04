@@ -5,7 +5,7 @@ CREATE TABLE `holidays` (
     `nameTh` VARCHAR(200) NOT NULL,
     `nameEn` VARCHAR(200) NOT NULL,
     `nameMy` VARCHAR(200) NULL,
-    `type` VARCHAR(191) NOT NULL DEFAULT 'national',
+    `type` VARCHAR(191) NOT NULL DEFAULT 'company',
     `companyId` INTEGER NULL,
     `isActive` BOOLEAN NOT NULL DEFAULT true,
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),

@@ -58,7 +58,7 @@ export default function HolidayDialog({
   const [formData, setFormData] = useState({
     date: '',
     name: '',
-    type: 'national',
+    type: 'company',
     companyId: '',
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -77,7 +77,7 @@ export default function HolidayDialog({
         setFormData({
           date: '',
           name: '',
-          type: 'national',
+          type: 'company',
           companyId: '',
         });
         setDateValue(null);

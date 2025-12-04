@@ -294,7 +294,7 @@ model Holiday {
   id          Int      @id @default(autoincrement())
   date        DateTime @db.Date
   name        String   @db.VarChar(200)  // Translation key, e.g. "new_year_day"
-  type        String   @default("national") // national, substitute, special, company
+  type        String   @default("company") // company
   companyId   Int?     // null = apply to all companies
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())

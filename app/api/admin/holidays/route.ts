@@ -56,7 +56,7 @@ export async function POST(request: NextRequest) {
             data: {
                 date: new Date(date),
                 name,
-                type: type || 'national',
+                type: type || 'company',
                 companyId: companyId ? parseInt(companyId) : null,
             },
         });
