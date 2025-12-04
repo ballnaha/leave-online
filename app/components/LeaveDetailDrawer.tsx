@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import {
     Box,
     Typography,
@@ -447,6 +447,23 @@ const LeaveDetailDrawer: React.FC<LeaveDetailDrawerProps> = ({ open, onClose, le
     const windowHeight = typeof window !== 'undefined' ? window.innerHeight : 800;
     // Fade out backdrop as we drag down (linear fade up to 40% of screen height)
     const backdropOpacity = isClosing ? 0 : Math.max(0.5 * (1 - dragY / (windowHeight * 0.4)), 0);
+
+    // Fix for iOS Safari background scrolling
+    useEffect(() => {
+        if (open) {
+            const scrollY = window.scrollY;
+            document.body.style.position = 'fixed';
+            document.body.style.top = `-${scrollY}px`;
+            document.body.style.width = '100%';
+            
+            return () => {
+                document.body.style.position = '';
+                document.body.style.top = '';
+                document.body.style.width = '';
+                window.scrollTo(0, scrollY);
+            };
+        }
+    }, [open]);
 
     // Handle touch start
     const handleTouchStart = useCallback((e: React.TouchEvent) => {
