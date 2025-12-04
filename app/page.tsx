@@ -1,6 +1,7 @@
 'use client';
 import React, { useEffect, useState, useMemo } from 'react';
 import { Box, Typography, Button, Card, CardContent, Skeleton, Container } from '@mui/material';
+import Image from 'next/image';
 import Header from './components/Header';
 import ImageSlider from './components/ImageSlider';
 import LeaveTypeCard from './components/LeaveTypeCard';
@@ -292,11 +293,13 @@ export default function Home() {
                       }}
                     >
                       {config.image ? (
-                        <Box 
-                          component="img" 
+                        <Image 
                           src={config.image} 
                           alt={type.name}
-                          sx={{ width: 40, height: 40, objectFit: 'contain' }} 
+                          width={40}
+                          height={40}
+                          priority
+                          style={{ objectFit: 'contain' }} 
                         />
                       ) : (
                         <IconComponent size={28} color="white" />
