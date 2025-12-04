@@ -280,7 +280,7 @@ export default function Home() {
                           component="img" 
                           src={config.image} 
                           alt={type.name}
-                          sx={{ width: 56, height: 56, objectFit: 'contain' }} 
+                          sx={{ width: 48, height: 48, objectFit: 'contain' }} 
                         />
                       ) : (
                         <IconComponent size={28} color="white" />
