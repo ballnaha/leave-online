@@ -149,6 +149,7 @@ export default function LeaveFormPage() {
     const [submitting, setSubmitting] = useState(false);
     const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
     const [leaveType, setLeaveType] = useState<LeaveTypeData | null>(null);
+    const [shiftType, setShiftType] = useState<'day' | 'night'>('day'); // กะทำงาน: day = กะเช้า, night = กะดึก
     const [formData, setFormData] = useState<LeaveFormData>({
         startDate: '',
         startTime: '08:00',
@@ -171,6 +172,175 @@ export default function LeaveFormPage() {
     const [previewImage, setPreviewImage] = useState<string | null>(null);
     const [showConfirmDialog, setShowConfirmDialog] = useState(false);
 
+    // ฟังก์ชันเปลี่ยนกะทำงาน
+    const handleShiftChange = (newShift: 'day' | 'night') => {
+        setShiftType(newShift);
+        
+        if (newShift === 'day') {
+            // กะเช้า: 08:00 - 17:00
+            setStartTimeValue(dayjs().hour(8).minute(0));
+            setEndTimeValue(dayjs().hour(17).minute(0));
+            handleFormChange('startTime', '08:00');
+            handleFormChange('endTime', '17:00');
+        } else {
+            // กะดึก: 20:00 - 05:00
+            setStartTimeValue(dayjs().hour(20).minute(0));
+            setEndTimeValue(dayjs().hour(5).minute(0));
+            handleFormChange('startTime', '20:00');
+            handleFormChange('endTime', '05:00');
+        }
+
+        // คำนวณจำนวนวันลาใหม่
+        if (formData.startDate && formData.endDate) {
+            const newStartTime = newShift === 'day' ? '08:00' : '20:00';
+            const newEndTime = newShift === 'day' ? '17:00' : '05:00';
+            recalculateTotalDays(formData.startDate, newStartTime, formData.endDate, newEndTime);
+        }
+    };
+
+    // ฟังก์ชันคำนวณจำนวนวันลาตามช่วงเวลา
+    const calculateLeaveDays = (
+        startDate: string,
+        startTime: string,
+        endDate: string,
+        endTime: string
+    ): number => {
+        if (!startDate || !endDate || !startTime || !endTime) return 0;
+
+        const start = dayjs(startDate);
+        const end = dayjs(endDate);
+        
+        if (end.isBefore(start)) return 0;
+
+        // แปลงเวลาเป็นนาที
+        const [startHour, startMin] = startTime.split(':').map(Number);
+        const [endHour, endMin] = endTime.split(':').map(Number);
+        const startMinutes = startHour * 60 + startMin;
+        const endMinutes = endHour * 60 + endMin;
+
+        // กำหนดเวลาทำงานมาตรฐาน (นาที)
+        const WORK_START_MORNING = 8 * 60;     // 08:00
+        const WORK_HALF_DAY_1 = 12 * 60;       // 12:00 (ครึ่งวันเช้า)
+        const WORK_HALF_DAY_2 = 13 * 60;       // 13:00 (ครึ่งวันบ่าย)
+        const WORK_END_DAY = 17 * 60;          // 17:00
+        
+        // กะดึก: 20:00 - 05:00 (9 ชม. = 1 วันทำงาน)
+        const NIGHT_START = 20 * 60;           // 20:00
+        const NIGHT_END = 5 * 60;              // 05:00
+        const NIGHT_SHIFT_HOURS = 9;           // ชั่วโมงต่อกะ
+        const NIGHT_HALF_HOURS = 4.5;          // ครึ่งกะ
+
+        // ตรวจสอบว่าเป็นกะดึกหรือไม่ (เริ่มตั้งแต่ 20:00)
+        const isNightShift = startMinutes >= NIGHT_START;
+
+        if (isNightShift) {
+            // === กะดึก: นับตามกะที่เริ่มในแต่ละคืน ===
+            // กะดึกเริ่ม 20:00 ทุกวัน และจบ 05:00 วันถัดไป
+            
+            let totalDays = 0;
+            let currentDate = start.clone();
+            const endDateTime = dayjs(`${endDate} ${endTime}`);
+
+            // วนลูปนับแต่ละกะ
+            while (currentDate.isBefore(end) || currentDate.isSame(end, 'day')) {
+                // กะของวันนี้: currentDate 20:00 - currentDate+1 05:00
+                const shiftStart = currentDate.hour(20).minute(0).second(0);
+                const shiftEnd = currentDate.add(1, 'day').hour(5).minute(0).second(0);
+                
+                // ถ้าวันแรก ให้ใช้เวลาเริ่มจริง
+                const actualShiftStart = currentDate.isSame(start, 'day') 
+                    ? dayjs(`${startDate} ${startTime}`)
+                    : shiftStart;
+
+                // ถ้ากะนี้เริ่มหลังเวลาสิ้นสุดการลา ให้หยุดนับ
+                if (actualShiftStart.isAfter(endDateTime) || actualShiftStart.isSame(endDateTime)) {
+                    break;
+                }
+
+                // หาเวลาสิ้นสุดของกะนี้ (เอาค่าที่น้อยกว่าระหว่าง shiftEnd กับ endDateTime)
+                const actualShiftEnd = shiftEnd.isAfter(endDateTime) ? endDateTime : shiftEnd;
+
+                // คำนวณชั่วโมงที่ลาในกะนี้
+                const hoursInShift = actualShiftEnd.diff(actualShiftStart, 'hour', true);
+
+                if (hoursInShift > 0) {
+                    if (hoursInShift >= NIGHT_SHIFT_HOURS) {
+                        totalDays += 1; // เต็มกะ
+                    } else if (hoursInShift >= NIGHT_HALF_HOURS) {
+                        totalDays += 0.5; // มากกว่าครึ่งกะ = 0.5 วัน
+                    } else if (hoursInShift > 0) {
+                        totalDays += 0.5; // น้อยกว่าครึ่งกะ = 0.5 วัน (ขั้นต่ำ)
+                    }
+                }
+
+                // ไปวันถัดไป
+                currentDate = currentDate.add(1, 'day');
+                
+                // ถ้าเวลาสิ้นสุดการลาอยู่ก่อนหรือเท่ากับ 05:00 ของวันนี้ ให้หยุด
+                if (endDateTime.isBefore(shiftEnd) || endDateTime.isSame(shiftEnd)) {
+                    break;
+                }
+            }
+
+            return totalDays;
+        }
+
+        // === กะปกติ: 08:00 - 17:00 ===
+        const daysDiff = end.diff(start, 'day');
+
+        // ถ้าเป็นวันเดียวกัน
+        if (daysDiff === 0) {
+            // ลาเต็มวัน: 08:00 - 17:00
+            if (startMinutes <= WORK_START_MORNING && endMinutes >= WORK_END_DAY) {
+                return 1;
+            }
+            // ลาครึ่งวันเช้า: 08:00 - 12:00 หรือ 08:00 - 13:00
+            if (startMinutes <= WORK_START_MORNING && endMinutes <= WORK_HALF_DAY_2) {
+                return 0.5;
+            }
+            // ลาครึ่งวันบ่าย: 12:00 - 17:00 หรือ 13:00 - 17:00
+            if (startMinutes >= WORK_HALF_DAY_1 && endMinutes >= WORK_END_DAY) {
+                return 0.5;
+            }
+            // กรณีอื่นๆ คำนวณตามสัดส่วน
+            const workedMinutes = endMinutes - startMinutes;
+            const fullDayMinutes = WORK_END_DAY - WORK_START_MORNING; // 540 นาที = 9 ชม.
+            const ratio = workedMinutes / fullDayMinutes;
+            
+            if (ratio <= 0.6) return 0.5;
+            return 1;
+        }
+
+        // หลายวัน: คำนวณวันแรก + วันกลาง + วันสุดท้าย
+        let totalDays = 0;
+
+        // วันแรก - ดูว่าเริ่มลาตอนไหน
+        if (startMinutes <= WORK_START_MORNING) {
+            totalDays += 1; // ลาเต็มวัน
+        } else if (startMinutes <= WORK_HALF_DAY_2) {
+            totalDays += 0.5; // ลาครึ่งวันบ่าย
+        } else {
+            // ถ้าเริ่มหลังบ่าย ไม่นับวันแรก (เพราะทำงานแล้ว)
+            totalDays += 0;
+        }
+
+        // วันกลาง (ลาเต็มวันทุกวัน)
+        if (daysDiff > 1) {
+            totalDays += (daysDiff - 1);
+        }
+
+        // วันสุดท้าย - ดูว่าสิ้นสุดตอนไหน
+        if (endMinutes >= WORK_END_DAY) {
+            totalDays += 1; // ลาเต็มวัน
+        } else if (endMinutes >= WORK_HALF_DAY_1) {
+            totalDays += 1; // ถ้าจบหลังเที่ยง ถือว่าเต็มวัน
+        } else if (endMinutes > WORK_START_MORNING) {
+            totalDays += 0.5; // ลาครึ่งวันเช้า
+        }
+
+        return totalDays;
+    };
+
     const maxLeaveDaysByRange = useMemo(() => {
         if (!formData.startDate || !formData.endDate) return null;
         const start = dayjs(formData.startDate);
@@ -180,6 +350,19 @@ export default function LeaveFormPage() {
         }
         return end.diff(start, 'day') + 1;
     }, [formData.startDate, formData.endDate]);
+
+    // คำนวณจำนวนวันลาเมื่อมีการเปลี่ยนแปลงวันที่หรือเวลา
+    const recalculateTotalDays = (
+        startDate: string,
+        startTime: string,
+        endDate: string,
+        endTime: string
+    ) => {
+        const days = calculateLeaveDays(startDate, startTime, endDate, endTime);
+        if (days > 0) {
+            handleFormChange('totalDays', days.toString());
+        }
+    };
 
     const baseTotalDaysHelper = 'ระบุจำนวนวันลา เช่น 0.5 = ครึ่งวัน, 1 = เต็มวัน';
     const totalDaysHelperText = errors.totalDays || (maxLeaveDaysByRange ? `${baseTotalDaysHelper} (สูงสุด ${maxLeaveDaysByRange} วัน)` : baseTotalDaysHelper);
@@ -719,6 +902,98 @@ export default function LeaveFormPage() {
                                 </Typography>
                             </Box>
 
+                            {/* เลือกกะทำงาน */}
+                            <Box sx={{ mb: 2.5, pb: 2, borderBottom: '1px dashed', borderColor: 'grey.200'}}>
+                                <FormControl component="fieldset" fullWidth>
+                                    <FormLabel 
+                                        component="legend" 
+                                        sx={{ 
+                                            fontSize: '0.875rem', 
+                                            fontWeight: 600, 
+                                            color: 'text.primary',
+                                            mb: 1,
+                                            
+                                            width: '100%',
+                                            '&.Mui-focused': { color: 'text.primary' }
+                                        }}
+                                    >
+                                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'left', gap: 1 }}>
+                                            <Clock size={16} color={config.color} />
+                                            {t('shift_type', 'กะทำงาน')}
+                                        </Box>
+                                    </FormLabel>
+                                    <RadioGroup
+                                        row
+                                        value={shiftType}
+                                        onChange={(e) => handleShiftChange(e.target.value as 'day' | 'night')}
+                                        sx={{ gap: 2, justifyContent: 'center' }}
+                                    >
+                                        <FormControlLabel
+                                            value="day"
+                                            control={
+                                                <Radio 
+                                                    size="small"
+                                                    sx={{
+                                                        color: config.color,
+                                                        '&.Mui-checked': { color: config.color },
+                                                    }}
+                                                />
+                                            }
+                                            label={
+                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                                    <Sun size={14} />
+                                                    <Typography variant="body2" sx={{ fontWeight: shiftType === 'day' ? 600 : 400 }}>
+                                                        {t('shift_day', 'กะเช้า')} (08:00 - 17:00)
+                                                    </Typography>
+                                                </Box>
+                                            }
+                                            sx={{
+                                                m: 0,
+                                                px: 1.5,
+                                                py: 0.75,
+                                                borderRadius: 2,
+                                                border: '1px solid',
+                                                borderColor: shiftType === 'day' ? config.color : 'grey.300',
+                                                bgcolor: shiftType === 'day' ? config.lightColor : 'transparent',
+                                                transition: 'all 0.2s',
+                                                '&:hover': { borderColor: config.color, bgcolor: config.lightColor },
+                                            }}
+                                        />
+                                        <FormControlLabel
+                                            value="night"
+                                            control={
+                                                <Radio 
+                                                    size="small"
+                                                    sx={{
+                                                        color: config.color,
+                                                        '&.Mui-checked': { color: config.color },
+                                                    }}
+                                                />
+                                            }
+                                            label={
+                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                                    <Clock size={14} />
+                                                    <Typography variant="body2" sx={{ fontWeight: shiftType === 'night' ? 600 : 400 }}>
+                                                        {t('shift_night', 'กะดึก')} (20:00 - 05:00)
+                                                    </Typography>
+                                                </Box>
+                                            }
+                                            sx={{
+                                                m: 0,
+                                                px: 1.5,
+                                                py: 0.75,
+                                                borderRadius: 2,
+                                                border: '1px solid',
+                                                borderColor: shiftType === 'night' ? config.color : 'grey.300',
+                                                bgcolor: shiftType === 'night' ? config.lightColor : 'transparent',
+                                                transition: 'all 0.2s',
+                                                '&:hover': { borderColor: config.color, bgcolor: config.lightColor },
+                                            }}
+                                        />
+                                    </RadioGroup>
+                                </FormControl>
+                            </Box>
+
                             {/* ส่วนเริ่มลา */}
                             <Box sx={{ mb: 3 }}>
                                 <Typography variant="subtitle2" sx={{ mb: 1.5, color: 'text.secondary', display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -733,7 +1008,17 @@ export default function LeaveFormPage() {
                                             onChange={(newValue) => {
                                                 setStartDateValue(newValue);
                                                 if (newValue && newValue.isValid()) {
-                                                    handleFormChange('startDate', newValue.format('YYYY-MM-DD'));
+                                                    const newStartDate = newValue.format('YYYY-MM-DD');
+                                                    handleFormChange('startDate', newStartDate);
+                                                    // คำนวณจำนวนวันลาอัตโนมัติตามเวลา
+                                                    if (endDateValue && endDateValue.isValid()) {
+                                                        recalculateTotalDays(
+                                                            newStartDate,
+                                                            formData.startTime,
+                                                            formData.endDate,
+                                                            formData.endTime
+                                                        );
+                                                    }
                                                 } else {
                                                     handleFormChange('startDate', '');
                                                 }
@@ -760,7 +1045,17 @@ export default function LeaveFormPage() {
                                             onChange={(newValue) => {
                                                 setStartTimeValue(newValue);
                                                 if (newValue && newValue.isValid()) {
-                                                    handleFormChange('startTime', newValue.format('HH:mm'));
+                                                    const newStartTime = newValue.format('HH:mm');
+                                                    handleFormChange('startTime', newStartTime);
+                                                    // คำนวณจำนวนวันลาอัตโนมัติเมื่อเปลี่ยนเวลา
+                                                    if (formData.startDate && formData.endDate) {
+                                                        recalculateTotalDays(
+                                                            formData.startDate,
+                                                            newStartTime,
+                                                            formData.endDate,
+                                                            formData.endTime
+                                                        );
+                                                    }
                                                 }
                                             }}
                                             ampm={false}
@@ -795,7 +1090,17 @@ export default function LeaveFormPage() {
                                             onChange={(newValue) => {
                                                 setEndDateValue(newValue);
                                                 if (newValue && newValue.isValid()) {
-                                                    handleFormChange('endDate', newValue.format('YYYY-MM-DD'));
+                                                    const newEndDate = newValue.format('YYYY-MM-DD');
+                                                    handleFormChange('endDate', newEndDate);
+                                                    // คำนวณจำนวนวันลาอัตโนมัติตามเวลา
+                                                    if (startDateValue && startDateValue.isValid()) {
+                                                        recalculateTotalDays(
+                                                            formData.startDate,
+                                                            formData.startTime,
+                                                            newEndDate,
+                                                            formData.endTime
+                                                        );
+                                                    }
                                                 } else {
                                                     handleFormChange('endDate', '');
                                                 }
@@ -823,7 +1128,17 @@ export default function LeaveFormPage() {
                                             onChange={(newValue) => {
                                                 setEndTimeValue(newValue);
                                                 if (newValue && newValue.isValid()) {
-                                                    handleFormChange('endTime', newValue.format('HH:mm'));
+                                                    const newEndTime = newValue.format('HH:mm');
+                                                    handleFormChange('endTime', newEndTime);
+                                                    // คำนวณจำนวนวันลาอัตโนมัติเมื่อเปลี่ยนเวลา
+                                                    if (formData.startDate && formData.endDate) {
+                                                        recalculateTotalDays(
+                                                            formData.startDate,
+                                                            formData.startTime,
+                                                            formData.endDate,
+                                                            newEndTime
+                                                        );
+                                                    }
                                                 }
                                             }}
                                             ampm={false}
