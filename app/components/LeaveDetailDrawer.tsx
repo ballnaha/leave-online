@@ -428,6 +428,118 @@ const LeaveDetailDrawer: React.FC<LeaveDetailDrawerProps> = ({ open, onClose, le
     // State for attachment viewer
     const [viewerOpen, setViewerOpen] = useState(false);
     const [selectedAttachmentIndex, setSelectedAttachmentIndex] = useState(0);
+    
+    // Pull-to-dismiss state
+    const [dragY, setDragY] = useState(0);
+    const [isDragging, setIsDragging] = useState(false);
+    const [isClosing, setIsClosing] = useState(false);
+    const startYRef = useRef<number>(0);
+    const lastYRef = useRef<number>(0);
+    const velocityRef = useRef<number>(0);
+    const lastTimeRef = useRef<number>(0);
+    const contentRef = useRef<HTMLDivElement>(null);
+    const dragHandleRef = useRef<HTMLDivElement>(null);
+    
+    const DISMISS_THRESHOLD = 80; // pixels to pull down to dismiss
+    const VELOCITY_THRESHOLD = 0.5; // velocity threshold for quick swipe dismiss
+
+    // Calculate drag progress (0 to 1)
+    const dragProgress = Math.min(dragY / DISMISS_THRESHOLD, 1);
+    
+    // Background opacity based on drag progress
+    const backdropOpacity = isClosing ? 0 : Math.max(0.5 - dragProgress * 0.5, 0);
+
+    // Handle touch start
+    const handleTouchStart = useCallback((e: React.TouchEvent) => {
+        // Check if touch started on drag handle or if content is at top
+        const touchY = e.touches[0].clientY;
+        const dragHandleRect = dragHandleRef.current?.getBoundingClientRect();
+        const isOnDragHandle = dragHandleRect && 
+            touchY >= dragHandleRect.top && 
+            touchY <= dragHandleRect.bottom + 30; // Extended touch area
+        
+        const isAtTop = contentRef.current && contentRef.current.scrollTop <= 0;
+        
+        if (isOnDragHandle || isAtTop) {
+            startYRef.current = touchY;
+            lastYRef.current = touchY;
+            lastTimeRef.current = Date.now();
+            velocityRef.current = 0;
+            setIsDragging(true);
+        }
+    }, []);
+
+    // Handle touch move
+    const handleTouchMove = useCallback((e: React.TouchEvent) => {
+        if (!isDragging) return;
+        
+        const currentY = e.touches[0].clientY;
+        const currentTime = Date.now();
+        const diff = currentY - startYRef.current;
+        
+        // Calculate velocity (pixels per millisecond)
+        const timeDelta = currentTime - lastTimeRef.current;
+        if (timeDelta > 0) {
+            const instantVelocity = (currentY - lastYRef.current) / timeDelta;
+            // Smooth velocity with exponential moving average
+            velocityRef.current = velocityRef.current * 0.7 + instantVelocity * 0.3;
+        }
+        
+        lastYRef.current = currentY;
+        lastTimeRef.current = currentTime;
+        
+        // Only allow pulling down (positive diff)
+        if (diff > 0) {
+            // Apply easing resistance - gets harder to pull as you go further
+            const maxDrag = 200;
+            const resistance = 1 - Math.pow(diff / maxDrag, 0.5) * 0.6;
+            const easedDrag = diff * Math.max(resistance, 0.3);
+            setDragY(easedDrag);
+            
+            // Prevent default scroll when dragging down
+            e.preventDefault();
+        } else {
+            // Allow scrolling up normally
+            setDragY(0);
+        }
+    }, [isDragging]);
+
+    // Handle touch end
+    const handleTouchEnd = useCallback(() => {
+        if (!isDragging) return;
+        
+        const velocity = velocityRef.current;
+        const shouldDismiss = dragY > DISMISS_THRESHOLD || velocity > VELOCITY_THRESHOLD;
+        
+        if (shouldDismiss) {
+            // Animate close with momentum
+            setIsClosing(true);
+            setDragY(window.innerHeight); // Animate to bottom
+            
+            // Wait for animation then close
+            setTimeout(() => {
+                onClose();
+                setIsClosing(false);
+                setDragY(0);
+            }, 200);
+        } else {
+            // Snap back with spring animation
+            setDragY(0);
+        }
+        
+        setIsDragging(false);
+        startYRef.current = 0;
+        velocityRef.current = 0;
+    }, [isDragging, dragY, onClose]);
+
+    // Reset drag state when drawer closes/opens
+    React.useEffect(() => {
+        if (!open) {
+            setDragY(0);
+            setIsDragging(false);
+            setIsClosing(false);
+        }
+    }, [open]);
 
     const handleOpenAttachment = (index: number) => {
         setSelectedAttachmentIndex(index);
@@ -480,25 +592,64 @@ const LeaveDetailDrawer: React.FC<LeaveDetailDrawerProps> = ({ open, onClose, le
                 enter: 300,
                 exit: 200,
             }}
+            ModalProps={{
+                // Custom backdrop opacity based on drag
+                slotProps: {
+                    backdrop: {
+                        sx: {
+                            bgcolor: `rgba(0, 0, 0, ${backdropOpacity})`,
+                            transition: isDragging ? 'none' : 'background-color 0.3s ease-out',
+                        }
+                    }
+                }
+            }}
             PaperProps={{
                 sx: {
                     borderTopLeftRadius: 24,
                     borderTopRightRadius: 24,
                     maxHeight: '90vh',
                     overflow: 'hidden',
+                    transform: dragY > 0 ? `translateY(${dragY}px)` : 'none',
+                    transition: isDragging 
+                        ? 'none' 
+                        : isClosing 
+                            ? 'transform 0.2s ease-out' 
+                            : 'transform 0.35s cubic-bezier(0.32, 0.72, 0, 1)',
+                    willChange: 'transform',
                 }
             }}
         >
             {leave && (
-            <Box sx={{ width: '100%', bgcolor: 'white' }}>
-                {/* Drag Handle */}
-                <Box sx={{ display: 'flex', justifyContent: 'center', pt: 1.5, pb: 0.5 }}>
+            <Box 
+                sx={{ width: '100%', bgcolor: 'white' }}
+                onTouchStart={handleTouchStart}
+                onTouchMove={handleTouchMove}
+                onTouchEnd={handleTouchEnd}
+            >
+                {/* Drag Handle - visual indicator */}
+                <Box 
+                    ref={dragHandleRef}
+                    sx={{ 
+                        display: 'flex', 
+                        justifyContent: 'center', 
+                        pt: 1.5, 
+                        pb: 1,
+                        cursor: 'grab',
+                        touchAction: 'none',
+                    }}
+                >
                     <Box
                         sx={{
-                            width: 40,
-                            height: 4,
-                            borderRadius: 2,
-                            bgcolor: '#E2E8F0',
+                            width: isDragging ? 48 : 40,
+                            height: 5,
+                            borderRadius: 2.5,
+                            bgcolor: isDragging 
+                                ? '#94A3B8' 
+                                : dragProgress > 0.5 
+                                    ? '#667eea' 
+                                    : '#E2E8F0',
+                            transition: isDragging ? 'none' : 'all 0.2s ease',
+                            transform: isDragging ? 'scaleX(1.1)' : 'scaleX(1)',
                         }}
                     />
                 </Box>
@@ -530,7 +681,10 @@ const LeaveDetailDrawer: React.FC<LeaveDetailDrawerProps> = ({ open, onClose, le
                 </Box>
 
                 {/* Content */}
-                <Box sx={{ px: 2.5, py: 2, overflowY: 'auto', overflowX: 'hidden', maxHeight: 'calc(90vh - 80px)' }}>
+                <Box 
+                    ref={contentRef}
+                    sx={{ px: 2.5, py: 2, overflowY: 'auto', overflowX: 'hidden', maxHeight: 'calc(90vh - 80px)' }}
+                >
                     {/* Leave Type & Status Card */}
                     <Card
                         sx={{
