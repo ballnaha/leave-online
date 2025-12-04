@@ -183,7 +183,7 @@ export default function HolidayDrawer({ open, onClose, initialYear }: HolidayDra
                     <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center', flexWrap: 'wrap' }}>
                         <Chip
                             icon={<Calendar size={16} color="#DC2626" />}
-                            label={`${t('holiday_company_count', 'วันหยุดบริษัท')} ${holidays.length} ${t('holiday_days', 'วัน')}`}
+                            label={`${t('holiday_type_company', 'วันหยุดบริษัท')} ${holidays.length} ${t('holiday_days', 'วัน')}`}
                             sx={{ bgcolor: '#FEE2E2', color: '#DC2626', fontWeight: 500 }}
                         />
                     </Box>

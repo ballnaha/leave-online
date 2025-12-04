@@ -359,13 +359,13 @@ async function main() {
     }),
     prisma.leaveType.upsert({
       where: { code: 'ordination' },
-      update: {},
+      update: { isPaid: false },
       create: {
         code: 'ordination',
         name: 'ลาบวช',
         description: 'ลาบวช',
         maxDaysPerYear: 15,
-        isPaid: true,
+        isPaid: false,
         isActive: true,
       },
     }),

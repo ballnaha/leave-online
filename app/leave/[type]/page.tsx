@@ -421,8 +421,8 @@ export default function LeaveFormPage() {
             newErrors.attachments = 'กรุณาแนบใบรับรองแพทย์เนื่องจากลาป่วยตั้งแต่ 3 วันขึ้นไป';
         }
 
-        // ตรวจสอบหลักฐานสำหรับลากิจ
-        if (leaveCode === 'business' && formData.attachments.length === 0) {
+        // ตรวจสอบหลักฐานสำหรับลากิจตั้งแต่ 1 วันขึ้นไป
+        if (leaveCode === 'personal' && totalDaysNum >= 1 && formData.attachments.length === 0) {
             newErrors.attachments = 'กรุณาแนบหลักฐานการลากิจ';
         }
 
@@ -595,18 +595,35 @@ export default function LeaveFormPage() {
                             )}
                         </Box>
                         {leaveType.maxDaysPerYear && (
-                            <Chip 
-                                size="small"
-                                label={`${leaveType.maxDaysPerYear} วัน/ปี`}
-                                sx={{ 
-                                    position: 'absolute',
-                                    right: 16,
-                                    bgcolor: config.lightColor, 
-                                    color: config.color,
-                                    fontWeight: 600,
-                                    fontSize: '0.7rem',
-                                }}
-                            />
+                            <Box sx={{ 
+                                position: 'absolute',
+                                right: 16,
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: 'flex-end',
+                                gap: 0.5
+                            }}>
+                                <Chip 
+                                    size="small"
+                                    label={`${leaveType.maxDaysPerYear} ${t('leave_days_per_year', 'วัน/ปี')}`}
+                                    sx={{ 
+                                        bgcolor: config.lightColor, 
+                                        color: config.color,
+                                        fontWeight: 600,
+                                        fontSize: '0.7rem',
+                                    }}
+                                />
+                                <Chip 
+                                    size="small"
+                                    label={leaveType.isPaid ? t('dashboard_paid', 'ได้ค่าจ้าง') : t('dashboard_unpaid', 'ไม่ได้ค่าจ้าง')}
+                                    sx={{ 
+                                        bgcolor: leaveType.isPaid ? 'rgba(76, 175, 80, 0.15)' : 'rgba(255, 152, 0, 0.15)', 
+                                        color: leaveType.isPaid ? '#4CAF50' : '#FF9800',
+                                        fontWeight: 600,
+                                        fontSize: '0.65rem',
+                                    }}
+                                />
+                            </Box>
                         )}
                         </Box>
                     </Container>
@@ -940,7 +957,10 @@ export default function LeaveFormPage() {
                                     color={(parseFloat(formData.totalDays) || 0) > leaveType.maxDaysPerYear ? 'error.main' : 'text.secondary'}
                                     sx={{ mt: 1, display: 'block', textAlign: 'center', fontWeight: (parseFloat(formData.totalDays) || 0) > leaveType.maxDaysPerYear ? 'bold' : 'normal' }}
                                 >
-                                    {t('leave_max_quota', 'สิทธิ์ลา {days} วัน/ปี (ส่วนที่เกินจะถูกหักเงิน)').replace('{days}', leaveType.maxDaysPerYear.toString())}
+                                    {leaveType.isPaid 
+                                        ? t('leave_max_quota_paid', 'สิทธิ์ลา {days} วัน/ปี (ได้รับค่าจ้าง)').replace('{days}', leaveType.maxDaysPerYear.toString())
+                                        : t('leave_max_quota_unpaid', 'สิทธิ์ลา {days} วัน/ปี (ไม่ได้รับค่าจ้าง)').replace('{days}', leaveType.maxDaysPerYear.toString())
+                                    }
                                 </Typography>
                             )}
                     </Box>
@@ -994,8 +1014,25 @@ export default function LeaveFormPage() {
                             </Box>
                             <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
                                 {t('leave_attachments', 'ไฟล์แนบ')}
+                                {/* แสดง * บังคับแนบไฟล์ */}
+                                {((leaveCode === 'sick' && parseFloat(formData.totalDays) >= 3) || 
+                                  (leaveCode === 'personal' && parseFloat(formData.totalDays) >= 1)) && (
+                                    <Typography component="span" sx={{ color: 'error.main', ml: 0.5 }}>*</Typography>
+                                )}
                             </Typography>
                         </Box>
+
+                        {/* แสดงข้อความแจ้งเตือนบังคับแนบไฟล์ */}
+                        {leaveCode === 'sick' && parseFloat(formData.totalDays) >= 3 && (
+                            <Alert severity="warning" sx={{ mb: 2, py: 0.5 }}>
+                                {t('leave_sick_attachment_required', 'ลาป่วยตั้งแต่ 3 วันขึ้นไป ต้องแนบใบรับรองแพทย์')}
+                            </Alert>
+                        )}
+                        {leaveCode === 'personal' && parseFloat(formData.totalDays) >= 1 && (
+                            <Alert severity="warning" sx={{ mb: 2, py: 0.5 }}>
+                                {t('leave_personal_attachment_required', 'ลากิจต้องแนบหลักฐานประกอบ')}
+                            </Alert>
+                        )}
 
                             {/* ปุ่มอัพโหลด */}
                         <input

@@ -67,9 +67,7 @@ const Sidebar = ({ open, onClose }: SidebarProps) => {
     const menuItems = [
         { text: 'แดชบอร์ด', icon: <Home2 size={20} variant="Outline" color="#6C63FF" />, activeIcon: <Home2 size={20} variant="Bold" color="#fff" />, path: '/' },
         { text: 'จัดการใบลา', icon: <Task size={20} variant="Outline" color="#6C63FF" />, activeIcon: <Task size={20} variant="Bold" color="#fff" />, path: '/approval' },
-        { text: 'การลาของฉัน', icon: <Calendar size={20} variant="Outline" color="#6C63FF" />, activeIcon: <Calendar size={20} variant="Bold" color="#fff" />, path: '/leave' },
-        { text: 'โปรไฟล์', icon: <User size={20} variant="Outline" color="#6C63FF" />, activeIcon: <User size={20} variant="Bold" color="#fff" />, path: '/profile' },
-        { text: 'ตั้งค่า', icon: <Setting2 size={20} variant="Outline" color="#6C63FF" />, activeIcon: <Setting2 size={20} variant="Bold" color="#fff" />, path: '/settings' },
+        
     ];
 
     // Admin roles that can access admin settings

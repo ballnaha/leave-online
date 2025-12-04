@@ -112,6 +112,7 @@ export default function LeavePage() {
     const [cancelReason, setCancelReason] = useState('');
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedCalendarDate, setSelectedCalendarDate] = useState<string | null>(null);
+    const [showAllLegends, setShowAllLegends] = useState(false);
 
     // Generate years for dropdown dynamically
     // Shows current year and all previous years from 2024 (พ.ศ. 2567)
@@ -653,27 +654,79 @@ export default function LeavePage() {
 
                     {/* Legend - Color meanings */}
                     <Box sx={{ mt: 2.5, pt: 2, borderTop: '1px solid #F1F5F9' }}>
-                        <Typography variant="caption" sx={{ color: '#94A3B8', fontWeight: 500, mb: 1, display: 'block' }}>
-                            {t('leave_legend', 'คำอธิบายสี')}
-                        </Typography>
-                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5 }}>
+                        <Box 
+                            sx={{ 
+                                display: 'flex', 
+                                alignItems: 'center', 
+                                justifyContent: 'space-between',
+                                cursor: 'pointer',
+                                mb: showAllLegends ? 1 : 0 
+                            }}
+                            onClick={() => setShowAllLegends(!showAllLegends)}
+                        >
+                            <Typography variant="caption" sx={{ color: '#94A3B8', fontWeight: 500 }}>
+                                {t('leave_legend', 'คำอธิบายสี')}
+                            </Typography>
+                            <Box sx={{ 
+                                display: 'flex', 
+                                alignItems: 'center', 
+                                color: '#94A3B8',
+                                transition: 'transform 0.2s',
+                                transform: showAllLegends ? 'rotate(180deg)' : 'rotate(0deg)'
+                            }}>
+                                <ChevronDown size={16} />
+                            </Box>
+                        </Box>
+                        
+                        {/* First row - always visible */}
+                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5, mt: 1 }}>
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                                 <Box sx={{ width: 12, height: 12, borderRadius: '50%', bgcolor: '#667eea' }} />
                                 <Typography variant="caption" sx={{ color: '#64748B' }}>{t('leave_today', 'วันนี้')}</Typography>
                             </Box>
                             {Object.entries(leaveTypeConfig)
                                 .filter(([key]) => key !== 'default')
+                                .slice(0, 3)
                                 .map(([key, config]) => (
                                     <Box key={key} sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                                         <Box sx={{ width: 12, height: 12, borderRadius: '50%', bgcolor: 'white', border: `2px solid ${config.color}` }} />
                                         <Typography variant="caption" sx={{ color: '#64748B' }}>{t(`leave_${key}`, config.label)}</Typography>
                                     </Box>
                                 ))}
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: '#DC2626' }} />
-                                <Typography variant="caption" sx={{ color: '#64748B' }}>{t('leave_holiday', 'วันหยุด')}</Typography>
-                            </Box>
+                            {!showAllLegends && (
+                                <Typography 
+                                    variant="caption" 
+                                    sx={{ 
+                                        color: '#667eea', 
+                                        cursor: 'pointer',
+                                        fontWeight: 500,
+                                        '&:hover': { textDecoration: 'underline' }
+                                    }}
+                                    onClick={() => setShowAllLegends(true)}
+                                >
+                                    +{Object.entries(leaveTypeConfig).filter(([key]) => key !== 'default').length - 3} {t('more', 'เพิ่มเติม')}
+                                </Typography>
+                            )}
                         </Box>
+
+                        {/* Remaining legends - collapsible */}
+                        {showAllLegends && (
+                            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5, mt: 1.5 }}>
+                                {Object.entries(leaveTypeConfig)
+                                    .filter(([key]) => key !== 'default')
+                                    .slice(3)
+                                    .map(([key, config]) => (
+                                        <Box key={key} sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                            <Box sx={{ width: 12, height: 12, borderRadius: '50%', bgcolor: 'white', border: `2px solid ${config.color}` }} />
+                                            <Typography variant="caption" sx={{ color: '#64748B' }}>{t(`leave_${key}`, config.label)}</Typography>
+                                        </Box>
+                                    ))}
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                    <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: '#DC2626' }} />
+                                    <Typography variant="caption" sx={{ color: '#64748B' }}>{t('leave_holiday', 'วันหยุด')}</Typography>
+                                </Box>
+                            </Box>
+                        )}
                     </Box>
                 </Card>
 

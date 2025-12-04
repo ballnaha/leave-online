@@ -42,6 +42,7 @@ const messages: Record<LocaleCode, Record<string, string>> = {
     home_quick_actions: "ลาด่วน",
     home_information: "ประชาสัมพันธ์",
     home_categories: "ประเภทการลา",
+    holiday_type_company: "วันหยุดบริษัท",
     
     // Profile & Settings
     edit_profile: "แก้ไขโปรไฟล์",
@@ -124,6 +125,8 @@ const messages: Record<LocaleCode, Record<string, string>> = {
     leave_reason_placeholder: "ระบุเหตุผลการลา...",
     leave_attachments: "ไฟล์แนบ",
     leave_attachments_hint: "รองรับไฟล์ .pdf, .jpg, .jpeg, .png (สูงสุด 3 ไฟล์, ไฟล์ละไม่เกิน 15MB)",
+    leave_sick_attachment_required: "ลาป่วยตั้งแต่ 3 วันขึ้นไป ต้องแนบใบรับรองแพทย์",
+    leave_personal_attachment_required: "ลากิจต้องแนบหลักฐานประกอบ",
     leave_upload_btn: "อัพโหลดไฟล์แนบ",
     leave_upload_processing: "กำลังประมวลผลไฟล์...",
     leave_upload_complete: "แนบไฟล์ครบแล้ว",
@@ -133,6 +136,9 @@ const messages: Record<LocaleCode, Record<string, string>> = {
     leave_confirm_desc: "ระบบจะส่งคำขอไปยังผู้อนุมัติทันทีเมื่อกดยืนยัน",
     leave_no_date_selected: "ยังไม่ได้เลือกช่วงวัน",
     leave_max_quota: "สิทธิ์ลา {days} วัน/ปี (ส่วนที่เกินจะถูกหักเงิน)",
+    leave_max_quota_paid: "สิทธิ์ลา {days} วัน/ปี (ได้รับค่าจ้าง)",
+    leave_max_quota_unpaid: "สิทธิ์ลา {days} วัน/ปี (ไม่ได้รับค่าจ้าง)",
+    leave_days_per_year: "วัน/ปี",
     leave_days_unit: "วัน",
     leave_adjust_hint: "กดปุ่ม +/- เพื่อปรับทีละ 0.5 วัน",
     
@@ -269,6 +275,26 @@ const messages: Record<LocaleCode, Record<string, string>> = {
     close: "ปิด",
     success: "สำเร็จ",
     error: "เกิดข้อผิดพลาด",
+    
+    // Dashboard
+    dashboard_remaining: "คงเหลือ",
+    dashboard_over_limit: "เกินสิทธิ์",
+    dashboard_unlimited: "ไม่จำกัด",
+    dashboard_from_total: "จาก {{total}} วัน",
+    dashboard_approved: "อนุมัติแล้ว {{days}} วัน",
+    dashboard_left: "เหลือ {{days}} วัน",
+    dashboard_exceeded: "เกิน {{days}} วัน",
+    dashboard_pending: "รออนุมัติ {{days}} วัน",
+    dashboard_rejected: "ไม่อนุมัติ {{days}} วัน",
+    dashboard_cancelled: "ยกเลิก {{days}} วัน",
+    dashboard_leave_types: "ประเภทการลา",
+    dashboard_paid: "ได้ค่าจ้าง",
+    dashboard_unpaid: "ไม่ได้ค่าจ้าง",
+    dashboard_unlimited_quota: "สิทธิ์ลาไม่จำกัด",
+    dashboard_remaining_quota: "สิทธิ์คงเหลือปี {{year}}: {{remaining}}/{{total}} วัน",
+    
+    // Common
+    more: "เพิ่มเติม",
   },
   en: {
     common_profile: "Profile",
@@ -304,6 +330,8 @@ const messages: Record<LocaleCode, Record<string, string>> = {
     home_quick_actions: "Quick Actions",
     home_information: "Information",
     home_categories: "Leave Categories",
+    holiday_type_company: "Company Holidays",
+
     // Profile & Settings
     edit_profile: "Edit Profile",
     account: "Account",
@@ -385,6 +413,8 @@ const messages: Record<LocaleCode, Record<string, string>> = {
     leave_reason_placeholder: "Specify reason...",
     leave_attachments: "Attachments",
     leave_attachments_hint: "Supports .pdf, .jpg, .jpeg, .png (Max 5 files, 15MB each)",
+    leave_sick_attachment_required: "Sick leave of 3 days or more requires a medical certificate",
+    leave_personal_attachment_required: "Personal leave requires supporting documents",
     leave_upload_btn: "Upload Attachments",
     leave_upload_processing: "Processing...",
     leave_upload_complete: "Max files reached",
@@ -394,6 +424,9 @@ const messages: Record<LocaleCode, Record<string, string>> = {
     leave_confirm_desc: "Request will be sent to approver immediately.",
     leave_no_date_selected: "No date selected",
     leave_max_quota: "Max quota: {days} days/year (Paid)",
+    leave_max_quota_paid: "Max quota: {days} days/year (Paid)",
+    leave_max_quota_unpaid: "Max quota: {days} days/year (Unpaid)",
+    leave_days_per_year: "days/year",
     leave_days_unit: "Days",
     leave_adjust_hint: "Press +/- to adjust by 0.5 days",
 
@@ -444,6 +477,7 @@ const messages: Record<LocaleCode, Record<string, string>> = {
     remaining: "Remaining",
     used: "Used",
     status_pending: "Pending",
+    status_approved: "Approved",
     status_cancelled: "Cancelled",
     status_waiting_for: "Waiting for approval from",
     supervisor: "Supervisor",
@@ -531,6 +565,26 @@ const messages: Record<LocaleCode, Record<string, string>> = {
     close: "Close",
     success: "Success",
     error: "Error",
+    
+    // Dashboard
+    dashboard_remaining: "Remaining",
+    dashboard_over_limit: "Over Limit",
+    dashboard_unlimited: "Unlimited",
+    dashboard_from_total: "from {{total}} days",
+    dashboard_approved: "Approved {{days}} days",
+    dashboard_left: "{{days}} days left",
+    dashboard_exceeded: "Exceeded {{days}} days",
+    dashboard_pending: "Pending {{days}} days",
+    dashboard_rejected: "Rejected {{days}} days",
+    dashboard_cancelled: "Cancelled {{days}} days",
+    dashboard_leave_types: "Leave Types",
+    dashboard_paid: "Paid",
+    dashboard_unpaid: "Unpaid",
+    dashboard_unlimited_quota: "Unlimited quota",
+    dashboard_remaining_quota: "Quota {{year}}: {{remaining}}/{{total}} days",
+    
+    // Common
+    more: "more",
   },
   my: {
     common_profile: "ပရိုဖိုင်",
@@ -566,6 +620,8 @@ const messages: Record<LocaleCode, Record<string, string>> = {
     home_quick_actions: "လျင်မြန်သောလုပ်ဆောင်ချက်များ",
     home_information: "သတင်းနှင့်ကြော်ငြာများ",
     home_categories: "အားလပ်ရက်အမျိုးအစားများ",
+    holiday_type_company: "ကုမ္ပဏီအားလပ်ရက်များ",
+    
     // Profile & Settings
     edit_profile: "ပရိုဖိုင်ပြင်ဆင်ရန်",
     account: "အကောင့်",
@@ -647,6 +703,8 @@ const messages: Record<LocaleCode, Record<string, string>> = {
     leave_reason_placeholder: "အကြောင်းပြချက်ထည့်ပါ...",
     leave_attachments: "ပူးတွဲဖိုင်များ",
     leave_attachments_hint: ".pdf, .jpg, .jpeg, .png ဖိုင်များ (အများဆုံး ၅ ဖိုင်၊ ၁၅ MB ထက်မပိုရ)",
+    leave_sick_attachment_required: "နာမကျန်းခွင့် ၃ ရက်နှင့်အထက် ဆရာဝန်လက်မှတ် လိုအပ်သည်",
+    leave_personal_attachment_required: "ကိုယ်ရေးကိုယ်တာခွင့် အထောက်အထားလိုအပ်သည်",
     leave_upload_btn: "ပူးတွဲဖိုင်တင်ရန်",
     status_cancelled: "ပယ်ဖျက်ပြီး",
 
@@ -713,6 +771,9 @@ const messages: Record<LocaleCode, Record<string, string>> = {
     leave_confirm_desc: "အတည်ပြုပြီးပါက အတည်ပြုသူထံသို့ ချက်ချင်းပေးပို့ပါမည်။",
     leave_no_date_selected: "ရက်စွဲမရွေးရသေးပါ",
     leave_max_quota: "ခွင့်ခံစားခွင့်: {days} ရက်/နှစ် (လစာပြည့်)",
+    leave_max_quota_paid: "ခွင့်ခံစားခွင့်: {days} ရက်/နှစ် (လစာရ)",
+    leave_max_quota_unpaid: "ခွင့်ခံစားခွင့်: {days} ရက်/နှစ် (လစာမရ)",
+    leave_days_per_year: "ရက်/နှစ်",
     leave_days_unit: "ရက်",
     leave_adjust_hint: "+/- နှိပ်၍ ၀.၅ ရက်စီ ချိန်ညှိပါ",
 
@@ -792,6 +853,26 @@ const messages: Record<LocaleCode, Record<string, string>> = {
     close: "ပိတ်ရန်",
     success: "အောင်မြင်သည်",
     error: "အမှားအယွင်း",
+    
+    // Dashboard
+    dashboard_remaining: "ကျန်ရှိ",
+    dashboard_over_limit: "ကန့်သတ်ကျော်",
+    dashboard_unlimited: "ကန့်သတ်မဲ့",
+    dashboard_from_total: "စုစုပေါင်း {{total}} ရက်မှ",
+    dashboard_approved: "အတည်ပြုပြီး {{days}} ရက်",
+    dashboard_left: "{{days}} ရက် ကျန်ရှိ",
+    dashboard_exceeded: "{{days}} ရက် ကျော်လွန်",
+    dashboard_pending: "စောင့်ဆိုင်းဆဲ {{days}} ရက်",
+    dashboard_rejected: "ပယ်ချပြီး {{days}} ရက်",
+    dashboard_cancelled: "ပယ်ဖျက်ပြီး {{days}} ရက်",
+    dashboard_leave_types: "အားလပ်တန်းများ",
+    dashboard_paid: "လစာရ",
+    dashboard_unpaid: "လစာမရ",
+    dashboard_unlimited_quota: "အကန့်အသတ်မဲ့",
+    dashboard_remaining_quota: "ခွင့် {{year}}: {{remaining}}/{{total}} ရက်",
+    
+    // Common
+    more: "ပိုမို",
   },
 };
 

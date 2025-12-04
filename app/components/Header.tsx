@@ -19,8 +19,8 @@ const Header = () => {
         year: 'numeric',
     });
 
-    // ตรวจสอบว่าเป็น admin, hr หรือ hr_manager ไหม
-    const isAdminOrHR = ['admin', 'hr', 'hr_manager'].includes(user?.role || '');
+    // แสดง Sidebar สำหรับทุกคนยกเว้น employee
+    const showSidebar = !!user && user.role !== 'employee';
 
     return (
         <>
@@ -52,8 +52,8 @@ const Header = () => {
                     px: 2,
                 }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                        {/* แสดง Hamburger Menu เฉพาะ admin หรือ hr */}
-                        {isAdminOrHR && (
+                        {/* แสดง Hamburger Menu สำหรับทุกคนยกเว้น employee */}
+                        {showSidebar && (
                             <IconButton
                                 onClick={() => setIsSidebarOpen(true)}
                                 sx={{ 
@@ -142,7 +142,7 @@ const Header = () => {
                                     <Skeleton variant="text" width={100} height={24} />
                                 ) : (
                                     <Typography variant="subtitle1" sx={{ fontWeight: 'bold', lineHeight: 1, color: 'text.primary', fontSize: '1rem' }}>
-                                        {t('greeting', 'สวัสดี')}, {user?.firstName || 'ผู้ใช้'}
+                                        {user?.firstName || 'ผู้ใช้'}
                                     </Typography>
                                 )}
                             </Box>
@@ -165,8 +165,8 @@ const Header = () => {
                 </Box>
             </Box>
 
-            {/* แสดง Sidebar เฉพาะ admin หรือ hr */}
-            {isAdminOrHR && (
+            {/* แสดง Sidebar สำหรับทุกคนยกเว้น employee */}
+            {showSidebar && (
                 <Sidebar open={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
             )}
         </>

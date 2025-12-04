@@ -20,6 +20,7 @@ import { LeaveRequest } from '@/types/leave';
 import LeaveDetailDrawer from './components/LeaveDetailDrawer';
 import { HelpCircle } from 'lucide-react';
 import { useUser } from './providers/UserProvider';
+import DashboardCard from './components/DashboardCard';
 
 interface LeaveType {
   id: number;
@@ -88,16 +89,15 @@ export default function Home() {
   const [selectedLeave, setSelectedLeave] = useState<LeaveRequest | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [hasBanners, setHasBanners] = useState(true);
+  const [year, setYear] = useState(new Date().getFullYear());
 
   useEffect(() => {
     setMounted(true);
     
     const loadData = async () => {
       try {
-        await Promise.all([
-          fetchLeaveTypes(),
-          fetchLeaveRequests()
-        ]);
+        await fetchLeaveTypes();
+        // fetchLeaveRequests will be called by the year effect
       } catch (error) {
         console.error('Error loading data:', error);
       } finally {
@@ -122,6 +122,10 @@ export default function Home() {
     }
   }, []);
 
+  useEffect(() => {
+    fetchLeaveRequests(year);
+  }, [year]);
+
   const fetchLeaveTypes = async () => {
     try {
       const response = await fetch('/api/leave-types');
@@ -134,9 +138,9 @@ export default function Home() {
     }
   };
 
-  const fetchLeaveRequests = async () => {
+  const fetchLeaveRequests = async (selectedYear: number) => {
     try {
-      const response = await fetch('/api/my-leaves');
+      const response = await fetch(`/api/my-leaves?year=${selectedYear}`);
       if (!response.ok) throw new Error('Failed to fetch leave requests');
       const data = await response.json();
       if (data.success && data.data) {
@@ -221,7 +225,19 @@ export default function Home() {
     <Box sx={{ minHeight: '100vh', bgcolor: 'background.default', pb: 10 }}>
       <Container maxWidth={false} sx={{ maxWidth: 1200, px: { xs: 2.5, sm: 3, md: 4 } }}>
         <Header />
+      </Container>
 
+      {/* DashboardCard - Full Width on Mobile */}
+      <Box sx={{ px: { xs: 0, sm: 3, md: 4 } }}>
+        <DashboardCard 
+          leaveTypes={filteredLeaveTypes} 
+          leaveRequests={leaveRequests} 
+          year={year}
+          onYearChange={setYear}
+        />
+      </Box>
+
+      <Container maxWidth={false} sx={{ maxWidth: 1200, px: { xs: 2.5, sm: 3, md: 4 } }}>
         {/* Quick Actions Section */}
         <Box sx={{ mt: 1.5, mb: 3 }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5 }}>
@@ -280,7 +296,7 @@ export default function Home() {
                           component="img" 
                           src={config.image} 
                           alt={type.name}
-                          sx={{ width: 48, height: 48, objectFit: 'contain' }} 
+                          sx={{ width: 40, height: 40, objectFit: 'contain' }} 
                         />
                       ) : (
                         <IconComponent size={28} color="white" />
