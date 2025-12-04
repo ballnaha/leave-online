@@ -24,7 +24,21 @@ const Header = () => {
 
     return (
         <>
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 2, pb: 1 }}>
+            <Box sx={{ 
+                display: 'flex', 
+                flexDirection: 'column', 
+                gap: 2, 
+                pt: 3, 
+                pb: 1,
+                
+                mx: { xs: -2, md: 0 },
+                px: 2,
+                borderBottom: '1px solid #f0f0f0',
+                width: { xs: '100vw', md: '100%' },
+                position: 'relative',
+                left: { xs: '50%', md: 'auto' },
+                transform: { xs: 'translateX(-50%)', md: 'none' },
+            }}>
                 {/* Top Row: Menu, Avatar, Date/Greeting, Notification */}
                 <Box sx={{ 
                     display: 'flex', 
@@ -32,9 +46,10 @@ const Header = () => {
                     alignItems: 'center',
                     position: 'relative',
                     zIndex: 50,
-                    bgcolor: 'background.default', // Ensure opaque background
-                    mx: -2, // Negative margin to cover full width if inside container with padding
-                    px: 2,  // Restore padding
+                    maxWidth: 1200,
+                    mx: 'auto',
+                    width: '100%',
+                    px: 2,
                 }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
                         {/* แสดง Hamburger Menu เฉพาะ admin หรือ hr */}
@@ -136,15 +151,15 @@ const Header = () => {
 
                     <IconButton
                         sx={{
-                            bgcolor: 'background.paper',
-                            boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+                            bgcolor: 'white',
+                            boxShadow: 'none',
                             width: 40,
                             height: 40,
-                            '&:hover': { bgcolor: 'background.paper' }
+                            '&:hover': { bgcolor: 'rgba(0,0,0,0.04)' }
                         }}
                     >
                         <Badge variant="dot" color="error" overlap="circular">
-                            <Notification size={20} variant="Outline" color="#FF9800" />
+                            <Notification size={20} variant="Outline" color="#64748B" />
                         </Badge>
                     </IconButton>
                 </Box>

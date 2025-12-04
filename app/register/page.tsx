@@ -21,6 +21,13 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { useToastr } from '@/app/components/Toastr';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
+import dayjs from 'dayjs';
+import 'dayjs/locale/th';
+import 'dayjs/locale/en';
+import { useLocale } from '@/app/providers/LocaleProvider';
 
 interface Company {
     id: number;
@@ -51,6 +58,7 @@ export default function RegisterPage() {
     const router = useRouter();
     const toastr = useToastr();
     const { data: session, status } = useSession();
+    const { locale } = useLocale();
 
     // Redirect to home if already logged in
     useEffect(() => {
@@ -866,82 +874,42 @@ export default function RegisterPage() {
                         <ChevronDown size={16} color="#9ca3af" />
                     </Box>
 
-                    {/* Start Date - Native Mobile Date Picker */}
-                    <Box
-                        sx={{
-                            position: 'relative',
-                            bgcolor: '#f8fafc',
-                            borderRadius: 2,
-                        }}
-                    >
-                        <TextField
-                            id="register-startDate"
-                            fullWidth
-                            label="วันที่เริ่มงาน"
-                            type="date"
-                            value={formData.startDate}
-                            onChange={handleChange('startDate')}
-                            size="small"
-                            sx={{
-                                bgcolor: '#f8fafc',
-                                '& .MuiOutlinedInput-root': {
-                                    '& fieldset': { borderColor: '#e5e7eb' },
-                                    '&:hover fieldset': { borderColor: '#1b194b' },
-                                },
-                                '& input[type="date"]': {
-                                    color: 'transparent',
-                                    '&::-webkit-datetime-edit': {
-                                        color: 'transparent',
+                    {/* Start Date - MUI Date Picker */}
+                    <Box sx={{ mb: 2 }}>
+                        <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale="th">
+                            <DatePicker
+                                label="วันที่เริ่มงาน"
+                                value={formData.startDate ? dayjs(formData.startDate) : null}
+                                onChange={(newValue) => {
+                                    setFormData({ 
+                                        ...formData, 
+                                        startDate: newValue ? newValue.format('YYYY-MM-DD') : '' 
+                                    });
+                                }}
+                                format="DD MMMM YYYY"
+                                yearsOrder="desc"
+                                slotProps={{
+                                    textField: {
+                                        size: 'small',
+                                        fullWidth: true,
+                                        sx: {
+                                            bgcolor: '#f8fafc',
+                                            '& .MuiOutlinedInput-root': {
+                                                '& fieldset': { borderColor: '#e5e7eb' },
+                                                '&:hover fieldset': { borderColor: '#1b194b' },
+                                            },
+                                        },
+                                        InputProps: {
+                                            startAdornment: (
+                                                <InputAdornment position="start">
+                                                    <Calendar size={18} color="#1b194b" />
+                                                </InputAdornment>
+                                            ),
+                                        }
                                     },
-                                    '&::-webkit-datetime-edit-fields-wrapper': {
-                                        color: 'transparent',
-                                    },
-                                },
-                                '& input[type="date"]::-webkit-calendar-picker-indicator': {
-                                    opacity: 1,
-                                    cursor: 'pointer',
-                                },
-                            }}
-                            slotProps={{
-                                input: {
-                                    startAdornment: (
-                                        <InputAdornment position="start">
-                                            <Calendar size={18} color="#1b194b" />
-                                        </InputAdornment>
-                                    ),
-                                },
-                                inputLabel: {
-                                    shrink: true,
-                                },
-                                htmlInput: {
-                                    max: new Date().toISOString().split('T')[0],
-                                }
-                            }}
-                        />
-                        {/* แสดงวันที่แบบ dd/mm/YYYY (พ.ศ.) */}
-                        <Typography 
-                            variant="body2" 
-                            sx={{ 
-                                position: 'absolute',
-                                left: 44,
-                                top: '50%',
-                                transform: 'translateY(-50%)',
-                                color: formData.startDate ? '#1f2937' : '#9ca3af',
-                                fontWeight: 400,
-                                fontSize: '0.875rem',
-                                pointerEvents: 'none',
-                                bgcolor: '#f8fafc',
-                                paddingRight: 1,
-                            }}
-                        >
-                            {formData.startDate ? (() => {
-                                const date = new Date(formData.startDate);
-                                const day = String(date.getDate()).padStart(2, '0');
-                                const month = String(date.getMonth() + 1).padStart(2, '0');
-                                const year = date.getFullYear() + 543;
-                                return `${day}/${month}/${year}`;
-                            })() : 'วว/ดด/ปปปป'}
-                        </Typography>
+                                }}
+                            />
+                        </LocalizationProvider>
                     </Box>
                     </Box>
                 </Box>

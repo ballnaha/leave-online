@@ -8,7 +8,7 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-sarabun);
+  --font-sans: var(--font-comfortaa), var(--font-sarabun);
 }
 
 html, body {
@@ -22,7 +22,8 @@ html, body {
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+  /* Comfortaa สำหรับภาษาอังกฤษ, Sarabun สำหรับภาษาไทย */
+  font-family: var(--font-comfortaa), var(--font-sarabun), Arial, Helvetica, sans-serif;
   /* Prevent pull-to-refresh on mobile */
   touch-action: pan-x pan-y;
 }

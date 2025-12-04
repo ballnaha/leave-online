@@ -19,6 +19,7 @@ import { useSession } from 'next-auth/react';
 import { LeaveRequest } from '@/types/leave';
 import LeaveDetailDrawer from './components/LeaveDetailDrawer';
 import { HelpCircle } from 'lucide-react';
+import { useUser } from './providers/UserProvider';
 
 interface LeaveType {
   id: number;
@@ -31,27 +32,30 @@ interface LeaveType {
 }
 
 // กำหนด icon และสีสำหรับแต่ละประเภทการลา
-const leaveTypeConfig: Record<string, { icon: any; color: string }> = {
-  sick: { icon: Health, color: '#5E72E4' },
-  personal: { icon: Briefcase, color: '#8965E0' },
-  vacation: { icon: Sun1, color: '#11CDEF' },
-  annual: { icon: Sun1, color: '#2DCECC' },
-  maternity: { icon: Lovely, color: '#F3A4B5' },
-  ordination: { icon: Building4, color: '#FB6340' },
-  military: { icon: Shield, color: '#5E72E4' },
-  marriage: { icon: Heart, color: '#F3A4B5' },
-  funeral: { icon: People, color: '#8898AA' },
-  paternity: { icon: Profile2User, color: '#11CDEF' },
-  sterilization: { icon: Health, color: '#2DCECC' },
-  business: { icon: Car, color: '#8965E0' },
-  unpaid: { icon: Clock, color: '#8898AA' },
-  other: { icon: MessageQuestion, color: '#5E72E4' },
-  default: { icon: Calendar2, color: '#5E72E4' },
+const leaveTypeConfig: Record<string, { icon: any; color: string; gradient: string; image?: string }> = {
+  sick: { icon: Health, color: '#5E72E4', gradient: 'linear-gradient(135deg, #5E72E4 0%, #825EE4 100%)', image: '/images/icon-stechoscope.png' },
+  personal: { icon: Briefcase, color: '#8965E0', gradient: 'linear-gradient(135deg, #8965E0 0%, #BC65E0 100%)', image: '/images/icon-business.png' },
+  vacation: { icon: Sun1, color: '#11CDEF', gradient: 'linear-gradient(135deg, #11CDEF 0%, #1171EF 100%)' , image: '/images/icon-vacation.png'},
+  annual: { icon: Sun1, color: '#2DCECC', gradient: 'linear-gradient(135deg, #2DCECC 0%, #2D8BCC 100%)' },
+  maternity: { icon: Lovely, color: '#F5365C', gradient: 'linear-gradient(135deg, #F5365C 0%, #F56036 100%)', image: '/images/icon-pregnant.png' },
+  ordination: { icon: Building4, color: '#FB6340', gradient: 'linear-gradient(135deg, #FB6340 0%, #FBB140 100%)', image: '/images/icon-monk.png'  },
+  work_outside: { icon: Car, color: '#2DCECC', gradient: 'linear-gradient(135deg, #2DCECC 0%, #2D8BCC 100%)', image: '/images/icon-workoutside.png'  },
+  absent: { icon: MessageQuestion, color: '#F5365C', gradient: 'linear-gradient(135deg, #F5365C 0%, #F56036 100%)' },
+  military: { icon: Shield, color: '#5E72E4', gradient: 'linear-gradient(135deg, #5E72E4 0%, #5E9BE4 100%)' },
+  marriage: { icon: Heart, color: '#F3A4B5', gradient: 'linear-gradient(135deg, #F3A4B5 0%, #D66086 100%)' },
+  funeral: { icon: People, color: '#8898AA', gradient: 'linear-gradient(135deg, #8898AA 0%, #6A7A8A 100%)' },
+  paternity: { icon: Profile2User, color: '#11CDEF', gradient: 'linear-gradient(135deg, #11CDEF 0%, #1171EF 100%)' },
+  sterilization: { icon: Health, color: '#2DCECC', gradient: 'linear-gradient(135deg, #2DCECC 0%, #2D8BCC 100%)' },
+  business: { icon: Car, color: '#8965E0', gradient: 'linear-gradient(135deg, #8965E0 0%, #BC65E0 100%)' },
+  unpaid: { icon: Clock, color: '#8898AA', gradient: 'linear-gradient(135deg, #8898AA 0%, #6A7A8A 100%)' },
+  other: { icon: HelpCircle, color: '#5E72E4', gradient: 'linear-gradient(135deg, #8898AA 0%, #6A7A8A 100%)' , image: '/images/icon-other.png' },
+  default: { icon: Calendar2, color: '#5E72E4', gradient: 'linear-gradient(135deg, #5E72E4 0%, #825EE4 100%)' },
 };
 
 export default function Home() {
   const { t } = useLocale();
   const { status } = useSession();
+  const { user } = useUser();
   const router = useRouter();
   
   useEffect(() => {
@@ -64,6 +68,22 @@ export default function Home() {
   const [dataLoading, setDataLoading] = useState(true);
   const [mounted, setMounted] = useState(false);
   const [leaveTypes, setLeaveTypes] = useState<LeaveType[]>([]);
+  
+  // Filter leave types based on gender
+  const filteredLeaveTypes = useMemo(() => {
+    return leaveTypes.filter(leave => {
+      // ถ้าเป็นเพศชาย ไม่แสดงลาคลอด (maternity)
+      if (user?.gender === 'male' && leave.code === 'maternity') {
+        return false;
+      }
+      // ถ้าเป็นเพศหญิง ไม่แสดงลาบวช (ordination)
+      if (user?.gender === 'female' && leave.code === 'ordination') {
+        return false;
+      }
+      return true;
+    });
+  }, [leaveTypes, user?.gender]);
+
   const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>([]);
   const [selectedLeave, setSelectedLeave] = useState<LeaveRequest | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -107,8 +127,8 @@ export default function Home() {
       const response = await fetch('/api/leave-types');
       if (!response.ok) throw new Error('Failed to fetch leave types');
       const data = await response.json();
-      // แสดงเฉพาะ 3 ประเภทแรก
-      setLeaveTypes(data.slice(0, 3));
+      // แสดงทั้งหมด
+      setLeaveTypes(data);
     } catch (error) {
       console.error('Error fetching leave types:', error);
     }
@@ -206,54 +226,74 @@ export default function Home() {
         <Box sx={{ mt: 1.5, mb: 3 }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5 }}>
             <Typography variant="h6" sx={{ fontWeight: 'bold', color: 'text.primary' }}>
-              {t('home_quick_actions', 'ลาด่วน')}
+              {t('home_categories', 'ประเภทการลา')}
             </Typography>
             
           </Box>
           
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', px: 1 }}>
-            {[
-              { label: t('leave_sick', 'ลาป่วย'), icon: Health, color: '#5E72E4', gradient: 'linear-gradient(135deg, #5E72E4 0%, #825EE4 100%)', path: '/leave/sick' },
-              { label: t('leave_personal', 'ลากิจ'), icon: Briefcase, color: '#8965E0', gradient: 'linear-gradient(135deg, #8965E0 0%, #BC65E0 100%)', path: '/leave/personal' },
-              { label: t('leave_annual', 'ลาพักร้อน'), icon: Sun1, color: '#2DCECC', gradient: 'linear-gradient(135deg, #2DCECC 0%, #2D8BCC 100%)', path: '/leave/vacation' },
-              { label: t('leave_other', 'ลาอื่นๆ'), icon: HelpCircle, color: '#8898AA', gradient: 'linear-gradient(135deg, #8898AA 0%, #6A7A8A 100%)', path: '/leave/other' },
-            ].map((action, index) => (
-              <Box 
-                key={index} 
-                onClick={() => router.push(action.path)}
-                sx={{ 
-                  display: 'flex', 
-                  flexDirection: 'column', 
-                  alignItems: 'center', 
-                  gap: 1,
-                  cursor: 'pointer'
-                }}
-              >
-                <Box
-                  sx={{
-                    width: 56,
-                    height: 56,
-                    borderRadius: '50%',
-                    background: action.gradient,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    boxShadow: `0 4px 16px ${action.color}40`,
-                    transition: 'transform 0.2s, box-shadow 0.2s',
-                    '&:hover': {
-                      transform: 'scale(1.1)',
-                      boxShadow: `0 6px 20px ${action.color}50`,
-                    }
-                  }}
-                >
-                  <action.icon size={28} color="white" />
+          {showLoading ? (
+            <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 2, px: 1 }}>
+              {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+                <Box key={i} sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
+                  <Skeleton variant="circular" width={56} height={56} />
+                  <Skeleton variant="text" width={40} />
                 </Box>
-                <Typography variant="caption" sx={{ fontWeight: 500, color: 'text.secondary' }}>
-                  {action.label}
-                </Typography>
-              </Box>
-            ))}
-          </Box>
+              ))}
+            </Box>
+          ) : (
+            <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 2, px: 1 }}>
+              {filteredLeaveTypes.map((type) => {
+                const config = getLeaveTypeConfig(type.code);
+                const IconComponent = config.icon;
+                
+                return (
+                  <Box 
+                    key={type.id} 
+                    onClick={() => router.push(`/leave/${type.code}`)}
+                    sx={{ 
+                      display: 'flex', 
+                      flexDirection: 'column', 
+                      alignItems: 'center', 
+                      gap: 1,
+                      cursor: 'pointer'
+                    }}
+                  >
+                    <Box
+                      sx={{
+                        width: 56,
+                        height: 56,
+                        borderRadius: '50%',
+                        background: config.image ? 'transparent' : config.gradient,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        boxShadow: config.image ? 'none' : `0 4px 16px ${config.color}40`,
+                        transition: 'transform 0.2s, box-shadow 0.2s',
+                        '&:hover': {
+                          transform: 'scale(1.1)',
+                          boxShadow: config.image ? 'none' : `0 6px 20px ${config.color}50`,
+                        }
+                      }}
+                    >
+                      {config.image ? (
+                        <Box 
+                          component="img" 
+                          src={config.image} 
+                          alt={type.name}
+                          sx={{ width: 56, height: 56, objectFit: 'contain' }} 
+                        />
+                      ) : (
+                        <IconComponent size={28} color="white" />
+                      )}
+                    </Box>
+                    <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary', textAlign: 'center', lineHeight: 1.2 }}>
+                      {t(`leave_${type.code}`, type.name)}
+                    </Typography>
+                  </Box>
+                );
+              })}
+            </Box>
+          )}
         </Box>
 
         {/* Banner Section - ซ่อนหัวข้อถ้าไม่มี banner */}

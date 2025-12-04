@@ -18,6 +18,9 @@ const leaveTypeCodeMap: Record<string, string> = {
     personal: 'PS',
     vacation: 'VC',
     maternity: 'MT',
+    ordination: 'OR',
+    work_outside: 'WO',
+    absent: 'AB',
     other: 'OT',
 };
 
@@ -98,6 +101,34 @@ export async function POST(request: Request) {
                 { error: 'End date cannot be before start date' },
                 { status: 400 }
             );
+        }
+
+        // Fetch user for validation
+        const user = await prisma.user.findUnique({
+            where: { id: Number(session.user.id) },
+            select: { gender: true, startDate: true }
+        });
+
+        if (!user) {
+            return NextResponse.json({ error: 'User not found' }, { status: 404 });
+        }
+
+        // Validation for Ordination Leave
+        if (leaveType === 'ordination') {
+            if (user.gender !== 'male') {
+                return NextResponse.json(
+                    { error: 'Ordination leave is only for male employees' },
+                    { status: 400 }
+                );
+            }
+            
+            const serviceYears = (new Date().getTime() - new Date(user.startDate).getTime()) / (1000 * 60 * 60 * 24 * 365);
+            if (serviceYears < 1) {
+                 return NextResponse.json(
+                    { error: 'Ordination leave requires at least 1 year of service' },
+                    { status: 400 }
+                );
+            }
         }
 
         const attachmentList: AttachmentPayload[] = Array.isArray(attachments)

@@ -72,6 +72,8 @@ const leaveTypeConfig: Record<string, { icon: any; color: string; lightColor: st
     annual: { icon: Sun, color: '#2DCECC', lightColor: '#E3FAF9' },
     maternity: { icon: Baby, color: '#F5365C', lightColor: '#FFF0F3' },
     ordination: { icon: Church, color: '#FB6340', lightColor: '#FFEFE9' },
+    work_outside: { icon: Car, color: '#2DCECC', lightColor: '#E0F7FA' },
+    absent: { icon: AlertCircle, color: '#F5365C', lightColor: '#FEE2E2' },
     military: { icon: Shield, color: '#5E72E4', lightColor: '#E9ECFF' },
     marriage: { icon: Heart, color: '#F3A4B5', lightColor: '#FDEEF1' },
     funeral: { icon: Users, color: '#8898AA', lightColor: '#F0F3F5' },
@@ -520,19 +522,20 @@ export default function LeaveFormPage() {
             <Box sx={{ minHeight: '100vh', bgcolor: '#f5f7fa', pb: 8 }}>
                 <Box
                     sx={{
-                        background: 'linear-gradient(135deg, #4F46E5 0%, #6366F1 100%)',
+                        bgcolor: 'white',
                         px: 2,
                         py: 2,
-                        boxShadow: '0 4px 12px rgba(79, 70, 229, 0.3)'
+                        boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
+                        borderBottom: '1px solid #f0f0f0',
                     }}
                 >
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                        <Skeleton variant="circular" width={40} height={40} sx={{ bgcolor: 'rgba(255,255,255,0.4)' }} />
+                        <Skeleton variant="circular" width={40} height={40} />
                         <Box sx={{ flex: 1 }}>
-                            <Skeleton variant="text" width="70%" height={26} sx={{ bgcolor: 'rgba(255,255,255,0.4)' }} />
-                            <Skeleton variant="text" width="45%" height={18} sx={{ bgcolor: 'rgba(255,255,255,0.35)', mt: 0.5 }} />
+                            <Skeleton variant="text" width="70%" height={26} />
+                            <Skeleton variant="text" width="45%" height={18} sx={{ mt: 0.5 }} />
                         </Box>
-                        <Skeleton variant="rounded" width={70} height={28} sx={{ bgcolor: 'rgba(255,255,255,0.4)', borderRadius: 999 }} />
+                        <Skeleton variant="rounded" width={70} height={28} sx={{ borderRadius: 999 }} />
                     </Box>
                 </Box>
 
@@ -556,46 +559,51 @@ export default function LeaveFormPage() {
     return (
         <>
             <Box sx={{ minHeight: '100vh', bgcolor: '#f5f7fa', pb: 12 }}>
-                {/* Header - Enhanced */}
+                {/* Header - White with centered text */}
                 <Box
                     sx={{
-                        background: `linear-gradient(135deg, ${config.color} 0%, ${config.color}dd 100%)`,
+                        bgcolor: 'white',
                         position: 'sticky',
                         top: 0,
                         zIndex: 100,
-                        boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+                        boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
+                        borderBottom: '1px solid #f0f0f0',
                     }}
                 >
                     <Container maxWidth={false} sx={{ maxWidth: 1200 }}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', px: 2, py: 1.5 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', px: 2, py: 2, position: 'relative' }}>
                         <IconButton 
                             onClick={() => router.back()} 
                             sx={{ 
-                                mr: 1.5,
-                                color: 'white',
-                                bgcolor: 'rgba(255,255,255,0.15)',
-                                '&:hover': { bgcolor: 'rgba(255,255,255,0.25)' }
+                                position: 'absolute',
+                                left: 8,
+                                color: '#1E293B',
+                                '&:hover': { bgcolor: 'rgba(0,0,0,0.04)' }
                             }}
                         >
                             <ArrowLeft size={22} />
                         </IconButton>
                         
-                        <Box sx={{ flex: 1 }}>
-                            <Typography variant="h6" sx={{ fontWeight: 'bold', lineHeight: 1.2, color: 'white' }}>
+                        <Box sx={{ flex: 1, textAlign: 'center' }}>
+                            <Typography variant="h6" sx={{ fontWeight: 'bold', lineHeight: 1.2, color: '#1E293B' }}>
                                 {t(`leave_${leaveType.code}`, leaveType.name)}
                             </Typography>
-                            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.85)' }}>
-                                {leaveType.description}
-                            </Typography>
+                            {leaveType.description && (
+                                <Typography variant="caption" sx={{ color: '#64748B' }}>
+                                    {leaveType.description}
+                                </Typography>
+                            )}
                         </Box>
                         {leaveType.maxDaysPerYear && (
                             <Chip 
                                 size="small"
                                 label={`${leaveType.maxDaysPerYear} วัน/ปี`}
                                 sx={{ 
-                                    bgcolor: 'rgba(255,255,255,0.2)', 
-                                    color: 'white',
-                                    fontWeight: 500,
+                                    position: 'absolute',
+                                    right: 16,
+                                    bgcolor: config.lightColor, 
+                                    color: config.color,
+                                    fontWeight: 600,
                                     fontSize: '0.7rem',
                                 }}
                             />
@@ -638,12 +646,12 @@ export default function LeaveFormPage() {
                                     <Typography variant="body2" fontWeight={500}>{userProfile?.companyName}</Typography>
                                 </Box>
                                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                    <Typography variant="body2" color="text.secondary">{t('division', 'ฝ่าย')}</Typography>
-                                    <Typography variant="body2" fontWeight={500}>{userProfile?.sectionName || '-'}</Typography>
+                                    <Typography variant="body2" color="text.secondary">{t('department', 'ฝ่าย')}</Typography>
+                                    <Typography variant="body2" fontWeight={500}>{userProfile?.departmentName || '-'}</Typography>
                                 </Box>
                                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                    <Typography variant="body2" color="text.secondary">{t('profile_department', 'แผนก')}</Typography>
-                                    <Typography variant="body2" fontWeight={500}>{userProfile?.departmentName || '-'}</Typography>
+                                    <Typography variant="body2" color="text.secondary">{t('section', 'แผนก')}</Typography>
+                                    <Typography variant="body2" fontWeight={500}>{userProfile?.sectionName || '-'}</Typography>
                                 </Box>
                                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                     <Typography variant="body2" color="text.secondary">{t('position', 'ตำแหน่ง')}</Typography>

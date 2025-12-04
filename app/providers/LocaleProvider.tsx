@@ -41,6 +41,7 @@ const messages: Record<LocaleCode, Record<string, string>> = {
     day: "วัน",
     home_quick_actions: "ลาด่วน",
     home_information: "ประชาสัมพันธ์",
+    home_categories: "ประเภทการลา",
     
     // Profile & Settings
     edit_profile: "แก้ไขโปรไฟล์",
@@ -173,6 +174,8 @@ const messages: Record<LocaleCode, Record<string, string>> = {
     leave_sterilization: "ลาทำหมัน",
     leave_business: "ลาติดต่อราชการ",
     leave_unpaid: "ลาไม่รับค่าจ้าง",
+    leave_work_outside: "ทำงานนอกสถานที่",
+    leave_absent: "ขาดงาน",
     leave_other: "ลาอื่นๆ",
     leave_holiday: "วันหยุด",
     sick_leave_warning: "ลาป่วยเกิน 3 วัน กรุณาแนบใบรับรองแพทย์",
@@ -300,6 +303,7 @@ const messages: Record<LocaleCode, Record<string, string>> = {
     day: "Day",
     home_quick_actions: "Quick Actions",
     home_information: "Information",
+    home_categories: "Leave Categories",
     // Profile & Settings
     edit_profile: "Edit Profile",
     account: "Account",
@@ -431,6 +435,8 @@ const messages: Record<LocaleCode, Record<string, string>> = {
     leave_sterilization: "Sterilization Leave",
     leave_business: "Business Leave",
     leave_unpaid: "Unpaid Leave",
+    leave_work_outside: "Work Outside",
+    leave_absent: "Absent",
     leave_other: "Other",
     leave_holiday: "Holiday",
     sick_leave_warning: "Sick leave exceeding 3 days requires a medical certificate",
@@ -559,7 +565,7 @@ const messages: Record<LocaleCode, Record<string, string>> = {
     day: "ရက်",
     home_quick_actions: "လျင်မြန်သောလုပ်ဆောင်ချက်များ",
     home_information: "သတင်းနှင့်ကြော်ငြာများ",
-
+    home_categories: "အားလပ်ရက်အမျိုးအစားများ",
     // Profile & Settings
     edit_profile: "ပရိုဖိုင်ပြင်ဆင်ရန်",
     account: "အကောင့်",
@@ -748,6 +754,8 @@ const messages: Record<LocaleCode, Record<string, string>> = {
     leave_sterilization: "သားဆက်ခြားခွင့်",
     leave_business: "အလုပ်ကိစ္စခွင့်",
     leave_unpaid: "လစာမဲ့ခွင့်",
+    leave_work_outside: "ပြင်ပလုပ်ငန်းခွင်",
+    leave_absent: "ပျက်ကွက်",
     leave_other: "အခြား",
     leave_holiday: "ရုံးပိတ်ရက်",
     sick_leave_warning: "၃ ရက်ထက်ကျော်လွန်သော ဆေးခွင့်အတွက် ဆေးစာရွက်စာတမ်း လိုအပ်ပါသည်",

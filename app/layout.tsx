@@ -1,9 +1,18 @@
 import type { Metadata, Viewport } from "next";
 import AppProviders from "./providers/AppProviders";
 import PWAInstallPrompt from "./components/PWAInstallPrompt";
-import { Sarabun } from "next/font/google";
+import { Sarabun, Comfortaa } from "next/font/google";
 import "./globals.css";
 
+// Font สำหรับภาษาอังกฤษ
+const comfortaa = Comfortaa({
+  weight: ['300', '400', '500', '600', '700'],
+  subsets: ['latin'],
+  variable: '--font-comfortaa',
+  display: 'swap',
+});
+
+// Font สำหรับภาษาไทย
 const sarabun = Sarabun({
   weight: ['300', '400', '500', '600', '700'],
   subsets: ['thai', 'latin'],
@@ -47,7 +56,7 @@ export default function RootLayout({
         <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-180.png" />
         <link rel="apple-touch-icon" sizes="167x167" href="/images/apple-touch-icon-167.png" />
       </head>
-      <body className={`${sarabun.variable} pre-locale`} style={{ overscrollBehavior: 'none' }}>
+      <body className={`${comfortaa.variable} ${sarabun.variable} pre-locale`} style={{ overscrollBehavior: 'none' }}>
         {/* Prevent language flicker and fade-in once locale applied */}
         <style
           dangerouslySetInnerHTML={{

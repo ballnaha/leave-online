@@ -412,6 +412,8 @@ const leaveTypeConfig: Record<string, { icon: any; color: string; lightColor: st
     annual: { icon: Sun1, color: '#2DCECC', lightColor: '#E0F7FA', label: 'ลาพักร้อน' },
     maternity: { icon: Lovely, color: '#F3A4B5', lightColor: '#FDEEF1', label: 'ลาคลอด' },
     ordination: { icon: Building4, color: '#FB6340', lightColor: '#FFF3E0', label: 'ลาอุปสมบท' },
+    work_outside: { icon: Car, color: '#2DCECC', lightColor: '#E0F7FA', label: 'ทำงานนอกสถานที่' },
+    absent: { icon: MessageQuestion, color: '#F5365C', lightColor: '#FEE2E2', label: 'ขาดงาน' },
     military: { icon: Shield, color: '#5E72E4', lightColor: '#E8EAF6', label: 'รับราชการทหาร' },
     marriage: { icon: Heart, color: '#F3A4B5', lightColor: '#FCE4EC', label: 'ลาแต่งงาน' },
     funeral: { icon: People, color: '#8898AA', lightColor: '#ECEFF1', label: 'ลาฌาปนกิจ' },
@@ -1110,7 +1112,7 @@ const LeaveDetailDrawer: React.FC<LeaveDetailDrawerProps> = ({ open, onClose, le
                     )}
 
                     {/* Created Date */}
-                    <Box sx={{ mt: 2, textAlign: 'center' }}>
+                    <Box sx={{ mt: 2, textAlign: 'center' , mb:2 }}>
                         <Typography sx={{ color: '#94A3B8', fontSize: '0.8rem' }}>
                             {t('submitted_at', 'ยื่นเมื่อ')} {dayjs(leave.createdAt).locale(locale).format('D MMMM YYYY HH:mm')}
                         </Typography>

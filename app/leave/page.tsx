@@ -75,6 +75,9 @@ const leaveTypeConfig: Record<string, { icon: any; color: string; lightColor: st
     personal: { icon: Briefcase, color: '#8965E0', lightColor: '#F0E9FF', label: 'ลากิจ' },
     vacation: { icon: Umbrella, color: '#11CDEF', lightColor: '#E3F9FC', label: 'ลาพักร้อน' },
     maternity: { icon: Baby, color: '#F3A4B5', lightColor: '#FDEEF1', label: 'ลาคลอด' },
+    ordination: { icon: Church, color: '#FB6340', lightColor: '#FFF0EB', label: 'ลาบวช' },
+    work_outside: { icon: Car, color: '#2DCECC', lightColor: '#E0F7FA', label: 'ทำงานนอกสถานที่' },
+    absent: { icon: XCircle, color: '#F5365C', lightColor: '#FEE2E2', label: 'ขาดงาน' },
     other: { icon: HelpCircle, color: '#5E72E4', lightColor: '#E9ECFF', label: 'อื่นๆ' },
     default: { icon: Clock, color: '#8898AA', lightColor: '#F0F3F5', label: 'การลา' },
 };

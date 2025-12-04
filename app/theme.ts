@@ -1,12 +1,9 @@
 'use client';
 import { createTheme } from '@mui/material/styles';
-import { Sarabun } from 'next/font/google';
 
-const sarabun = Sarabun({
-    weight: ['300', '400', '500', '600', '700'],
-    subsets: ['thai', 'latin'],
-    display: 'swap',
-});
+// ใช้ CSS variable แทนการ import font โดยตรง
+// เพื่อให้ MUI ใช้ font เดียวกันกับที่กำหนดใน layout.tsx
+const fontFamily = 'var(--font-comfortaa), var(--font-sarabun), Arial, Helvetica, sans-serif';
 
 const theme = createTheme({
     palette: {
@@ -43,7 +40,7 @@ const theme = createTheme({
         },
     },
     typography: {
-        fontFamily: sarabun.style.fontFamily,
+        fontFamily: fontFamily,
         h1: {
             fontWeight: 700,
             fontSize: '2rem',

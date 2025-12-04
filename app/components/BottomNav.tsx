@@ -51,6 +51,8 @@ const leaveTypeConfig: Record<string, { icon: any; color: string; gradient: stri
     annual: { icon: Sun1, color: '#2DCECC', gradient: 'linear-gradient(135deg, #2DCECC 0%, #2D8BCC 100%)' },
     maternity: { icon: Lovely, color: '#F5365C', gradient: 'linear-gradient(135deg, #F5365C 0%, #F56036 100%)' },
     ordination: { icon: Building4, color: '#FB6340', gradient: 'linear-gradient(135deg, #FB6340 0%, #FBB140 100%)' },
+    work_outside: { icon: Car, color: '#2DCECC', gradient: 'linear-gradient(135deg, #2DCECC 0%, #2D8BCC 100%)' },
+    absent: { icon: MessageQuestion, color: '#F5365C', gradient: 'linear-gradient(135deg, #F5365C 0%, #F56036 100%)' },
     military: { icon: Shield, color: '#5E72E4', gradient: 'linear-gradient(135deg, #5E72E4 0%, #5E9BE4 100%)' },
     marriage: { icon: Heart, color: '#F3A4B5', gradient: 'linear-gradient(135deg, #F3A4B5 0%, #D66086 100%)' },
     funeral: { icon: People, color: '#8898AA', gradient: 'linear-gradient(135deg, #8898AA 0%, #6A7A8A 100%)' },
@@ -81,13 +83,22 @@ const BottomNav: React.FC<BottomNavProps> = ({ activePage = 'home' }) => {
     // maternity (ลาคลอด) is only for female
     // paternity (ลาดูแลภรรยาคลอด) is only for male
     const filteredLeaveTypes = useMemo(() => {
+        // แสดงเฉพาะ ลาป่วย, ลากิจ, ลาพักร้อน ในเมนู FAB
+        const allowedCodes = ['sick', 'personal', 'vacation'];
+
         return leaveTypes.filter(leave => {
+            if (!allowedCodes.includes(leave.code)) return false;
+
             // ถ้าเป็นเพศชาย ไม่แสดงลาคลอด (maternity)
             if (user?.gender === 'male' && leave.code === 'maternity') {
                 return false;
             }
             // ถ้าเป็นเพศหญิง ไม่แสดงลาดูแลภรรยาคลอด (paternity)
             if (user?.gender === 'female' && leave.code === 'paternity') {
+                return false;
+            }
+            // ถ้าเป็นเพศหญิง ไม่แสดงลาบวช (ordination)
+            if (user?.gender === 'female' && leave.code === 'ordination') {
                 return false;
             }
             return true;
@@ -114,10 +125,9 @@ const BottomNav: React.FC<BottomNavProps> = ({ activePage = 'home' }) => {
             const response = await fetch('/api/leave-types');
             if (!response.ok) throw new Error('Failed to fetch leave types');
             const data = await response.json();
-            // จำกัดแสดงแค่ 5 ประเภทแรก
-            const slicedData = data.slice(0, 5);
-            cachedLeaveTypes = slicedData;
-            setLeaveTypes(slicedData);
+            // แสดงทั้งหมด
+            cachedLeaveTypes = data;
+            setLeaveTypes(data);
         } catch (error) {
             console.error('Error fetching leave types:', error);
         } finally {
@@ -203,7 +213,7 @@ const BottomNav: React.FC<BottomNavProps> = ({ activePage = 'home' }) => {
                         <Box
                             sx={{
                                 position: 'absolute',
-                                bottom: 75,
+                                bottom: 100,
                                 right: 20,
                                 pointerEvents: openMenu ? 'auto' : 'none',
                                 zIndex: 1001,
