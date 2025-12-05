@@ -62,6 +62,7 @@ const DashboardCard: React.FC<DashboardCardProps> = ({ leaveTypes, leaveRequests
     // State for LeaveDetailDrawer
     const [selectedLeave, setSelectedLeave] = useState<LeaveRequest | null>(null);
     const [detailDrawerOpen, setDetailDrawerOpen] = useState(false);
+    const [isImageViewerOpen, setIsImageViewerOpen] = useState(false);
 
     // Generate year options (current year - 2 to current year + 1)
     const currentYear = new Date().getFullYear();
@@ -607,8 +608,12 @@ const DashboardCard: React.FC<DashboardCardProps> = ({ leaveTypes, leaveRequests
 
             {/* Drilldown Drawer */}
             <Drawer.Root 
-                open={drilldownOpen} 
-                onOpenChange={(isOpen) => !isOpen && setDrilldownOpen(false)}
+                open={drilldownOpen && !isImageViewerOpen} 
+                onOpenChange={(isOpen) => {
+                    if (!isOpen && !isImageViewerOpen) {
+                        setDrilldownOpen(false);
+                    }
+                }}
                 shouldScaleBackground={false}
                 preventScrollRestoration={true}
             >
@@ -815,6 +820,7 @@ const DashboardCard: React.FC<DashboardCardProps> = ({ leaveTypes, leaveRequests
                 open={detailDrawerOpen}
                 onClose={() => setDetailDrawerOpen(false)}
                 leave={selectedLeave}
+                onImageViewerOpenChange={setIsImageViewerOpen}
             />
         </Box>
     );

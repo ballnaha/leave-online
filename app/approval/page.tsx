@@ -713,7 +713,7 @@ export default function ApprovalPage() {
                             {t(`leave_${approval.leaveRequest.leaveType}`, approval.leaveRequest.leaveType)}
                           </Box>
                           <Typography sx={{ fontSize: '0.8rem', color: '#999' }}>
-                            {approval.leaveRequest.totalDays}วัน
+                            จำนวน: {approval.leaveRequest.totalDays}วัน
                           </Typography>
                         </Box>
                       </Box>

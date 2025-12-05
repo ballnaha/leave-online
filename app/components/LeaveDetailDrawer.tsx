@@ -437,6 +437,7 @@ interface LeaveDetailDrawerProps {
     onClose: () => void;
     leave: LeaveRequest | null;
     onCancel?: () => void;
+    onImageViewerOpenChange?: (isOpen: boolean) => void;
 }
 
 // Config for leave types - matching app/leave/page.tsx
@@ -460,7 +461,7 @@ const leaveTypeConfig: Record<string, { icon: any; color: string; lightColor: st
     default: { icon: Clock, color: '#8898AA', lightColor: '#F0F3F5', label: 'การลา' },
 };
 
-const LeaveDetailDrawer: React.FC<LeaveDetailDrawerProps> = ({ open, onClose, leave, onCancel }) => {
+const LeaveDetailDrawer: React.FC<LeaveDetailDrawerProps> = ({ open, onClose, leave, onCancel, onImageViewerOpenChange }) => {
     const { t, locale } = useLocale();
     // State for attachment viewer
     const [viewerOpen, setViewerOpen] = useState(false);
@@ -469,10 +470,12 @@ const LeaveDetailDrawer: React.FC<LeaveDetailDrawerProps> = ({ open, onClose, le
     const handleOpenAttachment = (index: number) => {
         setSelectedAttachmentIndex(index);
         setViewerOpen(true);
+        onImageViewerOpenChange?.(true);
     };
 
     const handleCloseViewer = () => {
         setViewerOpen(false);
+        onImageViewerOpenChange?.(false);
     };
 
     // คำนวณค่าต่างๆ เมื่อมี leave
