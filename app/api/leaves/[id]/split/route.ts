@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import { createApprovalSteps } from '@/lib/escalation';
+import { notifyLeaveApproved } from '@/lib/onesignal';
 
 // Map leave type to short code
 const leaveTypeCodeMap: Record<string, string> = {
@@ -113,24 +113,10 @@ export async function POST(
             );
         }
 
-        // หา approval step ที่รอการอนุมัติจาก user นี้
-        // ต้องหา approval ที่ status เป็น pending หรือ in_progress และ approverId ตรงกับ user ปัจจุบัน
-        const pendingApproval = originalLeave.approvals.find(
-            (a) => a.approverId === approverId && (a.status === 'pending' || a.status === 'in_progress')
-        );
-
-        // ถ้าไม่เจอ ให้ตรวจสอบว่าเป็น admin, hr หรือ hr_manager หรือไม่
-        const allowedRoles = ['admin', 'hr', 'hr_manager'];
-        const hasPermission = allowedRoles.includes(session.user.role || '');
-
-        if (!pendingApproval && !hasPermission) {
-            console.log('Split Leave - Permission denied:', {
-                approverId,
-                userRole: session.user.role,
-                approvals: originalLeave.approvals.map(a => ({ id: a.id, approverId: a.approverId, status: a.status, level: a.level })),
-            });
+        // ตรวจสอบว่าเป็น hr_manager เท่านั้นที่แยกใบลาได้
+        if (session.user.role !== 'hr_manager') {
             return NextResponse.json(
-                { error: 'คุณไม่มีสิทธิ์แยกใบลานี้' },
+                { error: 'เฉพาะ HR Manager เท่านั้นที่สามารถแยกใบลาได้' },
                 { status: 403 }
             );
         }
@@ -163,32 +149,23 @@ export async function POST(
                 },
             });
 
-            // 2. อัพเดต approval ของใบลาเดิมเป็น cancelled (ถ้ามี pendingApproval)
-            if (pendingApproval) {
-                await tx.leaveApproval.update({
-                    where: { id: pendingApproval.id },
-                    data: {
-                        status: 'cancelled',
-                        comment: `แยกใบลาเป็น ${splits.length} ส่วน${comment ? `: ${comment}` : ''}`,
-                        actionAt: now,
-                    },
-                });
-            } else {
-                // ถ้าไม่มี pendingApproval (เช่น hr/admin ที่ไม่ใช่ approver) ให้ยกเลิก approval ทั้งหมดที่ยัง pending
-                await tx.leaveApproval.updateMany({
-                    where: { 
-                        leaveRequestId: originalLeaveId,
-                        status: { in: ['pending', 'in_progress'] }
-                    },
-                    data: {
-                        status: 'cancelled',
-                        comment: `แยกใบลาโดย ${session.user.role}: ${session.user.firstName} ${session.user.lastName}${comment ? ` - ${comment}` : ''}`,
-                        actionAt: now,
-                    },
-                });
-            }
+            // 2. ยกเลิก approval ทั้งหมดที่ยัง pending
+            await tx.leaveApproval.updateMany({
+                where: { 
+                    leaveRequestId: originalLeaveId,
+                    status: { in: ['pending', 'in_progress'] }
+                },
+                data: {
+                    status: 'cancelled',
+                    comment: `แยกใบลาโดย HR Manager: ${session.user.firstName} ${session.user.lastName}${comment ? ` - ${comment}` : ''}`,
+                    actionAt: now,
+                },
+            });
 
             // 3. สร้างใบลาใหม่ตาม splits
+            // hr_manager สามารถอนุมัติทันทีสำหรับทุกประเภทใบลา เพราะเป็นผู้อนุมัติคนสุดท้าย
+            const shouldAutoApprove = true; // hr_manager แยกใบลาจะอนุมัติทันทีเสมอ
+            
             for (let i = 0; i < splits.length; i++) {
                 const split = splits[i];
                 const splitStart = new Date(split.startDate);
@@ -200,7 +177,7 @@ export async function POST(
                 // คำนวณ escalation deadline (2 วัน)
                 const escalationDeadline = new Date();
                 escalationDeadline.setHours(escalationDeadline.getHours() + 48);
-
+                
                 // สร้างใบลาใหม่
                 const newLeave = await tx.leaveRequest.create({
                     data: {
@@ -213,16 +190,32 @@ export async function POST(
                         endTime: split.endTime || originalLeave.endTime,
                         totalDays: split.totalDays,
                         reason: split.reason || `${originalLeave.reason} (แยกจากใบลา ${originalLeave.leaveCode || '#' + originalLeaveId})`,
-                        status: 'pending',
-                        currentLevel: 1,
-                        escalationDeadline,
+                        status: shouldAutoApprove ? 'approved' : 'pending',
+                        currentLevel: shouldAutoApprove ? 99 : 1,
+                        escalationDeadline: shouldAutoApprove ? null : escalationDeadline,
                         isEscalated: false,
                         contactPhone: originalLeave.contactPhone,
                         contactAddress: originalLeave.contactAddress,
+                        finalApprovedAt: shouldAutoApprove ? now : null,
+                        finalApprovedBy: shouldAutoApprove ? approverId : null,
                     },
                 });
 
                 createdLeaves.push(newLeave.id);
+                
+                // ถ้าอนุมัติทันที สร้าง approval record ด้วย
+                if (shouldAutoApprove) {
+                    await tx.leaveApproval.create({
+                        data: {
+                            leaveRequestId: newLeave.id,
+                            level: 99, // HR Manager level
+                            approverId: approverId,
+                            status: 'approved',
+                            comment: `อนุมัติอัตโนมัติจากการแยกใบลา${comment ? `: ${comment}` : ''}`,
+                            actionAt: now,
+                        },
+                    });
+                }
 
                 // Copy attachments ถ้ามี
                 if (originalLeave.attachments.length > 0) {
@@ -239,14 +232,27 @@ export async function POST(
             }
         });
 
-        // สร้าง approval steps สำหรับใบลาใหม่ทั้งหมด (นอก transaction เพราะอาจมี side effects)
+        // แจ้งเตือนผู้ขอลาว่าใบลาได้รับการอนุมัติแล้ว (เฉพาะ hr_manager)
         for (const leaveId of createdLeaves) {
-            await createApprovalSteps(leaveId, originalLeave.userId);
+            const newLeave = await prisma.leaveRequest.findUnique({
+                where: { id: leaveId },
+                include: { user: true },
+            });
+            
+            if (newLeave) {
+                // แจ้งเตือนผู้ขอลา
+                await notifyLeaveApproved(
+                    newLeave.userId,
+                    leaveId,
+                    `${session.user.firstName} ${session.user.lastName}`,
+                    newLeave.leaveType
+                );
+            }
         }
 
         return NextResponse.json({
             success: true,
-            message: `แยกใบลาสำเร็จ สร้างใบลาใหม่ ${createdLeaves.length} รายการ`,
+            message: `แยกและอนุมัติใบลาสำเร็จ สร้างใบลาใหม่ ${createdLeaves.length} รายการ (อนุมัติแล้ว)`,
             originalLeaveId,
             newLeaveIds: createdLeaves,
         });

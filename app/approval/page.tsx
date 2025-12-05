@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState, useMemo } from 'react';
+import { useSession } from 'next-auth/react';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Navigation, Pagination as SwiperPagination, Zoom } from 'swiper/modules';
 import 'swiper/css';
@@ -153,6 +154,10 @@ const statusConfig: Record<string, { label: string; color: string; bgcolor: stri
 
 export default function ApprovalPage() {
   const { t } = useLocale();
+  const { data: session } = useSession();
+  
+  // Check if user is hr_manager
+  const isHrManager = session?.user?.role === 'hr_manager';
   
   const [loading, setLoading] = useState(true);
   const [approvals, setApprovals] = useState<ApprovalItem[]>([]);
@@ -1533,8 +1538,8 @@ export default function ApprovalPage() {
                         borderTop: '1px solid',
                         borderColor: 'grey.200',
                       }}>
-                        {/* Split button - show only if more than 1 day */}
-                        {approval.leaveRequest.totalDays > 1 && (
+                        {/* Split button - show only for hr_manager and if more than 1 day */}
+                        {isHrManager && approval.leaveRequest.totalDays > 1 && (
                           <Button
                             variant="outlined"
                             fullWidth
@@ -1545,18 +1550,20 @@ export default function ApprovalPage() {
                             sx={{ 
                               mb: 1.5,
                               borderColor: PRIMARY_COLOR,
-                              color: PRIMARY_COLOR,
+                              color: 'white',
+                              bgcolor: PRIMARY_COLOR ,
                               borderRadius: 1,
                               py: 1,
                               fontWeight: 600,
                               fontSize: '0.85rem',
                               textTransform: 'none',
                               '&:hover': { 
-                                bgcolor: `${PRIMARY_COLOR}10`,
+                                bgcolor: '#1976D2',
                                 borderColor: PRIMARY_COLOR,
+                                color: 'white',
                               }
                             }}
-                            startIcon={<Scissor size={18} color={PRIMARY_COLOR} variant="Bold" />}
+                            startIcon={<Scissor size={18} color='white' variant="Bold" />}
                           >
                             แยกใบลา
                           </Button>
