@@ -50,6 +50,7 @@ import {
     Car,
     Add,
     Minus,
+    Moon,
 } from 'iconsax-react';
 import { useRouter, useParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
@@ -942,7 +943,7 @@ export default function LeaveFormPage() {
                                             }
                                             label={
                                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                                    <Sun1 size={14} color={config.color} />
+                                                    <Sun1 size={14} color='#E65100' variant='Bold' />
                                                     <Typography variant="body2" sx={{ fontWeight: shiftType === 'day' ? 600 : 400 }}>
                                                         {t('shift_day', 'กะเช้า')} (08:00 - 17:00)
                                                     </Typography>
@@ -973,7 +974,7 @@ export default function LeaveFormPage() {
                                             }
                                             label={
                                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                                    <Clock size={14} color={config.color} />
+                                                    <Moon size={14} variant='Bold' color="black" />
                                                     <Typography variant="body2" sx={{ fontWeight: shiftType === 'night' ? 600 : 400 }}>
                                                         {t('shift_night', 'กะดึก')} (20:00 - 05:00)
                                                     </Typography>

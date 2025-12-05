@@ -47,6 +47,20 @@ const getNotificationCategory = (type: string): TabType => {
     }
 };
 
+// Leave type translation map for notification messages
+const leaveTypeTranslations: Record<string, Record<string, string>> = {
+    'vacation': { th: 'ลาพักร้อน', en: 'Vacation Leave', my: 'အားလပ်ခွင့်' },
+    'sick': { th: 'ลาป่วย', en: 'Sick Leave', my: 'ဖျားနာခွင့်' },
+    'personal': { th: 'ลากิจ', en: 'Personal Leave', my: 'ကိုယ်ရေးကိုယ်တာခွင့်' },
+    'maternity': { th: 'ลาคลอด', en: 'Maternity Leave', my: 'မီးဖွားခွင့်' },
+    'ordination': { th: 'ลาบวช', en: 'Ordination Leave', my: 'ရဟန်းခံခွင့်' },
+    'military': { th: 'ลาเกณฑ์ทหาร', en: 'Military Leave', my: 'စစ်မှုထမ်းခွင့်' },
+    'wedding': { th: 'ลาแต่งงาน', en: 'Wedding Leave', my: 'လက်ထပ်ခွင့်' },
+    'funeral': { th: 'ลางานศพ', en: 'Funeral Leave', my: 'အသုဘခွင့်' },
+    'wfh': { th: 'ทำงานที่บ้าน', en: 'Work From Home', my: 'အိမ်မှအလုပ်လုပ်' },
+    'unpaid': { th: 'ลาไม่รับค่าจ้าง', en: 'Unpaid Leave', my: 'လစာမဲ့ခွင့်' },
+};
+
 export default function NotificationsPage() {
     const { t, locale } = useLocale();
     const router = useRouter();
@@ -57,6 +71,43 @@ export default function NotificationsPage() {
     const [activeTab, setActiveTab] = useState<TabType>('all');
 
     const dateLocale = locale === 'th' ? 'th-TH' : locale === 'my' ? 'my-MM' : 'en-US';
+
+    // Translate leave type name based on current locale
+    const translateLeaveType = useCallback((leaveTypeCode: string | undefined, fallback: string = '') => {
+        if (!leaveTypeCode) return fallback;
+        const code = leaveTypeCode.toLowerCase();
+        return leaveTypeTranslations[code]?.[locale] || fallback || leaveTypeCode;
+    }, [locale]);
+
+    // Get translated notification title based on type
+    const getTranslatedTitle = useCallback((notification: NotificationItem): string => {
+        const titleKey = `notif_title_${notification.type}`;
+        const translated = t(titleKey, '');
+        return translated || notification.title;
+    }, [t]);
+
+    // Get translated notification message based on type and data
+    const getTranslatedMessage = useCallback((notification: NotificationItem): string => {
+        const messageKey = `notif_msg_${notification.type}`;
+        let translated = t(messageKey, '');
+        
+        if (!translated) {
+            return notification.message;
+        }
+
+        // Get leave type from data
+        const leaveTypeCode = notification.data?.leaveTypeCode || notification.data?.leaveType;
+        const leaveTypeName = translateLeaveType(leaveTypeCode, notification.data?.leaveTypeName || '');
+
+        // Replace placeholders with actual values
+        translated = translated
+            .replace('{{leaveType}}', leaveTypeName)
+            .replace('{{approverName}}', notification.data?.approverName || '')
+            .replace('{{requesterName}}', notification.data?.requesterName || '')
+            .replace('{{hoursLeft}}', notification.data?.hoursLeft || '');
+
+        return translated;
+    }, [t, translateLeaveType]);
 
     // Redirect if not authenticated
     useEffect(() => {
@@ -227,10 +278,10 @@ export default function NotificationsPage() {
 
     // Tab config
     const tabs = [
-        { value: 'all' as TabType, label: t('tab_all', 'ทั้งหมด'), icon: <Notification size={18} /> },
-        { value: 'submitted' as TabType, label: t('tab_submitted', 'ส่งใบลา'), icon: <Send2 size={18} /> },
-        { value: 'results' as TabType, label: t('tab_results', 'ผลอนุมัติ'), icon: <TickCircle size={18} /> },
-        { value: 'system' as TabType, label: t('tab_system', 'ระบบ'), icon: <InfoCircle size={18} /> },
+        { value: 'all' as TabType, label: t('tab_all', 'ทั้งหมด'), icon: <Notification size={18} color="#6C63FF" /> },
+        { value: 'submitted' as TabType, label: t('tab_submitted', 'ส่งใบลา'), icon: <Send2 size={18} color="#2196F3" /> },
+        { value: 'results' as TabType, label: t('tab_results', 'ผลอนุมัติ'), icon: <TickCircle size={18} color="#4CAF50" /> },
+        { value: 'system' as TabType, label: t('tab_system', 'ระบบ'), icon: <InfoCircle size={18} color="#FF9800" /> },
     ];
 
     if (status === 'loading') {
@@ -463,7 +514,7 @@ export default function NotificationsPage() {
                                                 mb: 0.5,
                                             }}
                                         >
-                                            {notification.title}
+                                            {getTranslatedTitle(notification)}
                                         </Typography>
                                         <Typography
                                             sx={{
@@ -476,7 +527,7 @@ export default function NotificationsPage() {
                                                 overflow: 'hidden',
                                             }}
                                         >
-                                            {notification.message}
+                                            {getTranslatedMessage(notification)}
                                         </Typography>
                                         <Typography
                                             sx={{

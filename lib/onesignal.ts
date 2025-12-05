@@ -214,6 +214,8 @@ export async function notifyApprovalPending(
     data: {
       type: 'approval_pending',
       leaveRequestId,
+      leaveTypeCode: leaveType,
+      requesterName,
     },
   });
 }
@@ -245,6 +247,8 @@ export async function notifyLeaveApproved(
     data: {
       type: 'approved',
       leaveRequestId,
+      leaveTypeCode: leaveType,
+      approverName,
     },
   });
 }
@@ -277,6 +281,8 @@ export async function notifyLeaveRejected(
     data: {
       type: 'rejected',
       leaveRequestId,
+      leaveTypeCode: leaveType,
+      approverName,
       reason,
     },
   });
@@ -308,6 +314,7 @@ export async function notifyEscalated(
     data: {
       type: 'escalated',
       leaveRequestId,
+      leaveTypeCode: leaveType,
     },
   });
 }
@@ -340,6 +347,9 @@ export async function notifyApprovalReminder(
     data: {
       type: 'reminder',
       leaveRequestId,
+      leaveTypeCode: leaveType,
+      requesterName,
+      hoursLeft: String(hoursLeft),
     },
   });
 }
@@ -370,6 +380,7 @@ export async function notifyLeaveSubmitted(
     data: {
       type: 'submitted',
       leaveRequestId,
+      leaveTypeCode: leaveType,
     },
   });
 }

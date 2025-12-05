@@ -302,12 +302,18 @@ export default function Home() {
             <Typography variant="h6" sx={{ fontWeight: 'bold', color: 'text.primary' }}>
               {t('home_categories', 'ประเภทการลา')}
             </Typography>
-            
+            <Button 
+                    size="small" 
+                    sx={{ fontWeight: 'medium' }}
+                    onClick={() => router.push(`/leave-types`)} // No action for now or link to all banners
+                  >
+                    {t('home_see_all', 'ดูทั้งหมด')}
+            </Button>
           </Box>
           
           {showLoading ? (
             <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 2, px: 1 }}>
-              {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+              {[1, 2, 3, 4, 5].map((i) => (
                 <Box key={i} sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
                   <Skeleton variant="circular" width={56} height={56} />
                   <Skeleton variant="text" width={40} />

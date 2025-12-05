@@ -277,7 +277,7 @@ const DashboardCard: React.FC<DashboardCardProps> = ({ leaveTypes, leaveRequests
                 sx={{
                     background: 'linear-gradient(135deg, #6C63FF 0%, #5A52E0 100%)',
                     borderRadius: { xs: 0, sm: 1 },
-                    p: 3,
+                    p: { xs: 2.5, sm: 3 },
                     color: 'white',
                     position: 'relative',
                     overflow: 'hidden',
@@ -287,20 +287,20 @@ const DashboardCard: React.FC<DashboardCardProps> = ({ leaveTypes, leaveRequests
                 {/* Decorative Circles */}
                 <Box sx={{
                     position: 'absolute',
-                    top: -20,
-                    right: -20,
-                    width: 150,
-                    height: 150,
+                    top: -25,
+                    right: -25,
+                    width: 140,
+                    height: 140,
                     borderRadius: '50%',
                     background: 'rgba(255, 255, 255, 0.1)',
                     pointerEvents: 'none',
                 }} />
                 <Box sx={{
                     position: 'absolute',
-                    bottom: -40,
-                    left: -40,
-                    width: 200,
-                    height: 200,
+                    bottom: -45,
+                    left: -45,
+                    width: 180,
+                    height: 180,
                     borderRadius: '50%',
                     background: 'rgba(255, 255, 255, 0.05)',
                     pointerEvents: 'none',
@@ -315,7 +315,7 @@ const DashboardCard: React.FC<DashboardCardProps> = ({ leaveTypes, leaveRequests
                     position: 'relative',
                     zIndex: 10
                 }}>
-                    <Typography variant="subtitle1" sx={{ fontWeight: 600, fontSize: '1rem' , color:'#FFFFFF;' }}>
+                    <Typography variant="subtitle1" sx={{ fontWeight: 600, fontSize: '0.95rem' , color:'#FFFFFF;' }}>
                         {t(`leave_${selectedCode}`, currentBalance.name)}
                     </Typography>
                     <Select
@@ -350,10 +350,10 @@ const DashboardCard: React.FC<DashboardCardProps> = ({ leaveTypes, leaveRequests
                     </Select>
                 </Box>
 
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2.5 }}>
                     {/* Left Side: Circular Progress with Chart.js */}
-                    <Box sx={{ width: '45%', display: 'flex', justifyContent: 'center' }}>
-                        <Box sx={{ position: 'relative', width: 150, height: 150 }}>
+                    <Box sx={{ width: '42%', display: 'flex', justifyContent: 'center' }}>
+                        <Box sx={{ position: 'relative', width: 130, height: 130 }}>
                             {/* Chart.js Doughnut */}
                             <Doughnut data={chartData} options={chartOptions} />
 
@@ -372,13 +372,13 @@ const DashboardCard: React.FC<DashboardCardProps> = ({ leaveTypes, leaveRequests
                                 zIndex: 1,
                                 pointerEvents: 'none'
                             }}>
-                                <Typography variant="caption" sx={{ fontSize: '0.75rem', color: 'white', mb: -0.5 }}>
+                                <Typography variant="caption" sx={{ fontSize: '0.7rem', color: 'white', mb: -0.5 }}>
                                     {isOverLimit ? t('dashboard_over_limit', 'เกินสิทธิ์') : t('dashboard_remaining', 'คงเหลือ')}
                                 </Typography>
-                                <Typography variant="h3" sx={{ fontWeight: 'bold', color: isOverLimit ? '#FF6B9D' : 'white' }}>
+                                <Typography variant="h4" sx={{ fontWeight: 'bold', color: isOverLimit ? '#FF6B9D' : 'white', fontSize: '2rem' }}>
                                     {isOverLimit ? Math.abs(currentBalance.remaining) : currentBalance.remaining}
                                 </Typography>
-                                <Typography variant="caption" sx={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.7)' }}>
+                                <Typography variant="caption" sx={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.7)' }}>
                                     {isUnlimited ? t('dashboard_unlimited', 'ไม่จำกัด') : t('dashboard_from_total', 'จาก {{total}} วัน').replace('{{total}}', String(currentBalance.total))}
                                 </Typography>
                             </Box>
@@ -386,54 +386,57 @@ const DashboardCard: React.FC<DashboardCardProps> = ({ leaveTypes, leaveRequests
                     </Box>
 
                     {/* Right Side: Stats */}
-                    <Box sx={{ width: '55%' }}>
+                    <Box sx={{ width: '58%' }}>
                         {/* แสดงสิทธิ์คงเหลือในปีนี้ */}
-                        <Typography variant="caption" sx={{ display: 'block', mb: 1.5, opacity: 0.8, fontSize: '0.75rem' }}>
+                        <Typography variant="caption" sx={{ display: 'block', mb: 1.25, opacity: 0.8, fontSize: '0.75rem' }}>
                             {isUnlimited 
                                 ? t('dashboard_unlimited_quota', 'สิทธิ์ลาไม่จำกัด')
-                                : t('dashboard_remaining_quota', 'สิทธิ์คงเหลือปี {{year}}: {{remaining}}/{{total}} วัน')
+                                : t('dashboard_remaining_quota', 'สิทธิ์คงเหลือ: {{remaining}}/{{total}} วัน')
                                     .replace('{{year}}', String(year + 543))
                                     .replace('{{remaining}}', String(Math.max(0, currentBalance.remaining)))
                                     .replace('{{total}}', String(currentBalance.total))
                             }
                         </Typography>
                         
-                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                             {/* อนุมัติแล้ว */}
                             <Box 
                                 onClick={() => currentBalance.approved > 0 && handleDrilldownClick('approved')}
                                 sx={{ 
                                     display: 'flex', 
                                     alignItems: 'center', 
-                                    gap: 1.5,
+                                    gap: 1.25,
                                     cursor: currentBalance.approved > 0 ? 'pointer' : 'default',
-                                    p: 0.5,
+                                    py: 0.375,
+                                    px: 0.5,
                                     mx: -0.5,
-                                    borderRadius: 1,
+                                    borderRadius: 0.5,
                                     transition: 'background-color 0.2s',
                                     '&:hover': currentBalance.approved > 0 ? { bgcolor: 'rgba(255,255,255,0.1)' } : {}
                                 }}
                             >
                                 <Box sx={{ 
-                                    width: 8, 
-                                    height: 8, 
+                                    width: 7, 
+                                    height: 7, 
                                     borderRadius: '50%', 
-                                    bgcolor: '#4CAF50' 
+                                    bgcolor: '#4CAF50',
+                                    flexShrink: 0
                                 }} />
-                                <Typography variant="body2" sx={{ fontSize: '0.85rem', flex: 1 }}>
+                                <Typography variant="body2" sx={{ fontSize: '0.8rem', flex: 1 }}>
                                     {t('dashboard_approved', 'อนุมัติแล้ว {{days}} วัน').replace('{{days}}', currentBalance.approved > 0 ? String(currentBalance.approved) : '-')}
                                 </Typography>
-                                {currentBalance.approved > 0 && <ArrowRight size={16} color="rgba(255,255,255,0.5)" />}
+                                {currentBalance.approved > 0 && <ArrowRight size={15} color="rgba(255,255,255,0.5)" />}
                             </Box>
                             {/* เหลือ / เกินสิทธิ์ */}
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, p: 0.5, mx: -0.5 }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25, py: 0.375, px: 0.5, mx: -0.5 }}>
                                 <Box sx={{ 
-                                    width: 8, 
-                                    height: 8, 
+                                    width: 7, 
+                                    height: 7, 
                                     borderRadius: '50%', 
-                                    bgcolor: isOverLimit ? '#FF6B9D' : 'rgba(255,255,255,0.5)' 
+                                    bgcolor: isOverLimit ? '#FF6B9D' : 'rgba(255,255,255,0.5)',
+                                    flexShrink: 0
                                 }} />
-                                <Typography variant="body2" sx={{ fontSize: '0.85rem' }}>
+                                <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
                                     {isOverLimit 
                                         ? t('dashboard_exceeded', 'เกิน {{days}} วัน').replace('{{days}}', String(Math.abs(currentBalance.remaining)))
                                         : t('dashboard_left', 'เหลือ {{days}} วัน').replace('{{days}}', isUnlimited ? '-' : String(currentBalance.remaining))
@@ -446,25 +449,27 @@ const DashboardCard: React.FC<DashboardCardProps> = ({ leaveTypes, leaveRequests
                                 sx={{ 
                                     display: 'flex', 
                                     alignItems: 'center', 
-                                    gap: 1.5,
+                                    gap: 1.25,
                                     cursor: currentBalance.pending > 0 ? 'pointer' : 'default',
-                                    p: 0.5,
+                                    py: 0.375,
+                                    px: 0.5,
                                     mx: -0.5,
-                                    borderRadius: 1,
+                                    borderRadius: 0.5,
                                     transition: 'background-color 0.2s',
                                     '&:hover': currentBalance.pending > 0 ? { bgcolor: 'rgba(255,255,255,0.1)' } : {}
                                 }}
                             >
                                 <Box sx={{ 
-                                    width: 8, 
-                                    height: 8, 
+                                    width: 7, 
+                                    height: 7, 
                                     borderRadius: '50%', 
-                                    bgcolor: '#FFC107'
+                                    bgcolor: '#FFC107',
+                                    flexShrink: 0
                                 }} />
-                                <Typography variant="body2" sx={{ fontSize: '0.85rem', flex: 1 }}>
+                                <Typography variant="body2" sx={{ fontSize: '0.8rem', flex: 1 }}>
                                     {t('dashboard_pending', 'รออนุมัติ {{days}} วัน').replace('{{days}}', currentBalance.pending > 0 ? String(currentBalance.pending) : '-')}
                                 </Typography>
-                                {currentBalance.pending > 0 && <ArrowRight size={16} color="rgba(255,255,255,0.5)" />}
+                                {currentBalance.pending > 0 && <ArrowRight size={15} color="rgba(255,255,255,0.5)" />}
                             </Box>
                             {/* ไม่อนุมัติ */}
                             <Box 
@@ -472,25 +477,27 @@ const DashboardCard: React.FC<DashboardCardProps> = ({ leaveTypes, leaveRequests
                                 sx={{ 
                                     display: 'flex', 
                                     alignItems: 'center', 
-                                    gap: 1.5,
+                                    gap: 1.25,
                                     cursor: currentBalance.rejected > 0 ? 'pointer' : 'default',
-                                    p: 0.5,
+                                    py: 0.375,
+                                    px: 0.5,
                                     mx: -0.5,
-                                    borderRadius: 1,
+                                    borderRadius: 0.5,
                                     transition: 'background-color 0.2s',
                                     '&:hover': currentBalance.rejected > 0 ? { bgcolor: 'rgba(255,255,255,0.1)' } : {}
                                 }}
                             >
                                 <Box sx={{ 
-                                    width: 8, 
-                                    height: 8, 
+                                    width: 7, 
+                                    height: 7, 
                                     borderRadius: '50%', 
-                                    bgcolor: '#FF8FA3'
+                                    bgcolor: '#FF8FA3',
+                                    flexShrink: 0
                                 }} />
-                                <Typography variant="body2" sx={{ fontSize: '0.85rem', flex: 1 }}>
+                                <Typography variant="body2" sx={{ fontSize: '0.8rem', flex: 1 }}>
                                     {t('dashboard_rejected', 'ไม่อนุมัติ {{days}} วัน').replace('{{days}}', currentBalance.rejected > 0 ? String(currentBalance.rejected) : '-')}
                                 </Typography>
-                                {currentBalance.rejected > 0 && <ArrowRight size={16} color="rgba(255,255,255,0.5)" />}
+                                {currentBalance.rejected > 0 && <ArrowRight size={15} color="rgba(255,255,255,0.5)" />}
                             </Box>
                             {/* ยกเลิก */}
                             <Box 
@@ -498,34 +505,36 @@ const DashboardCard: React.FC<DashboardCardProps> = ({ leaveTypes, leaveRequests
                                 sx={{ 
                                     display: 'flex', 
                                     alignItems: 'center', 
-                                    gap: 1.5,
+                                    gap: 1.25,
                                     cursor: currentBalance.cancelled > 0 ? 'pointer' : 'default',
-                                    p: 0.5,
+                                    py: 0.375,
+                                    px: 0.5,
                                     mx: -0.5,
-                                    borderRadius: 1,
+                                    borderRadius: 0.5,
                                     transition: 'background-color 0.2s',
                                     '&:hover': currentBalance.cancelled > 0 ? { bgcolor: 'rgba(255,255,255,0.1)' } : {}
                                 }}
                             >
                                 <Box sx={{ 
-                                    width: 8, 
-                                    height: 8, 
+                                    width: 7, 
+                                    height: 7, 
                                     borderRadius: '50%', 
-                                    bgcolor: '#9E9E9E'
+                                    bgcolor: '#9E9E9E',
+                                    flexShrink: 0
                                 }} />
-                                <Typography variant="body2" sx={{ fontSize: '0.85rem', flex: 1 }}>
+                                <Typography variant="body2" sx={{ fontSize: '0.8rem', flex: 1 }}>
                                     {t('dashboard_cancelled', 'ยกเลิก {{days}} วัน').replace('{{days}}', currentBalance.cancelled > 0 ? String(currentBalance.cancelled) : '-')}
                                 </Typography>
-                                {currentBalance.cancelled > 0 && <ArrowRight size={16} color="rgba(255,255,255,0.5)" />}
+                                {currentBalance.cancelled > 0 && <ArrowRight size={15} color="rgba(255,255,255,0.5)" />}
                             </Box>
                         </Box>
                     </Box>
                 </Box>
 
                 {/* Bottom: Quick Actions (Leave Types) */}
-                <Box sx={{ mt: 3 }}>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                        <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+                <Box sx={{ mt: 2.5 }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5 }}>
+                        <Typography variant="subtitle2" sx={{ fontWeight: 600, fontSize: '0.85rem' }}>
                             {t('dashboard_leave_types', 'ประเภทการลา')}
                         </Typography>
                     </Box>
@@ -534,7 +543,7 @@ const DashboardCard: React.FC<DashboardCardProps> = ({ leaveTypes, leaveRequests
                         display: 'flex', 
                         gap: 2, 
                         overflowX: 'auto', 
-                        pb: 1,
+                        pb: 0.5,
                         '::-webkit-scrollbar': { display: 'none' },
                         msOverflowStyle: 'none',
                         scrollbarWidth: 'none',
@@ -552,18 +561,18 @@ const DashboardCard: React.FC<DashboardCardProps> = ({ leaveTypes, leaveRequests
                                         display: 'flex', 
                                         flexDirection: 'column', 
                                         alignItems: 'center', 
-                                        gap: 1,
+                                        gap: 0.75,
                                         cursor: 'pointer',
-                                        minWidth: 60,
+                                        minWidth: 56,
                                         opacity: isSelected ? 1 : 0.7,
                                         transform: isSelected ? 'scale(1.05)' : 'scale(1)',
                                         transition: 'all 0.2s'
                                     }}
                                 >
                                     <Box sx={{
-                                        width: 40,
-                                        height: 40,
-                                        borderRadius: '12px',
+                                        width: 38,
+                                        height: 38,
+                                        borderRadius: '11px',
                                         bgcolor: isSelected ? 'white' : 'rgba(255, 255, 255, 0.2)',
                                         display: 'flex',
                                         alignItems: 'center',
@@ -582,7 +591,7 @@ const DashboardCard: React.FC<DashboardCardProps> = ({ leaveTypes, leaveRequests
                                             fontSize: '0.7rem', 
                                             textAlign: 'center',
                                             whiteSpace: 'nowrap',
-                                            maxWidth: 60,
+                                            maxWidth: 56,
                                             overflow: 'hidden',
                                             textOverflow: 'ellipsis'
                                         }}

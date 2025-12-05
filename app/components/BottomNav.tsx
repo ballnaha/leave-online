@@ -30,7 +30,7 @@ import {
 import { HelpCircle } from 'lucide-react';
 
 interface BottomNavProps {
-    activePage?: 'home' | 'messages' | 'leave' | 'profile';
+    activePage?: 'home' | 'leave-types' | 'leave' | 'profile';
 }
 
 interface LeaveType {
@@ -406,9 +406,9 @@ const BottomNav: React.FC<BottomNavProps> = ({ activePage = 'home' }) => {
                         >
                             <Box
                                 sx={{
-                                    width: 40,
-                                    height: 40,
-                                    borderRadius: '12px',
+                                    width: 50,
+                                    height: 50,
+                                    borderRadius: '24px',
                                     display: 'flex',
                                     alignItems: 'center',
                                     justifyContent: 'center',
@@ -429,16 +429,6 @@ const BottomNav: React.FC<BottomNavProps> = ({ activePage = 'home' }) => {
                                     color={activePage === 'home' ? '#6C63FF' : '#8B7FC7'} 
                                 />
                             </Box>
-                            <Typography
-                                sx={{
-                                    fontSize: '0.65rem',
-                                    fontWeight: activePage === 'home' ? 600 : 500,
-                                    color: activePage === 'home' ? '#6C63FF' : '#8B7FC7',
-                                    lineHeight: 1,
-                                }}
-                            >
-                                {t('nav_home', 'หน้าแรก')}
-                            </Typography>
                         </Box>
 
                         <Box 
@@ -459,9 +449,9 @@ const BottomNav: React.FC<BottomNavProps> = ({ activePage = 'home' }) => {
                         >
                             <Box
                                 sx={{
-                                    width: 40,
-                                    height: 40,
-                                    borderRadius: '12px',
+                                    width: 50,
+                                    height: 50,
+                                    borderRadius: '24px',
                                     display: 'flex',
                                     alignItems: 'center',
                                     justifyContent: 'center',
@@ -476,22 +466,12 @@ const BottomNav: React.FC<BottomNavProps> = ({ activePage = 'home' }) => {
                                     },
                                 }}
                             >
-                                <Calendar2 
+                                <Clock 
                                     size={22} 
                                     variant={activePage === 'leave' ? 'Bold' : 'TwoTone'} 
                                     color={activePage === 'leave' ? '#6C63FF' : '#8B7FC7'} 
                                 />
                             </Box>
-                            <Typography
-                                sx={{
-                                    fontSize: '0.65rem',
-                                    fontWeight: activePage === 'leave' ? 600 : 500,
-                                    color: activePage === 'leave' ? '#6C63FF' : '#8B7FC7',
-                                    lineHeight: 1,
-                                }}
-                            >
-                                {t('nav_leave', 'การลา')}
-                            </Typography>
                         </Box>
 
                         {/* Spacer for FAB with curved notch effect */}
@@ -523,18 +503,18 @@ const BottomNav: React.FC<BottomNavProps> = ({ activePage = 'home' }) => {
                             }}
                             onClick={() => {
                                 setOpenMenu(false);
-                                router.push('/messages');
+                                router.push('/leave-types');
                             }}
                         >
                             <Box
                                 sx={{
-                                    width: 40,
-                                    height: 40,
-                                    borderRadius: '12px',
+                                    width: 50,
+                                    height: 50,
+                                    borderRadius: '24px',
                                     display: 'flex',
                                     alignItems: 'center',
                                     justifyContent: 'center',
-                                    bgcolor: activePage === 'messages' ? 'rgba(108, 99, 255, 0.15)' : 'transparent',
+                                    bgcolor: activePage === 'leave-types' ? 'rgba(108, 99, 255, 0.15)' : 'transparent',
                                     transition: 'all 0.3s ease',
                                     '&:hover': {
                                         bgcolor: 'rgba(108, 99, 255, 0.1)',
@@ -545,22 +525,12 @@ const BottomNav: React.FC<BottomNavProps> = ({ activePage = 'home' }) => {
                                     },
                                 }}
                             >
-                                <Message 
+                                <Calendar2 
                                     size={22} 
-                                    variant={activePage === 'messages' ? 'Bold' : 'Outline'} 
-                                    color={activePage === 'messages' ? '#6C63FF' : '#8B7FC7'} 
+                                    variant={activePage === 'leave-types' ? 'Bold' : 'Outline'} 
+                                    color={activePage === 'leave-types' ? '#6C63FF' : '#8B7FC7'} 
                                 />
                             </Box>
-                            <Typography
-                                sx={{
-                                    fontSize: '0.65rem',
-                                    fontWeight: activePage === 'messages' ? 600 : 500,
-                                    color: activePage === 'messages' ? '#6C63FF' : '#8B7FC7',
-                                    lineHeight: 1,
-                                }}
-                            >
-                                {t('nav_activity', 'กิจกรรม')}
-                            </Typography>
                         </Box>
 
                         <Box
@@ -581,9 +551,9 @@ const BottomNav: React.FC<BottomNavProps> = ({ activePage = 'home' }) => {
                         >
                             <Box
                                 sx={{
-                                    width: 40,
-                                    height: 40,
-                                    borderRadius: '12px',
+                                    width: 50,
+                                    height: 50,
+                                    borderRadius: '24px',
                                     display: 'flex',
                                     alignItems: 'center',
                                     justifyContent: 'center',
@@ -604,16 +574,6 @@ const BottomNav: React.FC<BottomNavProps> = ({ activePage = 'home' }) => {
                                     color={activePage === 'profile' ? '#6C63FF' : '#8B7FC7'} 
                                 />
                             </Box>
-                            <Typography
-                                sx={{
-                                    fontSize: '0.65rem',
-                                    fontWeight: activePage === 'profile' ? 600 : 500,
-                                    color: activePage === 'profile' ? '#6C63FF' : '#8B7FC7',
-                                    lineHeight: 1,
-                                }}
-                            >
-                                {t('nav_profile', 'โปรไฟล์')}
-                            </Typography>
                         </Box>
                     </Paper>
 
