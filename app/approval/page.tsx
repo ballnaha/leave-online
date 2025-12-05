@@ -35,6 +35,11 @@ import {
   Select,
   MenuItem,
 } from '@mui/material';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
+import dayjs from 'dayjs';
+import 'dayjs/locale/th';
 import {
   TickCircle,
   CloseCircle,
@@ -58,6 +63,10 @@ import {
   Profile2User,
   Car,
   Warning2,
+  Scissor,
+  Add,
+  Minus,
+  Trash,
 } from 'iconsax-react';
 import BottomNav from '../components/BottomNav';
 import Sidebar from '../components/Sidebar';
@@ -175,6 +184,18 @@ export default function ApprovalPage() {
   const [comment, setComment] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+  
+  // Split Dialog state
+  const [splitDialogOpen, setSplitDialogOpen] = useState(false);
+  const [splitParts, setSplitParts] = useState<Array<{
+    leaveType: string;
+    startDate: string;
+    endDate: string;
+    startPeriod: 'full' | 'half';
+    endPeriod: 'full' | 'half';
+    totalDays: number;
+  }>>([]);
+  const [splitComment, setSplitComment] = useState('');
 
   useEffect(() => {
     fetchApprovals();
@@ -242,6 +263,233 @@ export default function ApprovalPage() {
     setComment('');
     setError('');
     setDialogOpen(true);
+  };
+  
+  // Split Leave Functions
+  const handleOpenSplitDialog = (approval: ApprovalItem) => {
+    setSelectedApproval(approval);
+    setSplitComment('');
+    setError('');
+    
+    // Initialize with 2 parts - first day as original type, rest as new type
+    const startDate = new Date(approval.leaveRequest.startDate);
+    const endDate = new Date(approval.leaveRequest.endDate);
+    const totalDays = approval.leaveRequest.totalDays;
+    
+    if (totalDays <= 1) {
+      setError('ไม่สามารถแยกใบลาที่มีเพียง 1 วันได้');
+      return;
+    }
+    
+    // Default split: first day = original type, remaining = absent
+    const firstDayEnd = new Date(startDate);
+    const secondDayStart = new Date(startDate);
+    secondDayStart.setDate(secondDayStart.getDate() + 1);
+    
+    setSplitParts([
+      {
+        leaveType: approval.leaveRequest.leaveType,
+        startDate: startDate.toISOString().split('T')[0],
+        endDate: firstDayEnd.toISOString().split('T')[0],
+        startPeriod: 'full',
+        endPeriod: 'full',
+        totalDays: 1,
+      },
+      {
+        leaveType: 'absent',
+        startDate: secondDayStart.toISOString().split('T')[0],
+        endDate: endDate.toISOString().split('T')[0],
+        startPeriod: 'full',
+        endPeriod: 'full',
+        totalDays: totalDays - 1,
+      },
+    ]);
+    
+    setSplitDialogOpen(true);
+  };
+  
+  // Helper function to calculate total days with period
+  const calculateTotalDaysWithPeriod = (
+    startDate: string, 
+    endDate: string, 
+    startPeriod: string, 
+    endPeriod: string
+  ): number => {
+    const start = dayjs(startDate);
+    const end = dayjs(endDate);
+    if (!start.isValid() || !end.isValid() || end.isBefore(start)) return 0;
+    
+    const daysDiff = end.diff(start, 'day');
+    
+    // Period values: full = 1, half = 0.5
+    const getPeriodValue = (period: string) => period === 'full' ? 1 : 0.5;
+    
+    if (daysDiff === 0) {
+      // Same day
+      if (startPeriod === 'full' && endPeriod === 'full') return 1;
+      if (startPeriod === 'half' && endPeriod === 'half') {
+        // ทั้งเริ่มและจบเป็นครึ่งวัน ในวันเดียวกัน = 0.5 วัน (ถือว่าเป็นช่วงเดียวกัน)
+        return 0.5;
+      }
+      // กรณีอื่นๆ ในวันเดียวกัน
+      return getPeriodValue(startPeriod);
+    }
+    
+    // Multiple days
+    // First day: depends on startPeriod (full=1, half=0.5)
+    const firstDayValue = getPeriodValue(startPeriod);
+    // Last day: depends on endPeriod (full=1, half=0.5)
+    const lastDayValue = getPeriodValue(endPeriod);
+    // Days in between are full days
+    const middleDays = Math.max(0, daysDiff - 1);
+    
+    return firstDayValue + middleDays + lastDayValue;
+  };
+
+  const handleUpdateSplitPart = (index: number, field: string, value: string | number) => {
+    setSplitParts(prev => {
+      const updated = [...prev];
+      updated[index] = { ...updated[index], [field]: value };
+      
+      // Auto-calculate totalDays if dates or periods change
+      if (field === 'startDate' || field === 'endDate' || field === 'startPeriod' || field === 'endPeriod') {
+        updated[index].totalDays = calculateTotalDaysWithPeriod(
+          updated[index].startDate,
+          updated[index].endDate,
+          updated[index].startPeriod,
+          updated[index].endPeriod
+        );
+        
+        // เมื่อเปลี่ยน endDate หรือ endPeriod ของส่วนที่ i ให้อัพเดท startDate/startPeriod ของส่วนถัดไป
+        if ((field === 'endDate' || field === 'endPeriod') && index < updated.length - 1) {
+          const currentEndPeriod = updated[index].endPeriod;
+          
+          // กำหนด startPeriod ของส่วนถัดไปตาม endPeriod ของส่วนปัจจุบัน
+          let nextStartDate = updated[index].endDate;
+          let nextStartPeriod: 'full' | 'half' = 'full';
+          
+          if (currentEndPeriod === 'half') {
+            // ถ้าจบครึ่งวัน ส่วนถัดไปเริ่มครึ่งวันหลังวันเดียวกัน
+            nextStartPeriod = 'half';
+          } else {
+            // ถ้าจบเต็มวัน ส่วนถัดไปเริ่มวันใหม่
+            nextStartDate = dayjs(updated[index].endDate).add(1, 'day').format('YYYY-MM-DD');
+            nextStartPeriod = 'full';
+          }
+          
+          updated[index + 1] = { 
+            ...updated[index + 1], 
+            startDate: nextStartDate,
+            startPeriod: nextStartPeriod 
+          };
+          
+          // คำนวณ totalDays ของส่วนถัดไปใหม่
+          updated[index + 1].totalDays = calculateTotalDaysWithPeriod(
+            updated[index + 1].startDate,
+            updated[index + 1].endDate,
+            updated[index + 1].startPeriod,
+            updated[index + 1].endPeriod
+          );
+        }
+        
+        // เมื่อเปลี่ยน startDate หรือ startPeriod ของส่วนที่ i ให้อัพเดท endDate/endPeriod ของส่วนก่อนหน้า
+        if ((field === 'startDate' || field === 'startPeriod') && index > 0) {
+          const currentStartPeriod = updated[index].startPeriod;
+          
+          let prevEndDate = updated[index].startDate;
+          let prevEndPeriod: 'full' | 'half' = 'full';
+          
+          if (currentStartPeriod === 'half') {
+            // ถ้าเริ่มครึ่งวันหลัง ส่วนก่อนหน้าจบครึ่งวันแรกวันเดียวกัน
+            prevEndPeriod = 'half';
+          } else {
+            // ถ้าเริ่มเต็มวัน ส่วนก่อนหน้าจบวันก่อน
+            prevEndDate = dayjs(updated[index].startDate).subtract(1, 'day').format('YYYY-MM-DD');
+            prevEndPeriod = 'full';
+          }
+          
+          updated[index - 1] = { 
+            ...updated[index - 1], 
+            endDate: prevEndDate,
+            endPeriod: prevEndPeriod 
+          };
+          
+          // คำนวณ totalDays ของส่วนก่อนหน้าใหม่
+          updated[index - 1].totalDays = calculateTotalDaysWithPeriod(
+            updated[index - 1].startDate,
+            updated[index - 1].endDate,
+            updated[index - 1].startPeriod,
+            updated[index - 1].endPeriod
+          );
+        }
+      }
+      
+      return updated;
+    });
+  };
+  
+  const handleAddSplitPart = () => {
+    if (!selectedApproval) return;
+    
+    const lastPart = splitParts[splitParts.length - 1];
+    const nextDay = new Date(lastPart.endDate);
+    nextDay.setDate(nextDay.getDate() + 1);
+    
+    setSplitParts(prev => [...prev, {
+      leaveType: 'absent',
+      startDate: nextDay.toISOString().split('T')[0],
+      endDate: nextDay.toISOString().split('T')[0],
+      startPeriod: 'full',
+      endPeriod: 'full',
+      totalDays: 1,
+    }]);
+  };
+  
+  const handleRemoveSplitPart = (index: number) => {
+    if (splitParts.length <= 1) {
+      setError('ต้องมีอย่างน้อย 1 ส่วน');
+      return;
+    }
+    setSplitParts(prev => prev.filter((_, i) => i !== index));
+  };
+  
+  const handleSubmitSplit = async () => {
+    if (!selectedApproval) return;
+    
+    // Validate total days
+    const totalSplitDays = splitParts.reduce((sum, p) => sum + p.totalDays, 0);
+    if (Math.abs(totalSplitDays - selectedApproval.leaveRequest.totalDays) > 0.01) {
+      setError(`จำนวนวันรวมไม่ตรง (เดิม: ${selectedApproval.leaveRequest.totalDays} วัน, แยก: ${totalSplitDays} วัน)`);
+      return;
+    }
+    
+    setSubmitting(true);
+    setError('');
+    
+    try {
+      const response = await fetch(`/api/leaves/${selectedApproval.leaveRequest.id}/split`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          splits: splitParts,
+          comment: splitComment.trim() || undefined,
+        }),
+      });
+      
+      const data = await response.json();
+      
+      if (!response.ok) {
+        setError(data.error || 'เกิดข้อผิดพลาด');
+        return;
+      }
+      
+      setSplitDialogOpen(false);
+      fetchApprovals();
+    } catch (err) {
+      setError('เกิดข้อผิดพลาดในการเชื่อมต่อ');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const handleSubmitAction = async () => {
@@ -1284,59 +1532,88 @@ export default function ApprovalPage() {
                         bgcolor: '#FAFAFA', 
                         borderTop: '1px solid',
                         borderColor: 'grey.200',
-                        display: 'flex', 
-                        gap: 2,
                       }}>
-                        <Button
-                          variant="contained"
-                          fullWidth
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleOpenDialog(approval, 'reject');
-                          }}
-                          sx={{ 
-                            bgcolor: '#D32F2F',
-                            color: 'white',
-                            borderRadius: 1,
-                            py: 1.5,
-                            fontWeight: 700,
-                            fontSize: '0.95rem',
-                            textTransform: 'none',
-                            boxShadow: '0 4px 12px rgba(211, 47, 47, 0.25)',
-                            '&:hover': { 
-                              bgcolor: '#B71C1C',
-                              boxShadow: '0 6px 16px rgba(211, 47, 47, 0.35)',
-                            }
-                          }}
-                          startIcon={<CloseCircle size={20} color="#ffffff" variant="Bold" />}
-                        >
-                          ปฏิเสธ
-                        </Button>
-                        <Button
-                          variant="contained"
-                          fullWidth
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleOpenDialog(approval, 'approve');
-                          }}
-                          sx={{ 
-                            bgcolor: '#2E7D32', 
-                            color: 'white',
-                            borderRadius: 1,
-                            py: 1.5,
-                            fontWeight: 700,
-                            fontSize: '0.95rem',
-                            textTransform: 'none',
-                            boxShadow: '0 4px 12px rgba(46, 125, 50, 0.25)',
-                            '&:hover': { 
-                              bgcolor: '#1B5E20',
-                              boxShadow: '0 6px 16px rgba(46, 125, 50, 0.35)',
-                            }
-                          }}
-                          startIcon={<TickCircle size={20} color="#ffffff" variant="Bold" />}
-                        >
-                          อนุมัติ
-                        </Button>
+                        {/* Split button - show only if more than 1 day */}
+                        {approval.leaveRequest.totalDays > 1 && (
+                          <Button
+                            variant="outlined"
+                            fullWidth
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleOpenSplitDialog(approval);
+                            }}
+                            sx={{ 
+                              mb: 1.5,
+                              borderColor: PRIMARY_COLOR,
+                              color: PRIMARY_COLOR,
+                              borderRadius: 1,
+                              py: 1,
+                              fontWeight: 600,
+                              fontSize: '0.85rem',
+                              textTransform: 'none',
+                              '&:hover': { 
+                                bgcolor: `${PRIMARY_COLOR}10`,
+                                borderColor: PRIMARY_COLOR,
+                              }
+                            }}
+                            startIcon={<Scissor size={18} color={PRIMARY_COLOR} variant="Bold" />}
+                          >
+                            แยกใบลา
+                          </Button>
+                        )}
+                        
+                        <Box sx={{ display: 'flex', gap: 2 }}>
+                          <Button
+                            variant="contained"
+                            fullWidth
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleOpenDialog(approval, 'reject');
+                            }}
+                            sx={{ 
+                              bgcolor: '#D32F2F',
+                              color: 'white',
+                              borderRadius: 1,
+                              py: 1.5,
+                              fontWeight: 700,
+                              fontSize: '0.95rem',
+                              textTransform: 'none',
+                              boxShadow: '0 4px 12px rgba(211, 47, 47, 0.25)',
+                              '&:hover': { 
+                                bgcolor: '#B71C1C',
+                                boxShadow: '0 6px 16px rgba(211, 47, 47, 0.35)',
+                              }
+                            }}
+                            startIcon={<CloseCircle size={20} color="#ffffff" variant="Bold" />}
+                          >
+                            ปฏิเสธ
+                          </Button>
+                          <Button
+                            variant="contained"
+                            fullWidth
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleOpenDialog(approval, 'approve');
+                            }}
+                            sx={{ 
+                              bgcolor: '#2E7D32', 
+                              color: 'white',
+                              borderRadius: 1,
+                              py: 1.5,
+                              fontWeight: 700,
+                              fontSize: '0.95rem',
+                              textTransform: 'none',
+                              boxShadow: '0 4px 12px rgba(46, 125, 50, 0.25)',
+                              '&:hover': { 
+                                bgcolor: '#1B5E20',
+                                boxShadow: '0 6px 16px rgba(46, 125, 50, 0.35)',
+                              }
+                            }}
+                            startIcon={<TickCircle size={20} color="#ffffff" variant="Bold" />}
+                          >
+                            อนุมัติ
+                          </Button>
+                        </Box>
                       </Box>
                     )}
                   </Collapse>
@@ -1383,6 +1660,13 @@ export default function ApprovalPage() {
           }
         }}
       >
+        {/* Close button */}
+        <IconButton
+          onClick={() => setDialogOpen(false)}
+          sx={{ position: 'absolute', top: 8, right: 8, zIndex: 1 }}
+        >
+          <CloseCircle size={28} color="#9CA3AF" />
+        </IconButton>
         <DialogTitle sx={{ textAlign: 'center', pt: 4, pb: 2 }}>
           <Box sx={{ 
             width: 60, 
@@ -1488,6 +1772,312 @@ export default function ApprovalPage() {
             fullWidth
             variant="outlined"
             onClick={() => setDialogOpen(false)} 
+            disabled={submitting}
+            size="large"
+            sx={{ borderRadius: 2, py: 1.5, fontSize: '1rem', borderColor: 'grey.300', color: 'text.primary' }}
+          >
+            ยกเลิก
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Split Leave Dialog - Fullscreen on mobile */}
+      <Dialog 
+        open={splitDialogOpen} 
+        onClose={() => setSplitDialogOpen(false)} 
+        maxWidth="sm" 
+        fullWidth
+        fullScreen
+        PaperProps={{
+          sx: { 
+            borderRadius: 0,
+            display: 'flex',
+            flexDirection: 'column',
+          }
+        }}
+      >
+        {/* Close button */}
+        <IconButton
+          onClick={() => setSplitDialogOpen(false)}
+          sx={{ position: 'absolute', top: 8, right: 8, zIndex: 1 }}
+        >
+          <CloseCircle size={28} color="#9CA3AF" />
+        </IconButton>
+        <DialogTitle sx={{ textAlign: 'center', pt: 4, pb: 2 }}>
+          <Box sx={{ 
+            width: 80, 
+            height: 80, 
+            borderRadius: '50%', 
+            bgcolor: `${PRIMARY_COLOR}15`,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            mx: 'auto',
+            mb: 2
+          }}>
+            <Scissor size={40} variant="Bold" color={PRIMARY_COLOR} />
+          </Box>
+          <Typography variant="h5" component="span" fontWeight={700} sx={{ display: 'block' }}>
+            แยกใบลา
+          </Typography>
+        </DialogTitle>
+        <DialogContent sx={{ flex: 1, display: 'flex', flexDirection: 'column', px: 3, overflow: 'auto' }}>
+          <Typography variant="body2" color="text.secondary" textAlign="center" sx={{ mb: 3 }}>
+            แยกใบลาออกเป็นหลายส่วนพร้อมกำหนดประเภทการลาใหม่
+          </Typography>
+
+          {selectedApproval && (
+            <Box sx={{ mb: 3, bgcolor: '#F8FAFC', p: 2, borderRadius: 1, border: '1px solid', borderColor: 'grey.200' }}>
+              <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 1 }}>
+                ข้อมูลใบลาเดิม
+              </Typography>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                <Typography variant="body2" color="text.secondary">พนักงาน</Typography>
+                <Typography variant="body2" fontWeight={600}>{selectedApproval.leaveRequest.user.firstName} {selectedApproval.leaveRequest.user.lastName}</Typography>
+              </Box>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                <Typography variant="body2" color="text.secondary">ประเภท</Typography>
+                <Typography variant="body2" fontWeight={600}>{t(`leave_${selectedApproval.leaveRequest.leaveType}`, selectedApproval.leaveRequest.leaveType)}</Typography>
+              </Box>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                <Typography variant="body2" color="text.secondary">วันที่</Typography>
+                <Typography variant="body2" fontWeight={600}>
+                  {new Date(selectedApproval.leaveRequest.startDate).toLocaleDateString('th-TH', { day: 'numeric', month: 'short' })} - {new Date(selectedApproval.leaveRequest.endDate).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' })}
+                </Typography>
+              </Box>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                <Typography variant="body2" color="text.secondary">จำนวนวัน</Typography>
+                <Typography variant="body2" fontWeight={600} color="primary">{selectedApproval.leaveRequest.totalDays} วัน</Typography>
+              </Box>
+            </Box>
+          )}
+
+          {error && (
+            <Alert severity="error" sx={{ mb: 2, borderRadius: 1 }}>
+              {error}
+            </Alert>
+          )}
+
+          <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 1.5 }}>
+            แยกใบลาเป็น {splitParts.length} ส่วน
+          </Typography>
+          
+          {splitParts.map((part, index) => (
+            <Paper 
+              key={index} 
+              elevation={0} 
+              sx={{ 
+                p: 2, 
+                mb: 2, 
+                borderRadius: 1, 
+                border: '1px solid', 
+                borderColor: 'grey.200',
+                position: 'relative',
+              }}
+            >
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5 }}>
+                <Chip 
+                  label={`ส่วนที่ ${index + 1}`} 
+                  size="small" 
+                  sx={{ 
+                    bgcolor: index === 0 ? '#E8F5E9' : '#FFF3E0', 
+                    color: index === 0 ? '#2E7D32' : '#E65100',
+                    fontWeight: 600 
+                  }} 
+                />
+                {splitParts.length > 1 && (
+                  <IconButton 
+                    size="small" 
+                    onClick={() => handleRemoveSplitPart(index)}
+                    sx={{ color: '#D32F2F' }}
+                  >
+                    <Trash size={18} color="#D32F2F" />
+                  </IconButton>
+                )}
+              </Box>
+              
+              <FormControl fullWidth size="small" sx={{ mb: 1.5 }}>
+                <InputLabel>ประเภทการลา</InputLabel>
+                <Select
+                  value={part.leaveType}
+                  label="ประเภทการลา"
+                  onChange={(e) => handleUpdateSplitPart(index, 'leaveType', e.target.value)}
+                >
+                  <MenuItem value="sick">{t('leave_sick', 'ลาป่วย')}</MenuItem>
+                  <MenuItem value="personal">{t('leave_personal', 'ลากิจ')}</MenuItem>
+                  <MenuItem value="vacation">{t('leave_vacation', 'ลาพักร้อน')}</MenuItem>
+                  <MenuItem value="absent">{t('leave_absent', 'ขาดงาน')}</MenuItem>
+                  <MenuItem value="maternity">{t('leave_maternity', 'ลาคลอด')}</MenuItem>
+                  <MenuItem value="ordination">{t('leave_ordination', 'ลาบวช')}</MenuItem>
+                  <MenuItem value="work_outside">{t('leave_work_outside', 'ปฏิบัติงานนอกสถานที่')}</MenuItem>
+                </Select>
+              </FormControl>
+              
+              <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale="th">
+                {/* วันที่เริ่มต้น */}
+                <Box sx={{ display: 'flex', gap: 1, mb: 1.5 }}>
+                  <DatePicker
+                    label="วันที่เริ่ม"
+                    value={part.startDate ? dayjs(part.startDate) : null}
+                    onChange={(newValue) => {
+                      if (newValue && newValue.isValid()) {
+                        const dateStr = newValue.format('YYYY-MM-DD');
+                        handleUpdateSplitPart(index, 'startDate', dateStr);
+                      }
+                    }}
+                    format="DD MMM YY"
+                    slotProps={{
+                      textField: {
+                        size: 'small',
+                        sx: { 
+                          flex: 1,
+                          '& .MuiOutlinedInput-root': {
+                            '& fieldset': { borderColor: '#e5e7eb' },
+                            '&:hover fieldset': { borderColor: PRIMARY_COLOR },
+                          },
+                        }
+                      }
+                    }}
+                  />
+                  <FormControl size="small" sx={{ minWidth: 90 }}>
+                    <InputLabel>ช่วง</InputLabel>
+                    <Select
+                      value={part.startPeriod}
+                      label="ช่วง"
+                      onChange={(e) => handleUpdateSplitPart(index, 'startPeriod', e.target.value)}
+                    >
+                      <MenuItem value="full">เต็มวัน</MenuItem>
+                      <MenuItem value="half">ครึ่งวัน</MenuItem>
+                    </Select>
+                  </FormControl>
+                </Box>
+                
+                {/* วันที่สิ้นสุด */}
+                <Box sx={{ display: 'flex', gap: 1, mb: 1.5 }}>
+                  <DatePicker
+                    label="วันที่สิ้นสุด"
+                    value={part.endDate ? dayjs(part.endDate) : null}
+                    onChange={(newValue) => {
+                      if (newValue && newValue.isValid()) {
+                        const dateStr = newValue.format('YYYY-MM-DD');
+                        handleUpdateSplitPart(index, 'endDate', dateStr);
+                      }
+                    }}
+                    minDate={part.startDate ? dayjs(part.startDate) : undefined}
+                    format="DD MMM YY"
+                    slotProps={{
+                      textField: {
+                        size: 'small',
+                        sx: { 
+                          flex: 1,
+                          '& .MuiOutlinedInput-root': {
+                            '& fieldset': { borderColor: '#e5e7eb' },
+                            '&:hover fieldset': { borderColor: PRIMARY_COLOR },
+                          },
+                        }
+                      }
+                    }}
+                  />
+                  <FormControl size="small" sx={{ minWidth: 90 }}>
+                    <InputLabel>ช่วง</InputLabel>
+                    <Select
+                      value={part.endPeriod}
+                      label="ช่วง"
+                      onChange={(e) => handleUpdateSplitPart(index, 'endPeriod', e.target.value)}
+                    >
+                      <MenuItem value="full">เต็มวัน</MenuItem>
+                      <MenuItem value="half">ครึ่งวัน</MenuItem>
+                    </Select>
+                  </FormControl>
+                </Box>
+              </LocalizationProvider>
+              
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', bgcolor: '#F8FAFC', p: 1.5, borderRadius: 1 }}>
+                <Typography variant="body2" color="text.secondary">จำนวนวัน (คำนวณอัตโนมัติ)</Typography>
+                <Typography 
+                  sx={{ 
+                    fontWeight: 700, 
+                    fontSize: '1rem',
+                    color: PRIMARY_COLOR 
+                  }}
+                >
+                  {part.totalDays} วัน
+                </Typography>
+              </Box>
+            </Paper>
+          ))}
+          
+          <Button
+            variant="outlined"
+            fullWidth
+            onClick={handleAddSplitPart}
+            startIcon={<Add size={18} color={PRIMARY_COLOR} />}
+            sx={{ 
+              mb: 2,
+              borderColor: PRIMARY_COLOR,
+              color: PRIMARY_COLOR,
+              borderStyle: 'dashed',
+              '&:hover': { 
+                bgcolor: `${PRIMARY_COLOR}10`,
+                borderColor: PRIMARY_COLOR,
+              }
+            }}
+          >
+            เพิ่มส่วน
+          </Button>
+          
+          {/* Summary */}
+          <Box sx={{ bgcolor: '#F1F5F9', p: 2, borderRadius: 1, mb: 2 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Typography variant="body2" fontWeight={600}>รวมจำนวนวัน</Typography>
+              <Typography 
+                variant="body1" 
+                fontWeight={700} 
+                color={Math.abs(splitParts.reduce((sum, p) => sum + p.totalDays, 0) - (selectedApproval?.leaveRequest.totalDays || 0)) < 0.01 ? 'success.main' : 'error.main'}
+              >
+                {splitParts.reduce((sum, p) => sum + p.totalDays, 0)} / {selectedApproval?.leaveRequest.totalDays || 0} วัน
+              </Typography>
+            </Box>
+          </Box>
+
+          <TextField
+            label="หมายเหตุ (ถ้ามี)"
+            multiline
+            rows={2}
+            fullWidth
+            value={splitComment}
+            onChange={(e) => setSplitComment(e.target.value)}
+            placeholder="ระบุเหตุผลในการแยกใบลา..."
+            sx={{
+              '& .MuiOutlinedInput-root': {
+                borderRadius: 1,
+              }
+            }}
+          />
+        </DialogContent>
+        <DialogActions sx={{ p: 3, gap: 1.5, flexDirection: 'column' }}>
+          <Button
+            fullWidth
+            variant="contained"
+            onClick={handleSubmitSplit}
+            disabled={submitting || Math.abs(splitParts.reduce((sum, p) => sum + p.totalDays, 0) - (selectedApproval?.leaveRequest.totalDays || 0)) > 0.01}
+            size="large"
+            sx={{ 
+              borderRadius: 2,
+              py: 1.5,
+              fontSize: '1rem',
+              bgcolor: PRIMARY_COLOR,
+              '&:hover': {
+                bgcolor: '#5B52E0',
+              }
+            }}
+          >
+            {submitting ? 'กำลังดำเนินการ...' : 'ยืนยันแยกใบลา'}
+          </Button>
+          <Button 
+            fullWidth
+            variant="outlined"
+            onClick={() => setSplitDialogOpen(false)} 
             disabled={submitting}
             size="large"
             sx={{ borderRadius: 2, py: 1.5, fontSize: '1rem', borderColor: 'grey.300', color: 'text.primary' }}
