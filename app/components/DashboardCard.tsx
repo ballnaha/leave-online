@@ -1,6 +1,7 @@
 'use client';
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
-import { Box, Typography, Paper, IconButton, Select, MenuItem, Drawer, Divider, Chip } from '@mui/material';
+import { Box, Typography, Paper, IconButton, Select, MenuItem, Divider, Chip } from '@mui/material';
+import { Drawer } from 'vaul';
 import { Health, Briefcase, Sun1, ArrowRight, DocumentText, Calendar, Clock, Archive, Building4, Lovely, Car, MessageQuestion, Shield, Heart, People, Profile2User, CloseCircle, TickCircle, Timer, Forbidden2 } from 'iconsax-react';
 import { useLocale } from '../providers/LocaleProvider';
 import { HelpCircle, X } from 'lucide-react';
@@ -8,6 +9,8 @@ import { Chart as ChartJS, ArcElement, Tooltip, Legend } from 'chart.js';
 import { Doughnut } from 'react-chartjs-2';
 import dayjs from 'dayjs';
 import 'dayjs/locale/th';
+import LeaveDetailDrawer from './LeaveDetailDrawer';
+import { LeaveRequest } from '@/types/leave';
 
 // Register Chart.js components
 ChartJS.register(ArcElement, Tooltip, Legend);
@@ -20,17 +23,6 @@ interface LeaveType {
     maxDaysPerYear: number | null;
     isPaid: boolean;
     isActive: boolean;
-}
-
-interface LeaveRequest {
-    id: number;
-    leaveCode: string | null;
-    leaveType: string;
-    totalDays: number;
-    status: string;
-    startDate: string;
-    endDate: string;
-    reason: string;
 }
 
 interface DashboardCardProps {
@@ -67,51 +59,9 @@ const DashboardCard: React.FC<DashboardCardProps> = ({ leaveTypes, leaveRequests
     const [drilldownOpen, setDrilldownOpen] = useState(false);
     const [drilldownStatus, setDrilldownStatus] = useState<'approved' | 'pending' | 'rejected' | 'cancelled' | null>(null);
     
-    // Drag-to-dismiss states
-    const [dragY, setDragY] = useState(0);
-    const [isDragging, setIsDragging] = useState(false);
-    const dragStartY = useRef(0);
-    const dragHandleRef = useRef<HTMLDivElement>(null);
-    const DISMISS_THRESHOLD = 100;
-
-    // Calculate backdrop opacity based on drag
-    const backdropOpacity = useMemo(() => {
-        if (dragY <= 0) return 0.5;
-        const maxDrag = 200;
-        const opacity = 0.5 * (1 - Math.min(dragY / maxDrag, 1));
-        return Math.max(0, opacity);
-    }, [dragY]);
-
-    // Touch handlers for drag-to-dismiss
-    const handleTouchStart = useCallback((e: React.TouchEvent) => {
-        dragStartY.current = e.touches[0].clientY;
-        setIsDragging(true);
-    }, []);
-
-    const handleTouchMove = useCallback((e: React.TouchEvent) => {
-        if (!isDragging) return;
-        const currentY = e.touches[0].clientY;
-        const diff = currentY - dragStartY.current;
-        if (diff > 0) {
-            setDragY(diff);
-        }
-    }, [isDragging]);
-
-    const handleTouchEnd = useCallback(() => {
-        setIsDragging(false);
-        if (dragY > DISMISS_THRESHOLD) {
-            setDrilldownOpen(false);
-        }
-        setDragY(0);
-    }, [dragY]);
-
-    // Reset drag state when drawer closes
-    useEffect(() => {
-        if (!drilldownOpen) {
-            setDragY(0);
-            setIsDragging(false);
-        }
-    }, [drilldownOpen]);
+    // State for LeaveDetailDrawer
+    const [selectedLeave, setSelectedLeave] = useState<LeaveRequest | null>(null);
+    const [detailDrawerOpen, setDetailDrawerOpen] = useState(false);
 
     // Generate year options (current year - 2 to current year + 1)
     const currentYear = new Date().getFullYear();
@@ -209,6 +159,12 @@ const DashboardCard: React.FC<DashboardCardProps> = ({ leaveTypes, leaveRequests
     const handleDrilldownClick = (status: 'approved' | 'pending' | 'rejected' | 'cancelled') => {
         setDrilldownStatus(status);
         setDrilldownOpen(true);
+    };
+
+    // Handle leave item click to open detail drawer
+    const handleLeaveItemClick = (leave: LeaveRequest) => {
+        setSelectedLeave(leave);
+        setDetailDrawerOpen(true);
     };
 
     // Get status config
@@ -320,7 +276,7 @@ const DashboardCard: React.FC<DashboardCardProps> = ({ leaveTypes, leaveRequests
                 elevation={0}
                 sx={{
                     background: 'linear-gradient(135deg, #6C63FF 0%, #5A52E0 100%)',
-                    borderRadius: { xs: 0, sm: 2 },
+                    borderRadius: { xs: 0, sm: 1 },
                     p: 3,
                     color: 'white',
                     position: 'relative',
@@ -337,6 +293,7 @@ const DashboardCard: React.FC<DashboardCardProps> = ({ leaveTypes, leaveRequests
                     height: 150,
                     borderRadius: '50%',
                     background: 'rgba(255, 255, 255, 0.1)',
+                    pointerEvents: 'none',
                 }} />
                 <Box sx={{
                     position: 'absolute',
@@ -346,6 +303,7 @@ const DashboardCard: React.FC<DashboardCardProps> = ({ leaveTypes, leaveRequests
                     height: 200,
                     borderRadius: '50%',
                     background: 'rgba(255, 255, 255, 0.05)',
+                    pointerEvents: 'none',
                 }} />
 
                 {/* Header: Leave Type Name + Year Selector */}
@@ -639,85 +597,96 @@ const DashboardCard: React.FC<DashboardCardProps> = ({ leaveTypes, leaveRequests
             </Paper>
 
             {/* Drilldown Drawer */}
-            <Drawer
-                anchor="bottom"
-                open={drilldownOpen}
-                onClose={() => setDrilldownOpen(false)}
-                ModalProps={{
-                    slotProps: {
-                        backdrop: {
-                            sx: {
-                                bgcolor: `rgba(0, 0, 0, ${backdropOpacity})`,
-                            }
-                        }
-                    }
-                }}
-                PaperProps={{
-                    sx: {
-                        borderTopLeftRadius: 16,
-                        borderTopRightRadius: 16,
-                        maxHeight: '70vh',
-                        ...(dragY > 0 && {
-                            transform: `translateY(${dragY}px)`,
-                            transition: isDragging ? 'none' : 'transform 0.2s ease-out',
-                        }),
-                    }
-                }}
+            <Drawer.Root 
+                open={drilldownOpen} 
+                onOpenChange={(isOpen) => !isOpen && setDrilldownOpen(false)}
+                shouldScaleBackground={false}
+                preventScrollRestoration={true}
             >
-                <Box 
-                    sx={{ width: '100%', bgcolor: 'white' }}
-                    onTouchStart={handleTouchStart}
-                    onTouchMove={handleTouchMove}
-                    onTouchEnd={handleTouchEnd}
-                >
-                    {/* Drag Handle */}
-                    <Box 
-                        ref={dragHandleRef}
-                        sx={{ 
-                            display: 'flex', 
-                            justifyContent: 'center', 
-                            pt: 1.5, 
-                            pb: 1,
-                            cursor: 'grab',
-                            touchAction: 'none',
+                <Drawer.Portal>
+                    <Drawer.Overlay 
+                        className="vaul-overlay"
+                        style={{
+                            position: 'fixed',
+                            inset: 0,
+                            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                            zIndex: 1300,
+                            backdropFilter: 'blur(2px)',
+                            WebkitBackdropFilter: 'blur(2px)',
+                        }}
+                    />
+                    <Drawer.Content
+                        className="vaul-content"
+                        style={{
+                            position: 'fixed',
+                            bottom: 0,
+                            left: 0,
+                            right: 0,
+                            backgroundColor: 'white',
+                            borderTopLeftRadius: 16,
+                            borderTopRightRadius: 16,
+                            maxHeight: '80vh',
+                            zIndex: 1300,
+                            display: 'flex',
+                            flexDirection: 'column',
+                            outline: 'none',
                         }}
                     >
-                        <Box
-                            sx={{
-                                width: isDragging ? 48 : 40,
-                                height: 5,
-                                borderRadius: 2.5,
-                                bgcolor: isDragging ? '#94A3B8' : '#CBD5E1',
-                                transition: 'all 0.2s ease',
-                            }}
-                        />
-                    </Box>
-                <Box sx={{ p: 2, pt: 0 }}>
+                        {/* Hidden Title for accessibility */}
+                        <Drawer.Title style={{ position: 'absolute', width: 1, height: 1, padding: 0, margin: -1, overflow: 'hidden', clip: 'rect(0, 0, 0, 0)', whiteSpace: 'nowrap', border: 0 }}>
+                            {drilldownStatus ? getStatusConfig(drilldownStatus).label : t('leave_details', 'รายละเอียดการลา')}
+                        </Drawer.Title>
+                        <Drawer.Description style={{ position: 'absolute', width: 1, height: 1, padding: 0, margin: -1, overflow: 'hidden', clip: 'rect(0, 0, 0, 0)', whiteSpace: 'nowrap', border: 0 }}>
+                            {t(`leave_${selectedCode}`, currentBalance.name)}
+                        </Drawer.Description>
+                <Box sx={{ width: '100%', bgcolor: 'white', display: 'flex', flexDirection: 'column', maxHeight: '80vh' }}>
+                    {/* Drag Handle */}
+                    <Drawer.Handle 
+                        style={{
+                            width: 40,
+                            height: 5,
+                            borderRadius: 2.5,
+                            backgroundColor: '#E2E8F0',
+                            margin: '12px auto 8px',
+                        }}
+                    />
+
                     {/* Header */}
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                    <Box
+                        sx={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            px: 2.5,
+                            py: 1.5,
+                            borderBottom: '1px solid #F1F5F9',
+                        }}
+                    >
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                             {drilldownStatus && (() => {
                                 const statusConfig = getStatusConfig(drilldownStatus);
                                 const StatusIcon = statusConfig.icon;
+                                const typeConfig = leaveTypeConfig[selectedCode] || leaveTypeConfig.default;
+                                const TypeIcon = typeConfig.icon;
                                 return (
                                     <>
                                         <Box sx={{
-                                            width: 36,
-                                            height: 36,
+                                            width: 48,
+                                            height: 48,
                                             borderRadius: 1,
                                             bgcolor: statusConfig.bgColor,
                                             display: 'flex',
                                             alignItems: 'center',
                                             justifyContent: 'center'
                                         }}>
-                                            <StatusIcon size={20} color={statusConfig.color} variant="Bold" />
+                                            <StatusIcon size={24} color={statusConfig.color} variant="Bold" />
                                         </Box>
                                         <Box>
-                                            <Typography variant="subtitle1" sx={{ fontWeight: 600, color: '#1E293B' }}>
+                                            <Typography variant="h6" sx={{ fontWeight: 700, color: '#1E293B', fontSize: '1rem' }}>
                                                 {statusConfig.label}
                                             </Typography>
-                                            <Typography variant="caption" sx={{ color: '#64748B' }}>
-                                                {t(`leave_${selectedCode}`, currentBalance.name)} - {drilldownRequests.length} {t('items', 'รายการ')}
+                                            <Typography sx={{ fontSize: '0.8rem', color: '#64748B' }}>
+                                                {t(`leave_${selectedCode}`, currentBalance.name)} • {drilldownRequests.length} {t('items', 'รายการ')}
                                             </Typography>
                                         </Box>
                                     </>
@@ -725,34 +694,72 @@ const DashboardCard: React.FC<DashboardCardProps> = ({ leaveTypes, leaveRequests
                             })()}
                         </Box>
                         <IconButton onClick={() => setDrilldownOpen(false)} size="small">
-                            <X size={20} />
+                            <CloseCircle size={32} color="#64748B" />
                         </IconButton>
                     </Box>
 
-                    <Divider sx={{ mb: 2 }} />
+                    {/* Content */}
+                    <Box 
+                        sx={{ 
+                            px: 2.5, 
+                            py: 2, 
+                            overflowY: 'auto', 
+                            overflowX: 'hidden', 
+                            flex: 1,
+                            overscrollBehavior: 'contain'
+                        }}
+                    >
 
-                    {/* List of leaves */}
-                    <Box sx={{ maxHeight: 'calc(70vh - 120px)', overflowY: 'auto' }}>
+                        {/* List of leaves */}
                         {drilldownRequests.length > 0 ? (
                             drilldownRequests.map((leave, index) => {
                                 const statusConfig = getStatusConfig(leave.status);
+                                const typeConfig = leaveTypeConfig[selectedCode] || leaveTypeConfig.default;
                                 return (
                                     <Box 
                                         key={leave.id}
+                                        onClick={() => handleLeaveItemClick(leave)}
                                         sx={{ 
                                             p: 2, 
                                             mb: 1.5, 
                                             bgcolor: '#F8FAFC', 
                                             borderRadius: 1,
-                                            border: '1px solid #E2E8F0'
+                                            border: '1px solid #E2E8F0',
+                                            cursor: 'pointer',
+                                            transition: 'all 0.2s ease',
+                                            '&:hover': {
+                                                bgcolor: '#F1F5F9',
+                                                borderColor: '#CBD5E1'
+                                            },
+                                            '&:active': {
+                                                transform: 'scale(0.98)',
+                                                bgcolor: '#E2E8F0'
+                                            }
                                         }}
                                     >
-                                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
-                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                                <Calendar size={16} color="#64748B" />
-                                                <Typography variant="body2" sx={{ fontWeight: 600, color: '#1E293B' }}>
-                                                    {formatDate(leave.startDate, leave.endDate)}
-                                                </Typography>
+                                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1.5 }}>
+                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                                                <Box sx={{
+                                                    width: 32,
+                                                    height: 32,
+                                                    borderRadius: 1,
+                                                    bgcolor: `${typeConfig.color}15`,
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center'
+                                                }}>
+                                                    <Calendar size={16} color={typeConfig.color} />
+                                                </Box>
+                                                <Box>
+                                                    <Typography sx={{ fontWeight: 600, color: '#1E293B', fontSize: '0.9rem' }}>
+                                                        {formatDate(leave.startDate, leave.endDate)}
+                                                    </Typography>
+                                                    {leave.leaveCode && (
+                                                        <Typography sx={{ color: '#94A3B8', fontSize: '0.75rem' }}>
+                                                            {leave.leaveCode}
+                                                        </Typography>
+                                                    )}
+                                                </Box>
                                             </Box>
                                             <Chip 
                                                 label={`${leave.totalDays} ${t('days', 'วัน')}`}
@@ -761,34 +768,45 @@ const DashboardCard: React.FC<DashboardCardProps> = ({ leaveTypes, leaveRequests
                                                     bgcolor: statusConfig.bgColor,
                                                     color: statusConfig.color,
                                                     fontWeight: 600,
-                                                    fontSize: '0.75rem'
+                                                    fontSize: '0.75rem',
+                                                    height: 24
                                                 }}
                                             />
                                         </Box>
                                         {leave.reason && (
-                                            <Typography variant="body2" sx={{ color: '#64748B', fontSize: '0.85rem' }}>
-                                                {leave.reason.length > 80 ? `${leave.reason.substring(0, 80)}...` : leave.reason}
-                                            </Typography>
-                                        )}
-                                        {leave.leaveCode && (
-                                            <Typography variant="caption" sx={{ color: '#94A3B8', display: 'block', mt: 0.5 }}>
-                                                {t('leave_code', 'รหัสใบลา')}: {leave.leaveCode}
-                                            </Typography>
+                                            <Box sx={{ 
+                                                pl: 6, 
+                                                borderLeft: `2px solid ${typeConfig.color}30`,
+                                                ml: 2
+                                            }}>
+                                                <Typography sx={{ color: '#64748B', fontSize: '0.85rem', lineHeight: 1.5 }}>
+                                                    {leave.reason.length > 100 ? `${leave.reason.substring(0, 100)}...` : leave.reason}
+                                                </Typography>
+                                            </Box>
                                         )}
                                     </Box>
                                 );
                             })
                         ) : (
-                            <Box sx={{ textAlign: 'center', py: 4, color: '#64748B' }}>
-                                <Typography variant="body2">
+                            <Box sx={{ textAlign: 'center', py: 6, color: '#64748B' }}>
+                                <Archive size={48} color="#CBD5E1" />
+                                <Typography sx={{ mt: 2, fontWeight: 500, color: '#94A3B8' }}>
                                     {t('no_leave_records', 'ไม่มีรายการ')}
                                 </Typography>
                             </Box>
                         )}
                     </Box>
                 </Box>
-                </Box>
-            </Drawer>
+                    </Drawer.Content>
+                </Drawer.Portal>
+            </Drawer.Root>
+
+            {/* Leave Detail Drawer */}
+            <LeaveDetailDrawer
+                open={detailDrawerOpen}
+                onClose={() => setDetailDrawerOpen(false)}
+                leave={selectedLeave}
+            />
         </Box>
     );
 };

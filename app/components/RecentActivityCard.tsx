@@ -51,11 +51,12 @@ const RecentActivityCard = ({ title, date, status, image, icon, iconColor = '#5E
         <Card
             sx={{
                 p: 2,
-                mb: 2,
+                mb: 1,
                 display: 'flex',
                 alignItems: 'center',
                 gap: 2,
                 cursor: 'pointer',
+                backgroundColor: 'rgba(255, 255, 255, 0.5)',
                 borderRadius: '20px',
                 boxShadow: '0 4px 20px rgba(0,0,0,0.02)',
                 transition: 'transform 0.2s, box-shadow 0.2s',

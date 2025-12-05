@@ -1,10 +1,10 @@
+'use client';
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import {
     Box,
     Typography,
     Card,
     IconButton,
-    Drawer,
     Stack,
     Button,
     Chip,
@@ -54,6 +54,7 @@ import 'dayjs/locale/th';
 import 'dayjs/locale/en';
 import 'dayjs/locale/my';
 import { LeaveRequest } from '@/types/leave';
+import { Drawer } from 'vaul';
 
 // Fullscreen transition for mobile
 const Transition = React.forwardRef(function Transition(
@@ -430,137 +431,6 @@ const LeaveDetailDrawer: React.FC<LeaveDetailDrawerProps> = ({ open, onClose, le
     // State for attachment viewer
     const [viewerOpen, setViewerOpen] = useState(false);
     const [selectedAttachmentIndex, setSelectedAttachmentIndex] = useState(0);
-    
-    // Pull-to-dismiss state
-    const [dragY, setDragY] = useState(0);
-    const [isDragging, setIsDragging] = useState(false);
-    const [isClosing, setIsClosing] = useState(false);
-    const startYRef = useRef<number>(0);
-    const lastYRef = useRef<number>(0);
-    const velocityRef = useRef<number>(0);
-    const lastTimeRef = useRef<number>(0);
-    const contentRef = useRef<HTMLDivElement>(null);
-    const dragHandleRef = useRef<HTMLDivElement>(null);
-    
-    const DISMISS_THRESHOLD = 120; // Increased threshold for stability
-    const VELOCITY_THRESHOLD = 0.5; // Velocity threshold for quick swipe
-
-    // Calculate drag progress for opacity
-    const windowHeight = typeof window !== 'undefined' ? window.innerHeight : 800;
-    // Fade out backdrop as we drag down (linear fade up to 40% of screen height)
-    const backdropOpacity = isClosing ? 0 : Math.max(0.5 * (1 - dragY / (windowHeight * 0.4)), 0);
-
-    // Fix for iOS Safari background scrolling
-    useEffect(() => {
-        if (open) {
-            const scrollY = window.scrollY;
-            document.body.style.position = 'fixed';
-            document.body.style.top = `-${scrollY}px`;
-            document.body.style.width = '100%';
-            
-            return () => {
-                document.body.style.position = '';
-                document.body.style.top = '';
-                document.body.style.width = '';
-                window.scrollTo(0, scrollY);
-            };
-        }
-    }, [open]);
-
-    // Handle touch start
-    const handleTouchStart = useCallback((e: React.TouchEvent) => {
-        const touchY = e.touches[0].clientY;
-        const dragHandleRect = dragHandleRef.current?.getBoundingClientRect();
-        
-        // Check if touching the handle area (generous hit box)
-        const isOnDragHandle = dragHandleRect && 
-            touchY >= dragHandleRect.top - 20 && 
-            touchY <= dragHandleRect.bottom + 20;
-        
-        // Check if content is scrolled to top
-        const isAtTop = contentRef.current && contentRef.current.scrollTop <= 0;
-        
-        if (isOnDragHandle || isAtTop) {
-            startYRef.current = touchY;
-            lastYRef.current = touchY;
-            lastTimeRef.current = Date.now();
-            velocityRef.current = 0;
-            setIsDragging(true);
-        }
-    }, []);
-
-    // Handle touch move
-    const handleTouchMove = useCallback((e: React.TouchEvent) => {
-        if (!isDragging) return;
-        
-        const currentY = e.touches[0].clientY;
-        const currentTime = Date.now();
-        const diff = currentY - startYRef.current;
-        
-        // Calculate velocity
-        const timeDelta = currentTime - lastTimeRef.current;
-        if (timeDelta > 0) {
-            const instantVelocity = (currentY - lastYRef.current) / timeDelta;
-            // Smooth velocity with exponential moving average
-            velocityRef.current = velocityRef.current * 0.6 + instantVelocity * 0.4;
-        }
-        
-        lastYRef.current = currentY;
-        lastTimeRef.current = currentTime;
-        
-        if (diff > 0) {
-            // Native feel: 1:1 movement (no resistance) when dragging down
-            // This feels more responsive like iOS sheet
-            setDragY(diff);
-            
-            if (e.cancelable) {
-                e.preventDefault();
-            }
-        } else {
-            // If pulling up, allow scroll (reset drag)
-            setDragY(0);
-        }
-    }, [isDragging]);
-
-    // Handle touch end
-    const handleTouchEnd = useCallback(() => {
-        if (!isDragging) return;
-        
-        const velocity = velocityRef.current;
-        // Dismiss if dragged far enough OR flicked fast enough (with some minimal drag)
-        const shouldDismiss = dragY > DISMISS_THRESHOLD || (dragY > 30 && velocity > VELOCITY_THRESHOLD);
-        
-        if (shouldDismiss) {
-            setIsClosing(true);
-            // Animate off screen
-            setDragY(windowHeight); 
-            
-            setTimeout(() => {
-                onClose();
-                // Reset after close
-                setTimeout(() => {
-                    setIsClosing(false);
-                    setDragY(0);
-                }, 50);
-            }, 200);
-        } else {
-            // Snap back
-            setDragY(0);
-        }
-        
-        setIsDragging(false);
-        startYRef.current = 0;
-        velocityRef.current = 0;
-    }, [isDragging, dragY, onClose, windowHeight]);
-
-    // Reset drag state when drawer closes/opens
-    React.useEffect(() => {
-        if (!open) {
-            setDragY(0);
-            setIsDragging(false);
-            setIsClosing(false);
-        }
-    }, [open]);
 
     const handleOpenAttachment = (index: number) => {
         setSelectedAttachmentIndex(index);
@@ -602,536 +472,530 @@ const LeaveDetailDrawer: React.FC<LeaveDetailDrawerProps> = ({ open, onClose, le
     const StatusIcon = statusInfo.icon;
 
     return (
-        <Drawer
-            anchor="bottom"
-            open={open}
-            onClose={onClose}
-            ModalProps={{
-                slotProps: {
-                    backdrop: {
-                        sx: {
-                            bgcolor: `rgba(0, 0, 0, ${backdropOpacity})`,
-                        }
-                    }
-                }
-            }}
-            PaperProps={{
-                sx: {
-                    borderTopLeftRadius: 16,
-                    borderTopRightRadius: 16,
-                    maxHeight: '90vh',
-                    ...(dragY > 0 && {
-                        transform: `translateY(${dragY}px)`,
-                        transition: isDragging ? 'none' : 'transform 0.2s ease-out',
-                    }),
-                }
-            }}
+        <Drawer.Root 
+            open={open} 
+            onOpenChange={(isOpen) => !isOpen && onClose()}
+            shouldScaleBackground={false}
+            preventScrollRestoration={true}
         >
-            {leave && (
-            <Box 
-                sx={{ width: '100%', bgcolor: 'white' }}
-                onTouchStart={handleTouchStart}
-                onTouchMove={handleTouchMove}
-                onTouchEnd={handleTouchEnd}
-            >
-                {/* Drag Handle - visual indicator */}
-                <Box 
-                    ref={dragHandleRef}
-                    sx={{ 
-                        display: 'flex', 
-                        justifyContent: 'center', 
-                        pt: 1.5, 
-                        pb: 1,
-                        cursor: 'grab',
-                        touchAction: 'none',
+            <Drawer.Portal>
+                <Drawer.Overlay 
+                    className="vaul-overlay"
+                    style={{
+                        position: 'fixed',
+                        inset: 0,
+                        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                        zIndex: 1300,
+                        backdropFilter: 'blur(2px)',
+                        WebkitBackdropFilter: 'blur(2px)',
                     }}
-                >
-                    <Box
-                        sx={{
-                            width: isDragging ? 48 : 40,
-                            height: 5,
-                            borderRadius: 2.5,
-                            bgcolor: isDragging 
-                                ? '#94A3B8' 
-                                : dragY > DISMISS_THRESHOLD / 2
-                                    ? '#667eea' 
-                                    : '#E2E8F0',
-                            transition: isDragging ? 'none' : 'all 0.2s ease',
-                            transform: isDragging ? 'scaleX(1.1)' : 'scaleX(1)',
-                        }}
-                    />
-                </Box>
-
-                {/* Header */}
-                <Box
-                    sx={{
+                />
+                <Drawer.Content
+                    className="vaul-content"
+                    style={{
+                        position: 'fixed',
+                        bottom: 0,
+                        left: 0,
+                        right: 0,
+                        backgroundColor: 'white',
+                        borderTopLeftRadius: 16,
+                        borderTopRightRadius: 16,
+                        maxHeight: '90vh',
+                        zIndex: 1300,
                         display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        px: 2.5,
-                        py: 1.5,
-                        borderBottom: '1px solid #F1F5F9',
+                        flexDirection: 'column',
+                        outline: 'none',
                     }}
                 >
-                    <Box>
-                        <Typography variant="h6" sx={{ fontWeight: 700, color: '#1E293B' }}>
-                            {t('leave_details', 'รายละเอียดใบลา')}
-                        </Typography>
-                        {leave.leaveCode && (
-                            <Typography sx={{ fontSize: '0.8rem', color: '#64748B' }}>
-                                {t('leave_code', 'รหัส')}: {leave.leaveCode}
-                            </Typography>
-                        )}
-                    </Box>
-                    <IconButton onClick={onClose} size="small">
-                        <CloseCircle size={32} color="#64748B" />
-                    </IconButton>
-                </Box>
+                    {leave && (
+                    <Box sx={{ width: '100%', bgcolor: 'white', display: 'flex', flexDirection: 'column', maxHeight: '90vh' }}>
+                        {/* Drag Handle - visual indicator */}
+                        <Drawer.Handle 
+                            style={{
+                                width: 40,
+                                height: 5,
+                                borderRadius: 2.5,
+                                backgroundColor: '#E2E8F0',
+                                margin: '12px auto 8px',
+                            }}
+                        />
 
-                {/* Content */}
-                <Box 
-                    ref={contentRef}
-                    sx={{ 
-                        px: 2.5, 
-                        py: 2, 
-                        overflowY: 'auto', 
-                        overflowX: 'hidden', 
-                        maxHeight: 'calc(90vh - 80px)',
-                        overscrollBehavior: 'contain'
-                    }}
-                >
-                    {/* Leave Type & Status Card */}
-                    <Card
-                        sx={{
-                            borderRadius: 1,
-                            p: 2.5,
-                            mb: 2,
-                            background: `linear-gradient(135deg, ${config.color}15 0%, ${config.color}05 100%)`,
-                            border: `1px solid ${config.color}30`,
-                            boxShadow: 'none'
-                        }}
-                    >
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
-                            <Box
-                                sx={{
-                                    width: 56,
-                                    height: 56,
-                                    borderRadius: 1,
-                                    bgcolor: config.color,
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                }}
-                            >
-                                <LeaveIcon size={28} color="white" />
-                            </Box>
-                            <Box sx={{ flex: 1 }}>
-                                <Typography sx={{ fontWeight: 700, fontSize: '1.2rem', color: '#1E293B', mb: 0.5 }}>
-                                    {leaveTypeName}
-                                </Typography>
-                                <Box
-                                    sx={{
-                                        display: 'inline-flex',
-                                        alignItems: 'center',
-                                        gap: 0.5,
-                                        px: 1.5,
-                                        py: 0.5,
-                                        borderRadius: 1,
-                                        bgcolor: statusInfo.bgColor,
-                                    }}
-                                >
-                                    <StatusIcon size={14} color={statusInfo.textColor} />
-                                    <Typography sx={{ fontSize: '0.85rem', fontWeight: 600, color: statusInfo.textColor }}>
-                                        {statusInfo.label}
-                                    </Typography>
-                                </Box>
-                            </Box>
-                        </Box>
-
-                        {/* Date Range */}
+                        {/* Header */}
                         <Box
                             sx={{
                                 display: 'flex',
                                 alignItems: 'center',
-                                gap: 1.5,
-                                p: 1.5,
-                                borderRadius: 1,
-                                bgcolor: 'white',
+                                justifyContent: 'space-between',
+                                px: 2.5,
+                                py: 1.5,
+                                borderBottom: '1px solid #F1F5F9',
+                                flexShrink: 0,
                             }}
                         >
-                            <Calendar size={20} color={config.color} />
                             <Box>
-                                <Typography sx={{ fontSize: '0.9rem', fontWeight: 600, color: '#1E293B' }}>
-                                    {isSameDay 
-                                        ? startDate.format('D MMMM YYYY')
-                                        : `${startDate.format('D MMM')} - ${endDate.format('D MMM YYYY')}`
-                                    }
-                                </Typography>
-                                <Typography sx={{ fontSize: '0.8rem', color: '#64748B' }}>
-                                    {t('total_days_label', 'รวม')} {leave.totalDays} {t('leave_days_unit', 'วัน')}
-                                    {leave.startTime && leave.endTime && 
-                                        ` (${leave.startTime} - ${leave.endTime})`
-                                    }
-                                </Typography>
+                                <Drawer.Title asChild>
+                                    <Typography variant="h6" sx={{ fontWeight: 700, color: '#1E293B' }}>
+                                        {t('leave_details', 'รายละเอียดใบลา')}
+                                    </Typography>
+                                </Drawer.Title>
+                                {leave.leaveCode && (
+                                    <Drawer.Description asChild>
+                                        <Typography sx={{ fontSize: '0.8rem', color: '#64748B' }}>
+                                            {t('leave_code', 'รหัส')}: {leave.leaveCode}
+                                        </Typography>
+                                    </Drawer.Description>
+                                )}
                             </Box>
+                            <IconButton onClick={onClose} size="small">
+                                <CloseCircle size={32} color="#64748B" />
+                            </IconButton>
                         </Box>
-                    </Card>
-                    
-                    {/* Reason */}
-                    <Card
-                        sx={{
-                            borderRadius: 1,
-                            p: 2,
-                            mb: 2,
-                            border: '1px solid #F1F5F9',
-                            boxShadow: 'none'
-                        }}
-                    >
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                            <DocumentText size={18} color="#64748B" />
-                            <Typography sx={{ fontWeight: 600, color: '#475569', fontSize: '0.9rem' }}>
-                                {t('leave_reason', 'เหตุผลการลา')}
-                            </Typography>
-                        </Box>
-                        <Typography sx={{ color: '#1E293B', fontSize: '0.95rem', pl: 3.5 }}>
-                            {leave.reason}
-                        </Typography>
-                    </Card>
 
-                    {/* Contact Info */}
-                    {(leave.contactPhone || leave.contactAddress) && (
-                        <Card
-                            sx={{
-                                borderRadius: 1,
-                                p: 2,
-                                mb: 2,
-                                border: '1px solid #F1F5F9',
-                                boxShadow: 'none'
+                        {/* Content */}
+                        <Box 
+                            sx={{ 
+                                px: 2.5, 
+                                py: 2, 
+                                overflowY: 'auto', 
+                                overflowX: 'hidden', 
+                                flex: 1,
+                                overscrollBehavior: 'contain'
                             }}
                         >
-                            <Typography sx={{ fontWeight: 600, color: '#475569', fontSize: '0.9rem', mb: 1.5 }}>
-                                {t('contact_info', 'ข้อมูลติดต่อระหว่างลา')}
-                            </Typography>
-                            {leave.contactPhone && (
-                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                                    <Call size={16} color="#64748B" />
-                                    <Typography sx={{ color: '#1E293B', fontSize: '0.9rem' }}>
-                                        {leave.contactPhone}
-                                    </Typography>
-                                </Box>
-                            )}
-                            {leave.contactAddress && (
-                                <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
-                                    <Location size={16} color="#64748B" style={{ marginTop: 2 }} />
-                                    <Typography sx={{ color: '#1E293B', fontSize: '0.9rem' }}>
-                                        {leave.contactAddress}
-                                    </Typography>
-                                </Box>
-                            )}
-                        </Card>
-                    )}
-
-                    {/* Attachments */}
-                    {leave.attachments && leave.attachments.length > 0 && (
-                        <Card
-                            sx={{
-                                borderRadius: 1,
-                                p: 2,
-                                mb: 2,
-                                border: '1px solid #F1F5F9',
-                                boxShadow: 'none'
-                            }}
-                        >
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 }}>
-                                <Paperclip2 size={18} color="#64748B" />
-                                <Typography sx={{ fontWeight: 600, color: '#475569', fontSize: '0.9rem' }}>
-                                    {t('leave_attachments', 'เอกสารแนบ')} ({leave.attachments.length})
-                                </Typography>
-                            </Box>
-                            <Stack spacing={1}>
-                                {leave.attachments.map((attachment, index) => {
-                                    const isImage = attachment.mimeType?.startsWith('image/');
-                                    return (
+                            {/* Leave Type & Status Card */}
+                            <Card
+                                sx={{
+                                    borderRadius: 1,
+                                    p: 2.5,
+                                    mb: 2,
+                                    background: `linear-gradient(135deg, ${config.color}15 0%, ${config.color}05 100%)`,
+                                    border: `1px solid ${config.color}30`,
+                                    boxShadow: 'none'
+                                }}
+                            >
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
                                     <Box
-                                        key={attachment.id}
-                                        onClick={() => handleOpenAttachment(index)}
                                         sx={{
+                                            width: 56,
+                                            height: 56,
+                                            borderRadius: 1,
+                                            bgcolor: config.color,
                                             display: 'flex',
                                             alignItems: 'center',
-                                            gap: 1.5,
-                                            p: 1.5,
-                                            borderRadius: 2,
-                                            bgcolor: '#F8FAFC',
-                                            textDecoration: 'none',
-                                            transition: 'all 0.15s ease',
-                                            cursor: 'pointer',
+                                            justifyContent: 'center',
+                                        }}
+                                    >
+                                        <LeaveIcon size={28} color="white" />
+                                    </Box>
+                                    <Box sx={{ flex: 1 }}>
+                                        <Typography sx={{ fontWeight: 700, fontSize: '1.2rem', color: '#1E293B', mb: 0.5 }}>
+                                            {leaveTypeName}
+                                        </Typography>
+                                        <Box
+                                            sx={{
+                                                display: 'inline-flex',
+                                                alignItems: 'center',
+                                                gap: 0.5,
+                                                px: 1.5,
+                                                py: 0.5,
+                                                borderRadius: 1,
+                                                bgcolor: statusInfo.bgColor,
+                                            }}
+                                        >
+                                            <StatusIcon size={14} color={statusInfo.textColor} />
+                                            <Typography sx={{ fontSize: '0.85rem', fontWeight: 600, color: statusInfo.textColor }}>
+                                                {statusInfo.label}
+                                            </Typography>
+                                        </Box>
+                                    </Box>
+                                </Box>
+
+                                {/* Date Range */}
+                                <Box
+                                    sx={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: 1.5,
+                                        p: 1.5,
+                                        borderRadius: 1,
+                                        bgcolor: 'white',
+                                    }}
+                                >
+                                    <Calendar size={20} color={config.color} />
+                                    <Box>
+                                        <Typography sx={{ fontSize: '0.9rem', fontWeight: 600, color: '#1E293B' }}>
+                                            {isSameDay 
+                                                ? startDate.format('D MMMM YYYY')
+                                                : `${startDate.format('D MMM')} - ${endDate.format('D MMM YYYY')}`
+                                            }
+                                        </Typography>
+                                        <Typography sx={{ fontSize: '0.8rem', color: '#64748B' }}>
+                                            {t('total_days_label', 'รวม')} {leave.totalDays} {t('leave_days_unit', 'วัน')}
+                                            {leave.startTime && leave.endTime && 
+                                                ` (${leave.startTime} - ${leave.endTime})`
+                                            }
+                                        </Typography>
+                                    </Box>
+                                </Box>
+                            </Card>
+                            
+                            {/* Reason */}
+                            <Card
+                                sx={{
+                                    borderRadius: 1,
+                                    p: 2,
+                                    mb: 2,
+                                    border: '1px solid #F1F5F9',
+                                    boxShadow: 'none'
+                                }}
+                            >
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                                    <DocumentText size={18} color="#64748B" />
+                                    <Typography sx={{ fontWeight: 600, color: '#475569', fontSize: '0.9rem' }}>
+                                        {t('leave_reason', 'เหตุผลการลา')}
+                                    </Typography>
+                                </Box>
+                                <Typography sx={{ color: '#1E293B', fontSize: '0.95rem', pl: 3.5 }}>
+                                    {leave.reason}
+                                </Typography>
+                            </Card>
+
+                            {/* Contact Info */}
+                            {(leave.contactPhone || leave.contactAddress) && (
+                                <Card
+                                    sx={{
+                                        borderRadius: 1,
+                                        p: 2,
+                                        mb: 2,
+                                        border: '1px solid #F1F5F9',
+                                        boxShadow: 'none'
+                                    }}
+                                >
+                                    <Typography sx={{ fontWeight: 600, color: '#475569', fontSize: '0.9rem', mb: 1.5 }}>
+                                        {t('contact_info', 'ข้อมูลติดต่อระหว่างลา')}
+                                    </Typography>
+                                    {leave.contactPhone && (
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                                            <Call size={16} color="#64748B" />
+                                            <Typography sx={{ color: '#1E293B', fontSize: '0.9rem' }}>
+                                                {leave.contactPhone}
+                                            </Typography>
+                                        </Box>
+                                    )}
+                                    {leave.contactAddress && (
+                                        <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
+                                            <Location size={16} color="#64748B" style={{ marginTop: 2 }} />
+                                            <Typography sx={{ color: '#1E293B', fontSize: '0.9rem' }}>
+                                                {leave.contactAddress}
+                                            </Typography>
+                                        </Box>
+                                    )}
+                                </Card>
+                            )}
+
+                            {/* Attachments */}
+                            {leave.attachments && leave.attachments.length > 0 && (
+                                <Card
+                                    sx={{
+                                        borderRadius: 1,
+                                        p: 2,
+                                        mb: 2,
+                                        border: '1px solid #F1F5F9',
+                                        boxShadow: 'none'
+                                    }}
+                                >
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 }}>
+                                        <Paperclip2 size={18} color="#64748B" />
+                                        <Typography sx={{ fontWeight: 600, color: '#475569', fontSize: '0.9rem' }}>
+                                            {t('leave_attachments', 'เอกสารแนบ')} ({leave.attachments.length})
+                                        </Typography>
+                                    </Box>
+                                    <Stack spacing={1}>
+                                        {leave.attachments.map((attachment, index) => {
+                                            const isImage = attachment.mimeType?.startsWith('image/');
+                                            return (
+                                            <Box
+                                                key={attachment.id}
+                                                onClick={() => handleOpenAttachment(index)}
+                                                sx={{
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    gap: 1.5,
+                                                    p: 1.5,
+                                                    borderRadius: 2,
+                                                    bgcolor: '#F8FAFC',
+                                                    textDecoration: 'none',
+                                                    transition: 'all 0.15s ease',
+                                                    cursor: 'pointer',
+                                                    '&:hover': {
+                                                        bgcolor: '#F1F5F9',
+                                                    },
+                                                    '&:active': {
+                                                        transform: 'scale(0.98)',
+                                                    },
+                                                }}
+                                            >
+                                                {isImage ? (
+                                                    <Box
+                                                        sx={{
+                                                            width: 48,
+                                                            height: 48,
+                                                            borderRadius: 1,
+                                                            overflow: 'hidden',
+                                                            flexShrink: 0,
+                                                        }}
+                                                    >
+                                                        <Box
+                                                            component="img"
+                                                            src={attachment.filePath}
+                                                            alt={attachment.fileName}
+                                                            sx={{
+                                                                width: '100%',
+                                                                height: '100%',
+                                                                objectFit: 'cover',
+                                                            }}
+                                                        />
+                                                    </Box>
+                                                ) : (
+                                                    <Box
+                                                        sx={{
+                                                            width: 48,
+                                                            height: 48,
+                                                            borderRadius: 1,
+                                                            bgcolor: '#E2E8F0',
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'center',
+                                                            flexShrink: 0,
+                                                        }}
+                                                    >
+                                                        <DocumentText size={24} color="#64748B" />
+                                                    </Box>
+                                                )}
+                                                <Box sx={{ flex: 1, minWidth: 0 }}>
+                                                    <Typography
+                                                        sx={{
+                                                            fontSize: '0.85rem',
+                                                            fontWeight: 500,
+                                                            color: '#334155',
+                                                            whiteSpace: 'nowrap',
+                                                            overflow: 'hidden',
+                                                            textOverflow: 'ellipsis',
+                                                        }}
+                                                    >
+                                                        {attachment.fileName}
+                                                    </Typography>
+                                                    <Typography sx={{ fontSize: '0.75rem', color: '#94A3B8' }}>
+                                                        {(attachment.fileSize / 1024).toFixed(1)} KB
+                                                    </Typography>
+                                                </Box>
+                                                <Gallery size={20} color="#94A3B8" />
+                                            </Box>
+                                            );
+                                        })}
+                                    </Stack>
+                                </Card>
+                            )}
+
+                            {/* Rejection Reason */}
+                            {leave.status === 'rejected' && leave.rejectReason && (
+                                <Card
+                                    sx={{
+                                        borderRadius: 1,
+                                        p: 2,
+                                        mb: 2,
+                                        bgcolor: '#FEF2F2',
+                                        border: '1px solid #FECACA',
+                                        boxShadow: 'none'
+                                    }}
+                                >
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                                        <CloseSquare size={18} color="#DC2626" />
+                                        <Typography sx={{ fontWeight: 600, color: '#DC2626', fontSize: '0.9rem' }}>
+                                            {t('reject_reason', 'เหตุผลที่ไม่อนุมัติ')}
+                                        </Typography>
+                                    </Box>
+                                    <Typography sx={{ color: '#991B1B', fontSize: '0.9rem', pl: 3.5 }}>
+                                        {leave.rejectReason}
+                                    </Typography>
+                                </Card>
+                            )}
+
+                            {/* Cancellation Reason */}
+                            {leave.status === 'cancelled' && (
+                                <Card
+                                    sx={{
+                                        borderRadius: 1,
+                                        p: 2,
+                                        mb: 2,
+                                        bgcolor: '#FFF7ED',
+                                        border: '1px solid #FDBA74',
+                                        boxShadow: 'none'
+                                    }}
+                                >
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                                        <Forbidden2 size={18} color="#EA580C" />
+                                        <Typography sx={{ fontWeight: 600, color: '#EA580C', fontSize: '0.9rem' }}>
+                                            {t('status_cancelled', 'ยกเลิกใบลาแล้ว')}
+                                        </Typography>
+                                    </Box>
+                                    {leave.cancelReason && (
+                                        <Typography sx={{ color: '#9A3412', fontSize: '0.9rem', pl: 3.5, mb: 1 }}>
+                                            <strong>{t('cancel_reason_label', 'เหตุผล')}:</strong> {leave.cancelReason}
+                                        </Typography>
+                                    )}
+                                    {leave.cancelledAt && (
+                                        <Typography sx={{ color: '#C2410C', fontSize: '0.8rem', pl: 3.5 }}>
+                                            {t('cancelled_at', 'ยกเลิกเมื่อ')} {dayjs(leave.cancelledAt).locale(locale).format('D MMMM YYYY HH:mm')}
+                                        </Typography>
+                                    )}
+                                </Card>
+                            )}
+
+                            {/* Approval Flow */}
+                            {leave.approvals && leave.approvals.length > 0 && (
+                                <Card
+                                    sx={{
+                                        borderRadius: 1,
+                                        p: 2,
+                                        border: '1px solid #F1F5F9',
+                                        boxShadow: 'none'
+                                    }}
+                                >
+                                    <Typography sx={{ fontWeight: 600, color: '#475569', fontSize: '0.9rem', mb: 2 }}>
+                                        {t('approval_status', 'สถานะการอนุมัติ')}
+                                    </Typography>
+                                    <Stack spacing={0}>
+                                        {leave.approvals.map((approval, index) => {
+                                            const approvalStatus = getStatusInfo(approval.status);
+                                            const ApprovalIcon = approvalStatus.icon;
+                                            const isLast = index === leave.approvals.length - 1;
+
+                                            return (
+                                                <Box key={approval.id} sx={{ display: 'flex', gap: 1.5 }}>
+                                                    {/* Timeline indicator */}
+                                                    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                                                        <Box
+                                                            sx={{
+                                                                width: 32,
+                                                                height: 32,
+                                                                borderRadius: '50%',
+                                                                bgcolor: approvalStatus.bgColor,
+                                                                display: 'flex',
+                                                                alignItems: 'center',
+                                                                justifyContent: 'center',
+                                                                border: `2px solid ${approvalStatus.textColor}`,
+                                                            }}
+                                                        >
+                                                            <ApprovalIcon size={16} color={approvalStatus.textColor} />
+                                                        </Box>
+                                                        {!isLast && (
+                                                            <Box
+                                                                sx={{
+                                                                    width: 2,
+                                                                    flex: 1,
+                                                                    minHeight: 24,
+                                                                    bgcolor: '#E2E8F0',
+                                                                    my: 0.5,
+                                                                }}
+                                                            />
+                                                        )}
+                                                    </Box>
+
+                                                    {/* Approval Content */}
+                                                    <Box sx={{ flex: 1, pb: isLast ? 0 : 2 }}>
+                                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
+                                                            <Typography sx={{ fontWeight: 600, color: '#1E293B', fontSize: '0.9rem' }}>
+                                                                {t('order_no', 'ลำดับที่')} {index + 1}
+                                                            </Typography>
+                                                            <Chip
+                                                                label={approvalStatus.label}
+                                                                size="small"
+                                                                sx={{
+                                                                    height: 22,
+                                                                    bgcolor: approvalStatus.bgColor,
+                                                                    color: approvalStatus.textColor,
+                                                                    fontWeight: 600,
+                                                                    fontSize: '0.7rem',
+                                                                }}
+                                                            />
+                                                        </Box>
+                                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
+                                                            
+                                                            <Typography sx={{ color: '#475569', fontSize: '0.85rem' }}>
+                                                                {approval.approver ? `${approval.approver.firstName} ${approval.approver.lastName}` : t('not_specified', 'ไม่ระบุ')}
+                                                                {approval.approver?.position && (
+                                                                    <Typography component="span" sx={{ color: '#94A3B8', fontSize: '0.8rem' }}>
+                                                                        {' '}• {approval.approver.position}
+                                                                    </Typography>
+                                                                )}
+                                                            </Typography>
+                                                        </Box>
+                                                        {approval.actionAt && (
+                                                            <Typography sx={{ color: '#94A3B8', fontSize: '0.8rem' }}>
+                                                                {dayjs(approval.actionAt).locale(locale).format('D MMM YYYY HH:mm')}
+                                                            </Typography>
+                                                        )}
+                                                        {approval.comment && (
+                                                            <Box
+                                                                sx={{
+                                                                    mt: 1,
+                                                                    p: 1.5,
+                                                                    borderRadius: 2,
+                                                                    bgcolor: '#F8FAFC',
+                                                                    borderLeft: `3px solid ${approvalStatus.textColor}`,
+                                                                }}
+                                                            >
+                                                                <Typography sx={{ color: '#475569', fontSize: '0.85rem' }}>
+                                                                    "{approval.comment}"
+                                                                </Typography>
+                                                            </Box>
+                                                        )}
+                                                    </Box>
+                                                </Box>
+                                            );
+                                        })}
+                                    </Stack>
+                                </Card>
+                            )}
+
+                            {/* Created Date */}
+                            <Box sx={{ mt: 2, textAlign: 'center' , mb:2 }}>
+                                <Typography sx={{ color: '#94A3B8', fontSize: '0.8rem' }}>
+                                    {t('submitted_at', 'ยื่นเมื่อ')} {dayjs(leave.createdAt).locale(locale).format('D MMMM YYYY HH:mm')}
+                                </Typography>
+                            </Box>
+
+                            {/* Cancel Button - Only show for pending status and if onCancel is provided */}
+                            {leave.status === 'pending' && onCancel && (
+                                <Box sx={{ mt: 3 , mb:3}}>
+                                    <Button
+                                        fullWidth
+                                        variant="outlined"
+                                        color="error"
+                                        onClick={onCancel}
+                                        startIcon={<CloseSquare size={18} color="#DC2626" />}
+                                        sx={{
+                                            borderRadius: 1,
+                                            py: 1.5,
+                                            fontWeight: 600,
+                                            borderColor: '#DC2626',
+                                            color: '#DC2626',
                                             '&:hover': {
-                                                bgcolor: '#F1F5F9',
-                                            },
-                                            '&:active': {
-                                                transform: 'scale(0.98)',
+                                                bgcolor: '#FEF2F2',
+                                                borderColor: '#DC2626',
                                             },
                                         }}
                                     >
-                                        {isImage ? (
-                                            <Box
-                                                sx={{
-                                                    width: 48,
-                                                    height: 48,
-                                                    borderRadius: 1,
-                                                    overflow: 'hidden',
-                                                    flexShrink: 0,
-                                                }}
-                                            >
-                                                <Box
-                                                    component="img"
-                                                    src={attachment.filePath}
-                                                    alt={attachment.fileName}
-                                                    sx={{
-                                                        width: '100%',
-                                                        height: '100%',
-                                                        objectFit: 'cover',
-                                                    }}
-                                                />
-                                            </Box>
-                                        ) : (
-                                            <Box
-                                                sx={{
-                                                    width: 48,
-                                                    height: 48,
-                                                    borderRadius: 1,
-                                                    bgcolor: '#E2E8F0',
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    justifyContent: 'center',
-                                                    flexShrink: 0,
-                                                }}
-                                            >
-                                                <DocumentText size={24} color="#64748B" />
-                                            </Box>
-                                        )}
-                                        <Box sx={{ flex: 1, minWidth: 0 }}>
-                                            <Typography
-                                                sx={{
-                                                    fontSize: '0.85rem',
-                                                    fontWeight: 500,
-                                                    color: '#334155',
-                                                    whiteSpace: 'nowrap',
-                                                    overflow: 'hidden',
-                                                    textOverflow: 'ellipsis',
-                                                }}
-                                            >
-                                                {attachment.fileName}
-                                            </Typography>
-                                            <Typography sx={{ fontSize: '0.75rem', color: '#94A3B8' }}>
-                                                {(attachment.fileSize / 1024).toFixed(1)} KB
-                                            </Typography>
-                                        </Box>
-                                        <Gallery size={20} color="#94A3B8" />
-                                    </Box>
-                                    );
-                                })}
-                            </Stack>
-                        </Card>
-                    )}
-
-                    {/* Rejection Reason */}
-                    {leave.status === 'rejected' && leave.rejectReason && (
-                        <Card
-                            sx={{
-                                borderRadius: 1,
-                                p: 2,
-                                mb: 2,
-                                bgcolor: '#FEF2F2',
-                                border: '1px solid #FECACA',
-                                boxShadow: 'none'
-                            }}
-                        >
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                                <CloseSquare size={18} color="#DC2626" />
-                                <Typography sx={{ fontWeight: 600, color: '#DC2626', fontSize: '0.9rem' }}>
-                                    {t('reject_reason', 'เหตุผลที่ไม่อนุมัติ')}
-                                </Typography>
-                            </Box>
-                            <Typography sx={{ color: '#991B1B', fontSize: '0.9rem', pl: 3.5 }}>
-                                {leave.rejectReason}
-                            </Typography>
-                        </Card>
-                    )}
-
-                    {/* Cancellation Reason */}
-                    {leave.status === 'cancelled' && (
-                        <Card
-                            sx={{
-                                borderRadius: 1,
-                                p: 2,
-                                mb: 2,
-                                bgcolor: '#FFF7ED',
-                                border: '1px solid #FDBA74',
-                                boxShadow: 'none'
-                            }}
-                        >
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                                <Forbidden2 size={18} color="#EA580C" />
-                                <Typography sx={{ fontWeight: 600, color: '#EA580C', fontSize: '0.9rem' }}>
-                                    {t('status_cancelled', 'ยกเลิกใบลาแล้ว')}
-                                </Typography>
-                            </Box>
-                            {leave.cancelReason && (
-                                <Typography sx={{ color: '#9A3412', fontSize: '0.9rem', pl: 3.5, mb: 1 }}>
-                                    <strong>{t('cancel_reason_label', 'เหตุผล')}:</strong> {leave.cancelReason}
-                                </Typography>
+                                        {t('cancel_leave_btn', 'ยกเลิกใบลา')}
+                                    </Button>
+                                </Box>
                             )}
-                            {leave.cancelledAt && (
-                                <Typography sx={{ color: '#C2410C', fontSize: '0.8rem', pl: 3.5 }}>
-                                    {t('cancelled_at', 'ยกเลิกเมื่อ')} {dayjs(leave.cancelledAt).locale(locale).format('D MMMM YYYY HH:mm')}
-                                </Typography>
-                            )}
-                        </Card>
-                    )}
-
-                    {/* Approval Flow */}
-                    {leave.approvals && leave.approvals.length > 0 && (
-                        <Card
-                            sx={{
-                                borderRadius: 1,
-                                p: 2,
-                                border: '1px solid #F1F5F9',
-                                boxShadow: 'none'
-                            }}
-                        >
-                            <Typography sx={{ fontWeight: 600, color: '#475569', fontSize: '0.9rem', mb: 2 }}>
-                                {t('approval_status', 'สถานะการอนุมัติ')}
-                            </Typography>
-                            <Stack spacing={0}>
-                                {leave.approvals.map((approval, index) => {
-                                    const approvalStatus = getStatusInfo(approval.status);
-                                    const ApprovalIcon = approvalStatus.icon;
-                                    const isLast = index === leave.approvals.length - 1;
-
-                                    return (
-                                        <Box key={approval.id} sx={{ display: 'flex', gap: 1.5 }}>
-                                            {/* Timeline indicator */}
-                                            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                                                <Box
-                                                    sx={{
-                                                        width: 32,
-                                                        height: 32,
-                                                        borderRadius: '50%',
-                                                        bgcolor: approvalStatus.bgColor,
-                                                        display: 'flex',
-                                                        alignItems: 'center',
-                                                        justifyContent: 'center',
-                                                        border: `2px solid ${approvalStatus.textColor}`,
-                                                    }}
-                                                >
-                                                    <ApprovalIcon size={16} color={approvalStatus.textColor} />
-                                                </Box>
-                                                {!isLast && (
-                                                    <Box
-                                                        sx={{
-                                                            width: 2,
-                                                            flex: 1,
-                                                            minHeight: 24,
-                                                            bgcolor: '#E2E8F0',
-                                                            my: 0.5,
-                                                        }}
-                                                    />
-                                                )}
-                                            </Box>
-
-                                            {/* Approval Content */}
-                                            <Box sx={{ flex: 1, pb: isLast ? 0 : 2 }}>
-                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
-                                                    <Typography sx={{ fontWeight: 600, color: '#1E293B', fontSize: '0.9rem' }}>
-                                                        {t('order_no', 'ลำดับที่')} {index + 1}
-                                                    </Typography>
-                                                    <Chip
-                                                        label={approvalStatus.label}
-                                                        size="small"
-                                                        sx={{
-                                                            height: 22,
-                                                            bgcolor: approvalStatus.bgColor,
-                                                            color: approvalStatus.textColor,
-                                                            fontWeight: 600,
-                                                            fontSize: '0.7rem',
-                                                        }}
-                                                    />
-                                                </Box>
-                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
-                                                    
-                                                    <Typography sx={{ color: '#475569', fontSize: '0.85rem' }}>
-                                                        {approval.approver ? `${approval.approver.firstName} ${approval.approver.lastName}` : t('not_specified', 'ไม่ระบุ')}
-                                                        {approval.approver?.position && (
-                                                            <Typography component="span" sx={{ color: '#94A3B8', fontSize: '0.8rem' }}>
-                                                                {' '}• {approval.approver.position}
-                                                            </Typography>
-                                                        )}
-                                                    </Typography>
-                                                </Box>
-                                                {approval.actionAt && (
-                                                    <Typography sx={{ color: '#94A3B8', fontSize: '0.8rem' }}>
-                                                        {dayjs(approval.actionAt).locale(locale).format('D MMM YYYY HH:mm')}
-                                                    </Typography>
-                                                )}
-                                                {approval.comment && (
-                                                    <Box
-                                                        sx={{
-                                                            mt: 1,
-                                                            p: 1.5,
-                                                            borderRadius: 2,
-                                                            bgcolor: '#F8FAFC',
-                                                            borderLeft: `3px solid ${approvalStatus.textColor}`,
-                                                        }}
-                                                    >
-                                                        <Typography sx={{ color: '#475569', fontSize: '0.85rem' }}>
-                                                            "{approval.comment}"
-                                                        </Typography>
-                                                    </Box>
-                                                )}
-                                            </Box>
-                                        </Box>
-                                    );
-                                })}
-                            </Stack>
-                        </Card>
-                    )}
-
-                    {/* Created Date */}
-                    <Box sx={{ mt: 2, textAlign: 'center' , mb:2 }}>
-                        <Typography sx={{ color: '#94A3B8', fontSize: '0.8rem' }}>
-                            {t('submitted_at', 'ยื่นเมื่อ')} {dayjs(leave.createdAt).locale(locale).format('D MMMM YYYY HH:mm')}
-                        </Typography>
-                    </Box>
-
-                    {/* Cancel Button - Only show for pending status and if onCancel is provided */}
-                    {leave.status === 'pending' && onCancel && (
-                        <Box sx={{ mt: 3 , mb:3}}>
-                            <Button
-                                fullWidth
-                                variant="outlined"
-                                color="error"
-                                onClick={onCancel}
-                                startIcon={<CloseSquare size={18} color="#DC2626" />}
-                                sx={{
-                                    borderRadius: 1,
-                                    py: 1.5,
-                                    fontWeight: 600,
-                                    borderColor: '#DC2626',
-                                    color: '#DC2626',
-                                    '&:hover': {
-                                        bgcolor: '#FEF2F2',
-                                        borderColor: '#DC2626',
-                                    },
-                                }}
-                            >
-                                {t('cancel_leave_btn', 'ยกเลิกใบลา')}
-                            </Button>
                         </Box>
+                    </Box>
                     )}
-                </Box>
-            </Box>
-            )}
+                </Drawer.Content>
+            </Drawer.Portal>
 
             {/* Attachment Viewer Modal */}
             <AttachmentViewer
@@ -1140,7 +1004,7 @@ const LeaveDetailDrawer: React.FC<LeaveDetailDrawerProps> = ({ open, onClose, le
                 attachments={leave?.attachments || []}
                 initialIndex={selectedAttachmentIndex}
             />
-        </Drawer>
+        </Drawer.Root>
     );
 };
 

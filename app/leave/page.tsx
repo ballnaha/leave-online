@@ -824,7 +824,7 @@ export default function LeavePage() {
                         </Card>
                     ) : (
                         <Fade in>
-                            <Stack spacing={1.5}>
+                            <Stack spacing={1}>
                                 {recentLeaves.map((leave) => {
                                     const config = getLeaveConfig(leave.leaveType || leave.leaveCode || 'default');
                                     const startDate = dayjs(leave.startDate);
@@ -837,7 +837,7 @@ export default function LeavePage() {
                                             onClick={() => handleOpenDetail(leave)}
                                             sx={{
                                                 borderRadius: 1,
-                                                p: 2,
+                                                p: 2.5,
                                                 display: 'flex',
                                                 alignItems: 'center',
                                                 gap: 2,

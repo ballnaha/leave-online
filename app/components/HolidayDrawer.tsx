@@ -238,7 +238,7 @@ export default function HolidayDrawer({ open, onClose, initialYear }: HolidayDra
                                                     alignItems: 'center',
                                                     gap: 2,
                                                     p: 1.5,
-                                                    borderRadius: 2,
+                                                    borderRadius: 1,
                                                     bgcolor: isPast ? '#F9FAFB' : 'white',
                                                     border: '1px solid #E5E7EB',
                                                     opacity: isPast ? 0.7 : 1,
@@ -253,7 +253,7 @@ export default function HolidayDrawer({ open, onClose, initialYear }: HolidayDra
                                                     sx={{
                                                         minWidth: 50,
                                                         height: 50,
-                                                        borderRadius: 2,
+                                                        borderRadius: 1,
                                                         bgcolor: '#FEE2E2',
                                                         display: 'flex',
                                                         flexDirection: 'column',

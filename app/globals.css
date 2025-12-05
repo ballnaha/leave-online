@@ -75,3 +75,43 @@ body {
 #nprogress .spinner {
   display: none !important;
 }
+
+/* Vaul Drawer Styles - Native-like animations */
+[vaul-drawer] {
+  touch-action: none;
+}
+
+[vaul-drawer-overlay] {
+  animation: fadeIn 0.3s ease-out;
+}
+
+[vaul-drawer-content] {
+  animation: slideUp 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+[vaul-drawer][vaul-drawer-direction="bottom"] [vaul-drawer-content] {
+  transform: translate3d(0, 0, 0);
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    transform: translate3d(0, 100%, 0);
+  }
+  to {
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+/* Prevent body scroll when drawer is open */
+[vaul-drawer-wrapper][vaul-drawer-visible="true"] {
+  overflow: hidden;
+}

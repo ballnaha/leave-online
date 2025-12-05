@@ -196,9 +196,21 @@ export async function notifyApprovalPending(
   requesterName: string,
   leaveType: string
 ): Promise<NotificationResult> {
+  const thLeaveType = translateLeaveType(leaveType, 'th');
+  const enLeaveType = translateLeaveType(leaveType, 'en');
+  const myLeaveType = translateLeaveType(leaveType, 'my');
+
   return notifyUser(approverId, 'approval_pending', {
-    title: '📋 มีใบลารออนุมัติ',
-    message: `${requesterName} ขอ${leaveType}`,
+    title: {
+      en: '📋 Leave Request Pending',
+      th: '📋 มีใบลารออนุมัติ',
+      my: '📋 ခွင့်တောင်းဆိုမှုစောင့်ဆိုင်းနေသည်'
+    },
+    message: {
+      en: `${requesterName} requested ${enLeaveType}`,
+      th: `${requesterName} ขอ${thLeaveType}`,
+      my: `${requesterName} က ${myLeaveType} တောင်းဆိုသည်`
+    },
     data: {
       type: 'approval_pending',
       leaveRequestId,
@@ -215,9 +227,21 @@ export async function notifyLeaveApproved(
   approverName: string,
   leaveType: string
 ): Promise<NotificationResult> {
+  const thLeaveType = translateLeaveType(leaveType, 'th');
+  const enLeaveType = translateLeaveType(leaveType, 'en');
+  const myLeaveType = translateLeaveType(leaveType, 'my');
+
   return notifyUser(userId, 'approved', {
-    title: '✅ ใบลาได้รับการอนุมัติ',
-    message: `${leaveType}ของคุณได้รับการอนุมัติโดย ${approverName}`,
+    title: {
+      en: '✅ Leave Approved',
+      th: '✅ ใบลาได้รับการอนุมัติ',
+      my: '✅ ခွင့်အတည်ပြုပြီး'
+    },
+    message: {
+      en: `Your ${enLeaveType} has been approved by ${approverName}`,
+      th: `${thLeaveType}ของคุณได้รับการอนุมัติโดย ${approverName}`,
+      my: `သင်၏ ${myLeaveType} ကို ${approverName} က အတည်ပြုပြီး`
+    },
     data: {
       type: 'approved',
       leaveRequestId,
@@ -235,9 +259,21 @@ export async function notifyLeaveRejected(
   leaveType: string,
   reason?: string
 ): Promise<NotificationResult> {
+  const thLeaveType = translateLeaveType(leaveType, 'th');
+  const enLeaveType = translateLeaveType(leaveType, 'en');
+  const myLeaveType = translateLeaveType(leaveType, 'my');
+
   return notifyUser(userId, 'rejected', {
-    title: '❌ ใบลาถูกปฏิเสธ',
-    message: `${leaveType}ของคุณถูกปฏิเสธโดย ${approverName}${reason ? `: ${reason}` : ''}`,
+    title: {
+      en: '❌ Leave Rejected',
+      th: '❌ ใบลาถูกปฏิเสธ',
+      my: '❌ ခွင့်ပယ်ချခံရသည်'
+    },
+    message: {
+      en: `Your ${enLeaveType} has been rejected by ${approverName}${reason ? `: ${reason}` : ''}`,
+      th: `${thLeaveType}ของคุณถูกปฏิเสธโดย ${approverName}${reason ? `: ${reason}` : ''}`,
+      my: `သင်၏ ${myLeaveType} ကို ${approverName} က ပယ်ချလိုက်သည်${reason ? `: ${reason}` : ''}`
+    },
     data: {
       type: 'rejected',
       leaveRequestId,
@@ -254,9 +290,21 @@ export async function notifyEscalated(
   leaveRequestId: number,
   leaveType: string
 ): Promise<NotificationResult> {
+  const thLeaveType = translateLeaveType(leaveType, 'th');
+  const enLeaveType = translateLeaveType(leaveType, 'en');
+  const myLeaveType = translateLeaveType(leaveType, 'my');
+
   return notifyUser(userId, 'escalated', {
-    title: '⚡ ใบลาถูกส่งต่อ',
-    message: `${leaveType}ของคุณถูกส่งไปยังผู้จัดการฝ่ายบุคคลเนื่องจากเกินเวลากำหนด`,
+    title: {
+      en: '⚡ Leave Escalated',
+      th: '⚡ ใบลาถูกส่งต่อ',
+      my: '⚡ ခွင့်တိုးမြှင့်တင်ပြပြီး'
+    },
+    message: {
+      en: `Your ${enLeaveType} has been escalated to HR Manager due to timeout`,
+      th: `${thLeaveType}ของคุณถูกส่งไปยังผู้จัดการฝ่ายบุคคลเนื่องจากเกินเวลากำหนด`,
+      my: `သင်၏ ${myLeaveType} ကို အချိန်လွန်သောကြောင့် HR Manager ထံ တင်ပြလိုက်သည်`
+    },
     data: {
       type: 'escalated',
       leaveRequestId,
@@ -274,9 +322,21 @@ export async function notifyApprovalReminder(
   leaveType: string,
   hoursLeft: number
 ): Promise<NotificationResult> {
+  const thLeaveType = translateLeaveType(leaveType, 'th');
+  const enLeaveType = translateLeaveType(leaveType, 'en');
+  const myLeaveType = translateLeaveType(leaveType, 'my');
+
   return notifyUser(approverId, 'reminder', {
-    title: '⏰ เตือนอนุมัติใบลา',
-    message: `${requesterName} รอ${leaveType} (เหลือเวลา ${hoursLeft} ชม.)`,
+    title: {
+      en: '⏰ Leave Approval Reminder',
+      th: '⏰ เตือนอนุมัติใบลา',
+      my: '⏰ ခွင့်အတည်ပြုရန်သတိပေးချက်'
+    },
+    message: {
+      en: `${requesterName} is waiting for ${enLeaveType} approval (${hoursLeft} hrs left)`,
+      th: `${requesterName} รอ${thLeaveType} (เหลือเวลา ${hoursLeft} ชม.)`,
+      my: `${requesterName} က ${myLeaveType} အတည်ပြုရန်စောင့်ဆိုင်းနေသည် (${hoursLeft} နာရီကျန်)`
+    },
     data: {
       type: 'reminder',
       leaveRequestId,

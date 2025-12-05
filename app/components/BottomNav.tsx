@@ -406,9 +406,9 @@ const BottomNav: React.FC<BottomNavProps> = ({ activePage = 'home' }) => {
                         >
                             <Box
                                 sx={{
-                                    width: 44,
-                                    height: 44,
-                                    borderRadius: '14px',
+                                    width: 40,
+                                    height: 40,
+                                    borderRadius: '12px',
                                     display: 'flex',
                                     alignItems: 'center',
                                     justifyContent: 'center',
@@ -424,11 +424,21 @@ const BottomNav: React.FC<BottomNavProps> = ({ activePage = 'home' }) => {
                                 }}
                             >
                                 <Home2 
-                                    size={26} 
+                                    size={22} 
                                     variant={activePage === 'home' ? 'Bold' : 'TwoTone'} 
                                     color={activePage === 'home' ? '#6C63FF' : '#8B7FC7'} 
                                 />
                             </Box>
+                            <Typography
+                                sx={{
+                                    fontSize: '0.65rem',
+                                    fontWeight: activePage === 'home' ? 600 : 500,
+                                    color: activePage === 'home' ? '#6C63FF' : '#8B7FC7',
+                                    lineHeight: 1,
+                                }}
+                            >
+                                {t('nav_home', 'หน้าแรก')}
+                            </Typography>
                         </Box>
 
                         <Box 
@@ -449,9 +459,9 @@ const BottomNav: React.FC<BottomNavProps> = ({ activePage = 'home' }) => {
                         >
                             <Box
                                 sx={{
-                                    width: 44,
-                                    height: 44,
-                                    borderRadius: '14px',
+                                    width: 40,
+                                    height: 40,
+                                    borderRadius: '12px',
                                     display: 'flex',
                                     alignItems: 'center',
                                     justifyContent: 'center',
@@ -467,11 +477,21 @@ const BottomNav: React.FC<BottomNavProps> = ({ activePage = 'home' }) => {
                                 }}
                             >
                                 <Calendar2 
-                                    size={26} 
+                                    size={22} 
                                     variant={activePage === 'leave' ? 'Bold' : 'TwoTone'} 
                                     color={activePage === 'leave' ? '#6C63FF' : '#8B7FC7'} 
                                 />
                             </Box>
+                            <Typography
+                                sx={{
+                                    fontSize: '0.65rem',
+                                    fontWeight: activePage === 'leave' ? 600 : 500,
+                                    color: activePage === 'leave' ? '#6C63FF' : '#8B7FC7',
+                                    lineHeight: 1,
+                                }}
+                            >
+                                {t('nav_leave', 'การลา')}
+                            </Typography>
                         </Box>
 
                         {/* Spacer for FAB with curved notch effect */}
@@ -508,9 +528,9 @@ const BottomNav: React.FC<BottomNavProps> = ({ activePage = 'home' }) => {
                         >
                             <Box
                                 sx={{
-                                    width: 44,
-                                    height: 44,
-                                    borderRadius: '14px',
+                                    width: 40,
+                                    height: 40,
+                                    borderRadius: '12px',
                                     display: 'flex',
                                     alignItems: 'center',
                                     justifyContent: 'center',
@@ -526,11 +546,21 @@ const BottomNav: React.FC<BottomNavProps> = ({ activePage = 'home' }) => {
                                 }}
                             >
                                 <Message 
-                                    size={26} 
+                                    size={22} 
                                     variant={activePage === 'messages' ? 'Bold' : 'Outline'} 
                                     color={activePage === 'messages' ? '#6C63FF' : '#8B7FC7'} 
                                 />
                             </Box>
+                            <Typography
+                                sx={{
+                                    fontSize: '0.65rem',
+                                    fontWeight: activePage === 'messages' ? 600 : 500,
+                                    color: activePage === 'messages' ? '#6C63FF' : '#8B7FC7',
+                                    lineHeight: 1,
+                                }}
+                            >
+                                {t('nav_activity', 'กิจกรรม')}
+                            </Typography>
                         </Box>
 
                         <Box
@@ -551,9 +581,9 @@ const BottomNav: React.FC<BottomNavProps> = ({ activePage = 'home' }) => {
                         >
                             <Box
                                 sx={{
-                                    width: 44,
-                                    height: 44,
-                                    borderRadius: '14px',
+                                    width: 40,
+                                    height: 40,
+                                    borderRadius: '12px',
                                     display: 'flex',
                                     alignItems: 'center',
                                     justifyContent: 'center',
@@ -569,11 +599,21 @@ const BottomNav: React.FC<BottomNavProps> = ({ activePage = 'home' }) => {
                                 }}
                             >
                                 <Profile2User 
-                                    size={26} 
+                                    size={22} 
                                     variant={activePage === 'profile' ? 'Bold' : 'TwoTone'} 
                                     color={activePage === 'profile' ? '#6C63FF' : '#8B7FC7'} 
                                 />
                             </Box>
+                            <Typography
+                                sx={{
+                                    fontSize: '0.65rem',
+                                    fontWeight: activePage === 'profile' ? 600 : 500,
+                                    color: activePage === 'profile' ? '#6C63FF' : '#8B7FC7',
+                                    lineHeight: 1,
+                                }}
+                            >
+                                {t('nav_profile', 'โปรไฟล์')}
+                            </Typography>
                         </Box>
                     </Paper>
 
