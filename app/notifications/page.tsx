@@ -252,7 +252,7 @@ export default function NotificationsPage() {
                     zIndex: 100,
                 }}
             >
-                <Container maxWidth="sm">
+                <Container maxWidth={false} sx={{ maxWidth: 1200, px: { xs: 2.5, sm: 3, md: 4 } }}>
                     <Box
                         sx={{
                             display: 'flex',
@@ -302,7 +302,7 @@ export default function NotificationsPage() {
 
                 {/* Tabs */}
                 <Box sx={{ borderBottom: '1px solid #E2E8F0' }}>
-                    <Container maxWidth="sm">
+                    <Container maxWidth={false} sx={{ maxWidth: 1200, px: { xs: 2.5, sm: 3, md: 4 } }}>
                         <Tabs
                             value={activeTab}
                             onChange={handleTabChange}
@@ -363,7 +363,7 @@ export default function NotificationsPage() {
             </Box>
 
             {/* Content */}
-            <Container maxWidth="sm" sx={{ py: 2 }}>
+            <Container maxWidth={false} sx={{ maxWidth: 1200, px: { xs: 2.5, sm: 3, md: 4 }, py: 2 }}>
                 {loading ? (
                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                         {[1, 2, 3, 4, 5].map(i => (

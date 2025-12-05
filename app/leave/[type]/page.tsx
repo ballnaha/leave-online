@@ -24,33 +24,33 @@ import { TimePicker } from '@mui/x-date-pickers/TimePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { 
-    ArrowLeft,
+    ArrowLeft2,
     Calendar,
     Clock,
-    FileText,
-    Upload,
-    Phone,
-    MapPin,
+    DocumentText,
+    DocumentUpload,
+    Call,
+    Location,
     User,
     Briefcase,
     Heart,
-    Umbrella,
-    HelpCircle,
-    Send,
-    Save,
-    X,
-    Paperclip,
-    AlertCircle,
-    Stethoscope,
+    Sun1,
+    InfoCircle,
+    Send2,
+    Save2,
+    CloseCircle,
+    Paperclip2,
+    Warning2,
+    Health,
     Sun,
-    Baby,
-    Church,
+    People,
+    Building,
     Shield,
-    Users,
+    Profile2User,
     Car,
-    Plus,
+    Add,
     Minus,
-} from 'lucide-react';
+} from 'iconsax-react';
 import { useRouter, useParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { useToastr } from '@/app/components/Toastr';
@@ -66,22 +66,22 @@ const PRIMARY_LIGHT = '#e3f2fd';
 
 // กำหนด icon และสีสำหรับแต่ละประเภทการลา
 const leaveTypeConfig: Record<string, { icon: any; color: string; lightColor: string }> = {
-    sick: { icon: Stethoscope, color: '#5E72E4', lightColor: '#E9ECFF' },
-    personal: { icon: Briefcase, color: '#8965E0', lightColor: '#F0E9FF' },
-    vacation: { icon: Umbrella, color: '#11CDEF', lightColor: '#E3F9FC' },
-    annual: { icon: Sun, color: '#2DCECC', lightColor: '#E3FAF9' },
-    maternity: { icon: Baby, color: '#F5365C', lightColor: '#FFF0F3' },
-    ordination: { icon: Church, color: '#FB6340', lightColor: '#FFEFE9' },
-    work_outside: { icon: Car, color: '#2DCECC', lightColor: '#E0F7FA' },
-    absent: { icon: AlertCircle, color: '#F5365C', lightColor: '#FEE2E2' },
-    military: { icon: Shield, color: '#5E72E4', lightColor: '#E9ECFF' },
-    marriage: { icon: Heart, color: '#F3A4B5', lightColor: '#FDEEF1' },
-    funeral: { icon: Users, color: '#8898AA', lightColor: '#F0F3F5' },
-    paternity: { icon: User, color: '#11CDEF', lightColor: '#E3F9FC' },
-    sterilization: { icon: Stethoscope, color: '#2DCECC', lightColor: '#E3FAF9' },
-    business: { icon: Car, color: '#8965E0', lightColor: '#F0E9FF' },
-    unpaid: { icon: Clock, color: '#8898AA', lightColor: '#F0F3F5' },
-    default: { icon: HelpCircle, color: '#5E72E4', lightColor: '#E9ECFF' },
+    sick: { icon: Health, color: PRIMARY_COLOR, lightColor: PRIMARY_LIGHT },
+    personal: { icon: Briefcase, color: PRIMARY_COLOR, lightColor: PRIMARY_LIGHT },
+    vacation: { icon: Sun1, color: PRIMARY_COLOR, lightColor: PRIMARY_LIGHT },
+    annual: { icon: Sun, color: PRIMARY_COLOR, lightColor: PRIMARY_LIGHT },
+    maternity: { icon: People, color: PRIMARY_COLOR, lightColor: PRIMARY_LIGHT },
+    ordination: { icon: Building, color: PRIMARY_COLOR, lightColor: PRIMARY_LIGHT },
+    work_outside: { icon: Car, color: PRIMARY_COLOR, lightColor: PRIMARY_LIGHT },
+    absent: { icon: Warning2, color: PRIMARY_COLOR, lightColor: PRIMARY_LIGHT },
+    military: { icon: Shield, color: PRIMARY_COLOR, lightColor: PRIMARY_LIGHT },
+    marriage: { icon: Heart, color: PRIMARY_COLOR, lightColor: PRIMARY_LIGHT },
+    funeral: { icon: Profile2User, color: PRIMARY_COLOR, lightColor: PRIMARY_LIGHT },
+    paternity: { icon: User, color: PRIMARY_COLOR, lightColor: PRIMARY_LIGHT },
+    sterilization: { icon: Health, color: PRIMARY_COLOR, lightColor: PRIMARY_LIGHT },
+    business: { icon: Car, color: PRIMARY_COLOR, lightColor: PRIMARY_LIGHT },
+    unpaid: { icon: Clock, color: PRIMARY_COLOR, lightColor: PRIMARY_LIGHT },
+    default: { icon: InfoCircle, color: PRIMARY_COLOR, lightColor: PRIMARY_LIGHT },
 };
 
 interface LeaveTypeData {
@@ -765,7 +765,7 @@ export default function LeaveFormPage() {
                                 '&:hover': { bgcolor: 'rgba(0,0,0,0.04)' }
                             }}
                         >
-                            <ArrowLeft size={22} />
+                            <ArrowLeft2 size={22} color="#1E293B" />
                         </IconButton>
                         
                         <Box sx={{ flex: 1, textAlign: 'center' }}>
@@ -942,7 +942,7 @@ export default function LeaveFormPage() {
                                             }
                                             label={
                                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                                    <Sun size={14} />
+                                                    <Sun1 size={14} color={config.color} />
                                                     <Typography variant="body2" sx={{ fontWeight: shiftType === 'day' ? 600 : 400 }}>
                                                         {t('shift_day', 'กะเช้า')} (08:00 - 17:00)
                                                     </Typography>
@@ -973,7 +973,7 @@ export default function LeaveFormPage() {
                                             }
                                             label={
                                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                                    <Clock size={14} />
+                                                    <Clock size={14} color={config.color} />
                                                     <Typography variant="body2" sx={{ fontWeight: shiftType === 'night' ? 600 : 400 }}>
                                                         {t('shift_night', 'กะดึก')} (20:00 - 05:00)
                                                     </Typography>
@@ -1246,7 +1246,7 @@ export default function LeaveFormPage() {
                                     '&:disabled': { opacity: 0.4 },
                                 }}
                             >
-                                <Plus size={18} color={config.color} />
+                                <Add size={18} color={config.color} />
                             </IconButton>
                         </Box>
 
@@ -1291,7 +1291,7 @@ export default function LeaveFormPage() {
                                 bgcolor: config.lightColor, 
                                 display: 'flex', alignItems: 'center', justifyContent: 'center' 
                             }}>
-                                <FileText size={15} color={config.color} />
+                                <DocumentText size={15} color={config.color} />
                             </Box>
                             <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
                                 {t('leave_reason', 'เหตุผลการลา')}
@@ -1326,7 +1326,7 @@ export default function LeaveFormPage() {
                                 bgcolor: config.lightColor, 
                                 display: 'flex', alignItems: 'center', justifyContent: 'center' 
                             }}>
-                                <Paperclip size={15} color={config.color} />
+                                <Paperclip2 size={15} color={config.color} />
                             </Box>
                             <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
                                 {t('leave_attachments', 'ไฟล์แนบ')}
@@ -1363,7 +1363,7 @@ export default function LeaveFormPage() {
                         <Button
                             variant="outlined"
                             fullWidth
-                            startIcon={<Upload size={18} />}
+                            startIcon={<DocumentUpload size={18} color={config.color} />}
                             onClick={() => fileInputRef.current?.click()}
                             disabled={formData.attachments.length >= MAX_FILES || processingAttachments}
                             sx={{
@@ -1451,7 +1451,7 @@ export default function LeaveFormPage() {
                                                         p: 1,
                                                     }}
                                                 >
-                                                    <FileText size={32} color={config.color} />
+                                                    <DocumentText size={32} color={config.color} />
                                                     <Typography 
                                                         variant="caption" 
                                                         noWrap 
@@ -1488,7 +1488,7 @@ export default function LeaveFormPage() {
                                                     }
                                                 }}
                                             >
-                                                <X size={14} />
+                                                <CloseCircle size={14} variant="Bold" color="#ffffff" />
                                             </IconButton>
                                             
                                             {/* แสดงขนาดไฟล์ */}
@@ -1521,7 +1521,7 @@ export default function LeaveFormPage() {
                         {leaveCode === 'sick' && (parseFloat(formData.totalDays) || 0) > 3 && formData.attachments.length === 0 && (
                             <Alert 
                                 severity="warning" 
-                                icon={<AlertCircle size={18} />}
+                                icon={<Warning2 size={18} color="#ED6C02" />}
                                 sx={{ mt: 2, borderRadius: 2 }}
                             >
                                 {t('sick_leave_warning', 'ลาป่วยเกิน 3 วัน กรุณาแนบใบรับรองแพทย์')}
@@ -1551,7 +1551,7 @@ export default function LeaveFormPage() {
                     <Button
                         variant="contained"
                         fullWidth
-                        startIcon={<Send size={18} />}
+                        startIcon={<Send2 size={18} color="#ffffff" />}
                         onClick={handleOpenConfirm}
                         disabled={submitting}
                         sx={{
@@ -1598,7 +1598,7 @@ export default function LeaveFormPage() {
                                 justifyContent: 'center',
                             }}
                         >
-                            <Send size={24} />
+                            <Send2 size={24} color={config.color} />
                         </Box>
                     </Box>
                     <Typography variant="h6" fontWeight="bold" textAlign="center">
@@ -1652,7 +1652,7 @@ export default function LeaveFormPage() {
                         <Button
                             variant="contained"
                             fullWidth
-                            startIcon={<Send size={18} />}
+                            startIcon={<Send2 size={18} color="#ffffff" />}
                             onClick={handleSubmit}
                             disabled={submitting}
                             sx={{
@@ -1708,7 +1708,7 @@ export default function LeaveFormPage() {
                             }
                         }}
                     >
-                        <X size={24} />
+                        <CloseCircle size={24} variant="Bold" color="#ffffff" />
                     </IconButton>
                     
                     {/* รูปภาพ */}

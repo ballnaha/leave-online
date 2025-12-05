@@ -87,24 +87,42 @@ const AttachmentViewer: React.FC<AttachmentViewerProps> = ({ open, onClose, atta
     const [currentIndex, setCurrentIndex] = useState(initialIndex);
     const swiperRef = useRef<SwiperType | null>(null);
 
+    // Sync currentIndex when initialIndex changes or dialog opens
+    useEffect(() => {
+        if (open) {
+            setCurrentIndex(initialIndex);
+        }
+    }, [open, initialIndex]);
+
     const handleSlideChange = useCallback((swiper: SwiperType) => {
         setCurrentIndex(swiper.activeIndex);
     }, []);
 
+    // Early return if not open to prevent unnecessary renders
+    if (!open) return null;
+
+    // Early return if no attachments
+    if (!attachments || attachments.length === 0) return null;
+
     // Filter only image attachments for swiping
     const imageAttachments = attachments.filter(att => att.mimeType?.startsWith('image/'));
     const currentAttachment = attachments[initialIndex];
-    const isImage = currentAttachment?.mimeType?.startsWith('image/');
-    const isPDF = currentAttachment?.mimeType === 'application/pdf';
+    
+    // Early return if no current attachment
+    if (!currentAttachment) return null;
+    
+    const isImage = currentAttachment.mimeType?.startsWith('image/');
+    const isPDF = currentAttachment.mimeType === 'application/pdf';
 
     // If initial attachment is not an image, show single view
-    if (!isImage && currentAttachment) {
+    if (!isImage) {
         return (
             <Dialog
                 fullScreen
                 open={open}
                 onClose={onClose}
                 TransitionComponent={Transition}
+                sx={{ zIndex: 1400 }}
                 PaperProps={{
                     sx: {
                         bgcolor: '#000',
@@ -124,11 +142,18 @@ const AttachmentViewer: React.FC<AttachmentViewerProps> = ({ open, onClose, atta
                         top: 0,
                         left: 0,
                         right: 0,
-                        zIndex: 10,
+                        zIndex: 1500,
+                        pointerEvents: 'auto',
                     }}
                 >
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                        <IconButton onClick={onClose} sx={{ color: 'white' }}>
+                        <IconButton 
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                onClose();
+                            }} 
+                            sx={{ color: 'white', pointerEvents: 'auto' }}
+                        >
                             <ArrowLeft2 size={24} color="white" />
                         </IconButton>
                         <Box sx={{ maxWidth: '200px' }}>
@@ -223,7 +248,8 @@ const AttachmentViewer: React.FC<AttachmentViewerProps> = ({ open, onClose, atta
     const imageInitialIndex = imageAttachments.findIndex(att => att.id === currentAttachment?.id);
     const activeImageAttachment = imageAttachments[currentIndex] || imageAttachments[0];
 
-    if (imageAttachments.length === 0) return null;
+    // If no image attachments, return null (already filtered as non-image above)
+    if (imageAttachments.length === 0 || !activeImageAttachment) return null;
 
     return (
         <Dialog
@@ -231,6 +257,7 @@ const AttachmentViewer: React.FC<AttachmentViewerProps> = ({ open, onClose, atta
             open={open}
             onClose={onClose}
             TransitionComponent={Transition}
+            sx={{ zIndex: 1400 }}
             PaperProps={{
                 sx: {
                     bgcolor: '#000',
@@ -250,11 +277,18 @@ const AttachmentViewer: React.FC<AttachmentViewerProps> = ({ open, onClose, atta
                     top: 0,
                     left: 0,
                     right: 0,
-                    zIndex: 10,
+                    zIndex: 1500,
+                    pointerEvents: 'auto',
                 }}
             >
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                    <IconButton onClick={onClose} sx={{ color: 'white' }}>
+                    <IconButton 
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            onClose();
+                        }} 
+                        sx={{ color: 'white', pointerEvents: 'auto' }}
+                    >
                         <ArrowLeft2 size={24} color="white" />
                     </IconButton>
                     <Box sx={{ maxWidth: '200px' }}>
@@ -472,6 +506,7 @@ const LeaveDetailDrawer: React.FC<LeaveDetailDrawerProps> = ({ open, onClose, le
     const StatusIcon = statusInfo.icon;
 
     return (
+        <>
         <Drawer.Root 
             open={open} 
             onOpenChange={(isOpen) => !isOpen && onClose()}
@@ -996,15 +1031,16 @@ const LeaveDetailDrawer: React.FC<LeaveDetailDrawerProps> = ({ open, onClose, le
                     )}
                 </Drawer.Content>
             </Drawer.Portal>
-
-            {/* Attachment Viewer Modal */}
-            <AttachmentViewer
-                open={viewerOpen}
-                onClose={handleCloseViewer}
-                attachments={leave?.attachments || []}
-                initialIndex={selectedAttachmentIndex}
-            />
         </Drawer.Root>
+
+        {/* Attachment Viewer Modal - Render outside Drawer.Root to avoid z-index issues */}
+        <AttachmentViewer
+            open={viewerOpen}
+            onClose={handleCloseViewer}
+            attachments={leave?.attachments || []}
+            initialIndex={selectedAttachmentIndex}
+        />
+        </>
     );
 };
 
