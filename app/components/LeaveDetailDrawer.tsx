@@ -508,8 +508,12 @@ const LeaveDetailDrawer: React.FC<LeaveDetailDrawerProps> = ({ open, onClose, le
     return (
         <>
         <Drawer.Root 
-            open={open} 
-            onOpenChange={(isOpen) => !isOpen && onClose()}
+            open={open && !viewerOpen} 
+            onOpenChange={(isOpen) => {
+                if (!isOpen && !viewerOpen) {
+                    onClose();
+                }
+            }}
             shouldScaleBackground={false}
             preventScrollRestoration={true}
         >
