@@ -702,37 +702,156 @@ export default function LeaveFormPage() {
 
     // ถ้ายังโหลดข้อมูลอยู่หรือยังไม่มี leaveType
     if (loading || !leaveType) {
-        const sectionHeights = [190, 230, 260];
         return (
-            <Box sx={{ minHeight: '100vh', bgcolor: '#f5f7fa', pb: 8 }}>
+            <Box sx={{ minHeight: '100vh', bgcolor: '#f5f7fa', pb: 12 }}>
+                {/* Header Skeleton */}
                 <Box
                     sx={{
                         bgcolor: 'white',
-                        px: 2,
-                        py: 2,
+                        position: 'sticky',
+                        top: 0,
+                        zIndex: 100,
                         boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
                         borderBottom: '1px solid #f0f0f0',
+                        py: 2,
+                        px: 2
                     }}
                 >
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                        <Skeleton variant="circular" width={40} height={40} />
-                        <Box sx={{ flex: 1 }}>
-                            <Skeleton variant="text" width="70%" height={26} />
-                            <Skeleton variant="text" width="45%" height={18} sx={{ mt: 0.5 }} />
+                    <Container maxWidth={false} sx={{ maxWidth: 1200 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', position: 'relative' }}>
+                            {/* Back Button */}
+                            <Skeleton variant="circular" width={40} height={40} sx={{ position: 'absolute', left: 0 }} />
+                            
+                            {/* Title & Description */}
+                            <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                                <Skeleton variant="text" width={150} height={32} />
+                                <Skeleton variant="text" width={100} height={20} />
+                            </Box>
+
+                            {/* Quota Chips */}
+                            <Box sx={{ position: 'absolute', right: 0, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 0.5 }}>
+                                <Skeleton variant="rounded" width={80} height={24} sx={{ borderRadius: 4 }} />
+                                <Skeleton variant="rounded" width={60} height={24} sx={{ borderRadius: 4 }} />
+                            </Box>
                         </Box>
-                        <Skeleton variant="rounded" width={70} height={28} sx={{ borderRadius: 999 }} />
-                    </Box>
+                    </Container>
                 </Box>
 
                 <Container maxWidth={false} disableGutters sx={{ maxWidth: 1200, px: { xs: 1.5, sm: 2 }, pt: 3 }}>
-                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
-                        <Skeleton variant="rounded" height={130} sx={{ borderRadius: 2 }} />
-                        {sectionHeights.map((height, index) => (
-                            <Skeleton key={index} variant="rounded" height={height} sx={{ borderRadius: 2 }} />
-                        ))}
-                        <Skeleton variant="rounded" height={72} sx={{ borderRadius: 999, maxWidth: 480, alignSelf: 'center', mt: 1 }} />
+                    {/* User Info Section Skeleton */}
+                    <Box sx={{ mb: 2.5, p: 2, bgcolor: 'white', borderRadius: 1, border: '1px solid #e0e0e0' }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+                            <Skeleton variant="rounded" width={28} height={28} sx={{ borderRadius: 1 }} />
+                            <Skeleton variant="text" width={120} height={24} />
+                        </Box>
+                        <Box sx={{ display: 'grid', gap: 1.5 }}>
+                            {[1, 2, 3, 4, 5, 6].map((i) => (
+                                <Box key={i} sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                                    <Skeleton variant="text" width={80} />
+                                    <Skeleton variant="text" width={120} />
+                                </Box>
+                            ))}
+                        </Box>
+                    </Box>
+
+                    <Divider sx={{ my: 3 }} />
+
+                    {/* Leave Details Section Skeleton */}
+                    <Box sx={{ mb: 3, p: 2, bgcolor: 'white', borderRadius: 1, border: '1px solid #e0e0e0' }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+                            <Skeleton variant="rounded" width={28} height={28} sx={{ borderRadius: 1 }} />
+                            <Skeleton variant="text" width={140} height={24} />
+                        </Box>
+                        
+                        {/* Date Write */}
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2.5 }}>
+                            <Skeleton variant="text" width={100} />
+                            <Skeleton variant="text" width={120} />
+                        </Box>
+
+                        {/* Shift Type */}
+                        <Box sx={{ mb: 2.5 }}>
+                            <Skeleton variant="text" width={80} sx={{ mb: 1 }} />
+                            <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center' }}>
+                                <Skeleton variant="rounded" width={140} height={36} sx={{ borderRadius: 2 }} />
+                                <Skeleton variant="rounded" width={140} height={36} sx={{ borderRadius: 2 }} />
+                            </Box>
+                        </Box>
+
+                        {/* Start/End Date Time */}
+                        <Box sx={{ mb: 3 }}>
+                            <Skeleton variant="text" width={60} sx={{ mb: 1.5 }} />
+                            <Box sx={{ pl: 2, borderLeft: '2px solid #f0f0f0', display: 'flex', flexDirection: 'column', gap: 2 }}>
+                                <Skeleton variant="rounded" height={40} sx={{ borderRadius: 1 }} />
+                                <Skeleton variant="rounded" height={40} sx={{ borderRadius: 1 }} />
+                            </Box>
+                        </Box>
+                        <Box sx={{ mb: 1 }}>
+                            <Skeleton variant="text" width={60} sx={{ mb: 1.5 }} />
+                            <Box sx={{ pl: 2, borderLeft: '2px solid #f0f0f0', display: 'flex', flexDirection: 'column', gap: 2 }}>
+                                <Skeleton variant="rounded" height={40} sx={{ borderRadius: 1 }} />
+                                <Skeleton variant="rounded" height={40} sx={{ borderRadius: 1 }} />
+                            </Box>
+                        </Box>
+                    </Box>
+
+                    <Divider sx={{ my: 3 }} />
+
+                    {/* Total Days Skeleton */}
+                    <Box sx={{ mb: 3, p: 2, bgcolor: 'white', borderRadius: 1, border: '1px solid #e0e0e0' }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+                            <Skeleton variant="rounded" width={28} height={28} sx={{ borderRadius: 1 }} />
+                            <Skeleton variant="text" width={100} height={24} />
+                        </Box>
+                        <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1.5, mb: 1.5 }}>
+                            <Skeleton variant="circular" width={36} height={36} />
+                            <Skeleton variant="rounded" width={80} height={60} sx={{ borderRadius: 1.5 }} />
+                            <Skeleton variant="circular" width={36} height={36} />
+                        </Box>
+                        <Skeleton variant="text" width={200} sx={{ mx: 'auto' }} />
+                    </Box>
+
+                    <Divider sx={{ my: 3 }} />
+
+                    {/* Reason Skeleton */}
+                    <Box sx={{ mb: 3, p: 2, bgcolor: 'white', borderRadius: 1, border: '1px solid #e0e0e0' }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+                            <Skeleton variant="rounded" width={28} height={28} sx={{ borderRadius: 1 }} />
+                            <Skeleton variant="text" width={100} height={24} />
+                        </Box>
+                        <Skeleton variant="rounded" height={100} sx={{ borderRadius: 1 }} />
+                    </Box>
+
+                    <Divider sx={{ my: 3 }} />
+
+                    {/* Attachments Skeleton */}
+                    <Box sx={{ mb: 3, p: 2, bgcolor: 'white', borderRadius: 1, border: '1px solid #e0e0e0' }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+                            <Skeleton variant="rounded" width={28} height={28} sx={{ borderRadius: 1 }} />
+                            <Skeleton variant="text" width={80} height={24} />
+                        </Box>
+                        <Skeleton variant="rounded" height={50} sx={{ borderRadius: 2 }} />
                     </Box>
                 </Container>
+
+                {/* Footer Skeleton */}
+                <Box 
+                    sx={{ 
+                        position: 'fixed',
+                        bottom: 0,
+                        left: 0,
+                        right: 0,
+                        bgcolor: 'white',
+                        borderTop: '1px solid #e0e0e0',
+                        px: 2,
+                        py: 2,
+                        zIndex: 100,
+                    }}
+                >
+                    <Box sx={{ maxWidth: 1200, mx: 'auto' }}>
+                        <Skeleton variant="rounded" height={48} sx={{ borderRadius: 3 }} />
+                    </Box>
+                </Box>
             </Box>
         );
     }

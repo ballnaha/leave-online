@@ -24,6 +24,14 @@ export async function GET(request: NextRequest) {
         whereClause.status = { in: ['pending', 'in_progress'] };
       }
 
+      // Fetch departments and sections for name lookup
+      const [departments, sections] = await Promise.all([
+        prisma.department.findMany({ select: { code: true, name: true } }),
+        prisma.section.findMany({ select: { code: true, name: true } }),
+      ]);
+      const deptMap = new Map(departments.map(d => [d.code, d.name]));
+      const sectMap = new Map(sections.map(s => [s.code, s.name]));
+
       const leaveRequests = await prisma.leaveRequest.findMany({
         where: whereClause,
         include: {
@@ -84,7 +92,11 @@ export async function GET(request: NextRequest) {
           createdAt: leave.createdAt,
           cancelReason: leave.cancelReason,
           cancelledAt: leave.cancelledAt,
-          user: leave.user,
+          user: {
+            ...leave.user,
+            department: deptMap.get(leave.user.department) || leave.user.department,
+            section: leave.user.section ? (sectMap.get(leave.user.section) || leave.user.section) : null,
+          },
           attachments: leave.attachments,
           approvalHistory: leave.approvals,
         },
@@ -118,6 +130,14 @@ export async function GET(request: NextRequest) {
       // ดูจาก escalation.ts -> createApprovalSteps -> สร้างมารอไว้เลยทุก step
       // ดังนั้นต้องเช็คว่า leaveRequest.currentLevel == approval.level
     }
+
+    // Fetch departments and sections for name lookup
+    const [departments, sections] = await Promise.all([
+      prisma.department.findMany({ select: { code: true, name: true } }),
+      prisma.section.findMany({ select: { code: true, name: true } }),
+    ]);
+    const deptMap = new Map(departments.map(d => [d.code, d.name]));
+    const sectMap = new Map(sections.map(s => [s.code, s.name]));
 
     const pendingApprovals = await prisma.leaveApproval.findMany({
       where: whereClause,
@@ -190,7 +210,11 @@ export async function GET(request: NextRequest) {
         createdAt: approval.leaveRequest.createdAt,
         cancelReason: approval.leaveRequest.cancelReason,
         cancelledAt: approval.leaveRequest.cancelledAt,
-        user: approval.leaveRequest.user,
+        user: {
+          ...approval.leaveRequest.user,
+          department: deptMap.get(approval.leaveRequest.user.department) || approval.leaveRequest.user.department,
+          section: approval.leaveRequest.user.section ? (sectMap.get(approval.leaveRequest.user.section) || approval.leaveRequest.user.section) : null,
+        },
         attachments: approval.leaveRequest.attachments,
         approvalHistory: approval.leaveRequest.approvals,
       },

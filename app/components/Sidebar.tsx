@@ -65,7 +65,7 @@ const Sidebar = ({ open, onClose }: SidebarProps) => {
     };
 
     const menuItems = [
-        { text: 'แดชบอร์ด', icon: <Home2 size={20} variant="Outline" color="#6C63FF" />, activeIcon: <Home2 size={20} variant="Bold" color="#fff" />, path: '/' },
+        { text: 'หน้าหลัก', icon: <Home2 size={20} variant="Outline" color="#6C63FF" />, activeIcon: <Home2 size={20} variant="Bold" color="#fff" />, path: '/' },
         { text: 'จัดการใบลา', icon: <Task size={20} variant="Outline" color="#6C63FF" />, activeIcon: <Task size={20} variant="Bold" color="#fff" />, path: '/approval' },
         
     ];

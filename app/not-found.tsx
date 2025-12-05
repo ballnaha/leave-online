@@ -4,6 +4,7 @@ import { Box, Button, Container, Typography } from '@mui/material';
 import { Home, SunFog, Sun } from 'iconsax-react';
 import Link from 'next/link';
 import { keyframes } from '@mui/system';
+import Image from 'next/image';
 
 // Animation for Sun
 const rotate = keyframes`
@@ -48,7 +49,12 @@ export default function NotFound() {
                     animation: `${sway} 3s ease-in-out infinite`,
                 }}
             >
-                <SunFog size={140} color="#6C63FF" />
+                <Image
+                    src="/images/404.png"
+                    alt="page not found"
+                    width={200}
+                    height={200}
+                />
             </Box>
         </Box>
 
@@ -68,7 +74,7 @@ export default function NotFound() {
                 PAGE NOT FOUND
             </Typography>
             <Typography variant="body1" color="text.secondary" sx={{ maxWidth: '350px', mx: 'auto' }}>
-                เราหาหน้าที่คุณต้องการไม่เจอ บางทีมันอาจจะไปเที่ยวทะเลอยู่ก็ได้
+                ไม่พบหน้าที่คุณค้นหา ลองตรวจสอบลิงก์อีกครั้ง หรือลองกลับไปที่หน้าหลัก
             </Typography>
         </Box>
 
