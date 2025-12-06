@@ -37,6 +37,12 @@ interface Holiday {
   isActive: boolean;
 }
 
+interface Company {
+  id: number;
+  code: string;
+  name: string;
+}
+
 interface HolidayDialogProps {
   open: boolean;
   onClose: () => void;
@@ -54,6 +60,8 @@ export default function HolidayDialog({
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const toastr = useToastr();
   const [loading, setLoading] = useState(false);
+  const [loadingCompanies, setLoadingCompanies] = useState(false);
+  const [companies, setCompanies] = useState<Company[]>([]);
   const [dateValue, setDateValue] = useState<Dayjs | null>(null);
   const [formData, setFormData] = useState({
     date: '',
@@ -62,6 +70,28 @@ export default function HolidayDialog({
     companyId: '',
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // Fetch companies when dialog opens
+  useEffect(() => {
+    if (open) {
+      fetchCompanies();
+    }
+  }, [open]);
+
+  const fetchCompanies = async () => {
+    setLoadingCompanies(true);
+    try {
+      const res = await fetch('/api/companies');
+      if (res.ok) {
+        const data = await res.json();
+        setCompanies(data);
+      }
+    } catch (error) {
+      console.error('Error fetching companies:', error);
+    } finally {
+      setLoadingCompanies(false);
+    }
+  };
 
   useEffect(() => {
     if (open) {
@@ -255,16 +285,27 @@ export default function HolidayDialog({
 
           {/* Company (Optional - for company-specific holidays) */}
           {formData.type === 'company' && (
-            <TextField
-              label="รหัสบริษัท (ถ้าเฉพาะบริษัท)"
-              type="number"
-              value={formData.companyId}
-              onChange={(e) => handleChange('companyId', e.target.value)}
-              placeholder="เว้นว่างไว้สำหรับทุกบริษัท"
-              size="small"
-              fullWidth
-              helperText="เว้นว่างไว้หากต้องการให้ใช้กับทุกบริษัท"
-            />
+            <FormControl fullWidth size="small">
+              <InputLabel>บริษัท (ถ้าเฉพาะบริษัท)</InputLabel>
+              <Select
+                value={formData.companyId}
+                label="บริษัท (ถ้าเฉพาะบริษัท)"
+                onChange={(e) => handleChange('companyId', e.target.value)}
+                disabled={loadingCompanies}
+              >
+                <MenuItem value="">
+                  <em>ทุกบริษัท</em>
+                </MenuItem>
+                {companies.map((company) => (
+                  <MenuItem key={company.id} value={company.id.toString()}>
+                    {company.code} - {company.name}
+                  </MenuItem>
+                ))}
+              </Select>
+              <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, ml: 1.5 }}>
+                เลือก &quot;ทุกบริษัท&quot; หากต้องการให้ใช้กับทุกบริษัท
+              </Typography>
+            </FormControl>
           )}
         </Box>
       </DialogContent>

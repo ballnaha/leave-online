@@ -14,6 +14,7 @@ interface OneSignalContextValue {
   permission: NotificationPermission | null;
   subscribe: () => Promise<void>;
   unsubscribe: () => Promise<void>;
+  requestPermission: () => Promise<void>;
 }
 
 const OneSignalContext = createContext<OneSignalContextValue | undefined>(undefined);
@@ -310,6 +311,51 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
     }
   }, [isInitialized, playerId]);
 
+  // Request permission only (without subscribing)
+  const requestPermission = useCallback(async () => {
+    console.log('🔔 OneSignal: Request permission called');
+    
+    if (!window.OneSignal) {
+      console.error('🔔 OneSignal: SDK not loaded');
+      throw new Error('OneSignal SDK not loaded');
+    }
+    
+    if (!isInitialized) {
+      console.error('🔔 OneSignal: Not initialized yet');
+      throw new Error('OneSignal not initialized');
+    }
+
+    try {
+      // Check current permission
+      const currentPermission = Notification.permission;
+      console.log('🔔 OneSignal: Current permission:', currentPermission);
+      
+      if (currentPermission === 'denied') {
+        // Cannot request again if denied, user must change in browser settings
+        console.warn('🔔 OneSignal: Permission was denied. User must enable in browser settings.');
+        throw new Error('PERMISSION_DENIED');
+      }
+      
+      // Request permission
+      console.log('🔔 OneSignal: Requesting permission...');
+      await window.OneSignal.Notifications.requestPermission();
+      
+      // Update permission state
+      const newPermission = Notification.permission;
+      setPermission(newPermission);
+      console.log('🔔 OneSignal: New permission status:', newPermission);
+      
+      // If granted, auto-subscribe
+      if (newPermission === 'granted') {
+        console.log('🔔 OneSignal: Permission granted, auto-subscribing...');
+        await subscribe();
+      }
+    } catch (error: any) {
+      console.error('🔔 OneSignal: Error requesting permission:', error);
+      throw error;
+    }
+  }, [isInitialized, subscribe]);
+
   const value = {
     isSupported,
     isSubscribed,
@@ -318,6 +364,7 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
     permission,
     subscribe,
     unsubscribe,
+    requestPermission,
   };
 
   return (

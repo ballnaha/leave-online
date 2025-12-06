@@ -44,10 +44,12 @@ import {
     ArrowDown2,
     HambergerMenu,
     SecuritySafe,
+    ShieldSearch,
 } from 'iconsax-react';
 import { signOut } from 'next-auth/react';
 import { useUser } from '@/app/providers/UserProvider';
 import { useToastr } from '@/app/components/Toastr';
+import { CalendarDays } from 'lucide-react';
 
 const drawerWidth = 260;
 const collapsedDrawerWidth = 68;
@@ -86,18 +88,7 @@ const menuGroups: MenuGroup[] = [
                 iconColor: '#6C63FF',
                 path: '/admin/leaves',
             },
-            {
-                text: 'ประเภทการลา',
-                icon: Calendar,
-                iconColor: '#6C63FF',
-                path: '/admin/leave-types',
-            },
-            {
-                text: 'วันหยุด',
-                icon: Calendar,
-                iconColor: '#6C63FF',
-                path: '/admin/holidays',
-            },
+
         ],
     },
     {
@@ -117,9 +108,62 @@ const menuGroups: MenuGroup[] = [
             },
         ],
     },
+
     {
-        groupLabel: 'องค์กร',
+        groupLabel: 'Banner',
         items: [
+            {
+                text: 'Banner',
+                icon: Gallery,
+                iconColor: '#6C63FF',
+                path: '/admin/banners',
+            },
+
+        ],
+    },
+    {
+        groupLabel: 'รายงาน',
+        items: [
+            {
+                text: 'รายงานใบลา',
+                icon: DocumentText1,
+                iconColor: '#6C63FF',
+                path: '/admin/leave-reports',
+            },
+        ],
+    },
+    {
+        groupLabel: 'ระบบ',
+        items: [
+            {
+                text: 'Notifications',
+                icon: Notification,
+                iconColor: '#6C63FF',
+                path: '/admin/notifications',
+            },
+            {
+                text: 'ทดสอบ Push',
+                icon: Notification,
+                iconColor: '#6C63FF',
+                path: '/admin/test-notification',
+            },
+        ],
+    },
+    {
+        groupLabel: 'Admin',
+        items: [
+            {
+                text: 'ประเภทการลา',
+                icon: CalendarDays,
+                iconColor: '#6C63FF',
+                path: '/admin/leave-types',
+            },
+            {
+                text: 'วันหยุด',
+                icon: Calendar,
+                iconColor: '#6C63FF',
+                path: '/admin/holidays',
+            },
             {
                 text: 'บริษัท',
                 icon: Building,
@@ -128,7 +172,7 @@ const menuGroups: MenuGroup[] = [
             },
             {
                 text: 'ฝ่าย',
-                icon: Layer,
+                icon: ShieldSearch,
                 iconColor: '#6C63FF',
                 path: '/admin/departments',
             },
@@ -148,40 +192,6 @@ const menuGroups: MenuGroup[] = [
                 icon: People,
                 iconColor: '#6C63FF',
                 path: '/admin/users',
-            },
-        ],
-    },
-    {
-        groupLabel: 'อื่นๆ',
-        items: [
-            {
-                text: 'Banner',
-                icon: Gallery,
-                iconColor: '#6C63FF',
-                path: '/admin/banners',
-            },
-            {
-                text: 'รายงาน',
-                icon: DocumentText1,
-                iconColor: '#6C63FF',
-                path: '/admin/reports',
-            },
-        ],
-    },
-    {
-        groupLabel: 'ระบบ',
-        items: [
-            {
-                text: 'ทดสอบ Push',
-                icon: Notification,
-                iconColor: '#6C63FF',
-                path: '/admin/test-notification',
-            },
-            {
-                text: 'ตั้งค่า',
-                icon: Setting2,
-                iconColor: '#6C63FF',
-                path: '/admin/settings',
             },
         ],
     },

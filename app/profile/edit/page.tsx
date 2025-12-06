@@ -995,22 +995,21 @@ export default function EditProfilePage() {
                                     fullWidth
                                     size="small"
                                     value={getDisplayValue('company')}
-                                    onClick={() => openDrawer('company')}
                                     placeholder={t('placeholder_company', 'เลือกบริษัท')}
+                                    disabled
                                     InputProps={{
                                         readOnly: true,
                                         startAdornment: (
                                             <InputAdornment position="start">
-                                                <Building size={18} color="#1b194b" />
+                                                <Building size={18} color="#9e9e9e" />
                                             </InputAdornment>
                                         ),
-                                        endAdornment: loadingCompanies ? (
-                                            <CircularProgress size={18} />
-                                        ) : (
-                                            <ArrowDown2 size={18} color="#9e9e9e" />
-                                        ),
                                     }}
-                                    sx={{ cursor: 'pointer' }}
+                                    sx={{
+                                        '& .MuiOutlinedInput-root': {
+                                            bgcolor: '#f5f5f5',
+                                        },
+                                    }}
                                 />
                             </Box>
 
@@ -1024,18 +1023,21 @@ export default function EditProfilePage() {
                                     fullWidth
                                     size="small"
                                     value={getDisplayValue('employeeType')}
-                                    onClick={() => openDrawer('employeeType')}
                                     placeholder={t('placeholder_employee_type', 'เลือกประเภทพนักงาน')}
+                                    disabled
                                     InputProps={{
                                         readOnly: true,
                                         startAdornment: (
                                             <InputAdornment position="start">
-                                                <Briefcase size={18} color="#1b194b" />
+                                                <Briefcase size={18} color="#9e9e9e" />
                                             </InputAdornment>
                                         ),
-                                        endAdornment: <ArrowDown2 size={18} color="#9e9e9e" />,
                                     }}
-                                    sx={{ cursor: 'pointer' }}
+                                    sx={{
+                                        '& .MuiOutlinedInput-root': {
+                                            bgcolor: '#f5f5f5',
+                                        },
+                                    }}
                                 />
                             </Box>
 
@@ -1049,23 +1051,21 @@ export default function EditProfilePage() {
                                     fullWidth
                                     size="small"
                                     value={getDisplayValue('department')}
-                                    onClick={() => formData.company && openDrawer('department')}
-                                    placeholder={formData.company ? t('placeholder_department', 'เลือกฝ่าย') : t('select_company_first', 'กรุณาเลือกบริษัทก่อน')}
-                                    disabled={!formData.company}
+                                    placeholder={t('placeholder_department', 'เลือกฝ่าย')}
+                                    disabled
                                     InputProps={{
                                         readOnly: true,
                                         startAdornment: (
                                             <InputAdornment position="start">
-                                                <Briefcase size={18} color="#1b194b" />
+                                                <Briefcase size={18} color="#9e9e9e" />
                                             </InputAdornment>
                                         ),
-                                        endAdornment: loadingDepartments ? (
-                                            <CircularProgress size={18} />
-                                        ) : (
-                                            <ArrowDown2 size={18} color="#9e9e9e" />
-                                        ),
                                     }}
-                                    sx={{ cursor: formData.company ? 'pointer' : 'default' }}
+                                    sx={{
+                                        '& .MuiOutlinedInput-root': {
+                                            bgcolor: '#f5f5f5',
+                                        },
+                                    }}
                                 />
                             </Box>
 
@@ -1079,23 +1079,21 @@ export default function EditProfilePage() {
                                     fullWidth
                                     size="small"
                                     value={getDisplayValue('section')}
-                                    onClick={() => formData.departmentId && sections.length > 0 && openDrawer('section')}
-                                    placeholder={formData.departmentId ? (sections.length > 0 ? t('placeholder_section', 'เลือกแผนก') : t('no_section', 'ไม่มีแผนก')) : t('select_department_first', 'กรุณาเลือกฝ่ายก่อน')}
-                                    disabled={!formData.departmentId || sections.length === 0}
+                                    placeholder={t('placeholder_section', 'เลือกแผนก')}
+                                    disabled
                                     InputProps={{
                                         readOnly: true,
                                         startAdornment: (
                                             <InputAdornment position="start">
-                                                <Location size={18} color="#1b194b" />
+                                                <Location size={18} color="#9e9e9e" />
                                             </InputAdornment>
                                         ),
-                                        endAdornment: loadingSections ? (
-                                            <CircularProgress size={18} />
-                                        ) : (
-                                            <ArrowDown2 size={18} color="#9e9e9e" />
-                                        ),
                                     }}
-                                    sx={{ cursor: formData.departmentId && sections.length > 0 ? 'pointer' : 'default' }}
+                                    sx={{
+                                        '& .MuiOutlinedInput-root': {
+                                            bgcolor: '#f5f5f5',
+                                        },
+                                    }}
                                 />
                             </Box>
 
@@ -1109,6 +1107,7 @@ export default function EditProfilePage() {
                                     fullWidth
                                     size="small"
                                     value={formData.position}
+                                    disabled
                                     onChange={handleChange('position')}
                                     placeholder={t('placeholder_position', 'ระบุตำแหน่งงาน')}
                                     InputProps={{
@@ -1123,7 +1122,10 @@ export default function EditProfilePage() {
                                             '&:focus-within': {
                                                 '& fieldset': { borderColor: '#1b194b' },
                                             },
+                                            bgcolor: '#f5f5f5'
+                                            
                                         },
+                                        
                                     }}
                                 />
                             </Box>

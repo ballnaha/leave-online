@@ -115,14 +115,15 @@ model LeaveBalance {
 }
 
 model Company {
-  id        Int      @id @default(autoincrement())
-  code      String   @unique
+  id        Int       @id @default(autoincrement())
+  code      String    @unique
   name      String
-  address   String?  @db.Text
+  address   String?   @db.Text
   phone     String?
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  isActive  Boolean   @default(true)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  holidays  Holiday[]
 
   @@map("companies")
 }
@@ -298,6 +299,7 @@ model Holiday {
   name        String   @db.VarChar(200)  // Translation key, e.g. "new_year_day"
   type        String   @default("company") // company
   companyId   Int?     // null = apply to all companies
+  company     Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt

@@ -8,6 +8,7 @@ export async function GET(request: NextRequest) {
         const searchParams = request.nextUrl.searchParams;
         const year = searchParams.get('year');
         const companyId = searchParams.get('companyId');
+        const includeCompany = searchParams.get('includeCompany') === 'true';
 
         const where: any = {
             isActive: true,
@@ -33,6 +34,15 @@ export async function GET(request: NextRequest) {
         const holidays = await prisma.holiday.findMany({
             where,
             orderBy: { date: 'asc' },
+            include: includeCompany ? {
+                company: {
+                    select: {
+                        id: true,
+                        code: true,
+                        name: true,
+                    },
+                },
+            } : undefined,
         });
 
         // Format response
@@ -42,6 +52,7 @@ export async function GET(request: NextRequest) {
             name: h.name,
             type: h.type,
             companyId: h.companyId,
+            ...(includeCompany && { company: (h as any).company }),
         }));
 
         return NextResponse.json(formattedHolidays);

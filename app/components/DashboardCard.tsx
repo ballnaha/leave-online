@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
-import { Box, Typography, Paper, IconButton, Select, MenuItem, Divider, Chip } from '@mui/material';
+import { Box, Typography, Paper, IconButton, Select, MenuItem, Divider, Chip, Tooltip as MuiTooltip, ClickAwayListener } from '@mui/material';
 import { Drawer } from 'vaul';
 import { Health, Briefcase, Sun1, ArrowRight, DocumentText, Calendar, Clock, Archive, Building4, Lovely, Car, MessageQuestion, Shield, Heart, People, Profile2User, CloseCircle, TickCircle, Timer, Forbidden2 } from 'iconsax-react';
 import { useLocale } from '../providers/LocaleProvider';
@@ -63,6 +63,9 @@ const DashboardCard: React.FC<DashboardCardProps> = ({ leaveTypes, leaveRequests
     const [selectedLeave, setSelectedLeave] = useState<LeaveRequest | null>(null);
     const [detailDrawerOpen, setDetailDrawerOpen] = useState(false);
     const [isImageViewerOpen, setIsImageViewerOpen] = useState(false);
+    
+    // State for chart tooltip
+    const [activeTooltip, setActiveTooltip] = useState<'approved' | 'pending' | 'remaining' | null>(null);
 
     // Generate year options (current year - 2 to current year + 1)
     const currentYear = new Date().getFullYear();
@@ -205,52 +208,111 @@ const DashboardCard: React.FC<DashboardCardProps> = ({ leaveTypes, leaveRequests
         approvedPercentage = 0; 
     }
 
-    // Color logic - Green for approved, Yellow for pending
+    // Color logic - Multi-ring colors like the reference image
     const config = leaveTypeConfig[selectedCode] || leaveTypeConfig.default;
-    const approvedColor = '#4CAF50'; // Green for approved
-    const pendingColor = '#FFC107'; // Yellow for pending
-    const remainingColor = 'rgba(255, 255, 255, 0.3)'; // Semi-transparent white for remaining
+    const ringColors = {
+        approved: '#2ECC71',    // Green (outer ring)
+        pending: '#F39C12',     // Orange (middle ring)  
+        remaining: '#5DADE2',   // Blue (inner ring)
+        background: 'rgba(255, 255, 255, 0.15)', // Semi-transparent for unused portion
+    };
 
-    // Chart.js Doughnut data
-    const chartData = useMemo(() => {
+    // Calculate percentages for multi-ring display
+    const calculatePercentage = useMemo(() => {
         if (isUnlimited) {
-            // For unlimited, show only used vs arbitrary remaining
+            // For unlimited leave types, remaining is always 100% (unlimited availability)
+            const totalUsed = currentBalance.approved + currentBalance.pending;
+            if (totalUsed === 0) {
+                // No usage at all - remaining is still 100% (unlimited)
+                return { approved: 0, pending: 0, remaining: 100, total: 0 };
+            }
+            // Show actual usage, remaining always 100% for unlimited
             return {
-                datasets: [{
-                    data: [currentBalance.approved, currentBalance.pending, Math.max(10 - currentBalance.used, 1)],
-                    backgroundColor: [approvedColor, pendingColor, remainingColor],
-                    borderWidth: 0,
-                    cutout: '75%',
-                    borderRadius: 4,
-                }]
+                approved: currentBalance.approved,
+                pending: currentBalance.pending,
+                remaining: 100, // Unlimited = always 100% remaining
+                total: totalUsed
             };
         }
+        if (currentBalance.total === 0) {
+            return { approved: 0, pending: 0, remaining: 0, total: 0 };
+        }
+        const approvedPct = (currentBalance.approved / currentBalance.total) * 100;
+        const pendingPct = (currentBalance.pending / currentBalance.total) * 100;
+        const remainingPct = Math.max((currentBalance.remaining / currentBalance.total) * 100, 0);
+        // Total percentage shows usage rate
+        const totalUsagePct = Math.min(Math.round(((currentBalance.approved + currentBalance.pending) / currentBalance.total) * 100), 100);
+        return { approved: approvedPct, pending: pendingPct, remaining: remainingPct, total: totalUsagePct };
+    }, [currentBalance, isUnlimited]);
 
+    // Chart.js Doughnut data - Multi-ring style
+    const chartData = useMemo(() => {
         if (isOverLimit) {
-            // Over limit - show full circle in coral/salmon color that matches purple bg
+            // Over limit - show all rings as full in warning colors
             return {
-                datasets: [{
-                    data: [100],
-                    backgroundColor: ['#FF6B9D'],
-                    borderWidth: 0,
-                    cutout: '75%',
-                    borderRadius: 4,
-                }]
+                datasets: [
+                    {
+                        data: [100],
+                        backgroundColor: ['#E74C3C'],
+                        borderWidth: 0,
+                        cutout: '82%',
+                        borderRadius: 20,
+                    },
+                    {
+                        data: [100],
+                        backgroundColor: ['#E74C3C'],
+                        borderWidth: 0,
+                        cutout: '82%',
+                        borderRadius: 20,
+                    },
+                    {
+                        data: [100],
+                        backgroundColor: ['#E74C3C'],
+                        borderWidth: 0,
+                        cutout: '82%',
+                        borderRadius: 20,
+                    }
+                ]
             };
         }
 
-        // Normal case
-        const remaining = Math.max(currentBalance.remaining, 0);
+        // Multi-ring chart: each status gets its own ring
+        const approved = calculatePercentage.approved;
+        const pending = calculatePercentage.pending;
+        const remaining = calculatePercentage.remaining;
+
         return {
-            datasets: [{
-                data: [currentBalance.approved, currentBalance.pending, remaining],
-                backgroundColor: [approvedColor, pendingColor, remainingColor],
-                borderWidth: 0,
-                cutout: '75%',
-                borderRadius: 4,
-            }]
+            datasets: [
+                // Outer ring - Approved (Green)
+                {
+                    data: [approved, 100 - approved],
+                    backgroundColor: [ringColors.approved, ringColors.background],
+                    borderWidth: 0,
+                    cutout: '78%',
+                    borderRadius: 20,
+                    rotation: -90,
+                },
+                // Middle ring - Pending (Orange)
+                {
+                    data: [pending, 100 - pending],
+                    backgroundColor: [ringColors.pending, ringColors.background],
+                    borderWidth: 0,
+                    cutout: '78%',
+                    borderRadius: 20,
+                    rotation: -90,
+                },
+                // Inner ring - Remaining (Blue)
+                {
+                    data: [remaining, 100 - remaining],
+                    backgroundColor: [ringColors.remaining, ringColors.background],
+                    borderWidth: 0,
+                    cutout: '78%',
+                    borderRadius: 20,
+                    rotation: -90,
+                },
+            ]
         };
-    }, [currentBalance, isUnlimited, isOverLimit]);
+    }, [currentBalance, isUnlimited, isOverLimit, calculatePercentage]);
 
     const chartOptions = useMemo(() => ({
         responsive: true,
@@ -266,13 +328,14 @@ const DashboardCard: React.FC<DashboardCardProps> = ({ leaveTypes, leaveRequests
         animation: {
             animateRotate: true,
             animateScale: true,
-            duration: 800,
+            duration: 1000,
             easing: 'easeOutQuart' as const,
         },
+        spacing: 4,
     }), []);
 
     return (
-        <Box sx={{ mb: { xs: 0, sm: 3 } }}>
+        <Box sx={{ mb: { xs: 0, sm: 3 }, maxWidth: 1200, mx: 'auto' }}>
             <Paper
                 elevation={0}
                 sx={{
@@ -352,13 +415,159 @@ const DashboardCard: React.FC<DashboardCardProps> = ({ leaveTypes, leaveRequests
                 </Box>
 
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2.5 }}>
-                    {/* Left Side: Circular Progress with Chart.js */}
-                    <Box sx={{ width: '42%', display: 'flex', justifyContent: 'center' }}>
-                        <Box sx={{ position: 'relative', width: 130, height: 130 }}>
-                            {/* Chart.js Doughnut */}
-                            <Doughnut data={chartData} options={chartOptions} />
+                    {/* Left Side: Multi-ring Circular Progress */}
+                    <Box sx={{ width: '45%', display: 'flex', justifyContent: 'center' }}>
+                        <ClickAwayListener onClickAway={() => setActiveTooltip(null)}>
+                        <Box sx={{ position: 'relative', width: 160, height: 160 }}>
+                            {/* Multi-ring Chart using nested circles */}
+                            <Box sx={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}>
+                                {/* Outer ring - Approved (Green) */}
+                                <MuiTooltip
+                                    open={activeTooltip === 'approved'}
+                                    title={
+                                        <Box sx={{ p: 0.5 }}>
+                                            <Typography sx={{ fontWeight: 600, fontSize: '0.85rem', color: '#2ECC71' }}>
+                                                {t('dashboard_approved_title', 'อนุมัติแล้ว')}
+                                            </Typography>
+                                            <Typography sx={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.9)' }}>
+                                                {currentBalance.approved} {t('days', 'วัน')} ({Math.round(calculatePercentage.approved)}%)
+                                            </Typography>
+                                        </Box>
+                                    }
+                                    placement="top"
+                                    arrow
+                                    componentsProps={{
+                                        tooltip: {
+                                            sx: {
+                                                bgcolor: 'rgba(0, 0, 0, 0.85)',
+                                                color: '#fff',
+                                                boxShadow: '0 4px 20px rgba(0,0,0,0.3)',
+                                                borderRadius: 1,
+                                                '& .MuiTooltip-arrow': {
+                                                    color: 'rgba(0, 0, 0, 0.85)',
+                                                },
+                                            },
+                                        },
+                                    }}
+                                >
+                                    <svg 
+                                        viewBox="0 0 100 100" 
+                                        style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', transform: 'rotate(-90deg)', cursor: 'pointer' }}
+                                        onClick={() => setActiveTooltip(activeTooltip === 'approved' ? null : 'approved')}
+                                    >
+                                        {/* Background circle */}
+                                        <circle cx="50" cy="50" r="45" fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="8" />
+                                        {/* Progress circle */}
+                                        <circle 
+                                            cx="50" cy="50" r="45" 
+                                            fill="none" 
+                                            stroke="#2ECC71" 
+                                            strokeWidth="8" 
+                                            strokeLinecap="round"
+                                            strokeDasharray={`${calculatePercentage.approved * 2.83} 283`}
+                                            style={{ transition: 'stroke-dasharray 0.8s ease-out' }}
+                                        />
+                                    </svg>
+                                </MuiTooltip>
+                                {/* Middle ring - Pending (Orange) */}
+                                <MuiTooltip
+                                    open={activeTooltip === 'pending'}
+                                    title={
+                                        <Box sx={{ p: 0.5 }}>
+                                            <Typography sx={{ fontWeight: 600, fontSize: '0.85rem', color: '#F39C12' }}>
+                                                {t('dashboard_pending_title', 'รออนุมัติ')}
+                                            </Typography>
+                                            <Typography sx={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.9)' }}>
+                                                {currentBalance.pending} {t('days', 'วัน')} ({Math.round(calculatePercentage.pending)}%)
+                                            </Typography>
+                                        </Box>
+                                    }
+                                    placement="top"
+                                    arrow
+                                    componentsProps={{
+                                        tooltip: {
+                                            sx: {
+                                                bgcolor: 'rgba(0, 0, 0, 0.85)',
+                                                color: '#fff',
+                                                boxShadow: '0 4px 20px rgba(0,0,0,0.3)',
+                                                borderRadius: 1,
+                                                '& .MuiTooltip-arrow': {
+                                                    color: 'rgba(0, 0, 0, 0.85)',
+                                                },
+                                            },
+                                        },
+                                    }}
+                                >
+                                    <svg 
+                                        viewBox="0 0 100 100" 
+                                        style={{ position: 'absolute', top: '12%', left: '12%', width: '76%', height: '76%', transform: 'rotate(-90deg)', cursor: 'pointer' }}
+                                        onClick={() => setActiveTooltip(activeTooltip === 'pending' ? null : 'pending')}
+                                    >
+                                        {/* Background circle */}
+                                        <circle cx="50" cy="50" r="45" fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="10" />
+                                        {/* Progress circle */}
+                                        <circle 
+                                            cx="50" cy="50" r="45" 
+                                            fill="none" 
+                                            stroke="#F39C12" 
+                                            strokeWidth="10" 
+                                            strokeLinecap="round"
+                                            strokeDasharray={`${calculatePercentage.pending * 2.83} 283`}
+                                            style={{ transition: 'stroke-dasharray 0.8s ease-out' }}
+                                        />
+                                    </svg>
+                                </MuiTooltip>
+                                {/* Inner ring - Remaining (Blue) */}
+                                <MuiTooltip
+                                    open={activeTooltip === 'remaining'}
+                                    title={
+                                        <Box sx={{ p: 0.5 }}>
+                                            <Typography sx={{ fontWeight: 600, fontSize: '0.85rem', color: isOverLimit ? '#E74C3C' : '#5DADE2' }}>
+                                                {isOverLimit ? t('dashboard_exceeded_title', 'เกินสิทธิ์') : t('dashboard_remaining_title', 'คงเหลือ')}
+                                            </Typography>
+                                            <Typography sx={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.9)' }}>
+                                                {isOverLimit ? Math.abs(currentBalance.remaining) : currentBalance.remaining} {t('days', 'วัน')} ({Math.round(calculatePercentage.remaining)}%)
+                                            </Typography>
+                                        </Box>
+                                    }
+                                    placement="top"
+                                    arrow
+                                    componentsProps={{
+                                        tooltip: {
+                                            sx: {
+                                                bgcolor: 'rgba(0, 0, 0, 0.85)',
+                                                color: '#fff',
+                                                boxShadow: '0 4px 20px rgba(0,0,0,0.3)',
+                                                borderRadius: 1,
+                                                '& .MuiTooltip-arrow': {
+                                                    color: 'rgba(0, 0, 0, 0.85)',
+                                                },
+                                            },
+                                        },
+                                    }}
+                                >
+                                    <svg 
+                                        viewBox="0 0 100 100" 
+                                        style={{ position: 'absolute', top: '24%', left: '24%', width: '52%', height: '52%', transform: 'rotate(-90deg)', cursor: 'pointer' }}
+                                        onClick={() => setActiveTooltip(activeTooltip === 'remaining' ? null : 'remaining')}
+                                    >
+                                        {/* Background circle */}
+                                        <circle cx="50" cy="50" r="45" fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="12" />
+                                        {/* Progress circle */}
+                                        <circle 
+                                            cx="50" cy="50" r="45" 
+                                            fill="none" 
+                                            stroke="#5DADE2" 
+                                            strokeWidth="12" 
+                                            strokeLinecap="round"
+                                            strokeDasharray={`${calculatePercentage.remaining * 2.83} 283`}
+                                            style={{ transition: 'stroke-dasharray 0.8s ease-out' }}
+                                        />
+                                    </svg>
+                                </MuiTooltip>
+                            </Box>
 
-                            {/* Text Content Overlay */}
+                            {/* Text Content Overlay - Days Remaining */}
                             <Box sx={{
                                 position: 'absolute',
                                 top: 0,
@@ -376,18 +585,19 @@ const DashboardCard: React.FC<DashboardCardProps> = ({ leaveTypes, leaveRequests
                                 <Typography variant="caption" sx={{ fontSize: '0.7rem', color: 'white', mb: -0.5 }}>
                                     {isOverLimit ? t('dashboard_over_limit', 'เกินสิทธิ์') : t('dashboard_remaining', 'คงเหลือ')}
                                 </Typography>
-                                <Typography variant="h4" sx={{ fontWeight: 'bold', color: isOverLimit ? '#FF6B9D' : 'white', fontSize: '2rem' }}>
-                                    {isOverLimit ? Math.abs(currentBalance.remaining) : currentBalance.remaining}
+                                <Typography variant="h4" sx={{ fontWeight: 'bold', color: isOverLimit ? '#E74C3C' : 'white', fontSize: '2.2rem' }}>
+                                    {isOverLimit ? Math.abs(currentBalance.remaining) : (isUnlimited ? '∞' : currentBalance.remaining)}
                                 </Typography>
                                 <Typography variant="caption" sx={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.7)' }}>
                                     {isUnlimited ? t('dashboard_unlimited', 'ไม่จำกัด') : t('dashboard_from_total', 'จาก {{total}} วัน').replace('{{total}}', String(currentBalance.total))}
                                 </Typography>
                             </Box>
                         </Box>
+                        </ClickAwayListener>
                     </Box>
 
                     {/* Right Side: Stats */}
-                    <Box sx={{ width: '58%' }}>
+                    <Box sx={{ width: '55%' }}>
                         {/* แสดงสิทธิ์คงเหลือในปีนี้ */}
                         <Typography variant="caption" sx={{ display: 'block', mb: 1.25, opacity: 0.8, fontSize: '0.75rem' }}>
                             {isUnlimited 
@@ -400,7 +610,7 @@ const DashboardCard: React.FC<DashboardCardProps> = ({ leaveTypes, leaveRequests
                         </Typography>
                         
                         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                            {/* อนุมัติแล้ว */}
+                            {/* อนุมัติแล้ว - Green outer ring */}
                             <Box 
                                 onClick={() => currentBalance.approved > 0 && handleDrilldownClick('approved')}
                                 sx={{ 
@@ -417,10 +627,10 @@ const DashboardCard: React.FC<DashboardCardProps> = ({ leaveTypes, leaveRequests
                                 }}
                             >
                                 <Box sx={{ 
-                                    width: 7, 
-                                    height: 7, 
+                                    width: 10, 
+                                    height: 10, 
                                     borderRadius: '50%', 
-                                    bgcolor: '#4CAF50',
+                                    bgcolor: '#2ECC71',
                                     flexShrink: 0
                                 }} />
                                 <Typography variant="body2" sx={{ fontSize: '0.8rem', flex: 1 }}>
@@ -428,23 +638,7 @@ const DashboardCard: React.FC<DashboardCardProps> = ({ leaveTypes, leaveRequests
                                 </Typography>
                                 {currentBalance.approved > 0 && <ArrowRight size={15} color="rgba(255,255,255,0.5)" />}
                             </Box>
-                            {/* เหลือ / เกินสิทธิ์ */}
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25, py: 0.375, px: 0.5, mx: -0.5 }}>
-                                <Box sx={{ 
-                                    width: 7, 
-                                    height: 7, 
-                                    borderRadius: '50%', 
-                                    bgcolor: isOverLimit ? '#FF6B9D' : 'rgba(255,255,255,0.5)',
-                                    flexShrink: 0
-                                }} />
-                                <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
-                                    {isOverLimit 
-                                        ? t('dashboard_exceeded', 'เกิน {{days}} วัน').replace('{{days}}', String(Math.abs(currentBalance.remaining)))
-                                        : t('dashboard_left', 'เหลือ {{days}} วัน').replace('{{days}}', isUnlimited ? '-' : String(currentBalance.remaining))
-                                    }
-                                </Typography>
-                            </Box>
-                            {/* รออนุมัติ */}
+                            {/* รออนุมัติ - Orange middle ring */}
                             <Box 
                                 onClick={() => currentBalance.pending > 0 && handleDrilldownClick('pending')}
                                 sx={{ 
@@ -461,16 +655,32 @@ const DashboardCard: React.FC<DashboardCardProps> = ({ leaveTypes, leaveRequests
                                 }}
                             >
                                 <Box sx={{ 
-                                    width: 7, 
-                                    height: 7, 
+                                    width: 10, 
+                                    height: 10, 
                                     borderRadius: '50%', 
-                                    bgcolor: '#FFC107',
+                                    bgcolor: '#F39C12',
                                     flexShrink: 0
                                 }} />
                                 <Typography variant="body2" sx={{ fontSize: '0.8rem', flex: 1 }}>
                                     {t('dashboard_pending', 'รออนุมัติ {{days}} วัน').replace('{{days}}', currentBalance.pending > 0 ? String(currentBalance.pending) : '-')}
                                 </Typography>
                                 {currentBalance.pending > 0 && <ArrowRight size={15} color="rgba(255,255,255,0.5)" />}
+                            </Box>
+                            {/* เหลือ / เกินสิทธิ์ - Blue inner ring */}
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25, py: 0.375, px: 0.5, mx: -0.5 }}>
+                                <Box sx={{ 
+                                    width: 10, 
+                                    height: 10, 
+                                    borderRadius: '50%', 
+                                    bgcolor: isOverLimit ? '#E74C3C' : '#5DADE2',
+                                    flexShrink: 0
+                                }} />
+                                <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+                                    {isOverLimit 
+                                        ? t('dashboard_exceeded', 'เกิน {{days}} วัน').replace('{{days}}', String(Math.abs(currentBalance.remaining)))
+                                        : t('dashboard_left', 'เหลือ {{days}} วัน').replace('{{days}}', isUnlimited ? '-' : String(currentBalance.remaining))
+                                    }
+                                </Typography>
                             </Box>
                             {/* ไม่อนุมัติ */}
                             <Box 
@@ -489,10 +699,10 @@ const DashboardCard: React.FC<DashboardCardProps> = ({ leaveTypes, leaveRequests
                                 }}
                             >
                                 <Box sx={{ 
-                                    width: 7, 
-                                    height: 7, 
+                                    width: 10, 
+                                    height: 10, 
                                     borderRadius: '50%', 
-                                    bgcolor: '#FF8FA3',
+                                    bgcolor: '#E74C3C',
                                     flexShrink: 0
                                 }} />
                                 <Typography variant="body2" sx={{ fontSize: '0.8rem', flex: 1 }}>
@@ -517,10 +727,10 @@ const DashboardCard: React.FC<DashboardCardProps> = ({ leaveTypes, leaveRequests
                                 }}
                             >
                                 <Box sx={{ 
-                                    width: 7, 
-                                    height: 7, 
+                                    width: 10, 
+                                    height: 10, 
                                     borderRadius: '50%', 
-                                    bgcolor: '#9E9E9E',
+                                    bgcolor: '#9B59B6',
                                     flexShrink: 0
                                 }} />
                                 <Typography variant="body2" sx={{ fontSize: '0.8rem', flex: 1 }}>

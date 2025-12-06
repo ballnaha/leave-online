@@ -11,8 +11,9 @@ import {
   alpha,
   useTheme,
   CircularProgress,
+  Link,
 } from '@mui/material';
-import { Bell, BellOff, BellRing } from 'lucide-react';
+import { Bell, BellOff, BellRing, Settings } from 'lucide-react';
 import { useOneSignal } from '../providers/OneSignalProvider';
 
 interface NotificationToggleProps {
@@ -25,16 +26,36 @@ export default function NotificationToggle({
   showStatus = true 
 }: NotificationToggleProps) {
   const theme = useTheme();
-  const { isSupported, isSubscribed, permission, subscribe, unsubscribe } = useOneSignal();
+  const { isSupported, isSubscribed, permission, subscribe, unsubscribe, requestPermission } = useOneSignal();
   const [loading, setLoading] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
 
   const handleToggle = async () => {
     setLoading(true);
+    setError(null);
     try {
       if (isSubscribed) {
         await unsubscribe();
       } else {
         await subscribe();
+      }
+    } catch (err: any) {
+      if (err?.message === 'PERMISSION_DENIED') {
+        setError('กรุณาเปิดการแจ้งเตือนในการตั้งค่าเบราว์เซอร์');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRequestPermission = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      await requestPermission();
+    } catch (err: any) {
+      if (err?.message === 'PERMISSION_DENIED') {
+        setError('กรุณาเปิดการแจ้งเตือนในการตั้งค่าเบราว์เซอร์');
       }
     } finally {
       setLoading(false);
@@ -54,11 +75,49 @@ export default function NotificationToggle({
 
   if (permission === 'denied') {
     return (
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, color: 'error.main' }}>
-        <BellOff size={18} />
-        <Typography variant="body2">
-          การแจ้งเตือนถูกบล็อก กรุณาเปิดในการตั้งค่าเบราว์เซอร์
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, color: 'error.main' }}>
+          <BellOff size={18} />
+          <Typography variant="body2">
+            การแจ้งเตือนถูกบล็อก
+          </Typography>
+        </Box>
+        <Typography variant="caption" color="text.secondary">
+          กรุณาเปิดการแจ้งเตือนในการตั้งค่าเบราว์เซอร์:
         </Typography>
+        <Typography variant="caption" color="text.secondary" component="div">
+          • Chrome: คลิก 🔒 ข้าง URL → Site settings → Notifications → Allow<br/>
+          • Safari: Preferences → Websites → Notifications
+        </Typography>
+      </Box>
+    );
+  }
+
+  // Show request permission button if permission is 'default' (not asked yet or reset)
+  if (permission === 'default' && !isSubscribed) {
+    return (
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+        <Button
+          variant="contained"
+          color="primary"
+          startIcon={
+            loading ? (
+              <CircularProgress size={18} color="inherit" />
+            ) : (
+              <Bell size={18} />
+            )
+          }
+          onClick={handleRequestPermission}
+          disabled={loading}
+          sx={{ borderRadius: 1 }}
+        >
+          เปิดการแจ้งเตือน
+        </Button>
+        {error && (
+          <Typography variant="caption" color="error">
+            {error}
+          </Typography>
+        )}
       </Box>
     );
   }

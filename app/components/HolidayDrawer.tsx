@@ -11,7 +11,7 @@ import {
     MenuItem,
     CircularProgress,
 } from '@mui/material';
-import { X, Calendar, Star, Sun } from 'lucide-react';
+import { CloseCircle, Calendar } from 'iconsax-react';
 import { useLocale } from '@/app/providers/LocaleProvider';
 import dayjs from 'dayjs';
 import 'dayjs/locale/th';
@@ -24,6 +24,11 @@ interface Holiday {
     name: string;
     type: string;
     companyId?: number | null;
+    company?: {
+        id: number;
+        code: string;
+        name: string;
+    } | null;
 }
 
 interface HolidayDrawerProps {
@@ -42,7 +47,7 @@ export default function HolidayDrawer({ open, onClose, initialYear }: HolidayDra
     const currentYear = dayjs().year();
     const years = Array.from({ length: 5 }, (_, i) => currentYear + 1 - i);
 
-    // Fetch holidays when year changes or drawer opens
+    // Fetch holidays when drawer opens
     useEffect(() => {
         if (open) {
             fetchHolidays();
@@ -59,7 +64,7 @@ export default function HolidayDrawer({ open, onClose, initialYear }: HolidayDra
     const fetchHolidays = async () => {
         setLoading(true);
         try {
-            const res = await fetch(`/api/holidays?year=${selectedYear}`);
+            const res = await fetch(`/api/holidays?year=${selectedYear}&includeCompany=true`);
             if (res.ok) {
                 const data = await res.json();
                 setHolidays(data);
@@ -83,30 +88,7 @@ export default function HolidayDrawer({ open, onClose, initialYear }: HolidayDra
         }, {} as Record<number, Holiday[]>);
     }, [holidays]);
 
-    const getTypeColor = (type: string) => {
-        switch (type) {
-            case 'company':
-                return { bg: '#D1FAE5', text: '#DC2626' };
-            default:
-                return { bg: '#F3F4F6', text: '#6B7280' };
-        }
-    };
-
-    const getTypeLabel = (type: string) => {
-        switch (type) {
-            case 'company':
-                return t('holiday_type_company', 'วันหยุดบริษัท');
-            default:
-                return '';
-        }
-    };
-
     const months = Object.keys(holidaysByMonth).map(Number).sort((a, b) => a - b);
-
-    // Stats
-    const stats = {
-        company: holidays.filter((h) => h.type === 'company').length,
-    };
 
     return (
         <Drawer
@@ -137,7 +119,7 @@ export default function HolidayDrawer({ open, onClose, initialYear }: HolidayDra
                     }}
                 >
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                        <Calendar size={24} />
+                        <Calendar size={24} variant="Bold" />
                         <Typography variant="h6" fontWeight={600}>
                             {t('holiday_title', 'วันหยุดประจำปี')}
                         </Typography>
@@ -173,7 +155,7 @@ export default function HolidayDrawer({ open, onClose, initialYear }: HolidayDra
                             </Select>
                         </FormControl>
                         <IconButton onClick={onClose} size="small" sx={{ color: 'white' }}>
-                            <X size={22} />
+                            <CloseCircle size={22} />
                         </IconButton>
                     </Box>
                 </Box>
@@ -182,7 +164,7 @@ export default function HolidayDrawer({ open, onClose, initialYear }: HolidayDra
                 <Box sx={{ p: 2, bgcolor: '#F9FAFB', borderBottom: '1px solid #E5E7EB' }}>
                     <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center', flexWrap: 'wrap' }}>
                         <Chip
-                            icon={<Calendar size={16} color="#DC2626" />}
+                            icon={<Calendar size={16} color="#DC2626" variant="Bold" />}
                             label={`${t('holiday_type_company', 'วันหยุดบริษัท')} ${holidays.length} ${t('holiday_days', 'วัน')}`}
                             sx={{ bgcolor: '#FEE2E2', color: '#DC2626', fontWeight: 500 }}
                         />
@@ -197,7 +179,7 @@ export default function HolidayDrawer({ open, onClose, initialYear }: HolidayDra
                         </Box>
                     ) : months.length === 0 ? (
                         <Box sx={{ textAlign: 'center', py: 4 }}>
-                            <Calendar size={48} color="#9CA3AF" />
+                            <Calendar size={48} color="#9CA3AF" variant="Bulk" />
                             <Typography color="text.secondary" sx={{ mt: 2 }}>
                                 {t('holiday_no_data', 'ไม่มีข้อมูลวันหยุดสำหรับปีนี้')}
                             </Typography>
@@ -287,10 +269,27 @@ export default function HolidayDrawer({ open, onClose, initialYear }: HolidayDra
                                                     >
                                                         {holidayName}
                                                     </Typography>
-                                                    <Typography variant="caption" sx={{ color: '#9CA3AF' }}>
-                                                        {t('holiday_type_company', 'วันหยุดบริษัท')}
-                                                        {isWeekend && ` • ${t('holiday_weekend', 'ตรงวันหยุด')}`}
-                                                    </Typography>
+                                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+                                                        <Typography variant="caption" sx={{ color: '#9CA3AF' }}>
+                                                            {t('holiday_type_company', 'วันหยุดบริษัท')}
+                                                            {isWeekend && ` • ${t('holiday_weekend', 'ตรงวันหยุด')}`}
+                                                        </Typography>
+                                                        {/* แสดง remark เฉพาะบริษัท ถ้าวันหยุดไม่ใช่ของทุกบริษัท */}
+                                                        {holiday.companyId !== null && holiday.company && (
+                                                            <Chip
+                                                                size="small"
+                                                                label={`${t('only_for', 'เฉพาะ')} ${holiday.company.code}`}
+                                                                title={holiday.company.name}
+                                                                sx={{
+                                                                    height: 18,
+                                                                    fontSize: '0.65rem',
+                                                                    bgcolor: '#FEF3C7',
+                                                                    color: '#92400E',
+                                                                    fontWeight: 500,
+                                                                }}
+                                                            />
+                                                        )}
+                                                    </Box>
                                                 </Box>
                                             </Box>
                                         );

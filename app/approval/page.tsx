@@ -676,7 +676,7 @@ export default function ApprovalPage() {
             <Tab 
               label={
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                  <Clock size={18} variant={tabValue === 0 ? "Bold" : "Linear"} />
+                  <Clock size={18} variant={tabValue === 0 ? "Bold" : "Linear"} color={tabValue === 0 ? PRIMARY_COLOR : "#64748B"} />
                   <span style={{ fontWeight: tabValue === 0 ? 600 : 400 }}>รออนุมัติ</span>
                   {counts.pending > 0 && (
                     <Chip 
@@ -700,7 +700,7 @@ export default function ApprovalPage() {
             <Tab 
               label={
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                  <TickCircle size={18} variant={tabValue === 1 ? "Bold" : "Linear"} />
+                  <TickCircle size={18} variant={tabValue === 1 ? "Bold" : "Linear"} color={tabValue === 1 ? PRIMARY_COLOR : "#64748B"} />
                   <span style={{ fontWeight: tabValue === 1 ? 600 : 400 }}>อนุมัติ</span>
                 </Box>
               }
@@ -709,7 +709,7 @@ export default function ApprovalPage() {
             <Tab 
               label={
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                  <CloseCircle size={18} variant={tabValue === 2 ? "Bold" : "Linear"} />
+                  <CloseCircle size={18} variant={tabValue === 2 ? "Bold" : "Linear"} color={tabValue === 2 ? PRIMARY_COLOR : "#64748B"} />
                   <span style={{ fontWeight: tabValue === 2 ? 600 : 400 }}>ปฏิเสธ</span>
                 </Box>
               }
@@ -718,7 +718,7 @@ export default function ApprovalPage() {
             <Tab 
               label={
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                  <Forbidden2 size={18} variant={tabValue === 3 ? "Bold" : "Linear"} />
+                  <Forbidden2 size={18} variant={tabValue === 3 ? "Bold" : "Linear"} color={tabValue === 3 ? PRIMARY_COLOR : "#64748B"} />
                   <span style={{ fontWeight: tabValue === 3 ? 600 : 400 }}>ยกเลิก</span>
                 </Box>
               }
