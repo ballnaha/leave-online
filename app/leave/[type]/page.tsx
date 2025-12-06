@@ -1648,6 +1648,15 @@ export default function LeaveFormPage() {
                             </Alert>
                         )}
                     </Box>
+
+                    {/* หมายเหตุ: กรุณาลางานภายใน 3 วัน */}
+                    <Alert 
+                        severity="info" 
+                        icon={<InfoCircle size={18} color="#0288d1" />}
+                        sx={{ mt: 2, borderRadius: 2 }}
+                    >
+                        {t('leave_submit_within_3_days', 'หมายเหตุ: กรุณาลางานภายใน 3 วันนับตั้งแต่วันที่ลา')}
+                    </Alert>
                 </Container>
             </Box>
 

@@ -199,6 +199,70 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  // Get device/browser info
+  const getDeviceInfo = useCallback(() => {
+    const ua = navigator.userAgent;
+    let browser = 'Unknown';
+    let browserVersion = '';
+    let os = 'Unknown';
+    let osVersion = '';
+    let platform = 'desktop';
+
+    // Detect browser
+    if (ua.includes('Firefox/')) {
+      browser = 'Firefox';
+      browserVersion = ua.match(/Firefox\/(\d+\.?\d*)/)?.[1] || '';
+    } else if (ua.includes('Edg/')) {
+      browser = 'Edge';
+      browserVersion = ua.match(/Edg\/(\d+\.?\d*)/)?.[1] || '';
+    } else if (ua.includes('Chrome/')) {
+      browser = 'Chrome';
+      browserVersion = ua.match(/Chrome\/(\d+\.?\d*)/)?.[1] || '';
+    } else if (ua.includes('Safari/') && !ua.includes('Chrome')) {
+      browser = 'Safari';
+      browserVersion = ua.match(/Version\/(\d+\.?\d*)/)?.[1] || '';
+    } else if (ua.includes('Opera') || ua.includes('OPR/')) {
+      browser = 'Opera';
+      browserVersion = ua.match(/(?:Opera|OPR)\/(\d+\.?\d*)/)?.[1] || '';
+    }
+
+    // Detect OS
+    if (ua.includes('Windows NT')) {
+      os = 'Windows';
+      const match = ua.match(/Windows NT (\d+\.?\d*)/);
+      if (match) {
+        const ver = match[1];
+        if (ver === '10.0') osVersion = '10/11';
+        else if (ver === '6.3') osVersion = '8.1';
+        else if (ver === '6.2') osVersion = '8';
+        else if (ver === '6.1') osVersion = '7';
+        else osVersion = ver;
+      }
+    } else if (ua.includes('Mac OS X')) {
+      os = 'macOS';
+      osVersion = ua.match(/Mac OS X ([\d_]+)/)?.[1]?.replace(/_/g, '.') || '';
+    } else if (ua.includes('Android')) {
+      os = 'Android';
+      osVersion = ua.match(/Android ([\d.]+)/)?.[1] || '';
+      platform = 'mobile';
+    } else if (ua.includes('iPhone') || ua.includes('iPad')) {
+      os = ua.includes('iPad') ? 'iPadOS' : 'iOS';
+      osVersion = ua.match(/OS ([\d_]+)/)?.[1]?.replace(/_/g, '.') || '';
+      platform = ua.includes('iPad') ? 'tablet' : 'mobile';
+    } else if (ua.includes('Linux')) {
+      os = 'Linux';
+    }
+
+    // Detect platform more accurately
+    if (ua.includes('Mobile') || ua.includes('Android')) {
+      platform = 'mobile';
+    } else if (ua.includes('Tablet') || ua.includes('iPad')) {
+      platform = 'tablet';
+    }
+
+    return { browser, browserVersion, os, osVersion, platform, userAgent: ua };
+  }, []);
+
   // Register device to backend
   const registerDevice = useCallback(async (pid: string) => {
     // Don't register if not authenticated
@@ -208,13 +272,15 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
     }
 
     try {
-      console.log('🔔 OneSignal: Registering device:', pid);
+      const deviceInfo = getDeviceInfo();
+      console.log('🔔 OneSignal: Registering device:', pid, deviceInfo);
       const res = await fetch('/api/notifications/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           playerId: pid,
           deviceType: 'web',
+          ...deviceInfo,
         }),
       });
       
@@ -236,7 +302,7 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
     } catch (error) {
       console.error('🔔 OneSignal: Error registering device:', error);
     }
-  }, [status]);
+  }, [status, getDeviceInfo]);
 
   // Auto-register when conditions are met
   useEffect(() => {

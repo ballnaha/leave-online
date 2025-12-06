@@ -948,7 +948,7 @@ export default function LeavePage() {
 
             {/* Leave Detail Drawer */}
             <LeaveDetailDrawer
-                open={drawerOpen}
+                open={drawerOpen && !cancelDialogOpen}
                 onClose={handleCloseDrawer}
                 leave={selectedLeave}
                 onCancel={() => setCancelDialogOpen(true)}
@@ -964,6 +964,7 @@ export default function LeavePage() {
                         setCancelReason('');
                     }
                 }}
+                sx={{ zIndex: 1400 }}
                 PaperProps={{
                     sx: {
                         borderRadius: 1,

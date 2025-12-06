@@ -181,14 +181,56 @@ export async function createApprovalSteps(
   leaveRequestId: number,
   userId: number
 ): Promise<void> {
+  const now = new Date();
+  
+  // ดึงข้อมูล user ก่อนเพื่อเช็ค role
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  if (!user) return;
+
+  // 0. ถ้าเป็น dept_manager ให้ส่งตรงไป HR Manager เลย
+  if (user.role === 'dept_manager') {
+    const hrManager = await prisma.user.findFirst({
+      where: { 
+        role: 'hr_manager', 
+        isActive: true,
+        id: { not: userId }, // ป้องกัน self-approval
+      },
+    });
+
+    if (hrManager) {
+      await prisma.leaveApproval.create({
+        data: {
+          leaveRequestId,
+          level: 99,
+          approverId: hrManager.id,
+          status: 'pending',
+          notifiedAt: now,
+        },
+      });
+
+      const leaveRequest = await prisma.leaveRequest.findUnique({
+        where: { id: leaveRequestId },
+        include: { user: true },
+      });
+
+      if (leaveRequest) {
+        await notifyApprovalPending(
+          hrManager.id,
+          leaveRequestId,
+          `${leaveRequest.user.firstName} ${leaveRequest.user.lastName}`,
+          leaveRequest.leaveType
+        );
+      }
+    }
+    return;
+  }
+
   // 1. ดึง approval flow ของ user (Specific User Override)
   const approvalFlows = await prisma.userApprovalFlow.findMany({
     where: { userId, isActive: true },
     orderBy: { level: 'asc' },
     include: { approver: true },
   });
-
-  const now = new Date();
 
   if (approvalFlows.length > 0) {
     // กรอง approval flows ที่ไม่ใช่ตัวเอง (ป้องกัน self-approval)
@@ -259,9 +301,8 @@ export async function createApprovalSteps(
   }
 
   // 2. ถ้าไม่มี User Flow ให้หาจาก ApprovalWorkflow (Section -> Department -> Company)
-  const user = await prisma.user.findUnique({ where: { id: userId } });
-  if (user) {
-    let workflow = null;
+  // user ถูกดึงมาแล้วด้านบน ไม่ต้องดึงซ้ำ
+  let workflow = null;
 
     // Check Section
     if (user.section) {
@@ -419,7 +460,6 @@ export async function createApprovalSteps(
         return;
       }
     }
-  }
 
   // 3. Fallback: ถ้าไม่มี flow กำหนดไว้เลย ให้ส่งตรงไป HR Manager (แต่ต้องไม่ใช่ตัวเอง)
   const hrManager = await prisma.user.findFirst({

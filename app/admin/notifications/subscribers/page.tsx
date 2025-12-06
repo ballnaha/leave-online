@@ -58,6 +58,11 @@ interface UserDevice {
   userId: number;
   playerId: string;
   deviceType: string;
+  browser: string | null;
+  browserVersion: string | null;
+  os: string | null;
+  osVersion: string | null;
+  platform: string | null;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
@@ -426,12 +431,20 @@ export default function SubscribersPage() {
                     </Typography>
                   </TableCell>
                   <TableCell>
-                    <Chip
-                      icon={getDeviceIcon(device.deviceType) as any}
-                      label={device.deviceType}
-                      size="small"
-                      variant="outlined"
-                    />
+                    <Box>
+                      <Chip
+                        icon={getDeviceIcon(device.deviceType) as any}
+                        label={device.browser ? `${device.browser} ${device.browserVersion || ''}`.trim() : device.deviceType}
+                        size="small"
+                        variant="outlined"
+                        sx={{ mb: 0.5 }}
+                      />
+                      {device.os && (
+                        <Typography variant="caption" color="text.secondary" display="block">
+                          {device.os} {device.osVersion || ''} • {device.platform || 'desktop'}
+                        </Typography>
+                      )}
+                    </Box>
                   </TableCell>
                   <TableCell>
                     <Chip

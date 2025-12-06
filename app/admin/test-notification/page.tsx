@@ -348,7 +348,7 @@ export default function TestNotificationPage() {
                               borderRadius: 1,
                             }}
                           >
-                            {device.playerId.substring(0, 8)}...
+                            {device.playerId}
                           </Typography>
                         </TableCell>
                       </TableRow>

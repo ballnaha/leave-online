@@ -30,6 +30,9 @@ import {
   InputLabel,
   Select,
   MenuItem,
+  Tabs,
+  Tab,
+  Badge,
 } from '@mui/material';
 import {
   Plus,
@@ -177,10 +180,12 @@ export default function UsersPage() {
   const [selectedUser, setSelectedUser] = useState<UserData | undefined>(undefined);
   const [searchQuery, setSearchQuery] = useState('');
   
+  // Role Tab
+  const [roleTab, setRoleTab] = useState<string>('all');
+  
   // Filters
   const [companyFilter, setCompanyFilter] = useState<string>('all');
   const [departmentFilter, setDepartmentFilter] = useState<string>('all');
-  const [roleFilter, setRoleFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   
   // Pagination State
@@ -301,10 +306,31 @@ export default function UsersPage() {
   // Get unique values for filters
   const uniqueCompanies = [...new Set(users.map((u) => u.company))].filter(Boolean);
   const uniqueDepartments = [...new Set(users.map((u) => u.department))].filter(Boolean);
-  const uniqueRoles = [...new Set(users.map((u) => u.role))].filter(Boolean);
   
   // Create department code to name map
   const departmentNameMap = new Map(users.map((u) => [u.department, u.departmentName]));
+
+  // Role tabs configuration
+  const roleTabs = [
+    { value: 'all', label: 'ทั้งหมด', color: 'primary' },
+    { value: 'employee', label: 'พนักงาน', color: 'default' },
+    { value: 'admin', label: 'Admin', color: 'error' },
+    { value: 'hr_manager', label: 'HR Manager', color: 'warning' },
+    { value: 'hr', label: 'HR', color: 'info' },
+    { value: 'dept_manager', label: 'ผจก.ฝ่าย', color: 'success' },
+    { value: 'section_head', label: 'หัวหน้าแผนก', color: 'secondary' },
+  ] as const;
+
+  // Count users by role
+  const roleUserCounts = {
+    all: users.length,
+    employee: users.filter(u => u.role === 'employee').length,
+    admin: users.filter(u => u.role === 'admin').length,
+    hr_manager: users.filter(u => u.role === 'hr_manager').length,
+    hr: users.filter(u => u.role === 'hr').length,
+    dept_manager: users.filter(u => u.role === 'dept_manager').length,
+    section_head: users.filter(u => u.role === 'section_head').length,
+  };
 
   // Filter users
   const filteredUsers = users.filter((user) => {
@@ -316,7 +342,7 @@ export default function UsersPage() {
     
     const matchesCompany = companyFilter === 'all' || user.company === companyFilter;
     const matchesDepartment = departmentFilter === 'all' || user.department === departmentFilter;
-    const matchesRole = roleFilter === 'all' || user.role === roleFilter;
+    const matchesRole = roleTab === 'all' || user.role === roleTab;
     const matchesStatus =
       statusFilter === 'all' ||
       (statusFilter === 'active' && user.isActive) ||
@@ -345,7 +371,7 @@ export default function UsersPage() {
   // Reset page when filters change
   useEffect(() => {
     setPage(0);
-  }, [searchQuery, companyFilter, departmentFilter, roleFilter, statusFilter]);
+  }, [searchQuery, companyFilter, departmentFilter, roleTab, statusFilter]);
 
   // Stats
   const activeUsers = users.filter((u) => u.isActive).length;
@@ -429,6 +455,66 @@ export default function UsersPage() {
         />
       </Box>
 
+      {/* Role Tabs */}
+      <Paper
+        sx={{
+          mb: 3,
+          borderRadius: 1,
+          border: '1px solid',
+          borderColor: 'divider',
+          boxShadow: 'none',
+          overflow: 'hidden',
+        }}
+      >
+        <Tabs
+          value={roleTab}
+          onChange={(_e, newValue) => setRoleTab(newValue)}
+          variant="scrollable"
+          scrollButtons="auto"
+          sx={{
+            bgcolor: alpha(theme.palette.background.default, 0.5),
+            '& .MuiTab-root': {
+              minHeight: 56,
+              fontWeight: 600,
+              textTransform: 'none',
+              fontSize: '0.875rem',
+            },
+            '& .MuiTabs-indicator': {
+              height: 3,
+              borderRadius: '3px 3px 0 0',
+            },
+          }}
+        >
+          {roleTabs.map((tab) => (
+            <Tab
+              key={tab.value}
+              value={tab.value}
+              label={
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  {tab.label}
+                  <Chip
+                    label={roleUserCounts[tab.value as keyof typeof roleUserCounts]}
+                    size="small"
+                    sx={{
+                      height: 22,
+                      minWidth: 28,
+                      fontSize: '0.75rem',
+                      fontWeight: 700,
+                      bgcolor: roleTab === tab.value 
+                        ? alpha(theme.palette.primary.main, 0.15)
+                        : alpha(theme.palette.text.secondary, 0.1),
+                      color: roleTab === tab.value 
+                        ? 'primary.main'
+                        : 'text.secondary',
+                    }}
+                  />
+                </Box>
+              }
+            />
+          ))}
+        </Tabs>
+      </Paper>
+
       {/* Search & Filters */}
       <Paper 
         sx={{ 
@@ -508,28 +594,6 @@ export default function UsersPage() {
               {uniqueDepartments.map((dept) => (
                 <MenuItem key={dept} value={dept}>
                   {departmentNameMap.get(dept) || dept}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-
-          {/* Role Filter */}
-          <FormControl size="small" sx={{ minWidth: 140 }}>
-            <InputLabel>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                <Shield size={16} />
-                สิทธิ์
-              </Box>
-            </InputLabel>
-            <Select
-              value={roleFilter}
-              onChange={(e) => setRoleFilter(e.target.value)}
-              label="สิทธิ์"
-            >
-              <MenuItem value="all">ทั้งหมด</MenuItem>
-              {uniqueRoles.map((role) => (
-                <MenuItem key={role} value={role}>
-                  {role}
                 </MenuItem>
               ))}
             </Select>
@@ -642,17 +706,17 @@ export default function UsersPage() {
                       </Avatar>
                       <Box sx={{ textAlign: 'center' }}>
                         <Typography variant="h6" fontWeight={600} gutterBottom>
-                          {searchQuery || companyFilter !== 'all' || departmentFilter !== 'all' || roleFilter !== 'all' || statusFilter !== 'all'
+                          {searchQuery || companyFilter !== 'all' || departmentFilter !== 'all' || roleTab !== 'all' || statusFilter !== 'all'
                             ? 'ไม่พบผู้ใช้งานที่ค้นหา' 
                             : 'ยังไม่มีข้อมูลผู้ใช้งาน'}
                         </Typography>
                         <Typography variant="body2" color="text.secondary">
-                          {searchQuery || companyFilter !== 'all' || departmentFilter !== 'all' || roleFilter !== 'all' || statusFilter !== 'all'
+                          {searchQuery || companyFilter !== 'all' || departmentFilter !== 'all' || roleTab !== 'all' || statusFilter !== 'all'
                             ? 'ลองค้นหาด้วยคำค้นอื่น หรือเปลี่ยนตัวกรอง' 
                             : 'เริ่มต้นใช้งานโดยการเพิ่มผู้ใช้งานใหม่'}
                         </Typography>
                       </Box>
-                      {!searchQuery && companyFilter === 'all' && departmentFilter === 'all' && roleFilter === 'all' && statusFilter === 'all' && (
+                      {!searchQuery && companyFilter === 'all' && departmentFilter === 'all' && roleTab === 'all' && statusFilter === 'all' && (
                         <Button
                           variant="contained"
                           startIcon={<Plus size={18} />}

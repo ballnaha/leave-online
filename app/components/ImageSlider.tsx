@@ -85,6 +85,14 @@ const ImageSlider: React.FC<ImageSliderProps> = ({ images, aspectRatio = '16/9',
         fetchBanners();
     }, [images]);
 
+    // Call onEmpty via useEffect to avoid setState during render
+    // Must be before any early returns to maintain hooks order
+    useEffect(() => {
+        if (!loading && sliderImages.length === 0) {
+            onEmpty?.();
+        }
+    }, [loading, sliderImages.length, onEmpty]);
+
     if (loading) {
         return (
             <Skeleton 
@@ -99,7 +107,6 @@ const ImageSlider: React.FC<ImageSliderProps> = ({ images, aspectRatio = '16/9',
     }
 
     if (sliderImages.length === 0) {
-        onEmpty?.();
         return null;
     }
 

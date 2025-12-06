@@ -207,14 +207,20 @@ model LeaveApproval {
 }
 
 model UserDevice {
-  id         Int      @id @default(autoincrement())
-  userId     Int
-  playerId   String   @unique
-  deviceType String
-  isActive   Boolean  @default(true)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id          Int      @id @default(autoincrement())
+  userId      Int
+  playerId    String   @unique
+  deviceType  String
+  browser     String?  // Browser name (Chrome, Firefox, Safari, etc.)
+  browserVersion String? // Browser version
+  os          String?  // Operating System (Windows, macOS, Android, iOS, Linux)
+  osVersion   String?  // OS version
+  platform    String?  // Platform (desktop, mobile, tablet)
+  userAgent   String?  @db.Text // Full user agent string
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId], map: "user_devices_userId_fkey")
   @@map("user_devices")

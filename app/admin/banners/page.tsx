@@ -511,7 +511,7 @@ export default function BannersPage() {
                       {!searchQuery && (
                         <Button
                           variant="contained"
-                          startIcon={<Add size={18} />}
+                          startIcon={<Add size={18} color={theme.palette.common.white} />}
                           onClick={handleCreate}
                           sx={{ mt: 1, borderRadius: 1 }}
                         >

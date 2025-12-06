@@ -2,7 +2,7 @@
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { Box, Typography, Paper, IconButton, Select, MenuItem, Divider, Chip, Tooltip as MuiTooltip, ClickAwayListener } from '@mui/material';
 import { Drawer } from 'vaul';
-import { Health, Briefcase, Sun1, ArrowRight, DocumentText, Calendar, Clock, Archive, Building4, Lovely, Car, MessageQuestion, Shield, Heart, People, Profile2User, CloseCircle, TickCircle, Timer, Forbidden2 } from 'iconsax-react';
+import { Health, Briefcase, Sun1, ArrowRight, DocumentText, Calendar, Clock, Archive, Building4, Lovely, Car, MessageQuestion, Shield, Heart, People, Profile2User, CloseCircle, TickCircle, Timer, Forbidden2, MoneySend } from 'iconsax-react';
 import { useLocale } from '../providers/LocaleProvider';
 import { HelpCircle, X } from 'lucide-react';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend } from 'chart.js';
@@ -48,7 +48,7 @@ const leaveTypeConfig: Record<string, { icon: any; color: string }> = {
     paternity: { icon: Profile2User, color: '#11CDEF' },
     sterilization: { icon: Health, color: '#2DCECC' },
     business: { icon: Car, color: '#8965E0' },
-    unpaid: { icon: Clock, color: '#8898AA' },
+    unpaid: { icon: MoneySend, color: '#8898AA' },
     other: { icon: HelpCircle, color: '#5E72E4' },
     default: { icon: MessageQuestion, color: '#8898AA' },
 };

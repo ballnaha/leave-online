@@ -29,6 +29,7 @@ import {
     Profile2User,
     Clock,
     Calendar2,
+    MoneySend,
 } from 'iconsax-react';
 import { HelpCircle } from 'lucide-react';
 
@@ -93,12 +94,12 @@ const leaveTypeConfig: Record<string, { icon: any; color: string; gradient: stri
         image: '/images/icon-workoutside.png',
         descKey: 'desc_work_outside'
     },
-    absent: { 
-        icon: MessageQuestion, 
+    unpaid: { 
+        icon: MoneySend, 
         color: '#F5365C', 
         gradient: 'linear-gradient(135deg, #F5365C 0%, #F56036 100%)',
-        image: '/images/icon-other.png',
-        descKey: 'desc_absent'
+        image: '/images/icon-unpaid1.png',
+        descKey: 'desc_unpaid'
     },
     military: { 
         icon: Shield, 
@@ -141,13 +142,6 @@ const leaveTypeConfig: Record<string, { icon: any; color: string; gradient: stri
         gradient: 'linear-gradient(135deg, #8965E0 0%, #BC65E0 100%)',
         image: '/images/icon-business.png',
         descKey: 'desc_business'
-    },
-    unpaid: { 
-        icon: Clock, 
-        color: '#8898AA', 
-        gradient: 'linear-gradient(135deg, #8898AA 0%, #6A7A8A 100%)',
-        image: '/images/icon-other.png',
-        descKey: 'desc_unpaid'
     },
     other: { 
         icon: HelpCircle, 
@@ -359,7 +353,7 @@ export default function LeaveTypesPage() {
                                                 {/* Paid/Unpaid Badge */}
                                                 <Box sx={{ mt: 1, display: 'flex', gap: 0.5 }}>
                                                     <Chip
-                                                        label={leaveType.isPaid ? t('paid', 'ได้รับค่าจ้าง') : t('unpaid_leave', 'ไม่ได้รับค่าจ้าง')}
+                                                        label={leaveType.isPaid ? t('paid', 'ได้รับค่าจ้าง') : t('unpaid', 'ไม่ได้รับค่าจ้าง')}
                                                         size="small"
                                                         sx={{
                                                             bgcolor: leaveType.isPaid ? '#E8F5E9' : '#FFF3E0',

@@ -67,14 +67,11 @@ const Sidebar = ({ open, onClose }: SidebarProps) => {
     const menuItems = [
         { text: 'หน้าหลัก', icon: <Home2 size={20} variant="Outline" color="#6C63FF" />, activeIcon: <Home2 size={20} variant="Bold" color="#fff" />, path: '/' },
         { text: 'จัดการใบลา', icon: <Task size={20} variant="Outline" color="#6C63FF" />, activeIcon: <Task size={20} variant="Bold" color="#fff" />, path: '/approval' },
-        
     ];
 
     // Admin roles that can access admin settings
     const adminRoles = ['admin', 'hr', 'hr_manager'];
-    if (adminRoles.includes(user?.role || '')) {
-        menuItems.push({ text: 'ตั้งค่าผู้อนุมัติ', icon: <Setting2 size={20} variant="Outline" color="#6C63FF" />, activeIcon: <Setting2 size={20} variant="Bold" color="#fff" />, path: '/admin/approval-workflows' });
-    }
+    const isAdmin = adminRoles.includes(user?.role || '');
 
     const handleNavigate = (path: string) => {
         if (path) {
@@ -126,7 +123,11 @@ const Sidebar = ({ open, onClose }: SidebarProps) => {
                                     <Typography variant="caption" color="text.secondary">
                                         {user?.role === 'admin' ? 'ผู้ดูแลระบบ' : 
                                          user?.role === 'hr' ? 'HR' : 
-                                         user?.role === 'hr_manager' ? 'HR Manager' : 'พนักงาน'}
+                                         user?.role === 'hr_manager' ? 'HR Manager' : 
+                                         user?.role === 'shift_supervisor' ? 'หัวหน้ากะ' :
+                                         user?.role === 'dept_manager' ? 'ผู้จัดการฝ่าย/ส่วน' : 
+                                         user?.role === 'section_head' ? 'หัวหน้าแผนก' :
+                                         'พนักงาน'}
                                     </Typography>
                                 </>
                             )}
@@ -171,27 +172,61 @@ const Sidebar = ({ open, onClose }: SidebarProps) => {
                     })}
                 </List>
 
-                <Box sx={{ p: 3 }}>
+                {/* Bottom Section - Admin & Logout */}
+                <Box sx={{ p: 2, display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                    <Divider sx={{ mb: 1, opacity: 0.5 }} />
+                    
+                    {/* Admin Button */}
+                    {isAdmin && (
+                        <ListItemButton
+                            onClick={() => handleNavigate('/admin')}
+                            sx={{
+                                borderRadius: 3,
+                                bgcolor: pathname.startsWith('/admin') ? 'primary.main' : 'transparent',
+                                color: pathname.startsWith('/admin') ? 'white' : 'text.primary',
+                                '&:hover': {
+                                    bgcolor: pathname.startsWith('/admin') ? 'primary.dark' : 'grey.100',
+                                }
+                            }}
+                        >
+                            <ListItemIcon sx={{ minWidth: 40 }}>
+                                <Setting2 size={20} variant={pathname.startsWith('/admin') ? 'Bold' : 'Outline'} color={pathname.startsWith('/admin') ? '#fff' : '#6C63FF'} />
+                            </ListItemIcon>
+                            <ListItemText
+                                primary="Admin Panel"
+                                primaryTypographyProps={{
+                                    fontSize: '0.95rem',
+                                    fontWeight: pathname.startsWith('/admin') ? 600 : 400
+                                }}
+                            />
+                        </ListItemButton>
+                    )}
+
+                    {/* Logout Button */}
                     <ListItemButton
                         onClick={handleLogout}
                         disabled={isLoggingOut}
                         sx={{
                             borderRadius: 3,
-                            color: 'error.main',
-                            bgcolor: 'error.light',
-                            '&:hover': { bgcolor: '#ffcdd2' },
+                            color: 'text.secondary',
+                            '&:hover': { 
+                                bgcolor: 'grey.100',
+                                color: 'error.main',
+                            },
                             '&.Mui-disabled': {
-                                bgcolor: 'error.light',
                                 opacity: 0.7,
                             },
                         }}
                     >
                         <ListItemIcon sx={{ minWidth: 40 }}>
-                            {isLoggingOut ? <CircularProgress size={20} color="error" /> : <Logout size={20} variant="Outline" color="#F44336" />}
+                            {isLoggingOut ? <CircularProgress size={20} color="inherit" /> : <Logout size={20} variant="Outline" color="#9E9E9E" />}
                         </ListItemIcon>
                         <ListItemText 
                             primary={isLoggingOut ? 'กำลังออกจากระบบ...' : 'ออกจากระบบ'} 
-                            primaryTypographyProps={{ fontWeight: 600 }} 
+                            primaryTypographyProps={{ 
+                                fontSize: '0.95rem',
+                                fontWeight: 400 
+                            }} 
                         />
                     </ListItemButton>
                 </Box>

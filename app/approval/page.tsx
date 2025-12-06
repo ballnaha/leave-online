@@ -35,6 +35,12 @@ import {
   InputLabel,
   Select,
   MenuItem,
+  Drawer,
+  List,
+  ListItem,
+  ListItemButton,
+  ListItemText,
+  ListItemIcon,
 } from '@mui/material';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
@@ -68,6 +74,7 @@ import {
   Add,
   Minus,
   Trash,
+  MoneySend,
 } from 'iconsax-react';
 import BottomNav from '../components/BottomNav';
 import Sidebar from '../components/Sidebar';
@@ -86,14 +93,14 @@ const leaveTypeConfig: Record<string, { icon: any; color: string; lightColor: st
     maternity: { icon: People, color: '#9C27B0', lightColor: '#F3E5F5' }, // ม่วง
     ordination: { icon: Building, color: '#ED6C02', lightColor: '#FFF3E0' }, // ส้ม
     work_outside: { icon: Car, color: '#0288D1', lightColor: '#E1F5FE' }, // ฟ้า
-    absent: { icon: Warning2, color: '#D32F2F', lightColor: '#FFEBEE' }, // แดง
     military: { icon: Shield, color: '#2E7D32', lightColor: '#E8F5E9' }, // เขียว
     marriage: { icon: Heart, color: '#E91E63', lightColor: '#FCE4EC' }, // ชมพู
     funeral: { icon: Profile2User, color: '#424242', lightColor: '#F5F5F5' }, // เทา
     paternity: { icon: User, color: '#1976D2', lightColor: '#E3F2FD' }, // น้ำเงิน
     sterilization: { icon: Health, color: '#D32F2F', lightColor: '#FFEBEE' }, // แดง
     business: { icon: Car, color: '#0288D1', lightColor: '#E1F5FE' }, // ฟ้า
-    unpaid: { icon: Clock, color: '#757575', lightColor: '#EEEEEE' }, // เทา
+    unpaid: { icon: MoneySend, color: '#757575', lightColor: '#EEEEEE' }, // เทา
+    other: { icon: InfoCircle, color: '#607D8B', lightColor: '#ECEFF1' }, // เทาฟ้า - ลาอื่นๆ
     default: { icon: InfoCircle, color: PRIMARY_COLOR, lightColor: PRIMARY_LIGHT },
 };
 
@@ -199,14 +206,32 @@ export default function ApprovalPage() {
     startPeriod: 'full' | 'half';
     endPeriod: 'full' | 'half';
     totalDays: number;
+    reason: string;
   }>>([]);
   const [splitComment, setSplitComment] = useState('');
+  
+  // Leave summary state (วันลาคงเหลือของ user)
+  const [leaveSummary, setLeaveSummary] = useState<Array<{
+    code: string;
+    name: string;
+    maxDays: number;
+    usedDays: number;
+    remainingDays: number;
+    isUnlimited: boolean;
+  }>>([]);
+  const [loadingSummary, setLoadingSummary] = useState(false);
+  
+  // Bottom sheet state for leave type selector
+  const [leaveTypeSheetOpen, setLeaveTypeSheetOpen] = useState(false);
+  const [currentEditingPartIndex, setCurrentEditingPartIndex] = useState<number | null>(null);
 
+  // โหลดข้อมูลครั้งแรกเมื่อ mount เท่านั้น (เพราะ fetch all แล้ว filter client-side)
   useEffect(() => {
     fetchApprovals();
-  }, [tabValue]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   
-  // Reset page when tab changes
+  // Reset page when tab changes (ไม่ต้อง fetch ใหม่)
   useEffect(() => {
     setPage(1);
     setExpandedCards(new Set());
@@ -270,11 +295,28 @@ export default function ApprovalPage() {
     setDialogOpen(true);
   };
   
+  // Fetch leave summary for a user
+  const fetchLeaveSummary = async (userId: number, year: number) => {
+    setLoadingSummary(true);
+    try {
+      const response = await fetch(`/api/users/${userId}/leave-summary?year=${year}`);
+      if (response.ok) {
+        const data = await response.json();
+        setLeaveSummary(data.summary);
+      }
+    } catch (error) {
+      console.error('Error fetching leave summary:', error);
+    } finally {
+      setLoadingSummary(false);
+    }
+  };
+  
   // Split Leave Functions
-  const handleOpenSplitDialog = (approval: ApprovalItem) => {
+  const handleOpenSplitDialog = async (approval: ApprovalItem) => {
     setSelectedApproval(approval);
     setSplitComment('');
     setError('');
+    setLeaveSummary([]);
     
     // Initialize with 2 parts - first day as original type, rest as new type
     const startDate = new Date(approval.leaveRequest.startDate);
@@ -286,7 +328,7 @@ export default function ApprovalPage() {
       return;
     }
     
-    // Default split: first day = original type, remaining = absent
+    // Default split: first day = original type, remaining = 
     const firstDayEnd = new Date(startDate);
     const secondDayStart = new Date(startDate);
     secondDayStart.setDate(secondDayStart.getDate() + 1);
@@ -299,18 +341,38 @@ export default function ApprovalPage() {
         startPeriod: 'full',
         endPeriod: 'full',
         totalDays: 1,
+        reason: approval.leaveRequest.reason || '',
       },
       {
-        leaveType: 'absent',
+        leaveType: 'unpaid',
         startDate: secondDayStart.toISOString().split('T')[0],
         endDate: endDate.toISOString().split('T')[0],
         startPeriod: 'full',
         endPeriod: 'full',
         totalDays: totalDays - 1,
+        reason: '',
       },
     ]);
     
     setSplitDialogOpen(true);
+    
+    // Fetch leave summary for the user
+    const leaveYear = startDate.getFullYear();
+    await fetchLeaveSummary(approval.leaveRequest.user.id, leaveYear);
+  };
+  
+  // Helper function to get remaining days for a leave type
+  const getRemainingDays = (leaveTypeCode: string): { remaining: number; isUnlimited: boolean; name: string } => {
+    const summary = leaveSummary.find(s => s.code === leaveTypeCode);
+    if (summary) {
+      return { 
+        remaining: summary.remainingDays, 
+        isUnlimited: summary.isUnlimited,
+        name: summary.name
+      };
+    }
+    // Default for unknown types
+    return { remaining: 0, isUnlimited: false, name: leaveTypeCode };
   };
   
   // Helper function to calculate total days with period
@@ -441,12 +503,13 @@ export default function ApprovalPage() {
     nextDay.setDate(nextDay.getDate() + 1);
     
     setSplitParts(prev => [...prev, {
-      leaveType: 'absent',
+      leaveType: '',
       startDate: nextDay.toISOString().split('T')[0],
       endDate: nextDay.toISOString().split('T')[0],
       startPeriod: 'full',
       endPeriod: 'full',
       totalDays: 1,
+      reason: '',
     }]);
   };
   
@@ -1865,6 +1928,44 @@ export default function ApprovalPage() {
             </Alert>
           )}
 
+          {/* แสดงสรุปสิทธิ์วันลาคงเหลือทั้งหมด */}
+          {loadingSummary ? (
+            <Box sx={{ mb: 3, p: 2, bgcolor: '#F8FAFC', borderRadius: 1, border: '1px solid', borderColor: 'grey.200' }}>
+              <Typography variant="body2" color="text.secondary" textAlign="center">
+                กำลังโหลดข้อมูลสิทธิ์วันลา...
+              </Typography>
+            </Box>
+          ) : leaveSummary.length > 0 && (
+            <Box sx={{ mb: 3, p: 2, bgcolor: '#EDE7F6', borderRadius: 1, border: '1px solid', borderColor: '#D1C4E9' }}>
+              <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 1.5, color: PRIMARY_COLOR, display: 'flex', alignItems: 'center', gap: 1 }}>
+                <InfoCircle size={16} variant="Bold" /> สิทธิ์วันลาคงเหลือของพนักงาน
+              </Typography>
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                {leaveSummary.map((leave) => (
+                  <Chip
+                    key={leave.code}
+                    label={`${t(`leave_${leave.code}`, leave.name)}: ${leave.isUnlimited ? 'ไม่จำกัด' : `${leave.remainingDays} วัน`}`}
+                    size="small"
+                    sx={{
+                      bgcolor: leave.isUnlimited 
+                        ? '#E3F2FD' 
+                        : leave.remainingDays > 0 
+                          ? '#E8F5E9' 
+                          : '#FFEBEE',
+                      color: leave.isUnlimited 
+                        ? '#1976D2' 
+                        : leave.remainingDays > 0 
+                          ? '#2E7D32' 
+                          : '#D32F2F',
+                      fontWeight: 500,
+                      fontSize: '0.7rem',
+                    }}
+                  />
+                ))}
+              </Box>
+            </Box>
+          )}
+
           <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 1.5 }}>
             แยกใบลาเป็น {splitParts.length} ส่วน
           </Typography>
@@ -1903,22 +2004,114 @@ export default function ApprovalPage() {
                 )}
               </Box>
               
-              <FormControl fullWidth size="small" sx={{ mb: 1.5 }}>
-                <InputLabel>ประเภทการลา</InputLabel>
-                <Select
-                  value={part.leaveType}
-                  label="ประเภทการลา"
-                  onChange={(e) => handleUpdateSplitPart(index, 'leaveType', e.target.value)}
-                >
-                  <MenuItem value="sick">{t('leave_sick', 'ลาป่วย')}</MenuItem>
-                  <MenuItem value="personal">{t('leave_personal', 'ลากิจ')}</MenuItem>
-                  <MenuItem value="vacation">{t('leave_vacation', 'ลาพักร้อน')}</MenuItem>
-                  <MenuItem value="absent">{t('leave_absent', 'ขาดงาน')}</MenuItem>
-                  <MenuItem value="maternity">{t('leave_maternity', 'ลาคลอด')}</MenuItem>
-                  <MenuItem value="ordination">{t('leave_ordination', 'ลาบวช')}</MenuItem>
-                  <MenuItem value="work_outside">{t('leave_work_outside', 'ปฏิบัติงานนอกสถานที่')}</MenuItem>
-                </Select>
-              </FormControl>
+              {/* Leave Type Selector - Clickable Box for Bottom Sheet */}
+              <Box
+                onClick={() => {
+                  setCurrentEditingPartIndex(index);
+                  setLeaveTypeSheetOpen(true);
+                }}
+                sx={{
+                  mb: 1.5,
+                  p: 1.5,
+                  border: '1px solid',
+                  borderColor: 'grey.300',
+                  borderRadius: 1,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  bgcolor: 'white',
+                  '&:hover': {
+                    borderColor: PRIMARY_COLOR,
+                    bgcolor: '#FAFAFA',
+                  }
+                }}
+              >
+                <Box>
+                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.25 }}>
+                    ประเภทการลา
+                  </Typography>
+                  <Typography variant="body2" fontWeight={600}>
+                    {(() => {
+                      const info = getRemainingDays(part.leaveType);
+                      const displayName = t(`leave_${part.leaveType}`, info.name || part.leaveType);
+                      return displayName;
+                    })()}
+                  </Typography>
+                </Box>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  {(() => {
+                    const info = getRemainingDays(part.leaveType);
+                    return (
+                      <Chip
+                        label={info.isUnlimited ? 'ไม่จำกัด' : `เหลือ ${info.remaining} วัน`}
+                        size="small"
+                        sx={{
+                          height: 22,
+                          fontSize: '0.7rem',
+                          bgcolor: info.isUnlimited 
+                            ? '#E3F2FD' 
+                            : info.remaining > 0 
+                              ? '#E8F5E9' 
+                              : '#FFEBEE',
+                          color: info.isUnlimited 
+                            ? '#1976D2' 
+                            : info.remaining > 0 
+                              ? '#2E7D32' 
+                              : '#D32F2F',
+                          fontWeight: 600,
+                        }}
+                      />
+                    );
+                  })()}
+                  <ArrowDown2 size={18} color="#94A3B8" />
+                </Box>
+              </Box>
+              
+              {/* แสดงข้อมูลวันลาเหลือสำหรับประเภทที่เลือก */}
+              {leaveSummary.length > 0 && (
+                <Box sx={{ 
+                  mb: 1.5, 
+                  p: 1.5, 
+                  bgcolor: '#F8FAFC', 
+                  borderRadius: 1,
+                  border: '1px solid #E2E8F0'
+                }}>
+                  {(() => {
+                    const info = getRemainingDays(part.leaveType);
+                    const warning = !info.isUnlimited && part.totalDays > info.remaining;
+                    return (
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <Typography variant="caption" color="text.secondary">
+                          สิทธิ์คงเหลือ:
+                        </Typography>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <Typography 
+                            variant="body2" 
+                            fontWeight={600}
+                            color={warning ? 'error.main' : info.isUnlimited ? 'primary.main' : 'success.main'}
+                          >
+                            {info.isUnlimited ? 'ไม่จำกัด' : `${info.remaining} วัน`}
+                          </Typography>
+                          {warning && (
+                            <Chip
+                              label="เกินสิทธิ์!"
+                              size="small"
+                              sx={{
+                                height: 18,
+                                fontSize: '0.65rem',
+                                bgcolor: '#FFEBEE',
+                                color: '#D32F2F',
+                                fontWeight: 600,
+                              }}
+                            />
+                          )}
+                        </Box>
+                      </Box>
+                    );
+                  })()}
+                </Box>
+              )}
               
               <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale="th">
                 {/* วันที่เริ่มต้น */}
@@ -1999,7 +2192,7 @@ export default function ApprovalPage() {
                 </Box>
               </LocalizationProvider>
               
-              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', bgcolor: '#F8FAFC', p: 1.5, borderRadius: 1 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', bgcolor: '#F8FAFC', p: 1.5, borderRadius: 1, mb: 1.5 }}>
                 <Typography variant="body2" color="text.secondary">จำนวนวัน (คำนวณอัตโนมัติ)</Typography>
                 <Typography 
                   sx={{ 
@@ -2011,6 +2204,23 @@ export default function ApprovalPage() {
                   {part.totalDays} วัน
                 </Typography>
               </Box>
+              
+              {/* เหตุผลการลาสำหรับแต่ละส่วน */}
+              <TextField
+                label={`เหตุผลการลาส่วนที่ ${index + 1}`}
+                multiline
+                rows={2}
+                fullWidth
+                value={part.reason}
+                onChange={(e) => handleUpdateSplitPart(index, 'reason', e.target.value)}
+                placeholder="ระบุเหตุผลการลา..."
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: 1,
+                    bgcolor: 'white',
+                  }
+                }}
+              />
             </Paper>
           ))}
           
@@ -2201,6 +2411,220 @@ export default function ApprovalPage() {
           )}
         </Box>
       </Dialog>
+
+      {/* Bottom Sheet for Leave Type Selection */}
+      <Drawer
+        anchor="bottom"
+        open={leaveTypeSheetOpen}
+        onClose={() => {
+          setLeaveTypeSheetOpen(false);
+          setCurrentEditingPartIndex(null);
+        }}
+        sx={{
+          zIndex: 1400, // Higher than fullscreen Dialog (1300)
+        }}
+        PaperProps={{
+          sx: {
+            borderTopLeftRadius: 20,
+            borderTopRightRadius: 20,
+            maxHeight: '70vh',
+          }
+        }}
+      >
+        <Box sx={{ p: 2, borderBottom: '1px solid #eee' }}>
+          {/* Handle bar */}
+          <Box sx={{ 
+            width: 40, 
+            height: 4, 
+            bgcolor: '#ddd', 
+            borderRadius: 2, 
+            mx: 'auto', 
+            mb: 2 
+          }} />
+          
+          <Typography variant="h6" fontWeight={700} sx={{ textAlign: 'center' }}>
+            {t('select_leave_type', 'เลือกประเภทการลา')}
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center' }}>
+            {t('for_part', 'สำหรับส่วนที่')} {currentEditingPartIndex !== null ? currentEditingPartIndex + 1 : ''}
+          </Typography>
+        </Box>
+          
+        <List sx={{ overflow: 'auto' }}>
+            {loadingSummary ? (
+              <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+                <Typography variant="body2" color="text.secondary">{t('loading', 'กำลังโหลด...')}</Typography>
+              </Box>
+            ) : leaveSummary.length > 0 ? (
+              leaveSummary.map((leave) => {
+                const currentPartLeaveType = currentEditingPartIndex !== null ? splitParts[currentEditingPartIndex]?.leaveType : null;
+                const isDisabled = !leave.isUnlimited && leave.remainingDays <= 0 && leave.code !== currentPartLeaveType;
+                const isSelected = currentPartLeaveType === leave.code;
+                const config = leaveTypeConfig[leave.code] || leaveTypeConfig.default;
+                const LeaveIcon = config.icon;
+                
+                return (
+                  <ListItem 
+                    key={leave.code} 
+                    disablePadding
+                  >
+                    <ListItemButton
+                      onClick={() => {
+                        if (!isDisabled && currentEditingPartIndex !== null) {
+                          handleUpdateSplitPart(currentEditingPartIndex, 'leaveType', leave.code);
+                          setLeaveTypeSheetOpen(false);
+                          setCurrentEditingPartIndex(null);
+                        }
+                      }}
+                      disabled={isDisabled}
+                      sx={{
+                        py: 1.5,
+                        bgcolor: isSelected ? 'rgba(108, 99, 255, 0.08)' : 'transparent',
+                        '&.Mui-disabled': {
+                          opacity: 0.5,
+                          bgcolor: 'grey.100',
+                        }
+                      }}
+                    >
+                      <ListItemIcon sx={{ minWidth: 44 }}>
+                        <Box sx={{ 
+                          width: 36, 
+                          height: 36, 
+                          borderRadius: 2, 
+                          bgcolor: config.lightColor,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center'
+                        }}>
+                          <LeaveIcon size={20} color={config.color} variant="Bold" />
+                        </Box>
+                      </ListItemIcon>
+                      <ListItemText
+                        primary={
+                          <Typography variant="body1" fontWeight={isSelected ? 700 : 500}>
+                            {t(`leave_${leave.code}`, leave.name)}
+                          </Typography>
+                        }
+                        secondary={
+                          <Typography variant="caption" color="text.secondary">
+                            {leave.isUnlimited 
+                              ? t('unlimited_days', 'ไม่จำกัดจำนวนวัน') 
+                              : t('used_days_format', 'ใช้ไป {{used}} / {{max}} วัน').replace('{{used}}', String(leave.usedDays)).replace('{{max}}', String(leave.maxDays))}
+                          </Typography>
+                        }
+                      />
+                      <Chip
+                        label={leave.isUnlimited ? t('unlimited', 'ไม่จำกัด') : t('remaining_days_format', 'เหลือ {{days}} วัน').replace('{{days}}', String(leave.remainingDays))}
+                        size="small"
+                        sx={{
+                          height: 24,
+                          fontSize: '0.75rem',
+                          bgcolor: leave.isUnlimited 
+                            ? '#E3F2FD' 
+                            : leave.remainingDays > 0 
+                              ? '#E8F5E9' 
+                              : '#FFEBEE',
+                          color: leave.isUnlimited 
+                            ? '#1976D2' 
+                            : leave.remainingDays > 0 
+                              ? '#2E7D32' 
+                              : '#D32F2F',
+                          fontWeight: 600,
+                        }}
+                      />
+                      {isSelected && (
+                        <TickCircle size={22} color={PRIMARY_COLOR} variant="Bold" style={{ marginLeft: 8 }} />
+                      )}
+                    </ListItemButton>
+                  </ListItem>
+                );
+              })
+            ) : (
+              // Fallback options
+              ['sick', 'personal', 'vacation', 'unpaid', 'maternity', 'ordination', 'work_outside', 'other'].map((code) => {
+                const config = leaveTypeConfig[code] || leaveTypeConfig.default;
+                const LeaveIcon = config.icon;
+                const names: Record<string, string> = {
+                  sick: 'ลาป่วย',
+                  personal: 'ลากิจ',
+                  vacation: 'ลาพักร้อน',
+                  unpaid: 'ลาไม่รับค่าจ้าง',
+                  maternity: 'ลาคลอด',
+                  ordination: 'ลาบวช',
+                  work_outside: 'ปฏิบัติงานนอกสถานที่',
+                  other: 'ลาอื่นๆ',
+                };
+                const currentPartLeaveType = currentEditingPartIndex !== null ? splitParts[currentEditingPartIndex]?.leaveType : null;
+                const isSelected = currentPartLeaveType === code;
+                
+                return (
+                  <ListItem key={code} disablePadding sx={{ mb: 1 }}>
+                    <ListItemButton
+                      onClick={() => {
+                        if (currentEditingPartIndex !== null) {
+                          handleUpdateSplitPart(currentEditingPartIndex, 'leaveType', code);
+                          setLeaveTypeSheetOpen(false);
+                          setCurrentEditingPartIndex(null);
+                        }
+                      }}
+                      sx={{
+                        borderRadius: 2,
+                        border: '1px solid',
+                        borderColor: isSelected ? PRIMARY_COLOR : 'grey.200',
+                        bgcolor: isSelected ? `${PRIMARY_COLOR}10` : 'white',
+                        py: 1.5,
+                      }}
+                    >
+                      <ListItemIcon sx={{ minWidth: 44 }}>
+                        <Box sx={{ 
+                          width: 36, 
+                          height: 36, 
+                          borderRadius: 2, 
+                          bgcolor: config.lightColor,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center'
+                        }}>
+                          <LeaveIcon size={20} color={config.color} variant="Bold" />
+                        </Box>
+                      </ListItemIcon>
+                      <ListItemText
+                        primary={
+                          <Typography variant="body1" fontWeight={isSelected ? 700 : 500}>
+                            {t(`leave_${code}`, names[code])}
+                          </Typography>
+                        }
+                      />
+                      {isSelected && (
+                        <TickCircle size={22} color={PRIMARY_COLOR} variant="Bold" />
+                      )}
+                    </ListItemButton>
+                  </ListItem>
+                );
+              })
+            )}
+          </List>
+          
+          {/* Cancel Button */}
+          <Box sx={{ p: 2, borderTop: '1px solid #eee' }}>
+            <Button
+              fullWidth
+              variant="outlined"
+              onClick={() => {
+                setLeaveTypeSheetOpen(false);
+                setCurrentEditingPartIndex(null);
+              }}
+              sx={{ 
+                py: 1.5, 
+                borderRadius: 2,
+                borderColor: 'grey.300',
+                color: 'text.primary',
+              }}
+            >
+              {t('cancel', 'ยกเลิก')}
+            </Button>
+          </Box>
+      </Drawer>
 
       <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       <BottomNav />

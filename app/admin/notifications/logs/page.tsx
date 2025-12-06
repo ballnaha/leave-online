@@ -455,7 +455,7 @@ export default function NotificationLogsPage() {
               {logs.length === 0 && !loading && (
                 <TableRow>
                   <TableCell colSpan={6} align="center" sx={{ py: 8 }}>
-                    <Bell size={48} color={theme.palette.text.disabled} />
+                    <Bell size={48} color={theme.palette.text.disabled} style={{ margin: '0 auto' }} />
                     <Typography variant="body1" color="text.secondary" sx={{ mt: 2 }}>
                       ไม่พบข้อมูล
                     </Typography>

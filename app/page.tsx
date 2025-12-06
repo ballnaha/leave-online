@@ -10,7 +10,8 @@ import BottomNav from './components/BottomNav';
 import { 
   Calendar2, Activity, Briefcase, Heart, Sun1, Lovely,
   Building4, Shield, People, Car, Clock, MessageQuestion, Health,
-  Profile2User, Danger
+  Profile2User, Danger,MoneySend,
+  Money
 } from 'iconsax-react';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import 'swiper/css';
@@ -49,7 +50,7 @@ const leaveTypeConfig: Record<string, { icon: any; color: string; gradient: stri
   paternity: { icon: Profile2User, color: '#11CDEF', gradient: 'linear-gradient(135deg, #11CDEF 0%, #1171EF 100%)' },
   sterilization: { icon: Health, color: '#2DCECC', gradient: 'linear-gradient(135deg, #2DCECC 0%, #2D8BCC 100%)' },
   business: { icon: Car, color: '#8965E0', gradient: 'linear-gradient(135deg, #8965E0 0%, #BC65E0 100%)' },
-  unpaid: { icon: Clock, color: '#8898AA', gradient: 'linear-gradient(135deg, #8898AA 0%, #6A7A8A 100%)' },
+  unpaid: { icon: MoneySend, color: '#8898AA', gradient: 'linear-gradient(135deg, #8898AA 0%, #6A7A8A 100%)' , image: '/images/icon-unpaid1.png'},
   other: { icon: HelpCircle, color: '#5E72E4', gradient: 'linear-gradient(135deg, #8898AA 0%, #6A7A8A 100%)' , image: '/images/icon-other.png' },
   default: { icon: Calendar2, color: '#5E72E4', gradient: 'linear-gradient(135deg, #5E72E4 0%, #825EE4 100%)' },
 };
@@ -450,13 +451,18 @@ export default function Home() {
                   const totalLevels = leave.approvals?.length || 0;
                   const approvedCount = leave.approvals?.filter(a => a.status === 'approved').length || 0;
                   
+                  // ตรวจสอบว่า attachment แรกเป็นรูปภาพหรือไม่
+                  const firstAttachment = leave.attachments?.[0];
+                  const isImageAttachment = firstAttachment?.mimeType?.startsWith('image/');
+                  const imageUrl = isImageAttachment ? firstAttachment.filePath : undefined;
+                  
                   return (
                     <Box key={leave.id} onClick={() => handleLeaveClick(leave)}>
                       <RecentActivityCard
                         title={t(`leave_${leave.leaveType || leave.leaveCode}`, leave.leaveTypeInfo?.name || 'การลา')}
                         date={formatDate(leave.startDate, leave.endDate)}
                         status={mapStatus(leave.status)}
-                        image={leave.attachments?.[0]?.filePath}
+                        image={imageUrl}
                         icon={<IconComponent size={24} color={config.color} />}
                         iconColor={config.color}
                         approvalStatus={getApprovalStatusText(leave)}
@@ -481,7 +487,7 @@ export default function Home() {
       <BottomNav activePage="home" />
       
       <LeaveDetailDrawer 
-        open={drawerOpen} 
+        open={drawerOpen && !cancelDialogOpen} 
         onClose={handleCloseDrawer} 
         leave={selectedLeave}
         onCancel={() => setCancelDialogOpen(true)}
@@ -496,6 +502,7 @@ export default function Home() {
             setCancelReason('');
           }
         }}
+        sx={{ zIndex: 1400 }}
         PaperProps={{
           sx: {
             borderRadius: 1,

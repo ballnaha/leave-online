@@ -34,6 +34,8 @@ import {
   InputLabel,
   Select,
   MenuItem,
+  Tabs,
+  Tab,
 } from '@mui/material';
 import {
   Add,
@@ -208,6 +210,18 @@ export default function UserApprovalFlowPage() {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
 
+  // Role Tab
+  const [roleTab, setRoleTab] = useState<number>(0);
+  const roleTabs: { label: string; roles: UserRole[] }[] = [
+    { label: 'ทั้งหมด', roles: [] },
+    { label: 'พนักงาน', roles: ['employee'] },
+    { label: 'หัวหน้ากะ', roles: ['shift_supervisor'] },
+    { label: 'หัวหน้าแผนก', roles: ['section_head'] },
+    { label: 'ผจก.ฝ่าย', roles: ['dept_manager'] },
+    { label: 'HR', roles: ['hr', 'hr_manager'] },
+    { label: 'Admin', roles: ['admin'] },
+  ];
+
   // Filters
   const [companyFilter, setCompanyFilter] = useState<string>('all');
   const [departmentFilter, setDepartmentFilter] = useState<string>('all');
@@ -272,8 +286,8 @@ export default function UserApprovalFlowPage() {
       const response = await fetch('/api/admin/users');
       if (!response.ok) throw new Error('Failed to fetch users');
       const data = await response.json();
-      // Filter to only show employees who can have custom flows
-      setUsers(data.filter((u: UserOption) => !['hr_manager', 'admin'].includes(u.role)));
+      // ดึงข้อมูลพนักงานทุกคน
+      setUsers(data);
     } catch (error) {
       console.error('Error fetching users:', error);
     } finally {
@@ -487,8 +501,13 @@ export default function UserApprovalFlowPage() {
     return filtered;
   })();
 
-  // Filter users
+  // Filter users by role tab first, then other filters
   const filteredUsers = users.filter((user) => {
+    // Filter by role tab
+    const currentRoleTab = roleTabs[roleTab];
+    const matchesRole = currentRoleTab.roles.length === 0 || currentRoleTab.roles.includes(user.role);
+    if (!matchesRole) return false;
+
     const matchesSearch =
       user.employeeId.toLowerCase().includes(searchQuery.toLowerCase()) ||
       user.firstName.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -584,6 +603,71 @@ export default function UserApprovalFlowPage() {
         />
       </Box>
 
+      {/* Role Tabs */}
+      <Paper
+        sx={{
+          mb: 3,
+          borderRadius: 1,
+          border: '1px solid',
+          borderColor: 'divider',
+          boxShadow: 'none',
+          overflow: 'hidden',
+        }}
+      >
+        <Tabs
+          value={roleTab}
+          onChange={(_, v) => {
+            setRoleTab(v);
+            setPage(0);
+          }}
+          variant="scrollable"
+          scrollButtons="auto"
+          sx={{
+            bgcolor: alpha(theme.palette.primary.main, 0.02),
+            '& .MuiTabs-indicator': {
+              height: 3,
+              borderRadius: '3px 3px 0 0',
+              bgcolor: theme.palette.primary.main,
+            },
+          }}
+        >
+          {roleTabs.map((tab, index) => {
+            const count = tab.roles.length === 0
+              ? users.length
+              : users.filter(u => tab.roles.includes(u.role)).length;
+            return (
+              <Tab
+                key={index}
+                label={
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <span>{tab.label}</span>
+                    <Chip
+                      label={count}
+                      size="small"
+                      sx={{
+                        height: 20,
+                        minWidth: 20,
+                        bgcolor: roleTab === index ? theme.palette.primary.main : alpha(theme.palette.text.secondary, 0.1),
+                        color: roleTab === index ? 'white' : 'text.secondary',
+                        fontSize: '0.7rem',
+                        fontWeight: 600,
+                        '& .MuiChip-label': { px: 0.75 },
+                      }}
+                    />
+                  </Box>
+                }
+                sx={{
+                  textTransform: 'none',
+                  fontWeight: roleTab === index ? 600 : 400,
+                  color: roleTab === index ? 'primary.main' : 'text.secondary',
+                  minHeight: 48,
+                }}
+              />
+            );
+          })}
+        </Tabs>
+      </Paper>
+
       {/* Search and Filters */}
       <Paper
         sx={{
@@ -668,10 +752,16 @@ export default function UserApprovalFlowPage() {
       </Paper>
 
       {/* Info Alert */}
-      <Alert severity="info" sx={{ mb: 3, borderRadius: 1 }}>
-        <Typography variant="body2">
-          <strong>หมายเหตุ:</strong> User Approval Flow ใช้สำหรับกำหนด flow พิเศษเฉพาะบุคคล 
-          ถ้าไม่กำหนด ระบบจะใช้ Approval Workflow ตาม ฝ่าย/แผนก โดยอัตโนมัติ
+      <Alert severity="info" sx={{ mb: 2, borderRadius: 1 }}>
+        <Typography variant="body2" sx={{ mb: 1 }}>
+          <strong>หมายเหตุ:</strong> หน้านี้ใช้สำหรับกำหนดผู้อนุมัติใบลาเฉพาะบุคคล (Custom Flow)
+        </Typography>
+        <Typography variant="body2" component="div">
+          <ul style={{ margin: 0, paddingLeft: 20 }}>
+            <li>ถ้าไม่กำหนด Custom Flow → ระบบจะใช้ลำดับการอนุมัติตาม ฝ่าย/แผนก โดยอัตโนมัติ</li>
+            <li><strong>ผจก.ฝ่าย</strong> → ใบลาจะส่งตรงไปหา <strong>HR Manager</strong> เลย (ไม่ต้องตั้ง Custom Flow)</li>
+            <li><strong>พนักงาน/หัวหน้ากะ/หัวหน้าแผนก</strong> → ใบลาจะผ่านผู้อนุมัติตามลำดับขั้นที่กำหนดไว้</li>
+          </ul>
         </Typography>
       </Alert>
 
@@ -1113,7 +1203,7 @@ export default function UserApprovalFlowPage() {
         maxWidth="sm" 
         fullWidth
         PaperProps={{
-          sx: { borderRadius: 2 }
+          sx: { borderRadius: 1 }
         }}
       >
         <DialogTitle sx={{ borderBottom: '1px solid', borderColor: 'divider' }}>

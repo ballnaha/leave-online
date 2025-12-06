@@ -12,7 +12,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { playerId, deviceType } = body;
+    const { playerId, deviceType, browser, browserVersion, os, osVersion, platform, userAgent } = body;
 
     if (!playerId) {
       return NextResponse.json(
@@ -29,6 +29,12 @@ export async function POST(request: NextRequest) {
       update: {
         userId,
         deviceType: deviceType || 'web',
+        browser,
+        browserVersion,
+        os,
+        osVersion,
+        platform,
+        userAgent,
         isActive: true,
         updatedAt: new Date(),
       },
@@ -36,6 +42,12 @@ export async function POST(request: NextRequest) {
         userId,
         playerId,
         deviceType: deviceType || 'web',
+        browser,
+        browserVersion,
+        os,
+        osVersion,
+        platform,
+        userAgent,
         isActive: true,
       },
     });

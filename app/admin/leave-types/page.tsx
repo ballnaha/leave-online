@@ -43,6 +43,7 @@ import {
   DollarCircle,
   Filter,
   Clock,
+  MoneySend,
 } from 'iconsax-react';
 import LeaveTypeDialog from './LeaveTypeDialog';
 import ConfirmDialog from '../components/ConfirmDialog';
@@ -464,7 +465,7 @@ export default function LeaveTypesPage() {
               </MenuItem>
               <MenuItem value="unpaid">
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <Clock size={16} color={theme.palette.text.secondary} />
+                  <MoneySend size={16} color={theme.palette.text.secondary} />
                   ไม่ได้รับค่าจ้าง
                 </Box>
               </MenuItem>
