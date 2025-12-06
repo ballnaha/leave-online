@@ -24,6 +24,7 @@ import {
     Badge,
     CircularProgress,
     Fade,
+    Collapse,
 } from '@mui/material';
 import type { Icon } from 'iconsax-react';
 import {
@@ -46,6 +47,7 @@ import {
     SecuritySafe,
     ShieldSearch,
 } from 'iconsax-react';
+import { ChevronDown, ChevronUp, Bell, History, Users, Send } from 'lucide-react';
 import { signOut } from 'next-auth/react';
 import { useUser } from '@/app/providers/UserProvider';
 import { useToastr } from '@/app/components/Toastr';
@@ -56,10 +58,17 @@ const collapsedDrawerWidth = 68;
 
 interface MenuItem {
     text: string;
-    icon: Icon;
+    icon: Icon | React.FC<{ size?: number; color?: string }>;
     iconColor: string;
     path?: string;
-    children?: MenuItem[];
+    children?: SubMenuItem[];
+}
+
+interface SubMenuItem {
+    text: string;
+    icon: React.FC<{ size?: number; color?: string }>;
+    iconColor: string;
+    path: string;
 }
 
 interface MenuGroup {
@@ -139,13 +148,32 @@ const menuGroups: MenuGroup[] = [
                 text: 'Notifications',
                 icon: Notification,
                 iconColor: '#6C63FF',
-                path: '/admin/notifications',
-            },
-            {
-                text: 'ทดสอบ Push',
-                icon: Notification,
-                iconColor: '#6C63FF',
-                path: '/admin/test-notification',
+                children: [
+                    {
+                        text: 'Dashboard',
+                        icon: Bell,
+                        iconColor: '#6C63FF',
+                        path: '/admin/notifications',
+                    },
+                    {
+                        text: 'ประวัติแจ้งเตือน',
+                        icon: History,
+                        iconColor: '#6C63FF',
+                        path: '/admin/notifications/logs',
+                    },
+                    {
+                        text: 'Subscribers',
+                        icon: Users,
+                        iconColor: '#6C63FF',
+                        path: '/admin/notifications/subscribers',
+                    },
+                    {
+                        text: 'ทดสอบ Push',
+                        icon: Send,
+                        iconColor: '#6C63FF',
+                        path: '/admin/test-notification',
+                    },
+                ],
             },
         ],
     },
@@ -216,6 +244,19 @@ export default function AdminLayout({
     const [collapsed, setCollapsed] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+    const [expandedMenus, setExpandedMenus] = useState<string[]>(['Notifications']); // Default expand Notifications
+
+    // Toggle submenu expand/collapse
+    const toggleSubmenu = (menuText: string) => {
+        setExpandedMenus(prev => 
+            prev.includes(menuText) 
+                ? prev.filter(m => m !== menuText)
+                : [...prev, menuText]
+        );
+    };
+
+    // Check if any child is active - moved below isActiveRoute definition
+    // const hasActiveChild = ... see below after isActiveRoute
 
     // Admin roles that can access admin pages
     const ADMIN_ROLES = ['admin', 'hr', 'hr_manager'];
@@ -284,13 +325,23 @@ export default function AdminLayout({
         }
     };
 
-    const isActiveRoute = (path?: string) => {
+    const isActiveRoute = (path?: string, exactMatch: boolean = false) => {
         if (!path) return false;
         // สำหรับ /admin ให้ตรวจสอบ exact match เท่านั้น
         if (path === '/admin') {
             return pathname === '/admin';
         }
+        // Exact match for submenu items
+        if (exactMatch) {
+            return pathname === path;
+        }
         return pathname === path || pathname.startsWith(path + '/');
+    };
+
+    // Check if any child is active (use exact match for children)
+    const hasActiveChild = (children?: SubMenuItem[]) => {
+        if (!children) return false;
+        return children.some(child => isActiveRoute(child.path, true));
     };
 
     const drawer = (
@@ -361,59 +412,133 @@ export default function AdminLayout({
                         )}
                         {/* Menu Items in Group */}
                         {group.items.map((item) => (
-                            <ListItem key={item.text} disablePadding sx={{ mb: 0.25, position: 'relative' }}>
-                                <Tooltip title={collapsed ? item.text : ''} placement="right">
-                                    <ListItemButton
-                                        onClick={() => item.path && handleNavigate(item.path)}
-                                        sx={{
-                                            borderRadius: 1,
-                                            justifyContent: collapsed ? 'center' : 'flex-start',
-                                            px: collapsed ? 1 : 1.5,
-                                            py: 0.75,
-                                            bgcolor: isActiveRoute(item.path) ? 'primary.main' : 'transparent',
-                                            color: isActiveRoute(item.path) ? 'white' : 'text.primary',
-                                            boxShadow: isActiveRoute(item.path) ? '0 4px 12px rgba(108, 99, 255, 0.4)' : 'none',
-                                            transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
-                                            '&:hover': {
-                                                bgcolor: isActiveRoute(item.path) ? 'primary.dark' : 'action.hover',
-                                                transform: 'translateX(2px)',
-                                            },
-                                        }}
-                                    >
-                                        <ListItemIcon
+                            <React.Fragment key={item.text}>
+                                {/* Parent menu item */}
+                                <ListItem disablePadding sx={{ mb: 0.25, position: 'relative' }}>
+                                    <Tooltip title={collapsed ? item.text : ''} placement="right">
+                                        <ListItemButton
+                                            onClick={() => {
+                                                if (item.children) {
+                                                    toggleSubmenu(item.text);
+                                                } else if (item.path) {
+                                                    handleNavigate(item.path);
+                                                }
+                                            }}
                                             sx={{
-                                                minWidth: collapsed ? 'auto' : 32,
-                                                color: isActiveRoute(item.path) ? 'white' : 'text.secondary',
-                                                transition: 'all 0.25s ease',
-                                                transform: isActiveRoute(item.path) ? 'scale(1.1)' : 'scale(1)',
+                                                borderRadius: 1,
+                                                justifyContent: collapsed ? 'center' : 'flex-start',
+                                                px: collapsed ? 1 : 1.5,
+                                                py: 0.75,
+                                                bgcolor: (item.path && isActiveRoute(item.path)) || hasActiveChild(item.children) 
+                                                    ? item.children ? 'action.selected' : 'primary.main' 
+                                                    : 'transparent',
+                                                color: (item.path && isActiveRoute(item.path)) ? 'white' : 'text.primary',
+                                                boxShadow: (item.path && isActiveRoute(item.path)) ? '0 4px 12px rgba(108, 99, 255, 0.4)' : 'none',
+                                                transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+                                                '&:hover': {
+                                                    bgcolor: (item.path && isActiveRoute(item.path)) ? 'primary.dark' : 'action.hover',
+                                                    transform: 'translateX(2px)',
+                                                },
                                             }}
                                         >
-                                            <item.icon 
-                                                size={18} 
-                                                variant="Outline" 
-                                                color={isActiveRoute(item.path) ? '#ffffff' : item.iconColor} 
-                                            />
-                                        </ListItemIcon>
-                                        <Box
-                                            sx={{
-                                                opacity: collapsed ? 0 : 1,
-                                                width: collapsed ? 0 : 'auto',
-                                                overflow: 'hidden',
-                                                whiteSpace: 'nowrap',
-                                                transition: 'opacity 0.25s ease, width 0.35s ease',
-                                            }}
-                                        >
-                                            <ListItemText
-                                                primary={item.text}
-                                                primaryTypographyProps={{
-                                                    fontSize: '0.825rem',
-                                                    fontWeight: isActiveRoute(item.path) ? 600 : 500,
+                                            <ListItemIcon
+                                                sx={{
+                                                    minWidth: collapsed ? 'auto' : 32,
+                                                    color: (item.path && isActiveRoute(item.path)) ? 'white' : 'text.secondary',
+                                                    transition: 'all 0.25s ease',
+                                                    transform: (item.path && isActiveRoute(item.path)) ? 'scale(1.1)' : 'scale(1)',
                                                 }}
-                                            />
-                                        </Box>
-                                    </ListItemButton>
-                                </Tooltip>
-                            </ListItem>
+                                            >
+                                                {'variant' in item.icon ? (
+                                                    <item.icon 
+                                                        size={18} 
+                                                        variant="Outline" 
+                                                        color={(item.path && isActiveRoute(item.path)) ? '#ffffff' : item.iconColor} 
+                                                    />
+                                                ) : (
+                                                    <item.icon 
+                                                        size={18} 
+                                                        color={(item.path && isActiveRoute(item.path)) ? '#ffffff' : item.iconColor} 
+                                                    />
+                                                )}
+                                            </ListItemIcon>
+                                            <Box
+                                                sx={{
+                                                    opacity: collapsed ? 0 : 1,
+                                                    width: collapsed ? 0 : 'auto',
+                                                    overflow: 'hidden',
+                                                    whiteSpace: 'nowrap',
+                                                    transition: 'opacity 0.25s ease, width 0.35s ease',
+                                                    flex: 1,
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'space-between',
+                                                }}
+                                            >
+                                                <ListItemText
+                                                    primary={item.text}
+                                                    primaryTypographyProps={{
+                                                        fontSize: '0.825rem',
+                                                        fontWeight: (item.path && isActiveRoute(item.path)) || hasActiveChild(item.children) ? 600 : 500,
+                                                    }}
+                                                />
+                                                {item.children && !collapsed && (
+                                                    expandedMenus.includes(item.text) 
+                                                        ? <ChevronUp size={16} /> 
+                                                        : <ChevronDown size={16} />
+                                                )}
+                                            </Box>
+                                        </ListItemButton>
+                                    </Tooltip>
+                                </ListItem>
+                                
+                                {/* Submenu items */}
+                                {item.children && !collapsed && (
+                                    <Collapse in={expandedMenus.includes(item.text)} timeout="auto" unmountOnExit>
+                                        <List component="div" disablePadding sx={{ pl: 2 }}>
+                                            {item.children.map((child) => (
+                                                <ListItem key={child.path} disablePadding sx={{ mb: 0.25 }}>
+                                                    <ListItemButton
+                                                        onClick={() => handleNavigate(child.path)}
+                                                        sx={{
+                                                            borderRadius: 1,
+                                                            py: 0.5,
+                                                            pl: 2,
+                                                            bgcolor: isActiveRoute(child.path, true) ? 'primary.main' : 'transparent',
+                                                            color: isActiveRoute(child.path, true) ? 'white' : 'text.primary',
+                                                            boxShadow: isActiveRoute(child.path, true) ? '0 4px 12px rgba(108, 99, 255, 0.4)' : 'none',
+                                                            transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+                                                            '&:hover': {
+                                                                bgcolor: isActiveRoute(child.path, true) ? 'primary.dark' : 'action.hover',
+                                                                transform: 'translateX(2px)',
+                                                            },
+                                                        }}
+                                                    >
+                                                        <ListItemIcon
+                                                            sx={{
+                                                                minWidth: 28,
+                                                                color: isActiveRoute(child.path, true) ? 'white' : 'text.secondary',
+                                                            }}
+                                                        >
+                                                            <child.icon 
+                                                                size={16} 
+                                                                color={isActiveRoute(child.path, true) ? '#ffffff' : child.iconColor} 
+                                                            />
+                                                        </ListItemIcon>
+                                                        <ListItemText
+                                                            primary={child.text}
+                                                            primaryTypographyProps={{
+                                                                fontSize: '0.8rem',
+                                                                fontWeight: isActiveRoute(child.path, true) ? 600 : 400,
+                                                            }}
+                                                        />
+                                                    </ListItemButton>
+                                                </ListItem>
+                                            ))}
+                                        </List>
+                                    </Collapse>
+                                )}
+                            </React.Fragment>
                         ))}
                     </React.Fragment>
                 ))}

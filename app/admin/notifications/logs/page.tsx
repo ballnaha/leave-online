@@ -28,14 +28,12 @@ import {
   Button,
   Card,
   CardContent,
-  Grid,
   Collapse,
 } from '@mui/material';
 import {
   Search,
   RefreshCw,
   Filter,
-  ChevronLeft,
   Download,
   Calendar,
   Bell,
@@ -217,31 +215,45 @@ export default function NotificationLogsPage() {
   return (
     <Box sx={{ p: { xs: 2, md: 3 } }}>
       {/* Header */}
-      <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 2 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-          <IconButton onClick={() => router.push('/admin/notifications')}>
-            <ChevronLeft />
-          </IconButton>
-          <Box>
-            <Typography variant="h5" fontWeight={700}>
-              📋 ประวัติการแจ้งเตือน
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              ทั้งหมด {total.toLocaleString()} รายการ
-            </Typography>
+      <Box sx={{ mb: 4, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 2 }}>
+        <Box>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1 }}>
+            <Avatar
+              sx={{
+                width: 48,
+                height: 48,
+                bgcolor: alpha(theme.palette.primary.main, 0.1),
+                color: 'primary.main',
+              }}
+            >
+              <Bell size={24} />
+            </Avatar>
+            <Box>
+              <Typography variant="h4" component="h1" fontWeight={700}>
+                ประวัติการแจ้งเตือน
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                ทั้งหมด {total.toLocaleString()} รายการ
+              </Typography>
+            </Box>
           </Box>
         </Box>
-        <Box sx={{ display: 'flex', gap: 1 }}>
-          <Tooltip title="รีเฟรช">
-            <IconButton onClick={fetchLogs} disabled={loading}>
-              <RefreshCw size={20} className={loading ? 'animate-spin' : ''} />
-            </IconButton>
-          </Tooltip>
-        </Box>
+        <Tooltip title="รีเฟรช">
+          <IconButton 
+            onClick={fetchLogs} 
+            disabled={loading}
+            sx={{ 
+              bgcolor: alpha(theme.palette.primary.main, 0.1),
+              '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.2) }
+            }}
+          >
+            <RefreshCw size={20} className={loading ? 'animate-spin' : ''} />
+          </IconButton>
+        </Tooltip>
       </Box>
 
       {/* Search & Filters */}
-      <Card sx={{ mb: 3, borderRadius: 2, border: '1px solid', borderColor: 'divider' }}>
+      <Card sx={{ mb: 3, borderRadius: 1, border: '1px solid', borderColor: 'divider' }}>
         <CardContent sx={{ pb: 2 }}>
           <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'center' }}>
             <TextField
@@ -326,7 +338,7 @@ export default function NotificationLogsPage() {
       </Card>
 
       {/* Table */}
-      <TableContainer component={Paper} sx={{ borderRadius: 2, border: '1px solid', borderColor: 'divider' }}>
+      <TableContainer component={Paper} sx={{ borderRadius: 1, border: '1px solid', borderColor: 'divider' }}>
         <Table>
           <TableHead>
             <TableRow sx={{ bgcolor: alpha(theme.palette.primary.main, 0.04) }}>
@@ -398,42 +410,42 @@ export default function NotificationLogsPage() {
                     <TableCell colSpan={6} sx={{ py: 0 }}>
                       <Collapse in={expandedRow === log.id}>
                         <Box sx={{ p: 2, bgcolor: alpha(theme.palette.grey[500], 0.04), borderRadius: 1, my: 1 }}>
-                          <Grid container spacing={2}>
-                            <Grid size={{ xs: 12, md: 6 }}>
+                          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '2fr 1fr 1fr' }, gap: 2 }}>
+                            <Box>
                               <Typography variant="caption" color="text.secondary">ข้อความ</Typography>
                               <Typography variant="body2" sx={{ mt: 0.5 }}>{log.message}</Typography>
-                            </Grid>
-                            <Grid size={{ xs: 12, md: 3 }}>
+                            </Box>
+                            <Box>
                               <Typography variant="caption" color="text.secondary">OneSignal ID</Typography>
                               <Typography variant="body2" sx={{ mt: 0.5, wordBreak: 'break-all' }}>
                                 {log.oneSignalId || '-'}
                               </Typography>
-                            </Grid>
-                            <Grid size={{ xs: 12, md: 3 }}>
+                            </Box>
+                            <Box>
                               <Typography variant="caption" color="text.secondary">อ่านเมื่อ</Typography>
                               <Typography variant="body2" sx={{ mt: 0.5 }}>
                                 {log.readAt ? dayjs(log.readAt).format('DD MMM YYYY HH:mm') : '-'}
                               </Typography>
-                            </Grid>
-                            {log.data && Object.keys(log.data).length > 0 && (
-                              <Grid size={{ xs: 12 }}>
-                                <Typography variant="caption" color="text.secondary">Data</Typography>
-                                <Box
-                                  component="pre"
-                                  sx={{
-                                    mt: 0.5,
-                                    p: 1,
-                                    bgcolor: alpha(theme.palette.grey[900], 0.04),
-                                    borderRadius: 1,
-                                    fontSize: 12,
-                                    overflow: 'auto',
-                                  }}
-                                >
-                                  {JSON.stringify(log.data, null, 2)}
-                                </Box>
-                              </Grid>
-                            )}
-                          </Grid>
+                            </Box>
+                          </Box>
+                          {log.data && Object.keys(log.data).length > 0 && (
+                            <Box sx={{ mt: 2 }}>
+                              <Typography variant="caption" color="text.secondary">Data</Typography>
+                              <Box
+                                component="pre"
+                                sx={{
+                                  mt: 0.5,
+                                  p: 1,
+                                  bgcolor: alpha(theme.palette.grey[900], 0.04),
+                                  borderRadius: 1,
+                                  fontSize: 12,
+                                  overflow: 'auto',
+                                }}
+                              >
+                                {JSON.stringify(log.data, null, 2)}
+                              </Box>
+                            </Box>
+                          )}
                         </Box>
                       </Collapse>
                     </TableCell>

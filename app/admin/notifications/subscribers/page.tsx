@@ -28,7 +28,6 @@ import {
   Button,
   Card,
   CardContent,
-  Grid,
   Switch,
   Dialog,
   DialogTitle,
@@ -38,7 +37,6 @@ import {
 import {
   Search,
   RefreshCw,
-  ChevronLeft,
   Smartphone,
   Monitor,
   Trash2,
@@ -101,7 +99,7 @@ function StatCard({ title, value, icon, color }: StatCardProps) {
   };
 
   return (
-    <Card sx={{ borderRadius: 2, border: '1px solid', borderColor: 'divider' }}>
+    <Card sx={{ borderRadius: 1, border: '1px solid', borderColor: 'divider' }}>
       <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <Box>
@@ -258,65 +256,73 @@ export default function SubscribersPage() {
   return (
     <Box sx={{ p: { xs: 2, md: 3 } }}>
       {/* Header */}
-      <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 2 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-          <IconButton onClick={() => router.push('/admin/notifications')}>
-            <ChevronLeft />
-          </IconButton>
-          <Box>
-            <Typography variant="h5" fontWeight={700}>
-              👥 Subscribers
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              จัดการอุปกรณ์ที่ลงทะเบียนรับการแจ้งเตือน
-            </Typography>
+      <Box sx={{ mb: 4, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 2 }}>
+        <Box>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1 }}>
+            <Avatar
+              sx={{
+                width: 48,
+                height: 48,
+                bgcolor: alpha(theme.palette.primary.main, 0.1),
+                color: 'primary.main',
+              }}
+            >
+              <Users size={24} />
+            </Avatar>
+            <Box>
+              <Typography variant="h4" component="h1" fontWeight={700}>
+                Subscribers
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                จัดการอุปกรณ์ที่ลงทะเบียนรับการแจ้งเตือน
+              </Typography>
+            </Box>
           </Box>
         </Box>
         <Tooltip title="รีเฟรช">
-          <IconButton onClick={fetchDevices} disabled={loading}>
+          <IconButton 
+            onClick={fetchDevices} 
+            disabled={loading}
+            sx={{ 
+              bgcolor: alpha(theme.palette.primary.main, 0.1),
+              '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.2) }
+            }}
+          >
             <RefreshCw size={20} className={loading ? 'animate-spin' : ''} />
           </IconButton>
         </Tooltip>
       </Box>
 
       {/* Stats */}
-      <Grid container spacing={2} sx={{ mb: 3 }}>
-        <Grid size={{ xs: 6, md: 3 }}>
-          <StatCard
-            title="ทั้งหมด"
-            value={stats?.total || 0}
-            icon={<Users size={22} />}
-            color="primary"
-          />
-        </Grid>
-        <Grid size={{ xs: 6, md: 3 }}>
-          <StatCard
-            title="Active"
-            value={stats?.active || 0}
-            icon={<CheckCircle size={22} />}
-            color="success"
-          />
-        </Grid>
-        <Grid size={{ xs: 6, md: 3 }}>
-          <StatCard
-            title="Inactive"
-            value={stats?.inactive || 0}
-            icon={<XCircle size={22} />}
-            color="error"
-          />
-        </Grid>
-        <Grid size={{ xs: 6, md: 3 }}>
-          <StatCard
-            title="Web"
-            value={stats?.byType?.find(t => t.type === 'web')?.count || 0}
-            icon={<Monitor size={22} />}
-            color="warning"
-          />
-        </Grid>
-      </Grid>
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'repeat(2, 1fr)', md: 'repeat(4, 1fr)' }, gap: 2, mb: 3 }}>
+        <StatCard
+          title="ทั้งหมด"
+          value={stats?.total || 0}
+          icon={<Users size={22} />}
+          color="primary"
+        />
+        <StatCard
+          title="Active"
+          value={stats?.active || 0}
+          icon={<CheckCircle size={22} />}
+          color="success"
+        />
+        <StatCard
+          title="Inactive"
+          value={stats?.inactive || 0}
+          icon={<XCircle size={22} />}
+          color="error"
+        />
+        <StatCard
+          title="Web"
+          value={stats?.byType?.find(t => t.type === 'web')?.count || 0}
+          icon={<Monitor size={22} />}
+          color="warning"
+        />
+      </Box>
 
       {/* Search & Filters */}
-      <Card sx={{ mb: 3, borderRadius: 2, border: '1px solid', borderColor: 'divider' }}>
+      <Card sx={{ mb: 3, borderRadius: 1, border: '1px solid', borderColor: 'divider' }}>
         <CardContent sx={{ pb: 2, '&:last-child': { pb: 2 } }}>
           <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'center' }}>
             <TextField
@@ -360,7 +366,7 @@ export default function SubscribersPage() {
       </Card>
 
       {/* Table */}
-      <TableContainer component={Paper} sx={{ borderRadius: 2, border: '1px solid', borderColor: 'divider' }}>
+      <TableContainer component={Paper} sx={{ borderRadius: 1, border: '1px solid', borderColor: 'divider' }}>
         <Table>
           <TableHead>
             <TableRow sx={{ bgcolor: alpha(theme.palette.primary.main, 0.04) }}>
@@ -413,9 +419,7 @@ export default function SubscribersPage() {
                         borderRadius: 1,
                         display: 'inline-block',
                         maxWidth: 180,
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap',
+                        
                       }}
                     >
                       {device.playerId}

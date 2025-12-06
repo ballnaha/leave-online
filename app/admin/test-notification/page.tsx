@@ -208,7 +208,7 @@ export default function TestNotificationPage() {
 
       <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 3 }}>
         {/* Send Form */}
-        <Card sx={{ borderRadius: 2, border: '1px solid', borderColor: 'divider' }}>
+        <Card sx={{ borderRadius: 1, border: '1px solid', borderColor: 'divider' }}>
           <CardContent sx={{ p: 3 }}>
             <Typography variant="h6" fontWeight={600} sx={{ mb: 3, display: 'flex', alignItems: 'center', gap: 1 }}>
               <Send size={20} />
@@ -296,7 +296,7 @@ export default function TestNotificationPage() {
         </Card>
 
         {/* Registered Devices */}
-        <Card sx={{ borderRadius: 2, border: '1px solid', borderColor: 'divider' }}>
+        <Card sx={{ borderRadius: 1, border: '1px solid', borderColor: 'divider' }}>
           <CardContent sx={{ p: 3 }}>
             <Typography variant="h6" fontWeight={600} sx={{ mb: 3, display: 'flex', alignItems: 'center', gap: 1 }}>
               <Smartphone size={20} />
@@ -362,7 +362,7 @@ export default function TestNotificationPage() {
       </Box>
 
       {/* Recent Logs */}
-      <Card sx={{ mt: 3, borderRadius: 2, border: '1px solid', borderColor: 'divider' }}>
+      <Card sx={{ mt: 3, borderRadius: 1, border: '1px solid', borderColor: 'divider' }}>
         <CardContent sx={{ p: 3 }}>
           <Typography variant="h6" fontWeight={600} sx={{ mb: 3 }}>
             ประวัติการส่งล่าสุด
@@ -409,9 +409,7 @@ export default function TestNotificationPage() {
                           color="text.secondary"
                           sx={{
                             maxWidth: 200,
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            whiteSpace: 'nowrap',
+                            
                           }}
                         >
                           {log.message}

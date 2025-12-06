@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { authOptions, isAdminRole } from '@/lib/auth';
 import prisma from '@/lib/prisma';
 
 export async function GET(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session || !['ADMIN', 'SUPER_ADMIN'].includes(session.user.role)) {
+    if (!session || !isAdminRole(session.user.role)) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -99,11 +99,50 @@ export async function GET(req: NextRequest) {
   }
 }
 
+const ONESIGNAL_APP_ID = process.env.ONESIGNAL_APP_ID || '';
+const ONESIGNAL_REST_API_KEY = process.env.ONESIGNAL_REST_API_KEY || '';
+
+// Helper function to update player tags in OneSignal
+async function updateOneSignalPlayerTags(playerId: string, tags: Record<string, string | number | boolean>) {
+  if (!ONESIGNAL_APP_ID || !ONESIGNAL_REST_API_KEY) {
+    console.log('OneSignal not configured, skipping tag update');
+    return { success: false, error: 'OneSignal not configured' };
+  }
+
+  try {
+    const response = await fetch(
+      `https://onesignal.com/api/v1/players/${playerId}`,
+      {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Basic ${ONESIGNAL_REST_API_KEY}`,
+        },
+        body: JSON.stringify({
+          app_id: ONESIGNAL_APP_ID,
+          tags,
+        }),
+      }
+    );
+
+    if (response.ok) {
+      return { success: true };
+    } else {
+      const error = await response.text();
+      console.error('OneSignal tag update failed:', error);
+      return { success: false, error };
+    }
+  } catch (error) {
+    console.error('Error updating OneSignal tags:', error);
+    return { success: false, error: String(error) };
+  }
+}
+
 // Deactivate a device
 export async function DELETE(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session || !['ADMIN', 'SUPER_ADMIN'].includes(session.user.role)) {
+    if (!session || !isAdminRole(session.user.role)) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -114,12 +153,33 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ error: 'Device ID is required' }, { status: 400 });
     }
 
+    // Get device to get playerId
+    const device = await prisma.userDevice.findUnique({
+      where: { id: parseInt(deviceId) },
+      select: { playerId: true }
+    });
+
+    if (!device) {
+      return NextResponse.json({ error: 'Device not found' }, { status: 404 });
+    }
+
+    // Update in DB
     await prisma.userDevice.update({
       where: { id: parseInt(deviceId) },
       data: { isActive: false }
     });
 
-    return NextResponse.json({ success: true, message: 'Device deactivated' });
+    // Update tag in OneSignal to exclude from notifications
+    const onesignalResult = await updateOneSignalPlayerTags(device.playerId, {
+      app_disabled: 'true',
+      disabled_at: new Date().toISOString(),
+    });
+
+    return NextResponse.json({ 
+      success: true, 
+      message: 'Device deactivated',
+      onesignalSync: onesignalResult.success 
+    });
 
   } catch (error) {
     console.error('Error deactivating device:', error);
@@ -134,7 +194,7 @@ export async function DELETE(req: NextRequest) {
 export async function PATCH(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session || !['ADMIN', 'SUPER_ADMIN'].includes(session.user.role)) {
+    if (!session || !isAdminRole(session.user.role)) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -145,14 +205,32 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: 'Device ID is required' }, { status: 400 });
     }
 
+    // Get device to get playerId
+    const device = await prisma.userDevice.findUnique({
+      where: { id: parseInt(id) },
+      select: { playerId: true }
+    });
+
+    if (!device) {
+      return NextResponse.json({ error: 'Device not found' }, { status: 404 });
+    }
+
+    // Update in DB
     await prisma.userDevice.update({
       where: { id: parseInt(id) },
       data: { isActive }
     });
 
+    // Update tag in OneSignal
+    const onesignalResult = await updateOneSignalPlayerTags(device.playerId, {
+      app_disabled: isActive ? '' : 'true', // Empty string removes the tag
+      disabled_at: isActive ? '' : new Date().toISOString(),
+    });
+
     return NextResponse.json({ 
       success: true, 
-      message: isActive ? 'Device activated' : 'Device deactivated' 
+      message: isActive ? 'Device activated' : 'Device deactivated',
+      onesignalSync: onesignalResult.success
     });
 
   } catch (error) {

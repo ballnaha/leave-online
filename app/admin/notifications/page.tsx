@@ -17,6 +17,7 @@ import {
   ListItem,
   ListItemAvatar,
   ListItemText,
+  ListItemIcon,
   Divider,
   Button,
   FormControl,
@@ -26,6 +27,7 @@ import {
   LinearProgress,
   IconButton,
   Tooltip,
+  Menu,
 } from '@mui/material';
 import {
   Bell,
@@ -46,6 +48,9 @@ import {
   Database,
   RefreshCcw,
   AlertCircle,
+  Download,
+  Upload,
+  CheckSquare,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useToastr } from '@/app/components/Toastr';
@@ -101,7 +106,7 @@ function StatCard({ title, value, icon, color, subtitle, trend }: StatCardProps)
   return (
     <Card
       sx={{
-        borderRadius: 2,
+        borderRadius: 1,
         border: '1px solid',
         borderColor: 'divider',
         boxShadow: '0 4px 20px rgba(0,0,0,0.04)',
@@ -133,6 +138,9 @@ function StatCard({ title, value, icon, color, subtitle, trend }: StatCardProps)
               height: 56,
               bgcolor: colorMap[color].light,
               color: colorMap[color].main,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
             }}
           >
             {icon}
@@ -173,8 +181,11 @@ function getTypeLabel(type: string): string {
 
 interface OneSignalStats {
   configured: boolean;
+  error?: string;
+  note?: string;
   onesignal?: {
-    appName: string;
+    appName?: string;
+    appId?: string;
     players: number;
     messageable_players: number;
   };
@@ -207,7 +218,12 @@ export default function NotificationsPage() {
   const fetchStats = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/admin/notifications/stats?days=${days}`);
+      const res = await fetch(`/api/admin/notifications/stats?days=${days}`, {
+        credentials: 'include',
+      });
+      if (!res.ok) {
+        throw new Error('Failed to fetch stats');
+      }
       const data = await res.json();
       setStats(data);
     } catch (error) {
@@ -220,7 +236,12 @@ export default function NotificationsPage() {
   const fetchOneSignalStats = async () => {
     setOnesignalLoading(true);
     try {
-      const res = await fetch('/api/admin/notifications/onesignal-stats');
+      const res = await fetch('/api/admin/notifications/onesignal-stats', {
+        credentials: 'include',
+      });
+      if (!res.ok) {
+        throw new Error('Failed to fetch OneSignal stats');
+      }
       const data = await res.json();
       setOnesignalStats(data);
     } catch (error) {
@@ -230,11 +251,16 @@ export default function NotificationsPage() {
     }
   };
 
-  const syncWithOneSignal = async () => {
+  const syncWithOneSignal = async (mode: 'validate' | 'import' | 'full' = 'validate') => {
     setSyncing(true);
     try {
       const res = await fetch('/api/admin/notifications/onesignal-stats', {
         method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ mode }),
       });
       const data = await res.json();
       if (data.success) {
@@ -252,6 +278,9 @@ export default function NotificationsPage() {
       setSyncing(false);
     }
   };
+
+  // Sync menu state
+  const [syncMenuAnchor, setSyncMenuAnchor] = useState<null | HTMLElement>(null);
 
   useEffect(() => {
     fetchStats();
@@ -343,11 +372,11 @@ export default function NotificationsPage() {
       </Grid>
 
       {/* OneSignal Stats Section */}
-      <Card sx={{ mb: 4, borderRadius: 2, border: '1px solid', borderColor: 'divider' }}>
+      <Card sx={{ mb: 4, borderRadius: 1, border: '1px solid', borderColor: 'divider' }}>
         <CardContent>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-              <Avatar sx={{ bgcolor: alpha(theme.palette.info.main, 0.1) }}>
+              <Avatar sx={{ bgcolor: alpha(theme.palette.info.main, 0.1), display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <Cloud size={24} color={theme.palette.info.main} />
               </Avatar>
               <Box>
@@ -369,11 +398,56 @@ export default function NotificationsPage() {
                 variant="outlined"
                 size="small"
                 startIcon={<RefreshCcw size={16} />}
-                onClick={syncWithOneSignal}
+                onClick={(e) => setSyncMenuAnchor(e.currentTarget)}
                 disabled={syncing || !onesignalStats?.configured}
               >
                 {syncing ? 'กำลัง Sync...' : 'Sync'}
               </Button>
+              <Menu
+                anchorEl={syncMenuAnchor}
+                open={Boolean(syncMenuAnchor)}
+                onClose={() => setSyncMenuAnchor(null)}
+                anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+                transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+              >
+                <MenuItem 
+                  onClick={() => { 
+                    setSyncMenuAnchor(null); 
+                    syncWithOneSignal('validate'); 
+                  }}
+                >
+                  <ListItemIcon><CheckSquare size={18} /></ListItemIcon>
+                  <ListItemText 
+                    primary="ตรวจสอบ Devices" 
+                    secondary="ตรวจสอบว่า devices ยังอยู่ใน OneSignal"
+                  />
+                </MenuItem>
+                <MenuItem 
+                  onClick={() => { 
+                    setSyncMenuAnchor(null); 
+                    syncWithOneSignal('import'); 
+                  }}
+                >
+                  <ListItemIcon><Download size={18} /></ListItemIcon>
+                  <ListItemText 
+                    primary="นำเข้าจาก OneSignal" 
+                    secondary="ดึง players ใหม่จาก OneSignal มา DB"
+                  />
+                </MenuItem>
+                <Divider />
+                <MenuItem 
+                  onClick={() => { 
+                    setSyncMenuAnchor(null); 
+                    syncWithOneSignal('full'); 
+                  }}
+                >
+                  <ListItemIcon><RefreshCcw size={18} /></ListItemIcon>
+                  <ListItemText 
+                    primary="Full Sync" 
+                    secondary="ตรวจสอบ + นำเข้าทั้งหมด"
+                  />
+                </MenuItem>
+              </Menu>
             </Box>
           </Box>
 
@@ -400,28 +474,45 @@ export default function NotificationsPage() {
                 <Box
                   sx={{
                     p: 2,
-                    borderRadius: 2,
-                    bgcolor: alpha(theme.palette.info.main, 0.05),
+                    borderRadius: 1,
+                    bgcolor: onesignalStats?.error 
+                      ? alpha(theme.palette.warning.main, 0.05)
+                      : alpha(theme.palette.info.main, 0.05),
                     border: '1px solid',
-                    borderColor: alpha(theme.palette.info.main, 0.2),
+                    borderColor: onesignalStats?.error 
+                      ? alpha(theme.palette.warning.main, 0.2)
+                      : alpha(theme.palette.info.main, 0.2),
                   }}
                 >
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                    <Cloud size={18} color={theme.palette.info.main} />
+                    <Cloud size={18} color={onesignalStats?.error ? theme.palette.warning.main : theme.palette.info.main} />
                     <Typography variant="body2" color="text.secondary">
                       OneSignal
                     </Typography>
                   </Box>
-                  <Typography variant="h4" fontWeight={700} color="info.main">
-                    {onesignalStats?.onesignal?.players?.toLocaleString() || 0}
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    Total Players
-                  </Typography>
-                  <Divider sx={{ my: 1 }} />
-                  <Typography variant="body2">
-                    <strong>{onesignalStats?.onesignal?.messageable_players?.toLocaleString() || 0}</strong> รับข้อความได้
-                  </Typography>
+                  {onesignalStats?.error ? (
+                    <>
+                      <Typography variant="body2" color="warning.main" fontWeight={600}>
+                        ไม่สามารถดึงข้อมูลได้
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
+                        {onesignalStats?.note || 'REST API Key ไม่มีสิทธิ์'}
+                      </Typography>
+                    </>
+                  ) : (
+                    <>
+                      <Typography variant="h4" fontWeight={700} color="info.main">
+                        {onesignalStats?.onesignal?.players?.toLocaleString() || 0}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        Total Players
+                      </Typography>
+                      <Divider sx={{ my: 1 }} />
+                      <Typography variant="body2">
+                        <strong>{onesignalStats?.onesignal?.messageable_players?.toLocaleString() || 0}</strong> รับข้อความได้
+                      </Typography>
+                    </>
+                  )}
                 </Box>
               </Grid>
 
@@ -430,7 +521,7 @@ export default function NotificationsPage() {
                 <Box
                   sx={{
                     p: 2,
-                    borderRadius: 2,
+                    borderRadius: 1,
                     bgcolor: alpha(theme.palette.success.main, 0.05),
                     border: '1px solid',
                     borderColor: alpha(theme.palette.success.main, 0.2),
@@ -465,7 +556,7 @@ export default function NotificationsPage() {
                 <Box
                   sx={{
                     p: 2,
-                    borderRadius: 2,
+                    borderRadius: 1,
                     bgcolor: alpha(
                       onesignalStats?.comparison?.syncStatus === 'synced'
                         ? theme.palette.success.main
@@ -524,7 +615,7 @@ export default function NotificationsPage() {
       <Grid container spacing={3}>
         {/* Status Breakdown */}
         <Grid size={{ xs: 12, md: 4 }}>
-          <Card sx={{ borderRadius: 2, border: '1px solid', borderColor: 'divider', height: '100%' }}>
+          <Card sx={{ borderRadius: 1, border: '1px solid', borderColor: 'divider', height: '100%' }}>
             <CardContent>
               <Typography variant="h6" fontWeight={600} gutterBottom>
                 สถานะการส่ง
@@ -568,7 +659,7 @@ export default function NotificationsPage() {
 
         {/* Type Breakdown */}
         <Grid size={{ xs: 12, md: 4 }}>
-          <Card sx={{ borderRadius: 2, border: '1px solid', borderColor: 'divider', height: '100%' }}>
+          <Card sx={{ borderRadius: 1, border: '1px solid', borderColor: 'divider', height: '100%' }}>
             <CardContent>
               <Typography variant="h6" fontWeight={600} gutterBottom>
                 ประเภทการแจ้งเตือน
@@ -599,14 +690,14 @@ export default function NotificationsPage() {
 
         {/* Subscribers Stats */}
         <Grid size={{ xs: 12, md: 4 }}>
-          <Card sx={{ borderRadius: 2, border: '1px solid', borderColor: 'divider', height: '100%' }}>
+          <Card sx={{ borderRadius: 1, border: '1px solid', borderColor: 'divider', height: '100%' }}>
             <CardContent>
               <Typography variant="h6" fontWeight={600} gutterBottom>
                 Subscribers
               </Typography>
               <Box sx={{ mt: 2 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
-                  <Avatar sx={{ width: 48, height: 48, bgcolor: alpha(theme.palette.success.main, 0.1) }}>
+                  <Avatar sx={{ width: 48, height: 48, bgcolor: alpha(theme.palette.success.main, 0.1), display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <Smartphone size={24} color={theme.palette.success.main} />
                   </Avatar>
                   <Box>
@@ -654,7 +745,7 @@ export default function NotificationsPage() {
       </Grid>
 
       {/* Recent Notifications */}
-      <Card sx={{ mt: 3, borderRadius: 2, border: '1px solid', borderColor: 'divider' }}>
+      <Card sx={{ mt: 3, borderRadius: 1, border: '1px solid', borderColor: 'divider' }}>
         <CardContent>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
             <Typography variant="h6" fontWeight={600}>
@@ -673,26 +764,26 @@ export default function NotificationsPage() {
               <React.Fragment key={notif.id}>
                 <ListItem sx={{ px: 0 }}>
                   <ListItemAvatar>
-                    <Avatar sx={{ bgcolor: alpha(theme.palette.primary.main, 0.1) }}>
+                    <Avatar sx={{ bgcolor: alpha(theme.palette.primary.main, 0.1), display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       <Bell size={20} color={theme.palette.primary.main} />
                     </Avatar>
                   </ListItemAvatar>
                   <ListItemText
                     primary={
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Typography variant="body2" fontWeight={500}>
+                      <Box component="span" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Typography component="span" variant="body2" fontWeight={500}>
                           {notif.title}
                         </Typography>
                         {getStatusChip(notif.status)}
                       </Box>
                     }
                     secondary={
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
-                        <Typography variant="caption" color="text.secondary">
+                      <Box component="span" sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
+                        <Typography component="span" variant="caption" color="text.secondary">
                           {notif.user?.firstName} {notif.user?.lastName}
                         </Typography>
-                        <Typography variant="caption" color="text.secondary">•</Typography>
-                        <Typography variant="caption" color="text.secondary">
+                        <Typography component="span" variant="caption" color="text.secondary">•</Typography>
+                        <Typography component="span" variant="caption" color="text.secondary">
                           {dayjs(notif.createdAt).fromNow()}
                         </Typography>
                       </Box>
