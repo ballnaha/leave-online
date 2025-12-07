@@ -99,7 +99,11 @@ export async function checkAndEscalate(): Promise<{
             hrManager.id,
             leave.id,
             `${leave.user.firstName} ${leave.user.lastName}`,
-            leave.leaveType
+            leave.leaveType,
+            leave.totalDays,
+            leave.startDate?.toISOString(),
+            leave.endDate?.toISOString(),
+            leave.reason
           );
 
           // แจ้งพนักงานว่าใบลาถูก escalate
@@ -218,7 +222,11 @@ export async function createApprovalSteps(
           hrManager.id,
           leaveRequestId,
           `${leaveRequest.user.firstName} ${leaveRequest.user.lastName}`,
-          leaveRequest.leaveType
+          leaveRequest.leaveType,
+          leaveRequest.totalDays,
+          leaveRequest.startDate?.toISOString(),
+          leaveRequest.endDate?.toISOString(),
+          leaveRequest.reason
         );
       }
     }
@@ -260,7 +268,11 @@ export async function createApprovalSteps(
             hrManager.id,
             leaveRequestId,
             `${leaveRequest.user.firstName} ${leaveRequest.user.lastName}`,
-            leaveRequest.leaveType
+            leaveRequest.leaveType,
+            leaveRequest.totalDays,
+            leaveRequest.startDate?.toISOString(),
+            leaveRequest.endDate?.toISOString(),
+            leaveRequest.reason
           );
         }
       }
@@ -294,7 +306,11 @@ export async function createApprovalSteps(
         firstApprover.approverId,
         leaveRequestId,
         `${leaveRequest.user.firstName} ${leaveRequest.user.lastName}`,
-        leaveRequest.leaveType
+        leaveRequest.leaveType,
+        leaveRequest.totalDays,
+        leaveRequest.startDate?.toISOString(),
+        leaveRequest.endDate?.toISOString(),
+        leaveRequest.reason
       );
     }
     return;
@@ -454,7 +470,11 @@ export async function createApprovalSteps(
             firstApproverId,
             leaveRequestId,
             `${leaveRequest.user.firstName} ${leaveRequest.user.lastName}`,
-            leaveRequest.leaveType
+            leaveRequest.leaveType,
+            leaveRequest.totalDays,
+            leaveRequest.startDate?.toISOString(),
+            leaveRequest.endDate?.toISOString(),
+            leaveRequest.reason
           );
         }
         return;
@@ -492,7 +512,11 @@ export async function createApprovalSteps(
         hrManager.id,
         leaveRequestId,
         `${leaveRequest.user.firstName} ${leaveRequest.user.lastName}`,
-        leaveRequest.leaveType
+        leaveRequest.leaveType,
+        leaveRequest.totalDays,
+        leaveRequest.startDate?.toISOString(),
+        leaveRequest.endDate?.toISOString(),
+        leaveRequest.reason
       );
     }
   } else {
@@ -526,7 +550,11 @@ export async function createApprovalSteps(
           admin.id,
           leaveRequestId,
           `${leaveRequest.user.firstName} ${leaveRequest.user.lastName}`,
-          leaveRequest.leaveType
+          leaveRequest.leaveType,
+          leaveRequest.totalDays,
+          leaveRequest.startDate?.toISOString(),
+          leaveRequest.endDate?.toISOString(),
+          leaveRequest.reason
         );
       }
     }
@@ -579,7 +607,11 @@ export async function processNextApproval(
       nextApproval.approverId,
       leaveRequestId,
       `${leaveRequest.user.firstName} ${leaveRequest.user.lastName}`,
-      leaveRequest.leaveType
+      leaveRequest.leaveType,
+      leaveRequest.totalDays,
+      leaveRequest.startDate?.toISOString(),
+      leaveRequest.endDate?.toISOString(),
+      leaveRequest.reason
     );
   }
 

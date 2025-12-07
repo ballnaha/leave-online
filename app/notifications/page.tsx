@@ -10,8 +10,15 @@ import {
     Divider,
     Tabs,
     Tab,
+    Chip,
+    Dialog,
+    DialogTitle,
+    DialogContent,
+    DialogActions,
+    TextField,
+    Alert,
 } from '@mui/material';
-import { ArrowLeft2, Notification, TickCircle, Trash, Clock, MessageNotif, Send2, DocumentText, InfoCircle, CloseCircle } from 'iconsax-react';
+import { ArrowLeft2, Notification, TickCircle, Trash, Clock, MessageNotif, Send2, DocumentText, InfoCircle, CloseCircle, ArrowRight2 } from 'iconsax-react';
 import { useRouter } from 'next/navigation';
 import { useLocale } from '../providers/LocaleProvider';
 import { useSession } from 'next-auth/react';
@@ -69,6 +76,16 @@ export default function NotificationsPage() {
     const [loading, setLoading] = useState(true);
     const [unreadCount, setUnreadCount] = useState(0);
     const [activeTab, setActiveTab] = useState<TabType>('all');
+    
+    // Dialog state for approve/reject
+    const [dialogOpen, setDialogOpen] = useState(false);
+    const [selectedNotification, setSelectedNotification] = useState<NotificationItem | null>(null);
+    const [actionType, setActionType] = useState<'approve' | 'reject'>('approve');
+    const [comment, setComment] = useState('');
+    const [submitting, setSubmitting] = useState(false);
+    const [error, setError] = useState('');
+    const [attachments, setAttachments] = useState<any[]>([]);
+    const [loadingAttachments, setLoadingAttachments] = useState(false);
 
     const dateLocale = locale === 'th' ? 'th-TH' : locale === 'my' ? 'my-MM' : 'en-US';
 
@@ -198,6 +215,78 @@ export default function NotificationsPage() {
         }
     };
 
+    // Open approve/reject dialog
+    const handleOpenDialog = async (notification: NotificationItem, action: 'approve' | 'reject') => {
+        setSelectedNotification(notification);
+        setActionType(action);
+        setComment('');
+        setError('');
+        setAttachments([]);
+        setDialogOpen(true);
+        
+        // Mark as read
+        if (!notification.isRead) {
+            markAsRead(notification.id);
+        }
+        
+        // Fetch attachments from leave request
+        if (notification.data?.leaveRequestId) {
+            setLoadingAttachments(true);
+            try {
+                const res = await fetch(`/api/leaves/${notification.data.leaveRequestId}`);
+                if (res.ok) {
+                    const data = await res.json();
+                    setAttachments(data.attachments || []);
+                }
+            } catch (err) {
+                console.error('Error fetching attachments:', err);
+            } finally {
+                setLoadingAttachments(false);
+            }
+        }
+    };
+
+    // Submit approve/reject action
+    const handleSubmitAction = async () => {
+        if (!selectedNotification?.data?.leaveRequestId) return;
+
+        if (actionType === 'reject' && !comment.trim()) {
+            setError(t('please_enter_reason', 'กรุณาระบุเหตุผลในการปฏิเสธ'));
+            return;
+        }
+
+        setSubmitting(true);
+        setError('');
+
+        try {
+            const response = await fetch(`/api/leaves/${selectedNotification.data.leaveRequestId}/approve`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    action: actionType,
+                    comment: comment.trim() || undefined,
+                }),
+            });
+
+            if (!response.ok) {
+                const data = await response.json().catch(() => ({ error: 'เกิดข้อผิดพลาด' }));
+                setError(data.error || t('error_occurred', 'เกิดข้อผิดพลาด'));
+                return;
+            }
+
+            setDialogOpen(false);
+            
+            // Remove the notification from list or refresh
+            setNotifications(prev => prev.filter(n => n.id !== selectedNotification.id));
+            
+            // Show success (optional: could use toast)
+        } catch (err) {
+            setError(t('connection_error', 'เกิดข้อผิดพลาดในการเชื่อมต่อ'));
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
     // Format time ago
     const formatTimeAgo = (dateString: string) => {
         const date = new Date(dateString);
@@ -265,9 +354,30 @@ export default function NotificationsPage() {
         }
         
         // Navigate based on notification type and data
-        if (notification.data?.leaveRequestId) {
-            // Could navigate to leave detail page if needed
-            // router.push(`/leave/detail/${notification.data.leaveRequestId}`);
+        const leaveRequestId = notification.data?.leaveRequestId;
+        
+        switch (notification.type) {
+            case 'approval_pending':
+            case 'reminder':
+                // ไปหน้าอนุมัติใบลา
+                if (leaveRequestId) {
+                    router.push(`/approval/${leaveRequestId}?action=approve`);
+                } else {
+                    router.push('/approval');
+                }
+                break;
+            case 'approved':
+            case 'rejected':
+            case 'submitted':
+            case 'escalated':
+            case 'cancelled':
+                // ไปหน้าใบลาของฉัน
+                router.push('/leave');
+                break;
+            default:
+                // Default: ไปหน้าใบลา
+                router.push('/leave');
+                break;
         }
     };
 
@@ -521,14 +631,121 @@ export default function NotificationsPage() {
                                                 color: '#64748B',
                                                 fontSize: '0.85rem',
                                                 lineHeight: 1.4,
-                                                display: '-webkit-box',
-                                                WebkitLineClamp: 2,
-                                                WebkitBoxOrient: 'vertical',
-                                                overflow: 'hidden',
                                             }}
                                         >
                                             {getTranslatedMessage(notification)}
                                         </Typography>
+                                        
+                                        {/* Show leave details if available */}
+                                        {(notification.data?.totalDays || notification.data?.startDate) && (
+                                            <Box sx={{ 
+                                                mt: 1, 
+                                                p: 1.5, 
+                                                bgcolor: '#F8FAFC', 
+                                                borderRadius: 1,
+                                                border: '1px solid #E2E8F0'
+                                            }}>
+                                                {/* Date range */}
+                                                {notification.data?.startDate && (
+                                                    <Typography
+                                                        sx={{
+                                                            color: '#475569',
+                                                            fontSize: '0.8rem',
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            gap: 0.5,
+                                                            mb: notification.data?.reason ? 0.75 : 0,
+                                                        }}
+                                                    >
+                                                        📅 {new Date(notification.data.startDate).toLocaleDateString(dateLocale, { day: 'numeric', month: 'short' })}
+                                                        {notification.data?.endDate && notification.data.startDate !== notification.data.endDate && (
+                                                            <> - {new Date(notification.data.endDate).toLocaleDateString(dateLocale, { day: 'numeric', month: 'short' })}</>
+                                                        )}
+                                                        {notification.data?.totalDays && (
+                                                            <Box component="span" sx={{ color: '#6C63FF', fontWeight: 600, ml: 0.5 }}>
+                                                                ({notification.data.totalDays} {t('days', 'วัน')})
+                                                            </Box>
+                                                        )}
+                                                    </Typography>
+                                                )}
+                                                
+                                                {/* Reason */}
+                                                {notification.data?.reason && (
+                                                    <Typography
+                                                        sx={{
+                                                            color: '#64748B',
+                                                            fontSize: '0.8rem',
+                                                            display: '-webkit-box',
+                                                            WebkitLineClamp: 2,
+                                                            WebkitBoxOrient: 'vertical',
+                                                            overflow: 'hidden',
+                                                        }}
+                                                    >
+                                                        💬 {notification.data.reason}
+                                                    </Typography>
+                                                )}
+                                            </Box>
+                                        )}
+                                        
+                                        {/* Action buttons for approval_pending and reminder */}
+                                        {(notification.type === 'approval_pending' || notification.type === 'reminder') && notification.data?.leaveRequestId && (
+                                            <Box sx={{ display: 'flex', gap: 1, mt: 1.5 }}>
+                                                <Button
+                                                    size="small"
+                                                    variant="contained"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        if (!notification.isRead) markAsRead(notification.id);
+                                                        handleOpenDialog(notification, 'approve');
+                                                    }}
+                                                    sx={{
+                                                        bgcolor: '#4CAF50',
+                                                        color: 'white',
+                                                        textTransform: 'none',
+                                                        fontSize: '0.75rem',
+                                                        fontWeight: 600,
+                                                        py: 0.5,
+                                                        px: 1.5,
+                                                        borderRadius: 1,
+                                                        boxShadow: 'none',
+                                                        '&:hover': {
+                                                            bgcolor: '#43A047',
+                                                            boxShadow: 'none',
+                                                        },
+                                                    }}
+                                                    startIcon={<TickCircle size={14} color="#ffffff" />}
+                                                >
+                                                    {t('approve', 'อนุมัติ')}
+                                                </Button>
+                                                <Button
+                                                    size="small"
+                                                    variant="outlined"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        if (!notification.isRead) markAsRead(notification.id);
+                                                        handleOpenDialog(notification, 'reject');
+                                                    }}
+                                                    sx={{
+                                                        borderColor: '#F44336',
+                                                        color: '#F44336',
+                                                        textTransform: 'none',
+                                                        fontSize: '0.75rem',
+                                                        fontWeight: 600,
+                                                        py: 0.5,
+                                                        px: 1.5,
+                                                        borderRadius: 1,
+                                                        '&:hover': {
+                                                            borderColor: '#D32F2F',
+                                                            bgcolor: 'rgba(244, 67, 54, 0.04)',
+                                                        },
+                                                    }}
+                                                    startIcon={<CloseCircle size={14} color="#F44336" />}
+                                                >
+                                                    {t('reject', 'ปฏิเสธ')}
+                                                </Button>
+                                            </Box>
+                                        )}
+                                        
                                         <Typography
                                             sx={{
                                                 color: '#94A3B8',
@@ -562,6 +779,179 @@ export default function NotificationsPage() {
                     </Box>
                 )}
             </Container>
+
+            {/* Approval/Rejection Dialog */}
+            <Dialog
+                open={dialogOpen}
+                onClose={() => !submitting && setDialogOpen(false)}
+                maxWidth="sm"
+                fullWidth
+                PaperProps={{
+                    sx: {
+                        borderRadius: 1,
+                        mx: 2,
+                    },
+                }}
+            >
+                <DialogTitle sx={{ pb: 1 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                        {actionType === 'approve' ? (
+                            <TickCircle size={28} color="#4CAF50" variant="Bold" />
+                        ) : (
+                            <CloseCircle size={28} color="#F44336" variant="Bold" />
+                        )}
+                        <Typography variant="h6" fontWeight={600}>
+                            {actionType === 'approve'
+                                ? t('confirmApproval', 'ยืนยันการอนุมัติ')
+                                : t('confirmRejection', 'ยืนยันการปฏิเสธ')}
+                        </Typography>
+                    </Box>
+                </DialogTitle>
+                <DialogContent>
+                    {error && (
+                        <Alert severity="error" sx={{ mb: 2 }}>
+                            {error}
+                        </Alert>
+                    )}
+
+                    {/* Leave Info Summary */}
+                    {selectedNotification && (
+                        <Box
+                            sx={{
+                                bgcolor: '#F8FAFC',
+                                borderRadius: 1,
+                                p: 2,
+                                mb: 2,
+                            }}
+                        >
+                            <Typography fontWeight={600} sx={{ mb: 1 }}>
+                                {selectedNotification.title}
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+                                {selectedNotification.message}
+                            </Typography>
+                            {selectedNotification.data?.startDate && (
+                                <Typography variant="body2" color="text.secondary">
+                                    📅 {new Date(selectedNotification.data.startDate).toLocaleDateString(dateLocale, { day: 'numeric', month: 'short', year: 'numeric' })}
+                                    {selectedNotification.data?.endDate && selectedNotification.data.startDate !== selectedNotification.data.endDate && (
+                                        <> - {new Date(selectedNotification.data.endDate).toLocaleDateString(dateLocale, { day: 'numeric', month: 'short', year: 'numeric' })}</>
+                                    )}
+                                    {selectedNotification.data?.totalDays && (
+                                        <Box component="span" sx={{ color: '#6C63FF', fontWeight: 600, ml: 0.5 }}>
+                                            ({selectedNotification.data.totalDays} {t('days', 'วัน')})
+                                        </Box>
+                                    )}
+                                </Typography>
+                            )}
+                            {selectedNotification.data?.reason && (
+                                <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                                    💬 {selectedNotification.data.reason}
+                                </Typography>
+                            )}
+                            
+                            {/* Attachments */}
+                            {loadingAttachments && (
+                                <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                                    {t('loading_attachments', 'กำลังโหลดไฟล์แนบ...')}
+                                </Typography>
+                            )}
+                            {!loadingAttachments && attachments.length > 0 && (
+                                <Box sx={{ mt: 1 }}>
+                                    <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+                                        📎 {t('attachments', 'ไฟล์แนบ')} ({attachments.length})
+                                    </Typography>
+                                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                                        {attachments.map((file: any, index: number) => (
+                                            <Box
+                                                key={file.id || index}
+                                                component="a"
+                                                href={file.filePath}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                sx={{
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    gap: 0.5,
+                                                    bgcolor: '#E8F4FD',
+                                                    color: '#1976D2',
+                                                    px: 1.5,
+                                                    py: 0.5,
+                                                    borderRadius: 1,
+                                                    fontSize: '0.75rem',
+                                                    textDecoration: 'none',
+                                                    '&:hover': {
+                                                        bgcolor: '#D0E8FA',
+                                                    },
+                                                }}
+                                            >
+                                                <DocumentText size={14} color="#1976D2" />
+                                                {file.fileName || `ไฟล์ ${index + 1}`}
+                                            </Box>
+                                        ))}
+                                    </Box>
+                                </Box>
+                            )}
+                        </Box>
+                    )}
+
+                    <TextField
+                        fullWidth
+                        multiline
+                        rows={3}
+                        label={actionType === 'approve'
+                            ? t('approvalComment', 'ความคิดเห็น (ถ้ามี)')
+                            : t('rejectionReason', 'เหตุผลในการปฏิเสธ')}
+                        value={comment}
+                        onChange={(e) => setComment(e.target.value)}
+                        placeholder={actionType === 'approve'
+                            ? t('enterApprovalComment', 'ใส่ความคิดเห็น...')
+                            : t('enterRejectionReason', 'ใส่เหตุผลในการปฏิเสธ...')}
+                        required={actionType === 'reject'}
+                        disabled={submitting}
+                        sx={{
+                            '& .MuiOutlinedInput-root': {
+                                borderRadius: 1,
+                            },
+                        }}
+                    />
+                </DialogContent>
+                <DialogActions sx={{ px: 3, pb: 3 }}>
+                    <Button
+                        onClick={() => setDialogOpen(false)}
+                        disabled={submitting}
+                        sx={{
+                            color: '#64748B',
+                            textTransform: 'none',
+                        }}
+                    >
+                        {t('cancel', 'ยกเลิก')}
+                    </Button>
+                    <Button
+                        variant="contained"
+                        onClick={handleSubmitAction}
+                        disabled={submitting || (actionType === 'reject' && !comment.trim())}
+                        sx={{
+                            bgcolor: actionType === 'approve' ? '#4CAF50' : '#F44336',
+                            textTransform: 'none',
+                            fontWeight: 600,
+                            px: 3,
+                            borderRadius: 1,
+                            '&:hover': {
+                                bgcolor: actionType === 'approve' ? '#43A047' : '#D32F2F',
+                            },
+                        }}
+                        startIcon={actionType === 'approve'
+                            ? <TickCircle size={18} color="#ffffff" />
+                            : <CloseCircle size={18} color="#ffffff" />}
+                    >
+                        {submitting
+                            ? t('processing', 'กำลังดำเนินการ...')
+                            : actionType === 'approve'
+                                ? t('approve', 'อนุมัติ')
+                                : t('reject', 'ปฏิเสธ')}
+                    </Button>
+                </DialogActions>
+            </Dialog>
 
             <BottomNav />
         </Box>

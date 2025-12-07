@@ -35,21 +35,21 @@ import {
   Badge,
 } from '@mui/material';
 import {
-  Plus,
-  Pencil,
-  Trash2,
+  Add,
+  Edit2,
+  Trash,
   User,
-  Search,
-  RefreshCw,
-  CheckCircle,
-  XCircle,
-  Building2,
-  Layers,
+  SearchNormal1,
+  Refresh2,
+  TickCircle,
+  CloseCircle,
+  Building,
+  Layer,
   Filter,
-  Shield,
-  Users,
+  ShieldTick,
+  People,
   Eye,
-} from 'lucide-react';
+} from 'iconsax-react';
 import UserDialog from './UserDialog';
 import UserViewDialog from './UserViewDialog';
 import ConfirmDialog from '../components/ConfirmDialog';
@@ -393,7 +393,7 @@ export default function UsersPage() {
                 color: 'primary.main',
               }}
             >
-              <Users size={24} />
+              <People size={24} color={theme.palette.primary.main} variant="Bold" />
             </Avatar>
             <Box>
               <Typography variant="h4" component="h1" fontWeight={700}>
@@ -407,7 +407,7 @@ export default function UsersPage() {
         </Box>
         <Button
           variant="contained"
-          startIcon={<Plus size={18} />}
+          startIcon={<Add size={18} color="#fff" />}
           onClick={handleCreate}
           sx={{ 
             borderRadius: 1,
@@ -428,28 +428,28 @@ export default function UsersPage() {
         <StatCard
           title="พนักงานทั้งหมด"
           value={totalUsers}
-          icon={<Users size={26} />}
+          icon={<People size={26} color={theme.palette.primary.main} variant="Bold" />}
           color="primary"
           subtitle="ในระบบ"
         />
         <StatCard
           title="พนักงานใหม่"
           value={newUsersThisMonth}
-          icon={<User size={26} />}
+          icon={<User size={26} color={theme.palette.success.main} variant="Bold" />}
           color="success"
           subtitle="เดือนนี้"
         />
         <StatCard
           title="เปิดใช้งาน"
           value={activeUsers}
-          icon={<CheckCircle size={26} />}
+          icon={<TickCircle size={26} color={theme.palette.warning.main} variant="Bold" />}
           color="warning"
           subtitle="Active Users"
         />
         <StatCard
           title="ปิดใช้งาน"
           value={inactiveUsers}
-          icon={<XCircle size={26} />}
+          icon={<CloseCircle size={26} color={theme.palette.secondary.main} variant="Bold" />}
           color="secondary"
           subtitle="Inactive Users"
         />
@@ -549,7 +549,7 @@ export default function UsersPage() {
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
-                  <Search size={18} color={theme.palette.text.secondary} />
+                  <SearchNormal1 size={18} color={theme.palette.text.secondary} />
                 </InputAdornment>
               ),
             }}
@@ -559,7 +559,7 @@ export default function UsersPage() {
           <FormControl size="small" sx={{ minWidth: 140 }}>
             <InputLabel>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                <Building2 size={16} />
+                <Building size={16} color={theme.palette.text.secondary} />
                 บริษัท
               </Box>
             </InputLabel>
@@ -581,7 +581,7 @@ export default function UsersPage() {
           <FormControl size="small" sx={{ minWidth: 140 }}>
             <InputLabel>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                <Layers size={16} />
+                <Layer size={16} color={theme.palette.text.secondary} />
                 ฝ่าย
               </Box>
             </InputLabel>
@@ -603,7 +603,7 @@ export default function UsersPage() {
           <FormControl size="small" sx={{ minWidth: 140 }}>
             <InputLabel>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                <Filter size={16} />
+                <Filter size={16} color={theme.palette.text.secondary} />
                 สถานะ
               </Box>
             </InputLabel>
@@ -636,8 +636,9 @@ export default function UsersPage() {
                 '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.1) },
               }}
             >
-              <RefreshCw 
+              <Refresh2 
                 size={20} 
+                color={theme.palette.text.secondary}
                 style={{ 
                   transition: 'transform 0.3s ease',
                   transform: loading ? 'rotate(360deg)' : 'rotate(0deg)',
@@ -702,7 +703,7 @@ export default function UsersPage() {
                           color: 'text.secondary',
                         }}
                       >
-                        <Users size={40} />
+                        <People size={40} color={theme.palette.text.secondary} />
                       </Avatar>
                       <Box sx={{ textAlign: 'center' }}>
                         <Typography variant="h6" fontWeight={600} gutterBottom>
@@ -719,7 +720,7 @@ export default function UsersPage() {
                       {!searchQuery && companyFilter === 'all' && departmentFilter === 'all' && roleTab === 'all' && statusFilter === 'all' && (
                         <Button
                           variant="contained"
-                          startIcon={<Plus size={18} />}
+                          startIcon={<Add size={18} color="#fff" />}
                           onClick={handleCreate}
                           sx={{ mt: 1, borderRadius: 1 }}
                         >
@@ -858,8 +859,8 @@ export default function UsersPage() {
                     <TableCell align="center">
                       <Chip
                         icon={user.isActive 
-                          ? <CheckCircle size={14} /> 
-                          : <XCircle size={14} />
+                          ? <TickCircle size={14} color={theme.palette.success.main} variant="Bold" /> 
+                          : <CloseCircle size={14} color={theme.palette.text.secondary} variant="Bold" />
                         }
                         label={user.isActive ? 'Active' : 'Inactive'}
                         size="small"
@@ -891,7 +892,7 @@ export default function UsersPage() {
                               },
                             }}
                           >
-                            <Eye size={18} />
+                            <Eye size={18} color={theme.palette.info.main} />
                           </IconButton>
                         </Tooltip>
                         <Tooltip title="แก้ไข">
@@ -906,7 +907,7 @@ export default function UsersPage() {
                               },
                             }}
                           >
-                            <Pencil size={18} />
+                            <Edit2 size={18} color={theme.palette.primary.main} />
                           </IconButton>
                         </Tooltip>
                         <Tooltip title="ลบ">
@@ -921,7 +922,7 @@ export default function UsersPage() {
                               },
                             }}
                           >
-                            <Trash2 size={18} />
+                            <Trash size={18} color={theme.palette.error.main} />
                           </IconButton>
                         </Tooltip>
                       </Box>

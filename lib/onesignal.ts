@@ -9,6 +9,7 @@ import { prisma } from './prisma';
 const ONESIGNAL_APP_ID = process.env.ONESIGNAL_APP_ID || '';
 const ONESIGNAL_REST_API_KEY = process.env.ONESIGNAL_REST_API_KEY || '';
 const ONESIGNAL_API_URL = 'https://onesignal.com/api/v1/notifications';
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://leave.psc.co.th';
 
 // Leave type translations
 const leaveTypeTranslations: Record<string, { th: string; en: string; my: string }> = {
@@ -46,6 +47,12 @@ export interface NotificationPayload {
   message: string | Record<string, string>;
   data?: Record<string, any>;
   url?: string;
+  buttons?: Array<{
+    id: string;
+    text: string;
+    icon?: string;
+    url?: string;
+  }>;
 }
 
 export interface NotificationResult {
@@ -79,20 +86,39 @@ export async function sendPushNotification(
       ? { en: payload.message, th: payload.message }
       : payload.message;
 
+    // Build notification body
+    const notificationBody: Record<string, any> = {
+      app_id: ONESIGNAL_APP_ID,
+      include_player_ids: playerIds,
+      headings: headings,
+      contents: contents,
+      data: payload.data || {},
+    };
+
+    // Add URL for click action
+    if (payload.url) {
+      notificationBody.url = payload.url;           // For mobile apps
+      notificationBody.web_url = payload.url;       // For web push
+    }
+
+    // Add action buttons
+    if (payload.buttons && payload.buttons.length > 0) {
+      notificationBody.buttons = payload.buttons;   // For mobile
+      notificationBody.web_buttons = payload.buttons.map(btn => ({
+        id: btn.id,
+        text: btn.text,
+        icon: btn.icon,
+        url: btn.url,
+      }));  // For web push
+    }
+
     const response = await fetch(ONESIGNAL_API_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Basic ${ONESIGNAL_REST_API_KEY}`,
       },
-      body: JSON.stringify({
-        app_id: ONESIGNAL_APP_ID,
-        include_player_ids: playerIds,
-        headings: headings,
-        contents: contents,
-        data: payload.data || {},
-        url: payload.url,
-      }),
+      body: JSON.stringify(notificationBody),
     });
 
     const result = await response.json();
@@ -194,11 +220,18 @@ export async function notifyApprovalPending(
   approverId: number,
   leaveRequestId: number,
   requesterName: string,
-  leaveType: string
+  leaveType: string,
+  totalDays?: number,
+  startDate?: string,
+  endDate?: string,
+  reason?: string
 ): Promise<NotificationResult> {
   const thLeaveType = translateLeaveType(leaveType, 'th');
   const enLeaveType = translateLeaveType(leaveType, 'en');
   const myLeaveType = translateLeaveType(leaveType, 'my');
+
+  const daysText = totalDays ? ` (${totalDays} ${totalDays === 1 ? 'day' : 'days'})` : '';
+  const daysTextTh = totalDays ? ` (${totalDays} วัน)` : '';
 
   return notifyUser(approverId, 'approval_pending', {
     title: {
@@ -207,15 +240,32 @@ export async function notifyApprovalPending(
       my: '📋 ခွင့်တောင်းဆိုမှုစောင့်ဆိုင်းနေသည်'
     },
     message: {
-      en: `${requesterName} requested ${enLeaveType}`,
-      th: `${requesterName} ขอ${thLeaveType}`,
-      my: `${requesterName} က ${myLeaveType} တောင်းဆိုသည်`
+      en: `${requesterName} requested ${enLeaveType}${daysText}`,
+      th: `${requesterName} ขอ${thLeaveType}${daysTextTh}`,
+      my: `${requesterName} က ${myLeaveType} တောင်းဆိုသည်${daysText}`
     },
+    url: `${APP_URL}/approval/${leaveRequestId}?action=approve`,
+    buttons: [
+      {
+        id: 'approve',
+        text: '✅ อนุมัติ',
+        url: `${APP_URL}/approval/${leaveRequestId}?action=approve`,
+      },
+      {
+        id: 'reject',
+        text: '❌ ปฏิเสธ',
+        url: `${APP_URL}/approval/${leaveRequestId}?action=reject`,
+      },
+    ],
     data: {
       type: 'approval_pending',
       leaveRequestId,
       leaveTypeCode: leaveType,
       requesterName,
+      totalDays: totalDays || null,
+      startDate: startDate || null,
+      endDate: endDate || null,
+      reason: reason || null,
     },
   });
 }
@@ -244,6 +294,7 @@ export async function notifyLeaveApproved(
       th: `${thLeaveType}ของคุณได้รับการอนุมัติโดย ${approverName}`,
       my: `သင်၏ ${myLeaveType} ကို ${approverName} က အတည်ပြုပြီး`
     },
+    url: `${APP_URL}/leave`,
     data: {
       type: 'approved',
       leaveRequestId,
@@ -278,6 +329,7 @@ export async function notifyLeaveRejected(
       th: `${thLeaveType}ของคุณถูกปฏิเสธโดย ${approverName}${reason ? `: ${reason}` : ''}`,
       my: `သင်၏ ${myLeaveType} ကို ${approverName} က ပယ်ချလိုက်သည်${reason ? `: ${reason}` : ''}`
     },
+    url: `${APP_URL}/leave`,
     data: {
       type: 'rejected',
       leaveRequestId,
@@ -311,6 +363,7 @@ export async function notifyEscalated(
       th: `${thLeaveType}ของคุณถูกส่งไปยังผู้จัดการฝ่ายบุคคลเนื่องจากเกินเวลากำหนด`,
       my: `သင်၏ ${myLeaveType} ကို အချိန်လွန်သောကြောင့် HR Manager ထံ တင်ပြလိုက်သည်`
     },
+    url: `${APP_URL}/leave`,
     data: {
       type: 'escalated',
       leaveRequestId,
@@ -344,6 +397,19 @@ export async function notifyApprovalReminder(
       th: `${requesterName} รอ${thLeaveType} (เหลือเวลา ${hoursLeft} ชม.)`,
       my: `${requesterName} က ${myLeaveType} အတည်ပြုရန်စောင့်ဆိုင်းနေသည် (${hoursLeft} နာရီကျန်)`
     },
+    url: `${APP_URL}/approval/${leaveRequestId}?action=approve`,
+    buttons: [
+      {
+        id: 'approve',
+        text: '✅ อนุมัติ',
+        url: `${APP_URL}/approval/${leaveRequestId}?action=approve`,
+      },
+      {
+        id: 'reject',
+        text: '❌ ปฏิเสธ',
+        url: `${APP_URL}/approval/${leaveRequestId}?action=reject`,
+      },
+    ],
     data: {
       type: 'reminder',
       leaveRequestId,
@@ -377,6 +443,7 @@ export async function notifyLeaveSubmitted(
       th: `คำขอ${thLeaveType}ของคุณถูกส่งแล้วและกำลังรอการอนุมัติ`,
       my: `သင်၏ ${myLeaveType} တောင်းဆိုမှုကို တင်ပြပြီး အတည်ပြုချက်စောင့်ဆိုင်းနေသည်`
     },
+    url: `${APP_URL}/leave`,
     data: {
       type: 'submitted',
       leaveRequestId,

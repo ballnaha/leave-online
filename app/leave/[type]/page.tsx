@@ -51,6 +51,8 @@ import {
     Add,
     Minus,
     Moon,
+    CalendarRemove,
+    TickCircle,
 } from 'iconsax-react';
 import { useRouter, useParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
@@ -151,6 +153,13 @@ export default function LeaveFormPage() {
     const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
     const [leaveType, setLeaveType] = useState<LeaveTypeData | null>(null);
     const [shiftType, setShiftType] = useState<'day' | 'night'>('day'); // กะทำงาน: day = กะเช้า, night = กะดึก
+    const [worksOnSunday, setWorksOnSunday] = useState<boolean>(false); // ทำงานวันอาทิตย์หรือไม่
+    const [backdateWarning, setBackdateWarning] = useState<{
+        show: boolean;
+        leaveDate: string;
+        deadline: string;
+        isOverdue: boolean;
+    } | null>(null);
     const [formData, setFormData] = useState<LeaveFormData>({
         startDate: '',
         startTime: '08:00',
@@ -172,6 +181,98 @@ export default function LeaveFormPage() {
     const [errors, setErrors] = useState<Record<string, string>>({});
     const [previewImage, setPreviewImage] = useState<string | null>(null);
     const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+
+    // ค่าคงที่สำหรับลาย้อนหลัง
+    const MAX_BACKDATE_DAYS = 3; // จำนวนวันทำการที่อนุญาตให้ลาย้อนหลัง (นับจากวันกลับมาทำงาน)
+
+    /**
+     * คำนวณวันสุดท้ายที่สามารถยื่นใบลาย้อนหลังได้
+     * กฎ: ลาย้อนหลังได้ 3 วันทำการ นับจากวันที่กลับมาทำงาน
+     * - วันกลับมาทำงาน = วันถัดจากวันสิ้นสุดการลา (นับเป็นวันที่ 1)
+     * - วันที่ 3 = วันสุดท้ายที่ยื่นใบลาได้
+     * 
+     * ตัวอย่าง: ลาวันที่ 4 ธค. 
+     * - กลับมาทำงานวันที่ 5 ธค. (นับ 1)
+     * - วันที่ 6 ธค. (นับ 2) 
+     * - วันที่ 7 ธค. (นับ 3) = deadline
+     * 
+     * @param leaveEndDate - วันที่สิ้นสุดการลา
+     * @param worksOnSun - ทำงานวันอาทิตย์หรือไม่
+     * @returns วันสุดท้ายที่ยื่นได้
+     */
+    const calculateBackdateDeadline = (leaveEndDate: Dayjs, worksOnSun: boolean): Dayjs => {
+        let currentDate = leaveEndDate.clone();
+        let workingDaysCounted = 0;
+        
+        // นับวันทำการ เริ่มจากวันถัดจากวันลา (วันกลับมาทำงาน = วันที่ 1)
+        while (workingDaysCounted < MAX_BACKDATE_DAYS) {
+            currentDate = currentDate.add(1, 'day');
+            
+            // ถ้าไม่ทำงานวันอาทิตย์ และวันนี้เป็นวันอาทิตย์ → ข้าม
+            if (!worksOnSun && currentDate.day() === 0) {
+                continue;
+            }
+            
+            workingDaysCounted++;
+        }
+        
+        return currentDate;
+    };
+
+    /**
+     * ตรวจสอบว่าลาย้อนหลังเกิน deadline หรือไม่
+     * @param leaveStartDate - วันที่เริ่มลา
+     * @param leaveEndDate - วันที่สิ้นสุดลา (ถ้าไม่ระบุจะใช้ startDate)
+     * @param worksOnSun - ทำงานวันอาทิตย์หรือไม่
+     */
+    const checkBackdateWarning = (leaveStartDate: string, worksOnSun: boolean, leaveEndDate?: string) => {
+        if (!leaveStartDate) {
+            setBackdateWarning(null);
+            return;
+        }
+
+        const today = dayjs().startOf('day');
+        const leaveStart = dayjs(leaveStartDate).startOf('day');
+        const leaveEnd = leaveEndDate ? dayjs(leaveEndDate).startOf('day') : leaveStart;
+        
+        // ถ้าลาล่วงหน้า (วันสิ้นสุดลา >= วันนี้) ไม่ต้อง warning
+        if (leaveEnd.isSame(today, 'day') || leaveEnd.isAfter(today)) {
+            setBackdateWarning(null);
+            return;
+        }
+
+        // คำนวณ deadline สำหรับลาย้อนหลัง (นับจากวันสิ้นสุดการลา)
+        const deadline = calculateBackdateDeadline(leaveEnd, worksOnSun);
+        const isOverdue = today.isAfter(deadline);
+
+        // หาวันกลับมาทำงาน (วันแรกหลังลา ที่เป็นวันทำการ)
+        let firstWorkDay = leaveEnd.clone();
+        do {
+            firstWorkDay = firstWorkDay.add(1, 'day');
+        } while (!worksOnSun && firstWorkDay.day() === 0);
+
+        setBackdateWarning({
+            show: true,
+            leaveDate: leaveStart.locale(locale).format('DD MMMM') + ' ' + (locale === 'th' ? leaveStart.year() + 543 : leaveStart.year()),
+            deadline: deadline.locale(locale).format('DD MMMM') + ' ' + (locale === 'th' ? deadline.year() + 543 : deadline.year()),
+            isOverdue,
+        });
+    };
+
+    // ฟังก์ชันเปลี่ยนทำงานวันอาทิตย์
+    const handleWorksOnSundayChange = (newValue: boolean) => {
+        setWorksOnSunday(newValue);
+        
+        // คำนวณจำนวนวันลาใหม่
+        if (formData.startDate && formData.endDate) {
+            recalculateTotalDays(formData.startDate, formData.startTime, formData.endDate, formData.endTime, newValue);
+        }
+
+        // ตรวจสอบ backdate warning ใหม่ (ใช้ endDate ถ้ามี ไม่งั้นใช้ startDate)
+        if (formData.startDate) {
+            checkBackdateWarning(formData.startDate, newValue, formData.endDate || formData.startDate);
+        }
+    };
 
     // ฟังก์ชันเปลี่ยนกะทำงาน
     const handleShiftChange = (newShift: 'day' | 'night') => {
@@ -204,7 +305,8 @@ export default function LeaveFormPage() {
         startDate: string,
         startTime: string,
         endDate: string,
-        endTime: string
+        endTime: string,
+        worksOnSun: boolean = worksOnSunday // ใช้ค่าจาก state ถ้าไม่ได้ส่งมา
     ): number => {
         if (!startDate || !endDate || !startTime || !endTime) return 0;
 
@@ -227,7 +329,6 @@ export default function LeaveFormPage() {
         
         // กะดึก: 20:00 - 05:00 (9 ชม. = 1 วันทำงาน)
         const NIGHT_START = 20 * 60;           // 20:00
-        const NIGHT_END = 5 * 60;              // 05:00
         const NIGHT_SHIFT_HOURS = 9;           // ชั่วโมงต่อกะ
         const NIGHT_HALF_HOURS = 4.5;          // ครึ่งกะ
 
@@ -244,6 +345,12 @@ export default function LeaveFormPage() {
 
             // วนลูปนับแต่ละกะ
             while (currentDate.isBefore(end) || currentDate.isSame(end, 'day')) {
+                // ถ้าไม่ทำงานวันอาทิตย์ และวันนี้เป็นวันอาทิตย์ → ข้ามไปวันถัดไป
+                if (!worksOnSun && currentDate.day() === 0) {
+                    currentDate = currentDate.add(1, 'day');
+                    continue;
+                }
+
                 // กะของวันนี้: currentDate 20:00 - currentDate+1 05:00
                 const shiftStart = currentDate.hour(20).minute(0).second(0);
                 const shiftEnd = currentDate.add(1, 'day').hour(5).minute(0).second(0);
@@ -287,10 +394,27 @@ export default function LeaveFormPage() {
         }
 
         // === กะปกติ: 08:00 - 17:00 ===
+        // ถ้าไม่ทำงานวันอาทิตย์ ต้องนับเฉพาะวันที่ไม่ใช่วันอาทิตย์
         const daysDiff = end.diff(start, 'day');
+
+        // นับจำนวนวันอาทิตย์ในช่วง (ถ้าไม่ทำงานวันอาทิตย์)
+        let sundaysInRange = 0;
+        if (!worksOnSun) {
+            let currentDate = start.clone();
+            while (currentDate.isBefore(end) || currentDate.isSame(end, 'day')) {
+                if (currentDate.day() === 0) {
+                    sundaysInRange++;
+                }
+                currentDate = currentDate.add(1, 'day');
+            }
+        }
 
         // ถ้าเป็นวันเดียวกัน
         if (daysDiff === 0) {
+            // ถ้าเป็นวันอาทิตย์และไม่ทำงานวันอาทิตย์ → 0 วัน
+            if (!worksOnSun && start.day() === 0) {
+                return 0;
+            }
             // ลาเต็มวัน: 08:00 - 17:00
             if (startMinutes <= WORK_START_MORNING && endMinutes >= WORK_END_DAY) {
                 return 1;
@@ -312,31 +436,49 @@ export default function LeaveFormPage() {
             return 1;
         }
 
-        // หลายวัน: คำนวณวันแรก + วันกลาง + วันสุดท้าย
+        // หลายวัน: คำนวณโดยวนลูปทีละวัน (เพื่อให้ข้ามวันอาทิตย์ได้ถูกต้อง)
         let totalDays = 0;
+        let currentDate = start.clone();
+        let dayIndex = 0;
+        const totalCalendarDays = daysDiff + 1;
 
-        // วันแรก - ดูว่าเริ่มลาตอนไหน
-        if (startMinutes <= WORK_START_MORNING) {
-            totalDays += 1; // ลาเต็มวัน
-        } else if (startMinutes <= WORK_HALF_DAY_2) {
-            totalDays += 0.5; // ลาครึ่งวันบ่าย
-        } else {
-            // ถ้าเริ่มหลังบ่าย ไม่นับวันแรก (เพราะทำงานแล้ว)
-            totalDays += 0;
-        }
+        while (currentDate.isBefore(end) || currentDate.isSame(end, 'day')) {
+            const isSunday = currentDate.day() === 0;
+            
+            // ถ้าไม่ทำงานวันอาทิตย์ และวันนี้เป็นวันอาทิตย์ → ข้าม
+            if (!worksOnSun && isSunday) {
+                currentDate = currentDate.add(1, 'day');
+                dayIndex++;
+                continue;
+            }
 
-        // วันกลาง (ลาเต็มวันทุกวัน)
-        if (daysDiff > 1) {
-            totalDays += (daysDiff - 1);
-        }
+            const isFirstDay = dayIndex === 0;
+            const isLastDay = dayIndex === totalCalendarDays - 1;
 
-        // วันสุดท้าย - ดูว่าสิ้นสุดตอนไหน
-        if (endMinutes >= WORK_END_DAY) {
-            totalDays += 1; // ลาเต็มวัน
-        } else if (endMinutes >= WORK_HALF_DAY_1) {
-            totalDays += 1; // ถ้าจบหลังเที่ยง ถือว่าเต็มวัน
-        } else if (endMinutes > WORK_START_MORNING) {
-            totalDays += 0.5; // ลาครึ่งวันเช้า
+            if (isFirstDay) {
+                // วันแรก - ดูว่าเริ่มลาตอนไหน
+                if (startMinutes <= WORK_START_MORNING) {
+                    totalDays += 1; // ลาเต็มวัน
+                } else if (startMinutes <= WORK_HALF_DAY_2) {
+                    totalDays += 0.5; // ลาครึ่งวันบ่าย
+                }
+                // ถ้าเริ่มหลังบ่าย ไม่นับวันแรก
+            } else if (isLastDay) {
+                // วันสุดท้าย - ดูว่าสิ้นสุดตอนไหน
+                if (endMinutes >= WORK_END_DAY) {
+                    totalDays += 1; // ลาเต็มวัน
+                } else if (endMinutes >= WORK_HALF_DAY_1) {
+                    totalDays += 1; // ถ้าจบหลังเที่ยง ถือว่าเต็มวัน
+                } else if (endMinutes > WORK_START_MORNING) {
+                    totalDays += 0.5; // ลาครึ่งวันเช้า
+                }
+            } else {
+                // วันกลาง (ลาเต็มวัน)
+                totalDays += 1;
+            }
+
+            currentDate = currentDate.add(1, 'day');
+            dayIndex++;
         }
 
         return totalDays;
@@ -349,17 +491,27 @@ export default function LeaveFormPage() {
         if (end.isBefore(start)) {
             return null;
         }
-        return end.diff(start, 'day') + 1;
-    }, [formData.startDate, formData.endDate]);
+        // นับจำนวนวันที่ทำงาน (ไม่รวมวันอาทิตย์ถ้าไม่ทำงาน)
+        let count = 0;
+        let currentDate = start.clone();
+        while (currentDate.isBefore(end) || currentDate.isSame(end, 'day')) {
+            if (worksOnSunday || currentDate.day() !== 0) {
+                count++;
+            }
+            currentDate = currentDate.add(1, 'day');
+        }
+        return count;
+    }, [formData.startDate, formData.endDate, worksOnSunday]);
 
     // คำนวณจำนวนวันลาเมื่อมีการเปลี่ยนแปลงวันที่หรือเวลา
     const recalculateTotalDays = (
         startDate: string,
         startTime: string,
         endDate: string,
-        endTime: string
+        endTime: string,
+        worksOnSun: boolean = worksOnSunday
     ) => {
-        const days = calculateLeaveDays(startDate, startTime, endDate, endTime);
+        const days = calculateLeaveDays(startDate, startTime, endDate, endTime, worksOnSun);
         if (days > 0) {
             handleFormChange('totalDays', days.toString());
         }
@@ -1115,6 +1267,116 @@ export default function LeaveFormPage() {
                                 </FormControl>
                             </Box>
 
+                            {/* เลือกทำงานวันอาทิตย์ */}
+                            <Box sx={{ mb: 2.5, pb: 2, borderBottom: '1px dashed', borderColor: 'grey.200'}}>
+                                <FormControl component="fieldset" fullWidth>
+                                    <FormLabel 
+                                        component="legend" 
+                                        sx={{ 
+                                            fontSize: '0.875rem', 
+                                            fontWeight: 600, 
+                                            color: 'text.primary',
+                                            mb: 1,
+                                            width: '100%',
+                                            '&.Mui-focused': { color: 'text.primary' }
+                                        }}
+                                    >
+                                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'left', gap: 1 }}>
+                                            <Calendar size={16} color={config.color} />
+                                            {t('works_on_sunday', 'ทำงานวันอาทิตย์')}
+                                        </Box>
+                                    </FormLabel>
+                                    <RadioGroup
+                                        row
+                                        value={worksOnSunday ? 'yes' : 'no'}
+                                        onChange={(e) => handleWorksOnSundayChange(e.target.value === 'yes')}
+                                        sx={{ gap: 2, justifyContent: 'center' }}
+                                    >
+                                        <FormControlLabel
+                                            value="no"
+                                            control={
+                                                <Radio 
+                                                    size="small"
+                                                    sx={{
+                                                        color: config.color,
+                                                        '&.Mui-checked': { color: config.color },
+                                                    }}
+                                                />
+                                            }
+                                            label={
+                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                                    <CalendarRemove size={14} color='#ef5350' variant='Bold' />
+                                                    <Typography variant="body2" sx={{ fontWeight: !worksOnSunday ? 600 : 400 }}>
+                                                        {t('works_sunday_no', 'หยุดวันอาทิตย์')}
+                                                    </Typography>
+                                                </Box>
+                                            }
+                                            sx={{
+                                                m: 0,
+                                                px: 1.5,
+                                                py: 0.75,
+                                                borderRadius: 2,
+                                                border: '1px solid',
+                                                borderColor: !worksOnSunday ? config.color : 'grey.300',
+                                                bgcolor: !worksOnSunday ? config.lightColor : 'transparent',
+                                                transition: 'all 0.2s',
+                                                '&:hover': { borderColor: config.color, bgcolor: config.lightColor },
+                                            }}
+                                        />
+                                        <FormControlLabel
+                                            value="yes"
+                                            control={
+                                                <Radio 
+                                                    size="small"
+                                                    sx={{
+                                                        color: config.color,
+                                                        '&.Mui-checked': { color: config.color },
+                                                    }}
+                                                />
+                                            }
+                                            label={
+                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                                    <TickCircle size={14} color='#4CAF50' variant='Bold' />
+                                                    <Typography variant="body2" sx={{ fontWeight: worksOnSunday ? 600 : 400 }}>
+                                                        {t('works_sunday_yes', 'ทำงานวันอาทิตย์')}
+                                                    </Typography>
+                                                </Box>
+                                            }
+                                            sx={{
+                                                m: 0,
+                                                px: 1.5,
+                                                py: 0.75,
+                                                borderRadius: 2,
+                                                border: '1px solid',
+                                                borderColor: worksOnSunday ? config.color : 'grey.300',
+                                                bgcolor: worksOnSunday ? config.lightColor : 'transparent',
+                                                transition: 'all 0.2s',
+                                                '&:hover': { borderColor: config.color, bgcolor: config.lightColor },
+                                            }}
+                                        />
+                                        
+                                    </RadioGroup>
+                                    {!worksOnSunday && (
+                                        <Typography 
+                                            variant="caption" 
+                                            sx={{ 
+                                                display: 'block', 
+                                                textAlign: 'center', 
+                                                mt: 1.5, 
+                                                color: 'text.secondary',
+                                                bgcolor: 'rgba(25, 118, 210, 0.08)',
+                                                py: 0.75,
+                                                px: 1.5,
+                                                borderRadius: 1,
+                                            }}
+                                        >
+                                            <InfoCircle size={12} style={{ marginRight: 4, verticalAlign: 'middle' }} />
+                                            {t('sunday_not_counted', 'วันอาทิตย์จะไม่ถูกนับเป็นวันลา')}
+                                        </Typography>
+                                    )}
+                                </FormControl>
+                            </Box>
+
                             {/* ส่วนเริ่มลา */}
                             <Box sx={{ mb: 3 }}>
                                 <Typography variant="subtitle2" sx={{ mb: 1.5, color: 'text.secondary', display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -1131,6 +1393,10 @@ export default function LeaveFormPage() {
                                                 if (newValue && newValue.isValid()) {
                                                     const newStartDate = newValue.format('YYYY-MM-DD');
                                                     handleFormChange('startDate', newStartDate);
+                                                    // ตรวจสอบลาย้อนหลัง (เฉพาะเมื่อมี endDate แล้ว)
+                                                    if (formData.endDate) {
+                                                        checkBackdateWarning(newStartDate, worksOnSunday, formData.endDate);
+                                                    }
                                                     // คำนวณจำนวนวันลาอัตโนมัติตามเวลา
                                                     if (endDateValue && endDateValue.isValid()) {
                                                         recalculateTotalDays(
@@ -1142,6 +1408,7 @@ export default function LeaveFormPage() {
                                                     }
                                                 } else {
                                                     handleFormChange('startDate', '');
+                                                    setBackdateWarning(null);
                                                 }
                                             }}
                                             format="DD MMMM YYYY"
@@ -1213,6 +1480,10 @@ export default function LeaveFormPage() {
                                                 if (newValue && newValue.isValid()) {
                                                     const newEndDate = newValue.format('YYYY-MM-DD');
                                                     handleFormChange('endDate', newEndDate);
+                                                    // ตรวจสอบลาย้อนหลัง (ใช้ endDate ใหม่)
+                                                    if (formData.startDate) {
+                                                        checkBackdateWarning(formData.startDate, worksOnSunday, newEndDate);
+                                                    }
                                                     // คำนวณจำนวนวันลาอัตโนมัติตามเวลา
                                                     if (startDateValue && startDateValue.isValid()) {
                                                         recalculateTotalDays(
@@ -1224,6 +1495,8 @@ export default function LeaveFormPage() {
                                                     }
                                                 } else {
                                                     handleFormChange('endDate', '');
+                                                    // ถ้าลบ endDate ให้ซ่อน warning
+                                                    setBackdateWarning(null);
                                                 }
                                             }}
                                             minDate={startDateValue || undefined}
@@ -1279,6 +1552,99 @@ export default function LeaveFormPage() {
                                     </LocalizationProvider>
                                 </Box>
                             </Box>
+
+                            {/* Warning สำหรับลาย้อนหลัง - Minimal Design */}
+                            {backdateWarning?.show && formData.endDate && (
+                                <Box
+                                    sx={{
+                                        mt: 2,
+                                        p: 2,
+                                        borderRadius: 1,
+                                        bgcolor: backdateWarning.isOverdue ? '#FEF2F2' : '#FFFBEB',
+                                        borderLeft: '4px solid',
+                                        borderLeftColor: backdateWarning.isOverdue ? '#EF4444' : '#F59E0B',
+                                    }}
+                                >
+                                    {/* Header */}
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 }}>
+                                        <Warning2 
+                                            size={20} 
+                                            variant="Bold" 
+                                            color={backdateWarning.isOverdue ? '#EF4444' : '#F59E0B'} 
+                                        />
+                                        <Typography 
+                                            variant="subtitle2" 
+                                            sx={{ 
+                                                fontWeight: 700, 
+                                                color: backdateWarning.isOverdue ? '#DC2626' : '#D97706',
+                                            }}
+                                        >
+                                            {backdateWarning.isOverdue 
+                                                ? t('backdate_overdue_title', 'ลาย้อนหลังเกินกำหนด')
+                                                : t('backdate_warning_title', 'ลาย้อนหลัง')}
+                                        </Typography>
+                                    </Box>
+
+                                    {/* Info rows */}
+                                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75, ml: 3.5 }}>
+                                        <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                                            <Typography variant="body2" color="text.secondary">
+                                                {t('leave_date', 'วันที่ลา')}
+                                            </Typography>
+                                            <Typography variant="body2" fontWeight={500}>
+                                                {backdateWarning.leaveDate}
+                                            </Typography>
+                                        </Box>
+                                        <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                                            <Typography variant="body2" color="text.secondary">
+                                                {t('submit_deadline', 'ยื่นได้ถึง')}
+                                            </Typography>
+                                            <Typography 
+                                                variant="body2" 
+                                                fontWeight={600}
+                                                sx={{ color: backdateWarning.isOverdue ? '#DC2626' : '#D97706' }}
+                                            >
+                                                {backdateWarning.deadline}
+                                            </Typography>
+                                        </Box>
+                                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                            <Typography variant="body2" color="text.secondary">
+                                                {t('submit_date', 'วันที่ยื่น')}
+                                            </Typography>
+                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                                <Typography 
+                                                    variant="body2" 
+                                                    fontWeight={600}
+                                                    sx={{ color: backdateWarning.isOverdue ? '#DC2626' : '#16A34A' }}
+                                                >
+                                                    {dayjs().locale(locale).format('DD MMM')} {locale === 'th' ? (dayjs().year() + 543).toString().slice(-2) : dayjs().year()}
+                                                </Typography>
+                                                {backdateWarning.isOverdue ? (
+                                                    <CloseCircle size={16} variant="Bold" color="#DC2626" />
+                                                ) : (
+                                                    <TickCircle size={16} variant="Bold" color="#16A34A" />
+                                                )}
+                                            </Box>
+                                        </Box>
+                                    </Box>
+
+                                    {/* Error message */}
+                                    {backdateWarning.isOverdue && (
+                                        <Typography 
+                                            variant="caption" 
+                                            sx={{ 
+                                                display: 'block',
+                                                mt: 1.5, 
+                                                ml: 3.5,
+                                                color: '#DC2626',
+                                                fontWeight: 500,
+                                            }}
+                                        >
+                                            * {t('backdate_overdue_msg', 'ไม่สามารถยื่นใบลาได้ เนื่องจากเกินกำหนด')}
+                                        </Typography>
+                                    )}
+                                </Box>
+                            )}
                     </Box>
 
                     <Divider sx={{ my: 3 }} />
@@ -1648,15 +2014,6 @@ export default function LeaveFormPage() {
                             </Alert>
                         )}
                     </Box>
-
-                    {/* หมายเหตุ: กรุณาลางานภายใน 3 วัน */}
-                    <Alert 
-                        severity="info" 
-                        icon={<InfoCircle size={18} color="#0288d1" />}
-                        sx={{ mt: 2, borderRadius: 2 }}
-                    >
-                        {t('leave_submit_within_3_days', 'หมายเหตุ: กรุณาลางานภายใน 3 วันนับตั้งแต่วันที่ลา')}
-                    </Alert>
                 </Container>
             </Box>
 
