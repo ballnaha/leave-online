@@ -26,6 +26,7 @@ import {
   useTheme,
   Fade,
   Skeleton,
+  Divider,
 } from '@mui/material';
 import {
   Add,
@@ -65,7 +66,7 @@ interface StatCardProps {
 
 function StatCard({ title, value, icon, color, subtitle }: StatCardProps) {
   const theme = useTheme();
-  
+
   const colorMap = {
     primary: { main: theme.palette.primary.main, light: alpha(theme.palette.primary.main, 0.1) },
     success: { main: theme.palette.success.main, light: theme.palette.success.light },
@@ -75,8 +76,8 @@ function StatCard({ title, value, icon, color, subtitle }: StatCardProps) {
   };
 
   return (
-    <Card 
-      sx={{ 
+    <Card
+      sx={{
         borderRadius: 1,
         border: '1px solid',
         borderColor: 'divider',
@@ -151,7 +152,7 @@ export default function CompaniesPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedCompany, setSelectedCompany] = useState<Company | undefined>(undefined);
   const [searchQuery, setSearchQuery] = useState('');
-  
+
   // Confirm Dialog State
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Company | null>(null);
@@ -197,7 +198,7 @@ export default function CompaniesPage() {
 
   const handleConfirmDelete = async () => {
     if (!deleteTarget) return;
-    
+
     setDeleteLoading(true);
     try {
       const res = await fetch(`/api/admin/companies/${deleteTarget.id}`, {
@@ -266,7 +267,7 @@ export default function CompaniesPage() {
           variant="contained"
           startIcon={<Add size={18} color="#fff" />}
           onClick={handleCreate}
-          sx={{ 
+          sx={{
             borderRadius: 1,
             px: 3,
             py: 1.25,
@@ -306,10 +307,10 @@ export default function CompaniesPage() {
       </Box>
 
       {/* Search & Actions */}
-      <Paper 
-        sx={{ 
-          p: 2.5, 
-          mb: 3, 
+      <Paper
+        sx={{
+          p: 2.5,
+          mb: 3,
           borderRadius: 1,
           border: '1px solid',
           borderColor: 'divider',
@@ -322,7 +323,7 @@ export default function CompaniesPage() {
             size="small"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            sx={{ 
+            sx={{
               flex: 1,
               minWidth: 200,
               '& .MuiOutlinedInput-root': {
@@ -344,31 +345,31 @@ export default function CompaniesPage() {
               ),
             }}
           />
-          <Chip 
+          <Chip
             label={`${filteredCompanies.length} รายการ`}
             size="small"
-            sx={{ 
+            sx={{
               bgcolor: alpha(theme.palette.primary.main, 0.1),
               color: 'primary.main',
               fontWeight: 600,
             }}
           />
           <Tooltip title="รีเฟรชข้อมูล">
-            <IconButton 
-              onClick={fetchCompanies} 
+            <IconButton
+              onClick={fetchCompanies}
               disabled={loading}
               sx={{
                 bgcolor: 'background.default',
                 '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.1) },
               }}
             >
-              <Refresh2 
+              <Refresh2
                 size={20}
                 color="#6C63FF"
-                style={{ 
+                style={{
                   transition: 'transform 0.3s ease',
                   transform: loading ? 'rotate(360deg)' : 'rotate(0deg)',
-                }} 
+                }}
               />
             </IconButton>
           </Tooltip>
@@ -377,10 +378,10 @@ export default function CompaniesPage() {
 
       {/* Error Alert */}
       {error && (
-        <Alert 
-          severity="error" 
-          sx={{ 
-            mb: 3, 
+        <Alert
+          severity="error"
+          sx={{
+            mb: 3,
             borderRadius: 1,
             '& .MuiAlert-icon': {
               color: theme.palette.error.main,
@@ -391,11 +392,134 @@ export default function CompaniesPage() {
         </Alert>
       )}
 
-      {/* Table */}
+      {/* Mobile Card View (Visible on xs, sm) */}
+      <Box sx={{ display: { xs: 'flex', md: 'none' }, flexDirection: 'column', gap: 2 }}>
+        {loading ? (
+          Array.from({ length: 3 }).map((_, i) => (
+            <Skeleton key={i} variant="rounded" height={180} sx={{ borderRadius: 1 }} />
+          ))
+        ) : filteredCompanies.length === 0 ? (
+          <Paper sx={{ p: 4, textAlign: 'center', borderRadius: 1, bgcolor: alpha(theme.palette.primary.main, 0.04) }}>
+            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+              <Building size={48} variant="Bold" color={theme.palette.text.disabled} />
+              <Typography variant="body1" fontWeight={600} color="text.secondary">
+                {searchQuery ? 'ไม่พบบริษัทที่ค้นหา' : 'ยังไม่มีข้อมูลบริษัท'}
+              </Typography>
+            </Box>
+          </Paper>
+        ) : (
+          filteredCompanies.map((company) => (
+            <Paper
+              key={company.id}
+              elevation={0}
+              sx={{
+                p: 2,
+                borderRadius: 1,
+                border: '1px solid',
+                borderColor: 'divider',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 2,
+              }}
+            >
+              {/* Card Header */}
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <Box>
+                  <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                    <Typography variant="subtitle1" fontWeight={700}>
+                      {company.name}
+                    </Typography>
+                    <Chip
+                      label={company.code}
+                      size="small"
+                      sx={{
+                        height: 20,
+                        fontSize: '0.65rem',
+                        fontWeight: 600,
+                        bgcolor: alpha(theme.palette.primary.main, 0.1),
+                        color: 'primary.main',
+                        borderRadius: 1,
+                      }}
+                    />
+                  </Box>
+                </Box>
+              </Box>
+
+              <Divider sx={{ borderStyle: 'dashed' }} />
+
+              {/* Details */}
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                  <Location size={16} color={theme.palette.text.secondary} />
+                  <Typography variant="body2" color="text.secondary" noWrap>
+                    {company.address || '-'}
+                  </Typography>
+                </Box>
+                <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                  <Call size={16} color={theme.palette.text.secondary} />
+                  <Typography variant="body2" color="text.secondary">
+                    {company.phone || '-'}
+                  </Typography>
+                </Box>
+                <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', mt: 0.5 }}>
+                  <Typography variant="body2" color="text.secondary">สถานะ:</Typography>
+                  <Chip
+                    icon={company.isActive
+                      ? <TickCircle size={14} color={theme.palette.success.main} />
+                      : <CloseCircle size={14} color={theme.palette.text.secondary} />
+                    }
+                    label={company.isActive ? 'เปิดใช้งาน' : 'ปิดใช้งาน'}
+                    size="small"
+                    sx={{
+                      height: 24,
+                      fontWeight: 500,
+                      bgcolor: company.isActive
+                        ? alpha(theme.palette.success.main, 0.1)
+                        : alpha(theme.palette.text.secondary, 0.1),
+                      color: company.isActive
+                        ? theme.palette.success.main
+                        : 'text.secondary',
+                      '& .MuiChip-icon': { color: 'inherit' },
+                    }}
+                  />
+                </Box>
+              </Box>
+
+              {/* Actions */}
+              <Box sx={{ display: 'flex', gap: 1, pt: 1 }}>
+                <Button
+                  fullWidth
+                  size="small"
+                  variant="outlined"
+                  startIcon={<Edit2 size={16} color={theme.palette.primary.main} />}
+                  onClick={() => handleEdit(company)}
+                  sx={{ borderRadius: 1 }}
+                >
+                  แก้ไข
+                </Button>
+                <Button
+                  fullWidth
+                  size="small"
+                  variant="outlined"
+                  color="error"
+                  startIcon={<Trash size={16} color={theme.palette.error.main} />}
+                  onClick={() => handleDelete(company)}
+                  sx={{ borderRadius: 1 }}
+                >
+                  ลบ
+                </Button>
+              </Box>
+            </Paper>
+          ))
+        )}
+      </Box>
+
+      {/* Table (Hidden on mobile) */}
       <Fade in={true} timeout={500}>
-        <TableContainer 
-          component={Paper} 
-          sx={{ 
+        <TableContainer
+          component={Paper}
+          sx={{
+            display: { xs: 'none', md: 'block' },
             borderRadius: 1,
             border: '1px solid',
             borderColor: 'divider',
@@ -428,15 +552,15 @@ export default function CompaniesPage() {
                           bgcolor: alpha(theme.palette.text.secondary, 0.1),
                         }}
                       >
-                        <Building size={40} variant="Bold" color="#64748B" />
+                        <Building size={40} variant="Bold" color={theme.palette.text.secondary} />
                       </Avatar>
                       <Box sx={{ textAlign: 'center' }}>
                         <Typography variant="h6" fontWeight={600} gutterBottom>
                           {searchQuery ? 'ไม่พบบริษัทที่ค้นหา' : 'ยังไม่มีข้อมูลบริษัท'}
                         </Typography>
                         <Typography variant="body2" color="text.secondary">
-                          {searchQuery 
-                            ? 'ลองค้นหาด้วยคำค้นอื่น' 
+                          {searchQuery
+                            ? 'ลองค้นหาด้วยคำค้นอื่น'
                             : 'เริ่มต้นใช้งานโดยการเพิ่มบริษัทใหม่'}
                         </Typography>
                       </Box>
@@ -461,7 +585,7 @@ export default function CompaniesPage() {
                     key={company.id}
                     sx={{
                       transition: 'background-color 0.2s ease',
-                      '&:hover': { 
+                      '&:hover': {
                         bgcolor: alpha(theme.palette.primary.main, 0.04),
                       },
                       '&:last-child td': { border: 0 },
@@ -471,7 +595,7 @@ export default function CompaniesPage() {
                       <Chip
                         label={company.code}
                         size="small"
-                        sx={{ 
+                        sx={{
                           fontWeight: 600,
                           bgcolor: alpha(theme.palette.primary.main, 0.1),
                           color: 'primary.main',
@@ -487,7 +611,7 @@ export default function CompaniesPage() {
                     <TableCell>
                       {company.address ? (
                         <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 0.75 }}>
-                          <Location size={16} color="#64748B" style={{ marginTop: 2, flexShrink: 0 }} />
+                          <Location size={16} color={theme.palette.text.secondary} style={{ marginTop: 2, flexShrink: 0 }} />
                           <Typography
                             variant="body2"
                             color="text.secondary"
@@ -508,7 +632,7 @@ export default function CompaniesPage() {
                     <TableCell>
                       {company.phone ? (
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
-                          <Call size={16} color="#64748B" />
+                          <Call size={16} color={theme.palette.text.secondary} />
                           <Typography variant="body2">{company.phone}</Typography>
                         </Box>
                       ) : (
@@ -517,19 +641,19 @@ export default function CompaniesPage() {
                     </TableCell>
                     <TableCell align="center">
                       <Chip
-                        icon={company.isActive 
-                          ? <TickCircle size={14} /> 
-                          : <CloseCircle size={14} />
+                        icon={company.isActive
+                          ? <TickCircle size={14} color={theme.palette.success.main} />
+                          : <CloseCircle size={14} color={theme.palette.text.secondary} />
                         }
                         label={company.isActive ? 'เปิดใช้งาน' : 'ปิดใช้งาน'}
                         size="small"
                         sx={{
                           fontWeight: 500,
-                          bgcolor: company.isActive 
-                            ? theme.palette.success.light 
+                          bgcolor: company.isActive
+                            ? alpha(theme.palette.success.main, 0.1)
                             : alpha(theme.palette.text.secondary, 0.1),
-                          color: company.isActive 
-                            ? theme.palette.success.main 
+                          color: company.isActive
+                            ? theme.palette.success.main
                             : 'text.secondary',
                           '& .MuiChip-icon': {
                             color: 'inherit',
@@ -551,7 +675,7 @@ export default function CompaniesPage() {
                               },
                             }}
                           >
-                            <Edit2 size={18} color="#6C63FF" />
+                            <Edit2 size={18} color={theme.palette.primary.main} />
                           </IconButton>
                         </Tooltip>
                         <Tooltip title="ลบ">
@@ -566,7 +690,7 @@ export default function CompaniesPage() {
                               },
                             }}
                           >
-                            <Trash size={18} color="#EF4444" />
+                            <Trash size={18} color={theme.palette.error.main} />
                           </IconButton>
                         </Tooltip>
                       </Box>

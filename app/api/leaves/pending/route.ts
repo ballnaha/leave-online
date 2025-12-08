@@ -16,10 +16,10 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const status = searchParams.get('status') || 'pending'; // pending, all
 
-    // Admin และ HR Manager: ดึงจาก leave_requests โดยตรง (เห็นทุกใบลา)
-    if (userRole === 'admin' || userRole === 'hr_manager') {
+    // Admin: ดึงจาก leave_requests โดยตรง (เห็นทุกใบลา)
+    if (userRole === 'admin') {
       const whereClause: Record<string, unknown> = {};
-      
+
       if (status === 'pending') {
         whereClause.status = { in: ['pending', 'in_progress'] };
       }
@@ -182,9 +182,9 @@ export async function GET(request: NextRequest) {
 
     // Filter เฉพาะใบลาที่ถึงคิวตัวเองแล้ว
     const filteredApprovals = pendingApprovals.filter(approval => {
-        if (approval.status !== 'pending') return true; // ถ้าทำไปแล้วก็ให้เห็น
-        // ถ้ายัง pending ต้องเช็คว่าเป็นคิวตัวเองไหม
-        return approval.leaveRequest.currentLevel === approval.level;
+      if (approval.status !== 'pending') return true; // ถ้าทำไปแล้วก็ให้เห็น
+      // ถ้ายัง pending ต้องเช็คว่าเป็นคิวตัวเองไหม
+      return approval.leaveRequest.currentLevel === approval.level;
     });
 
     // จัดรูปแบบข้อมูลให้อ่านง่าย

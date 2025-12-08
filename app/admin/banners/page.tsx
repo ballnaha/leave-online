@@ -25,6 +25,7 @@ import {
   useTheme,
   Fade,
   Skeleton,
+  Divider,
 } from '@mui/material';
 import {
   Add,
@@ -68,7 +69,7 @@ interface StatCardProps {
 
 function StatCard({ title, value, icon, color, subtitle }: StatCardProps) {
   const theme = useTheme();
-  
+
   const colorMap = {
     primary: { main: theme.palette.primary.main, light: alpha(theme.palette.primary.main, 0.1) },
     success: { main: theme.palette.success.main, light: theme.palette.success.light },
@@ -78,8 +79,8 @@ function StatCard({ title, value, icon, color, subtitle }: StatCardProps) {
   };
 
   return (
-    <Card 
-      sx={{ 
+    <Card
+      sx={{
         borderRadius: 1,
         border: '1px solid',
         borderColor: 'divider',
@@ -148,14 +149,14 @@ function TableSkeleton() {
 // Helper function to check if banner is currently active
 function isBannerCurrentlyActive(banner: Banner): boolean {
   if (!banner.isActive) return false;
-  
+
   const now = new Date();
   const start = banner.startDate ? new Date(banner.startDate) : null;
   const end = banner.endDate ? new Date(banner.endDate) : null;
-  
+
   if (start && now < start) return false;
   if (end && now > end) return false;
-  
+
   return true;
 }
 
@@ -164,18 +165,18 @@ function getBannerStatus(banner: Banner): { label: string; color: 'success' | 'w
   if (!banner.isActive) {
     return { label: 'ปิดใช้งาน', color: 'default', icon: <CloseCircle size={14} variant="Bold" color="#9e9e9e" /> };
   }
-  
+
   const now = new Date();
   const start = banner.startDate ? new Date(banner.startDate) : null;
   const end = banner.endDate ? new Date(banner.endDate) : null;
-  
+
   if (start && now < start) {
     return { label: 'รอเปิด', color: 'warning', icon: <Clock size={14} variant="Bold" color="#ed6c02" /> };
   }
   if (end && now > end) {
     return { label: 'หมดเวลา', color: 'error', icon: <CloseCircle size={14} variant="Bold" color="#d32f2f" /> };
   }
-  
+
   return { label: 'เปิดใช้งาน', color: 'success', icon: <TickCircle size={14} variant="Bold" color="#2e7d32" /> };
 }
 
@@ -183,9 +184,9 @@ function getBannerStatus(banner: Banner): { label: string; color: 'success' | 'w
 function formatDate(dateString?: string): string {
   if (!dateString) return '-';
   const date = new Date(dateString);
-  return date.toLocaleDateString('th-TH', { 
-    year: 'numeric', 
-    month: 'short', 
+  return date.toLocaleDateString('th-TH', {
+    year: 'numeric',
+    month: 'short',
     day: 'numeric',
     hour: '2-digit',
     minute: '2-digit',
@@ -201,7 +202,7 @@ export default function BannersPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedBanner, setSelectedBanner] = useState<Banner | undefined>(undefined);
   const [searchQuery, setSearchQuery] = useState('');
-  
+
   // Confirm Dialog State
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Banner | null>(null);
@@ -247,7 +248,7 @@ export default function BannersPage() {
 
   const handleConfirmDelete = async () => {
     if (!deleteTarget) return;
-    
+
     setDeleteLoading(true);
     try {
       const res = await fetch(`/api/admin/banners/${deleteTarget.id}`, {
@@ -319,9 +320,9 @@ export default function BannersPage() {
         </Box>
         <Button
           variant="contained"
-          startIcon={<Add size={18} color="white"/>}
+          startIcon={<Add size={18} color="white" />}
           onClick={handleCreate}
-          sx={{ 
+          sx={{
             borderRadius: 1,
             px: 3,
             py: 1.25,
@@ -368,10 +369,10 @@ export default function BannersPage() {
       </Box>
 
       {/* Search & Actions */}
-      <Paper 
-        sx={{ 
-          p: 2.5, 
-          mb: 3, 
+      <Paper
+        sx={{
+          p: 2.5,
+          mb: 3,
           borderRadius: 1,
           border: '1px solid',
           borderColor: 'divider',
@@ -384,7 +385,7 @@ export default function BannersPage() {
             size="small"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            sx={{ 
+            sx={{
               flex: 1,
               minWidth: 200,
               '& .MuiOutlinedInput-root': {
@@ -406,31 +407,31 @@ export default function BannersPage() {
               ),
             }}
           />
-          <Chip 
+          <Chip
             label={`${filteredBanners.length} รายการ`}
             size="small"
-            sx={{ 
+            sx={{
               bgcolor: alpha(theme.palette.primary.main, 0.1),
               color: 'primary.main',
               fontWeight: 600,
             }}
           />
           <Tooltip title="รีเฟรชข้อมูล">
-            <IconButton 
-              onClick={fetchBanners} 
+            <IconButton
+              onClick={fetchBanners}
               disabled={loading}
               sx={{
                 bgcolor: 'background.default',
                 '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.1) },
               }}
             >
-              <Refresh2 
+              <Refresh2
                 size={20}
                 color={theme.palette.primary.main}
-                style={{ 
+                style={{
                   transition: 'transform 0.3s ease',
                   transform: loading ? 'rotate(360deg)' : 'rotate(0deg)',
-                }} 
+                }}
               />
             </IconButton>
           </Tooltip>
@@ -439,10 +440,10 @@ export default function BannersPage() {
 
       {/* Error Alert */}
       {error && (
-        <Alert 
-          severity="error" 
-          sx={{ 
-            mb: 3, 
+        <Alert
+          severity="error"
+          sx={{
+            mb: 3,
             borderRadius: 1,
             '& .MuiAlert-icon': {
               color: theme.palette.error.main,
@@ -453,11 +454,146 @@ export default function BannersPage() {
         </Alert>
       )}
 
-      {/* Table */}
+      {/* Mobile Card View (Visible on xs, sm) */}
+      <Box sx={{ display: { xs: 'flex', md: 'none' }, flexDirection: 'column', gap: 2 }}>
+        {loading ? (
+          Array.from({ length: 3 }).map((_, i) => (
+            <Skeleton key={i} variant="rounded" height={200} sx={{ borderRadius: 1 }} />
+          ))
+        ) : filteredBanners.length === 0 ? (
+          <Paper sx={{ p: 4, textAlign: 'center', borderRadius: 1, bgcolor: alpha(theme.palette.primary.main, 0.04) }}>
+            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+              <Image size={48} variant="Bold" color={theme.palette.text.disabled} />
+              <Typography variant="body1" fontWeight={600} color="text.secondary">
+                {searchQuery ? 'ไม่พบ Banner ที่ค้นหา' : 'ยังไม่มี Banner'}
+              </Typography>
+            </Box>
+          </Paper>
+        ) : (
+          filteredBanners.map((banner) => {
+            const status = getBannerStatus(banner);
+            return (
+              <Paper
+                key={banner.id}
+                elevation={0}
+                sx={{
+                  p: 2,
+                  borderRadius: 1,
+                  border: '1px solid',
+                  borderColor: 'divider',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 2,
+                }}
+              >
+                {/* Image */}
+                <Box
+                  component="img"
+                  src={banner.imageUrl}
+                  alt={banner.title}
+                  sx={{
+                    width: '100%',
+                    height: 160,
+                    objectFit: 'cover',
+                    borderRadius: 1,
+                    border: '1px solid',
+                    borderColor: 'divider',
+                  }}
+                />
+
+                {/* Content */}
+                <Box>
+                  <Typography variant="subtitle1" fontWeight={700} gutterBottom>
+                    {banner.title}
+                  </Typography>
+                  {banner.description && (
+                    <Typography variant="body2" color="text.secondary" noWrap gutterBottom>
+                      {banner.description}
+                    </Typography>
+                  )}
+                </Box>
+
+                <Divider sx={{ borderStyle: 'dashed' }} />
+
+                {/* Details */}
+                <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
+                  <Box>
+                    <Typography variant="caption" color="text.secondary" display="block">ลำดับการแสดง</Typography>
+                    <Chip
+                      label={banner.displayOrder}
+                      size="small"
+                      sx={{
+                        bgcolor: alpha(theme.palette.info.main, 0.1),
+                        color: 'info.main',
+                        fontWeight: 600,
+                        height: 24
+                      }}
+                    />
+                  </Box>
+                  <Box>
+                    <Typography variant="caption" color="text.secondary" display="block">สถานะ</Typography>
+                    <Chip
+                      icon={status.icon as React.ReactElement}
+                      label={status.label}
+                      size="small"
+                      color={status.color}
+                      variant="outlined"
+                      sx={{ height: 24, '& .MuiChip-icon': { color: 'inherit' } }}
+                    />
+                  </Box>
+                </Box>
+
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Calendar size={14} color={theme.palette.primary.main} />
+                    <Typography variant="caption" color="text.secondary">
+                      เริ่ม: {formatDate(banner.startDate)}
+                    </Typography>
+                  </Box>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Calendar size={14} color={theme.palette.error.main} />
+                    <Typography variant="caption" color="text.secondary">
+                      สิ้นสุด: {formatDate(banner.endDate)}
+                    </Typography>
+                  </Box>
+                </Box>
+
+                {/* Actions */}
+                <Box sx={{ display: 'flex', gap: 1, pt: 1 }}>
+                  <Button
+                    fullWidth
+                    size="small"
+                    variant="outlined"
+                    startIcon={<Edit2 size={16} color={theme.palette.primary.main} />}
+                    onClick={() => handleEdit(banner)}
+                    sx={{ borderRadius: 1 }}
+                  >
+                    แก้ไข
+                  </Button>
+                  <Button
+                    fullWidth
+                    size="small"
+                    variant="outlined"
+                    color="error"
+                    startIcon={<Trash size={16} color={theme.palette.error.main} />}
+                    onClick={() => handleDelete(banner)}
+                    sx={{ borderRadius: 1 }}
+                  >
+                    ลบ
+                  </Button>
+                </Box>
+              </Paper>
+            );
+          })
+        )}
+      </Box>
+
+      {/* Table (Hidden on mobile) */}
       <Fade in={true} timeout={500}>
-        <TableContainer 
-          component={Paper} 
-          sx={{ 
+        <TableContainer
+          component={Paper}
+          sx={{
+            display: { xs: 'none', md: 'block' },
             borderRadius: 1,
             border: '1px solid',
             borderColor: 'divider',
@@ -503,8 +639,8 @@ export default function BannersPage() {
                           {searchQuery ? 'ไม่พบ Banner ที่ค้นหา' : 'ยังไม่มี Banner'}
                         </Typography>
                         <Typography variant="body2" color="text.secondary">
-                          {searchQuery 
-                            ? 'ลองค้นหาด้วยคำค้นอื่น' 
+                          {searchQuery
+                            ? 'ลองค้นหาด้วยคำค้นอื่น'
                             : 'เริ่มต้นใช้งานโดยการเพิ่ม Banner ใหม่'}
                         </Typography>
                       </Box>
@@ -531,7 +667,7 @@ export default function BannersPage() {
                       key={banner.id}
                       sx={{
                         transition: 'background-color 0.2s ease',
-                        '&:hover': { 
+                        '&:hover': {
                           bgcolor: alpha(theme.palette.primary.main, 0.04),
                         },
                         '&:last-child td': { border: 0 },
@@ -557,8 +693,8 @@ export default function BannersPage() {
                           {banner.title}
                         </Typography>
                         {banner.description && (
-                          <Typography 
-                            variant="body2" 
+                          <Typography
+                            variant="body2"
                             color="text.secondary"
                             sx={{
                               maxWidth: 250,
@@ -574,13 +710,13 @@ export default function BannersPage() {
                       <TableCell>
                         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
-                            <Calendar size={14} color={theme.palette.text.secondary} />
+                            <Calendar size={14} color={theme.palette.primary.main} />
                             <Typography variant="body2" color="text.secondary">
                               เริ่ม: {formatDate(banner.startDate)}
                             </Typography>
                           </Box>
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
-                            <Calendar size={14} color={theme.palette.text.secondary} />
+                            <Calendar size={14} color={theme.palette.error.main} />
                             <Typography variant="body2" color="text.secondary">
                               สิ้นสุด: {formatDate(banner.endDate)}
                             </Typography>

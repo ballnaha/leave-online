@@ -72,7 +72,7 @@ const messages: Record<LocaleCode, Record<string, string>> = {
     browser_not_supported: "เบราว์เซอร์ไม่รองรับ",
     blocked_notifications: "ถูกบล็อก - กรุณาเปิดในการตั้งค่า",
     select_language: "เลือกภาษา",
-    
+
     // iOS Instructions
     ios_install_title: "วิธีติดตั้งบน iPhone",
     step_1: "ขั้นตอนที่ 1",
@@ -87,7 +87,7 @@ const messages: Record<LocaleCode, Record<string, string>> = {
     at_top_right: "ที่มุมขวาบน",
     ios_note_safari: "หมายเหตุ: ต้องเปิดใน Safari เท่านั้น",
     understood: "เข้าใจแล้ว",
-    
+
     // Leave History
     leave_history_title: "ประวัติการลา",
     leave_legend: "คำอธิบายสี",
@@ -96,7 +96,7 @@ const messages: Record<LocaleCode, Record<string, string>> = {
     leave_search_placeholder: "ค้นหาใบลา...",
     leave_not_found: "ไม่พบใบลาที่ตรงกับการค้นหา",
     leave_no_history: "ยังไม่มีประวัติการลาในเดือนนี้",
-    
+
     // Days
     day_mon: "จ.",
     day_tue: "อ.",
@@ -105,7 +105,7 @@ const messages: Record<LocaleCode, Record<string, string>> = {
     day_fri: "ศ.",
     day_sat: "ส.",
     day_sun: "อา.",
-    
+
     // Errors
     cancel_reason_required: "กรุณาระบุเหตุผลการยกเลิก",
     cancel_failed: "ไม่สามารถยกเลิกใบลาได้",
@@ -116,7 +116,7 @@ const messages: Record<LocaleCode, Record<string, string>> = {
     cancel_leave_desc: "กรุณาระบุเหตุผลที่ต้องการยกเลิกใบลา",
     cancel_leave_placeholder: "ระบุเหตุผล...",
     cancel_leave_confirm: "ยืนยันยกเลิก",
-    
+
     // Leave Form
     leave_info: "ข้อมูลผู้ขอลา",
     leave_details: "รายละเอียดการลา",
@@ -145,7 +145,7 @@ const messages: Record<LocaleCode, Record<string, string>> = {
     leave_days_per_year: "วัน/ปี",
     leave_days_unit: "วัน",
     leave_adjust_hint: "กดปุ่ม +/- เพื่อปรับทีละ 0.5 วัน",
-    
+
     // Leave Detail Drawer
     preview_error: "ไม่สามารถแสดงตัวอย่างไฟล์นี้ได้",
     download_file: "ดาวน์โหลดไฟล์",
@@ -161,14 +161,14 @@ const messages: Record<LocaleCode, Record<string, string>> = {
     not_specified: "ไม่ระบุ",
     submitted_at: "ยื่นเมื่อ",
     cancel_leave_btn: "ยกเลิกใบลา",
-    
+
     // User Info
     department: "ฝ่าย",
     section: "แผนก",
     shift: "กะทำงาน",
     employee_id: "รหัสพนักงาน",
     position: "ตำแหน่ง",
-    
+
     // Leave Related
     leave_sick: "ลาป่วย",
     sick: "ลาป่วย",
@@ -320,7 +320,7 @@ const messages: Record<LocaleCode, Record<string, string>> = {
     reset: "รีเซ็ต",
     rotate_right: "หมุนขวา",
     save_image: "บันทึกรูปภาพ",
-    
+
     // Auth & Actions
     login: "เข้าสู่ระบบ",
     register: "สมัครสมาชิก",
@@ -334,7 +334,7 @@ const messages: Record<LocaleCode, Record<string, string>> = {
     close: "ปิด",
     success: "สำเร็จ",
     error: "เกิดข้อผิดพลาด",
-    
+
     // Dashboard
     dashboard_remaining: "คงเหลือ",
     dashboard_over_limit: "เกินสิทธิ์",
@@ -351,9 +351,29 @@ const messages: Record<LocaleCode, Record<string, string>> = {
     dashboard_unpaid: "ไม่ได้ค่าจ้าง",
     dashboard_unlimited_quota: "สิทธิ์ลาไม่จำกัด",
     dashboard_remaining_quota: "สิทธิ์คงเหลือปี {{year}}: {{remaining}}/{{total}} วัน",
-    
+
     // Common
     more: "เพิ่มเติม",
+    // Holiday Names
+    holiday_new_year: "วันขึ้นปีใหม่ (New Year's Day)",
+    holiday_chinese_new_year: "วันตรุษจีน (Chinese New Year)",
+    holiday_makha_bucha: "วันมาฆบูชา (Makha Bucha Day)",
+    holiday_chakri: "วันจักรี (Chakri Memorial Day)",
+    holiday_songkran: "วันสงกรานต์ (Songkran Festival)",
+    holiday_labor: "วันแรงงานแห่งชาติ (Labor Day)",
+    holiday_coronation: "วันฉัตรมงคล (Coronation Day)",
+    holiday_visakha_bucha: "วันวิสาขบูชา (Visakha Bucha Day)",
+    holiday_queen_suthida: "วันเฉลิมพระชนมพรรษาพระราชินี (H.M. Queen Suthida's Birthday)",
+    holiday_asalha_bucha: "วันอาสาฬหบูชา (Asalha Bucha Day)",
+    holiday_buddhist_lent: "วันเข้าพรรษา (Buddhist Lent Day)",
+    holiday_king_rama_10: "วันเฉลิมพระชนมพรรษา ร.10 (H.M. King Maha Vajiralongkorn's Birthday)",
+    holiday_queen_mother: "วันแม่แห่งชาติ (H.M. Queen Sirikit The Queen Mother's Birthday)",
+    holiday_king_rama_9_memorial: "วันคล้ายวันสวรรคต ร.9 (H.M. King Bhumibol Adulyadej The Great Memorial Day)",
+    holiday_chulalongkorn: "วันปิยมหาราช (Chulalongkorn Day)",
+    holiday_father_day: "วันพ่อแห่งชาติ (H.M. King Bhumibol Adulyadej The Great's Birthday)",
+    holiday_constitution: "วันรัฐธรรมนูญ (Constitution Day)",
+    holiday_new_year_eve: "วันสิ้นปี (New Year's Eve)",
+    holiday_company: "วันหยุดบริษัท (Company Holiday)",
   },
   en: {
     common_profile: "Profile",
@@ -393,7 +413,7 @@ const messages: Record<LocaleCode, Record<string, string>> = {
     shift_type: "Shift Types",
     leave_start_section: "Start Leave",
     leave_end_section: "End Leave",
-   leave_start_time: "Start Time",
+    leave_start_time: "Start Time",
     leave_end_time: "End Time",
     // Profile & Settings
     edit_profile: "Edit Profile",
@@ -434,7 +454,7 @@ const messages: Record<LocaleCode, Record<string, string>> = {
     at_top_right: "at the top right",
     ios_note_safari: "Note: Must open in Safari",
     understood: "Understood",
-    
+
     // Leave History
     leave_history_title: "Leave History",
     leave_legend: "Color Legend",
@@ -452,7 +472,7 @@ const messages: Record<LocaleCode, Record<string, string>> = {
     day_fri: "Fri",
     day_sat: "Sat",
     day_sun: "Sun",
-    
+
     // Errors
     cancel_reason_required: "Cancellation reason required",
     cancel_failed: "Failed to cancel leave",
@@ -515,7 +535,7 @@ const messages: Record<LocaleCode, Record<string, string>> = {
     shift: "Shift",
     employee_id: "Employee ID",
     position: "Position",
-    
+
     // Leave Related
     leave_sick: "Sick Leave",
     sick: "Sick Leave",
@@ -611,7 +631,7 @@ const messages: Record<LocaleCode, Record<string, string>> = {
     holiday_days: "days",
     holiday_weekend: "Falls on weekend",
     holiday_no_data: "No holiday data available for this year",
-  
+
 
     // Edit Profile
     edit_profile_title: "Edit Profile",
@@ -683,7 +703,7 @@ const messages: Record<LocaleCode, Record<string, string>> = {
     close: "Close",
     success: "Success",
     error: "Error",
-    
+
     // Dashboard
     dashboard_remaining: "Remaining",
     dashboard_over_limit: "Over Limit",
@@ -700,9 +720,29 @@ const messages: Record<LocaleCode, Record<string, string>> = {
     dashboard_unpaid: "Unpaid",
     dashboard_unlimited_quota: "Unlimited quota",
     dashboard_remaining_quota: "Quota {{year}}: {{remaining}}/{{total}} days",
-    
+
     // Common
     more: "more",
+    // Holiday Names
+    holiday_new_year: "New Year's Day",
+    holiday_chinese_new_year: "Chinese New Year",
+    holiday_makha_bucha: "Makha Bucha Day",
+    holiday_chakri: "Chakri Memorial Day",
+    holiday_songkran: "Songkran Festival",
+    holiday_labor: "Labor Day",
+    holiday_coronation: "Coronation Day",
+    holiday_visakha_bucha: "Visakha Bucha Day",
+    holiday_queen_suthida: "H.M. Queen Suthida's Birthday",
+    holiday_asalha_bucha: "Asalha Bucha Day",
+    holiday_buddhist_lent: "Buddhist Lent Day",
+    holiday_king_rama_10: "H.M. King Maha Vajiralongkorn's Birthday",
+    holiday_queen_mother: "H.M. Queen Sirikit The Queen Mother's Birthday",
+    holiday_king_rama_9_memorial: "H.M. King Bhumibol Adulyadej The Great Memorial Day",
+    holiday_chulalongkorn: "Chulalongkorn Day",
+    holiday_father_day: "H.M. King Bhumibol Adulyadej The Great's Birthday",
+    holiday_constitution: "Constitution Day",
+    holiday_new_year_eve: "New Year's Eve",
+    holiday_company: "Company Holiday",
   },
   my: {
     common_profile: "ပရိုဖိုင်",
@@ -784,7 +824,7 @@ const messages: Record<LocaleCode, Record<string, string>> = {
     at_top_right: "ညာဘက်အပေါ်ထောင့်တွင်",
     ios_note_safari: "မှတ်ချက်: Safari တွင်သာ ဖွင့်ရမည်",
     understood: "နားလည်ပါပြီ",
-    
+
     // Leave History
     leave_history_title: "ခွင့်မှတ်တမ်း",
     leave_legend: "အရောင်အညွှန်း",
@@ -802,7 +842,7 @@ const messages: Record<LocaleCode, Record<string, string>> = {
     day_fri: "သောကြာ",
     day_sat: "စနေ",
     day_sun: "တနင်္ဂနွေ",
-    
+
     // Errors
     cancel_reason_required: "ပယ်ဖျက်ရသည့်အကြောင်းရင်း လိုအပ်ပါသည်",
     cancel_failed: "ခွင့်ပယ်ဖျက်၍မရပါ",
@@ -922,7 +962,7 @@ const messages: Record<LocaleCode, Record<string, string>> = {
     shift: "အလုပ်ချိန်",
     employee_id: "ဝန်ထမ်းနံပါတ်",
     position: "ရာထူး",
-    
+
     // Leave Related
     leave_sick: "ဆေးခွင့်",
     sick: "ဆေးခွင့်",
@@ -1017,7 +1057,7 @@ const messages: Record<LocaleCode, Record<string, string>> = {
     holiday_days: "ရက်",
     holiday_weekend: "စနေ/တနင်္ဂနွေနှင့် ရက်တိုက်",
     holiday_no_data: "ဤနှစ်အတွက် ပိတ်ရက်အချက်အလက် မရှိပါ",
-    
+
     // Auth & Actions
     login: "ဝင်ရောက်ရန်",
     register: "စာရင်းသွင်းရန်",
@@ -1031,7 +1071,7 @@ const messages: Record<LocaleCode, Record<string, string>> = {
     close: "ပိတ်ရန်",
     success: "အောင်မြင်သည်",
     error: "အမှားအယွင်း",
-    
+
     // Dashboard
     dashboard_remaining: "ကျန်ရှိ",
     dashboard_over_limit: "ကန့်သတ်ကျော်",
@@ -1048,9 +1088,29 @@ const messages: Record<LocaleCode, Record<string, string>> = {
     dashboard_unpaid: "လစာမရ",
     dashboard_unlimited_quota: "အကန့်အသတ်မဲ့",
     dashboard_remaining_quota: "ခွင့် {{year}}: {{remaining}}/{{total}} ရက်",
-    
+
     // Common
     more: "ပိုမို",
+    // Holiday Names
+    holiday_new_year: "နှစ်သစ်ကူးနေ့",
+    holiday_chinese_new_year: "တရုတ်နှစ်သစ်ကူး",
+    holiday_makha_bucha: "တပေါင်းလပြည့်နေ့ (Makha Bucha)",
+    holiday_chakri: "ချက်ကရီနေ့ (Chakri Memorial Day)",
+    holiday_songkran: "သင်္ကြန်ပွဲတော်",
+    holiday_labor: "အလုပ်သမားနေ့ (Labor Day)",
+    holiday_coronation: "ဘိသိက်မင်္ဂလာနေ့ (Coronation Day)",
+    holiday_visakha_bucha: "ကဆုန်လပြည့်နေ့ (Visakha Bucha)",
+    holiday_queen_suthida: "မိဖုရားကြီး စုသီတာ မွေးနေ့",
+    holiday_asalha_bucha: "ဓမ္မစကြာနေ့ (Asalha Bucha)",
+    holiday_buddhist_lent: "ဝါဆိုလပြည့်နေ့ (Buddhist Lent)",
+    holiday_king_rama_10: "ထိုင်းဘုရင်မင်းမြတ် မွေးနေ့",
+    holiday_queen_mother: "မိခင်များနေ့ (Mother's Day)",
+    holiday_king_rama_9_memorial: "ဘူမိဘောဘုရင် နတ်ရွာစံနေ့",
+    holiday_chulalongkorn: "ချူလာလောင်ကွန်းနေ့ (Chulalongkorn Day)",
+    holiday_father_day: "ဖခင်များနေ့ (Father's Day)",
+    holiday_constitution: "ဖွဲ့စည်းပုံအခြေခံဥပဒေနေ့",
+    holiday_new_year_eve: "နှစ်သစ်ကူးအကြိုနေ့",
+    holiday_company: "ကုမ္ပဏီအားလပ်ရက်",
   },
 };
 
@@ -1107,11 +1167,11 @@ export function LocaleProvider({ children, initialLocale }: { children: React.Re
       const oneYear = 60 * 60 * 24 * 365;
       document.cookie = `locale=${encodeURIComponent(locale)}; path=/; max-age=${oneYear}; samesite=lax`;
       // Reveal body once locale is applied (only on first load)
-      try { 
+      try {
         if (document.body.classList.contains('pre-locale')) {
-          document.body.classList.remove('pre-locale'); 
+          document.body.classList.remove('pre-locale');
         }
-      } catch {}
+      } catch { }
     }
     if (typeof window !== "undefined") {
       localStorage.setItem(LOCALE_STORAGE_KEY, locale);

@@ -36,6 +36,7 @@ import {
   MenuItem,
   Tabs,
   Tab,
+  Divider,
 } from '@mui/material';
 import {
   Add,
@@ -121,7 +122,7 @@ interface StatCardProps {
 
 function StatCard({ title, value, icon, color, subtitle }: StatCardProps) {
   const theme = useTheme();
-  
+
   const colorMap = {
     primary: { main: theme.palette.primary.main, light: alpha(theme.palette.primary.main, 0.1) },
     success: { main: theme.palette.success.main, light: alpha(theme.palette.success.main, 0.1) },
@@ -131,8 +132,8 @@ function StatCard({ title, value, icon, color, subtitle }: StatCardProps) {
   };
 
   return (
-    <Card 
-      sx={{ 
+    <Card
+      sx={{
         borderRadius: 1,
         border: '1px solid',
         borderColor: 'divider',
@@ -205,7 +206,7 @@ export default function UserApprovalFlowPage() {
   const [users, setUsers] = useState<UserOption[]>([]);
   const [allApprovers, setAllApprovers] = useState<UserOption[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
-  
+
   // Pagination
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
@@ -238,15 +239,15 @@ export default function UserApprovalFlowPage() {
   const [approvalFlows, setApprovalFlows] = useState<ApprovalFlow[]>([]);
   const [addApproverDialogOpen, setAddApproverDialogOpen] = useState(false);
   const [selectedApprover, setSelectedApprover] = useState<UserOption | null>(null);
-  
+
   // Delete confirmation
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState<UserOption | null>(null);
   const [deleting, setDeleting] = useState(false);
-  
+
   // Track users with custom flows
   const [usersWithFlows, setUsersWithFlows] = useState<Set<number>>(new Set());
-  
+
   const [error, setError] = useState('');
 
   const fetchMasterData = async () => {
@@ -256,7 +257,7 @@ export default function UserApprovalFlowPage() {
         fetch('/api/departments'),
         fetch('/api/sections'),
       ]);
-      
+
       if (companiesRes.ok) {
         const data = await companiesRes.json();
         setCompanies(data);
@@ -366,14 +367,14 @@ export default function UserApprovalFlowPage() {
 
   const handleAddApprover = () => {
     if (!selectedApprover) return;
-    
+
     if (approvalFlows.some(f => f.approverId === selectedApprover.id)) {
       setError('ผู้อนุมัตินี้มีอยู่ใน flow แล้ว');
       return;
     }
 
-    const newLevel = approvalFlows.length > 0 
-      ? Math.max(...approvalFlows.map(f => f.level)) + 1 
+    const newLevel = approvalFlows.length > 0
+      ? Math.max(...approvalFlows.map(f => f.level)) + 1
       : 1;
 
     setApprovalFlows([
@@ -487,17 +488,17 @@ export default function UserApprovalFlowPage() {
   // Get filtered sections based on selected company and department
   const filteredSections = (() => {
     let filtered = sections;
-    
+
     // Filter by company first
     if (companyFilter !== 'all') {
       filtered = filtered.filter(s => s.companyCode === companyFilter);
     }
-    
+
     // Then filter by department
     if (departmentFilter !== 'all') {
       filtered = filtered.filter(s => s.departmentCode === departmentFilter);
     }
-    
+
     return filtered;
   })();
 
@@ -512,11 +513,11 @@ export default function UserApprovalFlowPage() {
       user.employeeId.toLowerCase().includes(searchQuery.toLowerCase()) ||
       user.firstName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       user.lastName.toLowerCase().includes(searchQuery.toLowerCase());
-    
+
     const matchesCompany = companyFilter === 'all' || user.company === companyFilter;
     const matchesDepartment = departmentFilter === 'all' || user.department === departmentFilter;
     const matchesSection = sectionFilter === 'all' || user.section === sectionFilter;
-    
+
     return matchesSearch && matchesCompany && matchesDepartment && matchesSection;
   });
 
@@ -557,8 +558,8 @@ export default function UserApprovalFlowPage() {
           </Box>
         </Box>
         <Tooltip title="รีเฟรชข้อมูล">
-          <IconButton 
-            onClick={() => { fetchUsers(); fetchApprovers(); }} 
+          <IconButton
+            onClick={() => { fetchUsers(); fetchApprovers(); }}
             disabled={loading}
             sx={{
               bgcolor: 'background.paper',
@@ -740,10 +741,10 @@ export default function UserApprovalFlowPage() {
           </Select>
         </FormControl>
 
-        <Chip 
+        <Chip
           label={`${filteredUsers.length} รายการ`}
           size="small"
-          sx={{ 
+          sx={{
             bgcolor: alpha(theme.palette.primary.main, 0.1),
             color: 'primary.main',
             fontWeight: 600,
@@ -765,10 +766,124 @@ export default function UserApprovalFlowPage() {
         </Typography>
       </Alert>
 
-      {/* Table */}
-      <TableContainer 
-        component={Paper} 
-        sx={{ 
+      {/* Mobile Card View (Visible on xs, sm) */}
+      <Box sx={{ display: { xs: 'flex', md: 'none' }, flexDirection: 'column', gap: 2 }}>
+        {loading ? (
+          Array.from({ length: 3 }).map((_, i) => (
+            <Skeleton key={i} variant="rounded" height={150} sx={{ borderRadius: 1 }} />
+          ))
+        ) : filteredUsers.length === 0 ? (
+          <Paper sx={{ p: 4, textAlign: 'center', borderRadius: 1, bgcolor: alpha(theme.palette.primary.main, 0.04) }}>
+            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+              <UserEdit size={48} color={theme.palette.text.disabled} variant="Bold" />
+              <Typography variant="body1" fontWeight={600} color="text.secondary">
+                ไม่พบข้อมูลพนักงาน
+              </Typography>
+            </Box>
+          </Paper>
+        ) : (
+          paginatedUsers.map((user) => {
+            const hasFlow = usersWithFlows.has(user.id);
+            return (
+              <Paper
+                key={user.id}
+                elevation={0}
+                sx={{
+                  p: 2,
+                  borderRadius: 1,
+                  border: '1px solid',
+                  borderColor: 'divider',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 2,
+                }}
+              >
+                {/* Card Header: User Info */}
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <Box sx={{ display: 'flex', gap: 1.5 }}>
+                    <Avatar
+                      src={user.avatar || undefined}
+                      sx={{ width: 40, height: 40, bgcolor: theme.palette.primary.main }}
+                    >
+                      {user.firstName.charAt(0)}
+                    </Avatar>
+                    <Box>
+                      <Typography variant="subtitle2" fontWeight={700}>
+                        {user.firstName} {user.lastName}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        {user.employeeId} • {user.position || '-'}
+                      </Typography>
+                    </Box>
+                  </Box>
+                  {hasFlow && (
+                    <Chip
+                      label="Custom Flow"
+                      size="small"
+                      color="primary"
+                      variant="filled"
+                      sx={{ borderRadius: 1, height: 20, fontSize: '0.65rem' }}
+                    />
+                  )}
+                </Box>
+
+                <Divider sx={{ borderStyle: 'dashed' }} />
+
+                {/* Card Body: Department/Role */}
+                <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
+                  <Box>
+                    <Typography variant="caption" color="text.secondary">สังกัด</Typography>
+                    <Typography variant="body2" fontWeight={500}>{user.companyName || user.company}</Typography>
+                    <Typography variant="caption" display="block" color="text.secondary">
+                      {user.departmentName || user.department} / {user.sectionName || user.section}
+                    </Typography>
+                  </Box>
+                  <Box>
+                    <Typography variant="caption" color="text.secondary">สิทธิ์</Typography>
+                    <Chip
+                      label={roleLabels[user.role] || user.role}
+                      size="small"
+                      variant="outlined"
+                      sx={{ borderRadius: 1, height: 24 }}
+                    />
+                  </Box>
+                </Box>
+
+                {/* Card Footer: Actions */}
+                <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, pt: 1 }}>
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    startIcon={<UserEdit size={16} color={theme.palette.text.primary} />}
+                    onClick={() => handleOpenDialog(user)}
+                    sx={{ borderRadius: 1 }}
+                  >
+                    จัดการ Flow
+                  </Button>
+                  {hasFlow && (
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      color="error"
+                      startIcon={<RotateLeft size={16} color={theme.palette.text.primary} />}
+                      onClick={() => handleOpenDeleteDialog(user)}
+                      sx={{ borderRadius: 1 }}
+                    >
+                      Reset
+                    </Button>
+                  )}
+                </Box>
+              </Paper>
+            );
+          })
+        )}
+      </Box>
+
+      {/* Desktop Table View (Hidden on xs, sm) */}
+      <TableContainer
+        component={Paper}
+        sx={{
+          display: { xs: 'none', md: 'block' },
           borderRadius: 1,
           border: '1px solid',
           borderColor: 'divider',
@@ -817,7 +932,7 @@ export default function UserApprovalFlowPage() {
                   key={user.id}
                   sx={{
                     transition: 'background-color 0.2s ease',
-                    '&:hover': { 
+                    '&:hover': {
                       bgcolor: alpha(theme.palette.primary.main, 0.04),
                     },
                     '&:last-child td': { border: 0 },
@@ -825,8 +940,8 @@ export default function UserApprovalFlowPage() {
                 >
                   <TableCell>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                      <Avatar 
-                        src={user.avatar || undefined} 
+                      <Avatar
+                        src={user.avatar || undefined}
                         alt={`${user.firstName} ${user.lastName}`}
                         sx={{ bgcolor: theme.palette.primary.main }}
                       >
@@ -862,7 +977,7 @@ export default function UserApprovalFlowPage() {
                     <Chip
                       label={roleLabels[user.role] || user.role}
                       size="small"
-                      sx={{ 
+                      sx={{
                         bgcolor: alpha(theme.palette.info.main, 0.1),
                         color: theme.palette.info.main,
                         fontWeight: 500,
@@ -875,7 +990,7 @@ export default function UserApprovalFlowPage() {
                       <Chip
                         label="Custom"
                         size="small"
-                        sx={{ 
+                        sx={{
                           fontWeight: 500,
                           borderRadius: 1,
                           bgcolor: alpha(theme.palette.success.main, 0.1),
@@ -887,7 +1002,7 @@ export default function UserApprovalFlowPage() {
                         label="Default"
                         size="small"
                         variant="outlined"
-                        sx={{ 
+                        sx={{
                           fontWeight: 500,
                           borderRadius: 1,
                         }}
@@ -968,18 +1083,18 @@ export default function UserApprovalFlowPage() {
       )}
 
       {/* Edit Flow Dialog */}
-      <Dialog 
-        open={dialogOpen} 
-        onClose={handleCloseDialog} 
-        maxWidth="sm" 
+      <Dialog
+        open={dialogOpen}
+        onClose={handleCloseDialog}
+        maxWidth="sm"
         fullWidth
         PaperProps={{
           sx: { borderRadius: 1 }
         }}
       >
-        <DialogTitle sx={{ 
-          display: 'flex', 
-          alignItems: 'center', 
+        <DialogTitle sx={{
+          display: 'flex',
+          alignItems: 'center',
           justifyContent: 'space-between',
           borderBottom: '1px solid',
           borderColor: 'divider',
@@ -995,21 +1110,21 @@ export default function UserApprovalFlowPage() {
           </IconButton>
         </DialogTitle>
 
-        <DialogContent sx={{ pt: 3 , mt:2 }}>
+        <DialogContent sx={{ pt: 3, mt: 2 }}>
           {/* Selected User Info */}
           {selectedUser && (
-            <Paper 
-              variant="outlined" 
-              sx={{ 
-                p: 2, 
-                mb: 3, 
+            <Paper
+              variant="outlined"
+              sx={{
+                p: 2,
+                mb: 3,
                 borderRadius: 1.5,
                 bgcolor: alpha(theme.palette.primary.main, 0.04),
               }}
             >
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                <Avatar 
-                  src={selectedUser.avatar} 
+                <Avatar
+                  src={selectedUser.avatar}
                   sx={{ width: 48, height: 48, bgcolor: theme.palette.primary.main }}
                 >
                   {selectedUser.firstName[0]}
@@ -1022,9 +1137,9 @@ export default function UserApprovalFlowPage() {
                     {selectedUser.employeeId} • {selectedUser.position || selectedUser.department}
                   </Typography>
                 </Box>
-                <Chip 
-                  label={roleLabels[selectedUser.role]} 
-                  size="small" 
+                <Chip
+                  label={roleLabels[selectedUser.role]}
+                  size="small"
                   color="primary"
                   sx={{ fontWeight: 500 }}
                 />
@@ -1051,11 +1166,11 @@ export default function UserApprovalFlowPage() {
           {error && <Alert severity="error" sx={{ mb: 2, borderRadius: 1 }}>{error}</Alert>}
 
           {approvalFlows.length === 0 ? (
-            <Paper 
-              variant="outlined" 
-              sx={{ 
-                p: 4, 
-                textAlign: 'center', 
+            <Paper
+              variant="outlined"
+              sx={{
+                p: 4,
+                textAlign: 'center',
                 borderStyle: 'dashed',
                 borderRadius: 1.5,
                 bgcolor: alpha(theme.palette.background.default, 0.5),
@@ -1073,10 +1188,10 @@ export default function UserApprovalFlowPage() {
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
               {approvalFlows.map((flow, idx) => (
                 <React.Fragment key={flow.id}>
-                  <Paper 
-                    variant="outlined" 
-                    sx={{ 
-                      p: 1.5, 
+                  <Paper
+                    variant="outlined"
+                    sx={{
+                      p: 1.5,
                       borderRadius: 1.5,
                       display: 'flex',
                       alignItems: 'center',
@@ -1141,10 +1256,10 @@ export default function UserApprovalFlowPage() {
                 <ArrowDown2 size={18} color={theme.palette.text.disabled} />
               </Box>
             )}
-            <Paper 
-              variant="outlined" 
-              sx={{ 
-                p: 1.5, 
+            <Paper
+              variant="outlined"
+              sx={{
+                p: 1.5,
                 borderRadius: 1.5,
                 borderColor: alpha(theme.palette.warning.main, 0.5),
                 bgcolor: alpha(theme.palette.warning.main, 0.04),
@@ -1184,8 +1299,8 @@ export default function UserApprovalFlowPage() {
           <Button onClick={handleCloseDialog} sx={{ borderRadius: 1 }}>
             ยกเลิก
           </Button>
-          <Button 
-            variant="contained" 
+          <Button
+            variant="contained"
             onClick={handleSaveFlow}
             disabled={saving}
             startIcon={<TickSquare size={16} color="#fff" />}
@@ -1197,10 +1312,10 @@ export default function UserApprovalFlowPage() {
       </Dialog>
 
       {/* Add Approver Dialog */}
-      <Dialog 
-        open={addApproverDialogOpen} 
-        onClose={() => setAddApproverDialogOpen(false)} 
-        maxWidth="sm" 
+      <Dialog
+        open={addApproverDialogOpen}
+        onClose={() => setAddApproverDialogOpen(false)}
+        maxWidth="sm"
         fullWidth
         PaperProps={{
           sx: { borderRadius: 1 }
@@ -1212,7 +1327,7 @@ export default function UserApprovalFlowPage() {
             เพิ่มผู้อนุมัติ
           </Box>
         </DialogTitle>
-        <DialogContent sx={{ pt: 3 , mt:2}}>
+        <DialogContent sx={{ pt: 3, mt: 2 }}>
           <Autocomplete
             options={allApprovers.filter(a => !approvalFlows.some(f => f.approverId === a.id))}
             getOptionLabel={(option) => `${option.firstName} ${option.lastName}`}
@@ -1251,8 +1366,8 @@ export default function UserApprovalFlowPage() {
           <Button onClick={() => setAddApproverDialogOpen(false)} sx={{ borderRadius: 1 }}>
             ยกเลิก
           </Button>
-          <Button 
-            variant="contained" 
+          <Button
+            variant="contained"
             onClick={handleAddApprover}
             disabled={!selectedApprover}
             sx={{ borderRadius: 1 }}

@@ -23,6 +23,59 @@ export async function GET(request: NextRequest) {
       skip: offset,
     });
 
+    // Extract leaveRequestIds
+    const leaveRequestIds = notifications
+      .map(n => (n.data as any)?.leaveRequestId)
+      .filter((id): id is number => typeof id === 'number');
+
+    // Fetch current status
+    let statusMap = new Map<number, { status: string; waitingFor: string }>();
+
+    if (leaveRequestIds.length > 0) {
+      const leaveRequests = await prisma.leaveRequest.findMany({
+        where: { id: { in: leaveRequestIds } },
+        select: {
+          id: true,
+          status: true,
+          approvals: {
+            where: { status: 'pending' },
+            include: { approver: { select: { firstName: true, lastName: true } } },
+            orderBy: { level: 'asc' },
+            take: 1,
+          },
+        },
+      });
+
+      leaveRequests.forEach((lr) => {
+        let waitingFor = '';
+        if (lr.status === 'pending' && lr.approvals.length > 0) {
+          const approver = lr.approvals[0].approver;
+          waitingFor = `${approver.firstName} ${approver.lastName}`;
+        }
+        statusMap.set(lr.id, {
+          status: lr.status,
+          waitingFor,
+        });
+      });
+    }
+
+    // Enrich notifications
+    const enrichedNotifications = notifications.map((n) => {
+      const leaveId = (n.data as any)?.leaveRequestId;
+      if (leaveId && statusMap.has(leaveId)) {
+        const info = statusMap.get(leaveId)!;
+        return {
+          ...n,
+          data: {
+            ...(n.data as object),
+            realTimeStatus: info.status,
+            waitingFor: info.waitingFor,
+          },
+        };
+      }
+      return n;
+    });
+
     const total = await prisma.notificationLog.count({
       where: { userId },
     });
@@ -32,7 +85,7 @@ export async function GET(request: NextRequest) {
     });
 
     return NextResponse.json({
-      data: notifications,
+      data: enrichedNotifications,
       total,
       unreadCount,
       limit,
@@ -68,7 +121,7 @@ export async function PATCH(request: NextRequest) {
     } else if (notificationIds && Array.isArray(notificationIds)) {
       // Mark specific notifications as read
       await prisma.notificationLog.updateMany({
-        where: { 
+        where: {
           id: { in: notificationIds },
           userId,
         },

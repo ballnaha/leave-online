@@ -132,10 +132,10 @@ export default function ApprovalDetailPage() {
   const router = useRouter();
   const params = useParams();
   const searchParams = useSearchParams();
-  
+
   const leaveId = params?.id as string;
   const actionParam = searchParams?.get('action') as 'approve' | 'reject' | null;
-  
+
   const [loading, setLoading] = useState(true);
   const [leaveDetail, setLeaveDetail] = useState<LeaveDetail | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -145,7 +145,7 @@ export default function ApprovalDetailPage() {
   const [actionType, setActionType] = useState<'approve' | 'reject'>(actionParam || 'approve');
   const [canApprove, setCanApprove] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState(false);
-  
+
   // Image modal state
   const [imageModalOpen, setImageModalOpen] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string>('');
@@ -173,17 +173,17 @@ export default function ApprovalDetailPage() {
       }
       const data = await response.json();
       setLeaveDetail(data);
-      
+
       // Check if user can approve this leave
       const userId = parseInt(session?.user?.id || '0');
       const userRole = session?.user?.role;
-      
+
       // Admin/HR Manager can approve all, or user is in approval list
       const isPending = ['pending', 'in_progress'].includes(data.status);
       const isInApprovalList = data.approvalHistory?.some(
         (h: any) => h.approver?.id === userId && h.status === 'pending'
       );
-      
+
       setCanApprove(isPending && (userRole === 'admin' || userRole === 'hr_manager' || isInApprovalList));
     } catch (error) {
       console.error('Error fetching leave detail:', error);
@@ -263,10 +263,105 @@ export default function ApprovalDetailPage() {
   if (loading) {
     return (
       <Box sx={{ minHeight: '100vh', bgcolor: '#F8FAFC', pb: 10 }}>
-        <Container maxWidth="sm" sx={{ pt: 3 }}>
-          <Skeleton variant="rectangular" height={60} sx={{ mb: 2, borderRadius: 2 }} />
-          <Skeleton variant="rectangular" height={200} sx={{ mb: 2, borderRadius: 2 }} />
-          <Skeleton variant="rectangular" height={150} sx={{ borderRadius: 2 }} />
+        {/* Header Skeleton */}
+        <Box sx={{ bgcolor: 'white', borderBottom: '1px solid', borderColor: 'grey.200', position: 'sticky', top: 0, zIndex: 100 }}>
+          <Container maxWidth="md">
+            <Box sx={{ display: 'flex', alignItems: 'center', py: 2, gap: 2 }}>
+              <Skeleton variant="circular" width={40} height={40} />
+              <Skeleton variant="text" width={150} height={32} />
+              <Box sx={{ flex: 1 }} />
+              <Skeleton variant="rounded" width={80} height={24} />
+            </Box>
+          </Container>
+        </Box>
+
+        <Container maxWidth="md" sx={{ pt: 3 }}>
+          {/* Action Toggle Skeleton */}
+          <Box sx={{ display: 'flex', gap: 1, mb: 3 }}>
+            <Skeleton variant="rounded" height={52} sx={{ flex: 1, borderRadius: 1 }} />
+            <Skeleton variant="rounded" height={52} sx={{ flex: 1, borderRadius: 1 }} />
+          </Box>
+
+          {/* Confirmation Header Skeleton */}
+          <Box sx={{ textAlign: 'center', mb: 3 }}>
+            <Skeleton variant="circular" width={70} height={70} sx={{ mx: 'auto', mb: 2 }} />
+            <Skeleton variant="text" width={180} height={28} sx={{ mx: 'auto' }} />
+            <Skeleton variant="text" width={280} height={20} sx={{ mx: 'auto', mt: 0.5 }} />
+          </Box>
+
+          {/* Employee Info Card Skeleton */}
+          <Box sx={{ mb: 2, p: 2.5, bgcolor: 'white', borderRadius: 1, boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
+            {/* User Info */}
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+              <Skeleton variant="circular" width={50} height={50} />
+              <Box sx={{ flex: 1 }}>
+                <Skeleton variant="text" width={150} height={24} />
+                <Skeleton variant="text" width={200} height={18} />
+              </Box>
+            </Box>
+
+            <Skeleton variant="rectangular" height={1} sx={{ my: 2 }} />
+
+            {/* Leave Type */}
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
+              <Skeleton variant="rounded" width={40} height={40} />
+              <Box>
+                <Skeleton variant="text" width={80} height={16} />
+                <Skeleton variant="text" width={100} height={20} />
+              </Box>
+            </Box>
+
+            {/* Date Range */}
+            <Box sx={{ bgcolor: '#F8FAFC', p: 2, borderRadius: 1.5, mb: 2 }}>
+              <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
+                <Box>
+                  <Skeleton variant="text" width={60} height={14} />
+                  <Skeleton variant="text" width={120} height={20} />
+                </Box>
+                <Box>
+                  <Skeleton variant="text" width={60} height={14} />
+                  <Skeleton variant="text" width={120} height={20} />
+                </Box>
+              </Box>
+              <Skeleton variant="rectangular" height={1} sx={{ my: 1.5 }} />
+              <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                <Skeleton variant="text" width={80} height={18} />
+                <Skeleton variant="text" width={60} height={22} />
+              </Box>
+            </Box>
+
+            {/* Reason */}
+            <Skeleton variant="text" width={100} height={16} sx={{ mb: 0.5 }} />
+            <Skeleton variant="rounded" height={60} sx={{ borderRadius: 1 }} />
+          </Box>
+
+          {/* Approval History Skeleton */}
+          <Box sx={{ mb: 2, p: 2.5, bgcolor: 'white', borderRadius: 1, boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
+            <Skeleton variant="text" width={150} height={24} sx={{ mb: 2 }} />
+            <Box sx={{ bgcolor: '#F8FAFC', borderRadius: 1.5, p: 2 }}>
+              {[1, 2].map((i) => (
+                <Box key={i} sx={{ display: 'flex', gap: 2, mb: i === 1 ? 2 : 0 }}>
+                  <Skeleton variant="circular" width={22} height={22} />
+                  <Box sx={{ flex: 1 }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                      <Skeleton variant="text" width={120} height={20} />
+                      <Skeleton variant="rounded" width={60} height={20} />
+                    </Box>
+                    <Skeleton variant="text" width={80} height={14} />
+                  </Box>
+                </Box>
+              ))}
+            </Box>
+          </Box>
+
+          {/* Action Card Skeleton */}
+          <Box sx={{ p: 2.5, bgcolor: 'white', borderRadius: 1, boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
+            <Skeleton variant="rounded" height={80} sx={{ mb: 2, borderRadius: 1.5 }} />
+            <Box sx={{ display: 'flex', gap: 1.5 }}>
+              <Skeleton variant="rounded" height={48} sx={{ flex: 1, borderRadius: 1.5 }} />
+              <Skeleton variant="rounded" height={48} sx={{ flex: 1, borderRadius: 1.5 }} />
+            </Box>
+          </Box>
         </Container>
       </Box>
     );
@@ -276,12 +371,12 @@ export default function ApprovalDetailPage() {
     return (
       <Box sx={{ minHeight: '100vh', bgcolor: '#F8FAFC', pb: 10 }}>
         <Container maxWidth="sm" sx={{ pt: 3 }}>
-          <Alert severity="error" sx={{ borderRadius: 2 }}>
+          <Alert severity="error" sx={{ borderRadius: 1 }}>
             ไม่พบข้อมูลใบลา
           </Alert>
           <Button
             variant="outlined"
-            startIcon={<ArrowLeft size={20} />}
+            startIcon={<ArrowLeft size={20} color={PRIMARY_COLOR} />}
             onClick={() => router.push('/approval')}
             sx={{ mt: 2 }}
           >
@@ -302,11 +397,11 @@ export default function ApprovalDetailPage() {
     return (
       <Box sx={{ minHeight: '100vh', bgcolor: '#F8FAFC', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <Container maxWidth="sm">
-          <Paper sx={{ p: 4, textAlign: 'center', borderRadius: 2 }}>
-            <Box sx={{ 
-              width: 80, 
-              height: 80, 
-              borderRadius: '50%', 
+          <Paper sx={{ p: 4, textAlign: 'center', borderRadius: 1 }}>
+            <Box sx={{
+              width: 80,
+              height: 80,
+              borderRadius: '50%',
               bgcolor: actionType === 'approve' ? '#E8F5E9' : '#FFEBEE',
               display: 'flex',
               alignItems: 'center',
@@ -314,8 +409,8 @@ export default function ApprovalDetailPage() {
               mx: 'auto',
               mb: 3
             }}>
-              {actionType === 'approve' 
-                ? <TickCircle size={50} variant="Bold" color="#4CAF50" /> 
+              {actionType === 'approve'
+                ? <TickCircle size={50} variant="Bold" color="#4CAF50" />
                 : <CloseCircle size={50} variant="Bold" color="#F44336" />}
             </Box>
             <Typography variant="h5" fontWeight={700} gutterBottom>
@@ -333,15 +428,15 @@ export default function ApprovalDetailPage() {
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: '#F8FAFC', pb: 10 }}>
       {/* Header */}
-      <Box sx={{ 
-        bgcolor: 'white', 
+      <Box sx={{
+        bgcolor: 'white',
         borderBottom: '1px solid',
         borderColor: 'grey.200',
         position: 'sticky',
         top: 0,
         zIndex: 100,
       }}>
-        <Container maxWidth="sm">
+        <Container maxWidth="md">
           <Box sx={{ display: 'flex', alignItems: 'center', py: 2, gap: 2 }}>
             <IconButton onClick={() => router.push('/approval')} sx={{ ml: -1 }}>
               <ArrowLeft size={24} color="#334155" />
@@ -349,10 +444,10 @@ export default function ApprovalDetailPage() {
             <Typography variant="h6" fontWeight={700} sx={{ flex: 1 }}>
               {canApprove ? (actionType === 'approve' ? 'อนุมัติใบลา' : 'ปฏิเสธใบลา') : 'รายละเอียดใบลา'}
             </Typography>
-            <Chip 
+            <Chip
               label={statusInfo.label}
               size="small"
-              sx={{ 
+              sx={{
                 bgcolor: statusInfo.bgcolor,
                 color: statusInfo.color,
                 fontWeight: 600,
@@ -363,58 +458,103 @@ export default function ApprovalDetailPage() {
         </Container>
       </Box>
 
-      <Container maxWidth="sm" sx={{ pt: 3 }}>
+      <Container maxWidth="md" sx={{ pt: 3 }}>
         {/* Action Type Toggle (only when can approve) */}
         {canApprove && (
-          <Box sx={{ display: 'flex', gap: 1, mb: 3 }}>
-            <Button
-              variant={actionType === 'approve' ? 'contained' : 'outlined'}
-              onClick={() => setActionType('approve')}
-              sx={{ 
-                flex: 1,
-                py: 1.5,
-                borderRadius: 2,
-                bgcolor: actionType === 'approve' ? '#4CAF50' : 'transparent',
-                borderColor: actionType === 'approve' ? '#4CAF50' : 'grey.300',
-                color: actionType === 'approve' ? 'white' : 'text.secondary',
-                '&:hover': {
-                  bgcolor: actionType === 'approve' ? '#43A047' : 'grey.50',
-                  borderColor: actionType === 'approve' ? '#43A047' : 'grey.400',
-                }
+          <Box sx={{ mb: 3 }}>
+            <Box
+              sx={{
+                bgcolor: '#F1F5F9',
+                p: 0.5,
+                borderRadius: 3,
+                display: 'flex',
+                position: 'relative',
+                isolation: 'isolate'
               }}
-              startIcon={<TickCircle size={20} variant={actionType === 'approve' ? 'Bold' : 'Linear'} />}
             >
-              อนุมัติ
-            </Button>
-            <Button
-              variant={actionType === 'reject' ? 'contained' : 'outlined'}
-              onClick={() => setActionType('reject')}
-              sx={{ 
-                flex: 1,
-                py: 1.5,
-                borderRadius: 2,
-                bgcolor: actionType === 'reject' ? '#F44336' : 'transparent',
-                borderColor: actionType === 'reject' ? '#F44336' : 'grey.300',
-                color: actionType === 'reject' ? 'white' : 'text.secondary',
-                '&:hover': {
-                  bgcolor: actionType === 'reject' ? '#D32F2F' : 'grey.50',
-                  borderColor: actionType === 'reject' ? '#D32F2F' : 'grey.400',
-                }
-              }}
-              startIcon={<CloseCircle size={20} variant={actionType === 'reject' ? 'Bold' : 'Linear'} />}
-            >
-              ปฏิเสธ
-            </Button>
+              {/* Sliding Background */}
+              <Box
+                sx={{
+                  position: 'absolute',
+                  top: 4,
+                  bottom: 4,
+                  left: 4,
+                  width: 'calc(50% - 4px)',
+                  bgcolor: 'white',
+                  borderRadius: 2.5,
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.06)',
+                  transition: 'transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)',
+                  transform: actionType === 'approve' ? 'translateX(0)' : 'translateX(100%)',
+                  zIndex: 0
+                }}
+              />
+
+              <Box
+                onClick={() => setActionType('approve')}
+                sx={{
+                  flex: 1,
+                  py: 1.25,
+                  borderRadius: 2.5,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 1,
+                  position: 'relative',
+                  zIndex: 1,
+                  transition: 'color 0.2s',
+                  color: actionType === 'approve' ? '#2E7D32' : '#64748B',
+                }}
+              >
+                <TickCircle
+                  size={20}
+                  variant={actionType === 'approve' ? 'Bold' : 'Linear'}
+                  color={actionType === 'approve' ? '#2E7D32' : '#64748B'}
+                  style={{ transition: 'all 0.2s' }}
+                />
+                <Typography fontWeight={actionType === 'approve' ? 700 : 500} fontSize="0.95rem" sx={{ transition: 'font-weight 0.2s' }}>
+                  อนุมัติ
+                </Typography>
+              </Box>
+
+              <Box
+                onClick={() => setActionType('reject')}
+                sx={{
+                  flex: 1,
+                  py: 1.25,
+                  borderRadius: 2.5,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 1,
+                  position: 'relative',
+                  zIndex: 1,
+                  transition: 'color 0.2s',
+                  color: actionType === 'reject' ? '#D32F2F' : '#64748B',
+                }}
+              >
+                <CloseCircle
+                  size={20}
+                  variant={actionType === 'reject' ? 'Bold' : 'Linear'}
+                  color={actionType === 'reject' ? '#D32F2F' : '#64748B'}
+                  style={{ transition: 'all 0.2s' }}
+                />
+                <Typography fontWeight={actionType === 'reject' ? 700 : 500} fontSize="0.95rem" sx={{ transition: 'font-weight 0.2s' }}>
+                  ปฏิเสธ
+                </Typography>
+              </Box>
+            </Box>
           </Box>
         )}
 
         {/* Confirmation Header */}
         {canApprove && (
           <Box sx={{ textAlign: 'center', mb: 3 }}>
-            <Box sx={{ 
-              width: 70, 
-              height: 70, 
-              borderRadius: '50%', 
+            <Box sx={{
+              width: 70,
+              height: 70,
+              borderRadius: '50%',
               bgcolor: actionType === 'approve' ? '#E8F5E9' : '#FFEBEE',
               display: 'flex',
               alignItems: 'center',
@@ -422,31 +562,31 @@ export default function ApprovalDetailPage() {
               mx: 'auto',
               mb: 2
             }}>
-              {actionType === 'approve' 
-                ? <TickCircle size={45} variant="Bold" color="#4CAF50" /> 
+              {actionType === 'approve'
+                ? <TickCircle size={45} variant="Bold" color="#4CAF50" />
                 : <CloseCircle size={45} variant="Bold" color="#F44336" />}
             </Box>
             <Typography variant="h6" fontWeight={700}>
               {actionType === 'approve' ? 'ยืนยันการอนุมัติ' : 'ยืนยันการปฏิเสธ'}
             </Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-              {actionType === 'approve' 
-                ? 'คุณต้องการอนุมัติคำขอลาของพนักงานใช่หรือไม่?' 
+              {actionType === 'approve'
+                ? 'คุณต้องการอนุมัติคำขอลาของพนักงานใช่หรือไม่?'
                 : 'คุณต้องการปฏิเสธคำขอลาของพนักงานใช่หรือไม่?'}
             </Typography>
           </Box>
         )}
 
         {/* Employee Info Card */}
-        <Card sx={{ mb: 2, borderRadius: 2, boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
+        <Card sx={{ mb: 2, borderRadius: 1, boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
           <CardContent sx={{ p: 2.5 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
-              <Avatar 
-                src={leaveDetail.user.avatar} 
-                sx={{ 
-                  width: 50, 
+              <Avatar
+                src={leaveDetail.user.avatar}
+                sx={{
+                  width: 50,
                   height: 50,
-                  bgcolor: PRIMARY_COLOR 
+                  bgcolor: PRIMARY_COLOR
                 }}
               >
                 {leaveDetail.user.firstName?.[0]}
@@ -460,15 +600,15 @@ export default function ApprovalDetailPage() {
                 </Typography>
               </Box>
             </Box>
-            
+
             <Divider sx={{ my: 2 }} />
-            
+
             {/* Leave Details */}
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
-              <Box sx={{ 
-                width: 40, 
-                height: 40, 
-                borderRadius: 1.5, 
+              <Box sx={{
+                width: 40,
+                height: 40,
+                borderRadius: 1,
                 bgcolor: leaveConfig.lightColor,
                 display: 'flex',
                 alignItems: 'center',
@@ -482,7 +622,7 @@ export default function ApprovalDetailPage() {
               </Box>
             </Box>
 
-            <Box sx={{ bgcolor: '#F8FAFC', p: 2, borderRadius: 1.5, mb: 2 }}>
+            <Box sx={{ bgcolor: '#F8FAFC', p: 2, borderRadius: 1, mb: 2 }}>
               <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
                 <Box>
                   <Typography variant="caption" color="text.secondary">วันที่เริ่ม</Typography>
@@ -523,7 +663,7 @@ export default function ApprovalDetailPage() {
             {/* Reason */}
             <Box sx={{ mb: 2 }}>
               <Typography variant="caption" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.5 }}>
-                <DocumentText size={14} /> เหตุผลการลา
+                <DocumentText size={14} color="#64748B" /> เหตุผลการลา
               </Typography>
               <Paper elevation={0} sx={{ p: 1.5, bgcolor: '#F8FAFC', borderRadius: 1 }}>
                 <Typography variant="body2">{leaveDetail.reason || '-'}</Typography>
@@ -534,7 +674,7 @@ export default function ApprovalDetailPage() {
             {leaveDetail.status === 'cancelled' && leaveDetail.cancelReason && (
               <Box sx={{ mb: 2 }}>
                 <Typography variant="caption" color="error" sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.5 }}>
-                  <Forbidden2 size={14} /> เหตุผลที่ยกเลิก
+                  <Forbidden2 size={14} color="#D32F2F" /> เหตุผลที่ยกเลิก
                 </Typography>
                 <Paper elevation={0} sx={{ p: 1.5, bgcolor: '#FFEBEE', borderRadius: 1 }}>
                   <Typography variant="body2" color="error.dark">{leaveDetail.cancelReason}</Typography>
@@ -546,39 +686,39 @@ export default function ApprovalDetailPage() {
             {leaveDetail.attachments && leaveDetail.attachments.length > 0 && (
               <Box>
                 <Typography variant="caption" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 1 }}>
-                  <Paperclip2 size={14} /> ไฟล์แนบ ({leaveDetail.attachments.length})
+                  <Paperclip2 size={14} color="#64748B" /> ไฟล์แนบ ({leaveDetail.attachments.length})
                 </Typography>
                 <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
                   {leaveDetail.attachments.map((file) => (
-                    <Box 
+                    <Box
                       key={file.id}
                       onClick={(e) => handleFileClick(file, e, leaveDetail.attachments)}
-                      sx={{ 
-                        display: 'flex', 
-                        alignItems: 'center', 
-                        gap: 1, 
-                        p: 1, 
-                        bgcolor: '#F8FAFC', 
+                      sx={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 1,
+                        p: 1,
+                        bgcolor: '#F8FAFC',
                         borderRadius: 1,
                         border: '1px solid',
                         borderColor: 'grey.200',
                         cursor: 'pointer',
                         transition: 'all 0.2s',
-                        '&:hover': { 
+                        '&:hover': {
                           borderColor: PRIMARY_COLOR,
                         }
                       }}
                     >
                       {isImageFile(file.fileName) ? (
-                        <Box 
-                          component="img" 
-                          src={file.filePath} 
-                          sx={{ 
-                            width: 36, 
-                            height: 36, 
-                            borderRadius: 0.5, 
-                            objectFit: 'cover' 
-                          }} 
+                        <Box
+                          component="img"
+                          src={file.filePath}
+                          sx={{
+                            width: 36,
+                            height: 36,
+                            borderRadius: 0.5,
+                            objectFit: 'cover'
+                          }}
                         />
                       ) : (
                         <Box sx={{ width: 36, height: 36, borderRadius: 0.5, bgcolor: '#E2E8F0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -598,24 +738,24 @@ export default function ApprovalDetailPage() {
 
         {/* Approval History */}
         {leaveDetail.approvalHistory && leaveDetail.approvalHistory.length > 0 && (
-          <Card sx={{ mb: 2, borderRadius: 2, boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
+          <Card sx={{ mb: 2, borderRadius: 1, boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
             <CardContent sx={{ p: 2.5 }}>
               <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
                 <Clock size={18} color={PRIMARY_COLOR} variant="Bold" /> ประวัติการอนุมัติ
               </Typography>
-              
-              <Box sx={{ bgcolor: '#F8FAFC', borderRadius: 1.5, p: 2 }}>
+
+              <Box sx={{ bgcolor: '#F8FAFC', borderRadius: 1, p: 2 }}>
                 {leaveDetail.approvalHistory.map((hist, idx) => (
                   <Box key={idx} sx={{ position: 'relative', pb: idx === leaveDetail.approvalHistory.length - 1 ? 0 : 2 }}>
                     {idx !== leaveDetail.approvalHistory.length - 1 && (
                       <Box sx={{ position: 'absolute', left: 10, top: 24, bottom: 0, width: 2, bgcolor: '#E2E8F0' }} />
                     )}
-                    
+
                     <Box sx={{ display: 'flex', gap: 2 }}>
-                      <Box sx={{ 
-                        width: 22, 
-                        height: 22, 
-                        borderRadius: '50%', 
+                      <Box sx={{
+                        width: 22,
+                        height: 22,
+                        borderRadius: '50%',
                         bgcolor: statusConfig[hist.status]?.bgcolor || '#F1F5F9',
                         display: 'flex',
                         alignItems: 'center',
@@ -628,18 +768,18 @@ export default function ApprovalDetailPage() {
                         {hist.status === 'cancelled' && <Forbidden2 size={14} color={statusConfig.cancelled.color} variant="Bold" />}
                         {hist.status === 'skipped' && <Clock size={14} color="#9e9e9e" variant="Bold" />}
                       </Box>
-                      
+
                       <Box sx={{ flex: 1 }}>
                         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
                           <Typography variant="body2" fontWeight={600}>
                             {hist.approver.firstName} {hist.approver.lastName}
                           </Typography>
-                          <Chip 
+                          <Chip
                             label={statusConfig[hist.status]?.label || hist.status}
                             size="small"
-                            sx={{ 
-                              height: 20, 
-                              fontSize: '0.65rem', 
+                            sx={{
+                              height: 20,
+                              fontSize: '0.65rem',
                               bgcolor: statusConfig[hist.status]?.bgcolor,
                               color: statusConfig[hist.status]?.color,
                               fontWeight: 600
@@ -649,7 +789,7 @@ export default function ApprovalDetailPage() {
                         <Typography variant="caption" color="text.secondary">
                           {hist.approver.position || 'ผู้อนุมัติ'}
                         </Typography>
-                        
+
                         {hist.comment && (
                           <Paper elevation={0} sx={{ mt: 1, p: 1.5, bgcolor: 'white', borderRadius: 1 }}>
                             <Typography variant="caption" color="text.secondary" fontStyle="italic">
@@ -668,7 +808,7 @@ export default function ApprovalDetailPage() {
 
         {/* Comment Input & Action Buttons */}
         {canApprove && (
-          <Card sx={{ borderRadius: 2, boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
+          <Card sx={{ borderRadius: 1, boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
             <CardContent sx={{ p: 2.5 }}>
               {error && (
                 <Alert severity="error" sx={{ mb: 2, borderRadius: 1 }}>
@@ -688,18 +828,18 @@ export default function ApprovalDetailPage() {
                 sx={{
                   mb: 2,
                   '& .MuiOutlinedInput-root': {
-                    borderRadius: 1.5,
+                    borderRadius: 1,
                   }
                 }}
               />
-              
+
               <Box sx={{ display: 'flex', gap: 1.5 }}>
-                <Button 
+                <Button
                   variant="outlined"
-                  onClick={() => router.push('/approval')} 
+                  onClick={() => router.push('/approval')}
                   disabled={submitting}
                   size="large"
-                  sx={{ flex: 1, borderRadius: 1.5, py: 1.25, borderColor: 'grey.300', color: 'text.primary' }}
+                  sx={{ flex: 1, borderRadius: 1, py: 1.25, borderColor: 'grey.300', color: 'text.primary' }}
                 >
                   ยกเลิก
                 </Button>
@@ -708,9 +848,9 @@ export default function ApprovalDetailPage() {
                   onClick={handleSubmitAction}
                   disabled={submitting}
                   size="large"
-                  sx={{ 
+                  sx={{
                     flex: 1,
-                    borderRadius: 1.5,
+                    borderRadius: 1,
                     py: 1.25,
                     bgcolor: actionType === 'approve' ? '#4CAF50' : '#F44336',
                     boxShadow: actionType === 'approve' ? '0 4px 12px rgba(76, 175, 80, 0.3)' : '0 4px 12px rgba(244, 67, 54, 0.3)',
@@ -731,9 +871,9 @@ export default function ApprovalDetailPage() {
           <Button
             variant="outlined"
             fullWidth
-            startIcon={<ArrowLeft size={20} />}
+            startIcon={<ArrowLeft size={20} color={PRIMARY_COLOR} />}
             onClick={() => router.push('/approval')}
-            sx={{ borderRadius: 1.5, py: 1.25 }}
+            sx={{ borderRadius: 1, py: 1.25 }}
           >
             กลับหน้ารายการ
           </Button>
@@ -747,8 +887,8 @@ export default function ApprovalDetailPage() {
         maxWidth="lg"
         fullWidth
         PaperProps={{
-          sx: { 
-            bgcolor: 'rgba(0,0,0,0.95)', 
+          sx: {
+            bgcolor: 'rgba(0,0,0,0.95)',
             borderRadius: { xs: 0, sm: 2 },
             maxHeight: '100vh',
             m: { xs: 0, sm: 2 },
@@ -757,22 +897,22 @@ export default function ApprovalDetailPage() {
       >
         <IconButton
           onClick={() => setImageModalOpen(false)}
-          sx={{ 
-            position: 'absolute', 
-            top: 8, 
-            right: 8, 
+          sx={{
+            position: 'absolute',
+            top: 8,
+            right: 8,
             zIndex: 10,
             bgcolor: 'rgba(255,255,255,0.1)',
             color: 'white',
             '&:hover': { bgcolor: 'rgba(255,255,255,0.2)' }
           }}
         >
-          <CloseCircle size={28} />
+          <CloseCircle size={28} color="white" />
         </IconButton>
-        
-        <Box sx={{ 
-          display: 'flex', 
-          alignItems: 'center', 
+
+        <Box sx={{
+          display: 'flex',
+          alignItems: 'center',
           justifyContent: 'center',
           minHeight: { xs: '100vh', sm: '80vh' },
           p: 2,
@@ -788,10 +928,10 @@ export default function ApprovalDetailPage() {
             >
               {currentAttachments.map((file, idx) => (
                 <SwiperSlide key={idx}>
-                  <Box sx={{ 
-                    display: 'flex', 
-                    justifyContent: 'center', 
-                    alignItems: 'center', 
+                  <Box sx={{
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'center',
                     height: '100%',
                     p: 2,
                   }}>

@@ -23,7 +23,7 @@ import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { TimePicker } from '@mui/x-date-pickers/TimePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
-import { 
+import {
     ArrowLeft2,
     Calendar,
     Clock,
@@ -114,6 +114,14 @@ interface UserProfile {
     shift: string | null;
 }
 
+interface HolidayData {
+    id: number;
+    date: string; // YYYY-MM-DD
+    name: string;
+    type: string;
+    companyId: number | null;
+}
+
 interface UploadedAttachmentMeta {
     fileName: string;
     filePath: string;
@@ -152,6 +160,7 @@ export default function LeaveFormPage() {
     const [submitting, setSubmitting] = useState(false);
     const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
     const [leaveType, setLeaveType] = useState<LeaveTypeData | null>(null);
+    const [holidays, setHolidays] = useState<HolidayData[]>([]); // วันหยุดจาก database
     const [shiftType, setShiftType] = useState<'day' | 'night'>('day'); // กะทำงาน: day = กะเช้า, night = กะดึก
     const [worksOnSunday, setWorksOnSunday] = useState<boolean>(false); // ทำงานวันอาทิตย์หรือไม่
     const [backdateWarning, setBackdateWarning] = useState<{
@@ -176,7 +185,7 @@ export default function LeaveFormPage() {
     const [endDateValue, setEndDateValue] = useState<Dayjs | null>(null);
     const [startTimeValue, setStartTimeValue] = useState<Dayjs | null>(dayjs().hour(8).minute(0));
     const [endTimeValue, setEndTimeValue] = useState<Dayjs | null>(dayjs().hour(17).minute(0));
-    
+
     const [processingAttachments, setProcessingAttachments] = useState(false);
     const [errors, setErrors] = useState<Record<string, string>>({});
     const [previewImage, setPreviewImage] = useState<string | null>(null);
@@ -203,19 +212,19 @@ export default function LeaveFormPage() {
     const calculateBackdateDeadline = (leaveEndDate: Dayjs, worksOnSun: boolean): Dayjs => {
         let currentDate = leaveEndDate.clone();
         let workingDaysCounted = 0;
-        
+
         // นับวันทำการ เริ่มจากวันถัดจากวันลา (วันกลับมาทำงาน = วันที่ 1)
         while (workingDaysCounted < MAX_BACKDATE_DAYS) {
             currentDate = currentDate.add(1, 'day');
-            
+
             // ถ้าไม่ทำงานวันอาทิตย์ และวันนี้เป็นวันอาทิตย์ → ข้าม
             if (!worksOnSun && currentDate.day() === 0) {
                 continue;
             }
-            
+
             workingDaysCounted++;
         }
-        
+
         return currentDate;
     };
 
@@ -234,7 +243,7 @@ export default function LeaveFormPage() {
         const today = dayjs().startOf('day');
         const leaveStart = dayjs(leaveStartDate).startOf('day');
         const leaveEnd = leaveEndDate ? dayjs(leaveEndDate).startOf('day') : leaveStart;
-        
+
         // ถ้าลาล่วงหน้า (วันสิ้นสุดลา >= วันนี้) ไม่ต้อง warning
         if (leaveEnd.isSame(today, 'day') || leaveEnd.isAfter(today)) {
             setBackdateWarning(null);
@@ -259,13 +268,19 @@ export default function LeaveFormPage() {
         });
     };
 
+    // ฟังก์ชันตรวจสอบว่าวันที่เป็นวันหยุดหรือไม่
+    const isHoliday = (date: Dayjs, holidayList: HolidayData[]): boolean => {
+        const dateStr = date.format('YYYY-MM-DD');
+        return holidayList.some(h => h.date === dateStr);
+    };
+
     // ฟังก์ชันเปลี่ยนทำงานวันอาทิตย์
     const handleWorksOnSundayChange = (newValue: boolean) => {
         setWorksOnSunday(newValue);
-        
+
         // คำนวณจำนวนวันลาใหม่
         if (formData.startDate && formData.endDate) {
-            recalculateTotalDays(formData.startDate, formData.startTime, formData.endDate, formData.endTime, newValue);
+            recalculateTotalDays(formData.startDate, formData.startTime, formData.endDate, formData.endTime, newValue, holidays);
         }
 
         // ตรวจสอบ backdate warning ใหม่ (ใช้ endDate ถ้ามี ไม่งั้นใช้ startDate)
@@ -277,7 +292,7 @@ export default function LeaveFormPage() {
     // ฟังก์ชันเปลี่ยนกะทำงาน
     const handleShiftChange = (newShift: 'day' | 'night') => {
         setShiftType(newShift);
-        
+
         if (newShift === 'day') {
             // กะเช้า: 08:00 - 17:00
             setStartTimeValue(dayjs().hour(8).minute(0));
@@ -296,7 +311,7 @@ export default function LeaveFormPage() {
         if (formData.startDate && formData.endDate) {
             const newStartTime = newShift === 'day' ? '08:00' : '20:00';
             const newEndTime = newShift === 'day' ? '17:00' : '05:00';
-            recalculateTotalDays(formData.startDate, newStartTime, formData.endDate, newEndTime);
+            recalculateTotalDays(formData.startDate, newStartTime, formData.endDate, newEndTime, worksOnSunday, holidays);
         }
     };
 
@@ -306,13 +321,14 @@ export default function LeaveFormPage() {
         startTime: string,
         endDate: string,
         endTime: string,
-        worksOnSun: boolean = worksOnSunday // ใช้ค่าจาก state ถ้าไม่ได้ส่งมา
+        worksOnSun: boolean = worksOnSunday, // ใช้ค่าจาก state ถ้าไม่ได้ส่งมา
+        holidayList: HolidayData[] = holidays // ใช้ค่าจาก state ถ้าไม่ได้ส่งมา
     ): number => {
         if (!startDate || !endDate || !startTime || !endTime) return 0;
 
         const start = dayjs(startDate);
         const end = dayjs(endDate);
-        
+
         if (end.isBefore(start)) return 0;
 
         // แปลงเวลาเป็นนาที
@@ -326,7 +342,7 @@ export default function LeaveFormPage() {
         const WORK_HALF_DAY_1 = 12 * 60;       // 12:00 (ครึ่งวันเช้า)
         const WORK_HALF_DAY_2 = 13 * 60;       // 13:00 (ครึ่งวันบ่าย)
         const WORK_END_DAY = 17 * 60;          // 17:00
-        
+
         // กะดึก: 20:00 - 05:00 (9 ชม. = 1 วันทำงาน)
         const NIGHT_START = 20 * 60;           // 20:00
         const NIGHT_SHIFT_HOURS = 9;           // ชั่วโมงต่อกะ
@@ -338,7 +354,7 @@ export default function LeaveFormPage() {
         if (isNightShift) {
             // === กะดึก: นับตามกะที่เริ่มในแต่ละคืน ===
             // กะดึกเริ่ม 20:00 ทุกวัน และจบ 05:00 วันถัดไป
-            
+
             let totalDays = 0;
             let currentDate = start.clone();
             const endDateTime = dayjs(`${endDate} ${endTime}`);
@@ -351,12 +367,18 @@ export default function LeaveFormPage() {
                     continue;
                 }
 
+                // ถ้าเป็นวันหยุด → ข้ามไปวันถัดไป
+                if (isHoliday(currentDate, holidayList)) {
+                    currentDate = currentDate.add(1, 'day');
+                    continue;
+                }
+
                 // กะของวันนี้: currentDate 20:00 - currentDate+1 05:00
                 const shiftStart = currentDate.hour(20).minute(0).second(0);
                 const shiftEnd = currentDate.add(1, 'day').hour(5).minute(0).second(0);
-                
+
                 // ถ้าวันแรก ให้ใช้เวลาเริ่มจริง
-                const actualShiftStart = currentDate.isSame(start, 'day') 
+                const actualShiftStart = currentDate.isSame(start, 'day')
                     ? dayjs(`${startDate} ${startTime}`)
                     : shiftStart;
 
@@ -383,7 +405,7 @@ export default function LeaveFormPage() {
 
                 // ไปวันถัดไป
                 currentDate = currentDate.add(1, 'day');
-                
+
                 // ถ้าเวลาสิ้นสุดการลาอยู่ก่อนหรือเท่ากับ 05:00 ของวันนี้ ให้หยุด
                 if (endDateTime.isBefore(shiftEnd) || endDateTime.isSame(shiftEnd)) {
                     break;
@@ -397,7 +419,7 @@ export default function LeaveFormPage() {
         // ถ้าไม่ทำงานวันอาทิตย์ ต้องนับเฉพาะวันที่ไม่ใช่วันอาทิตย์
         const daysDiff = end.diff(start, 'day');
 
-        // นับจำนวนวันอาทิตย์ในช่วง (ถ้าไม่ทำงานวันอาทิตย์)
+        // นับจำนวนวันอาทิตย์และวันหยุดในช่วง (ถ้าไม่ทำงานวันอาทิตย์)
         let sundaysInRange = 0;
         if (!worksOnSun) {
             let currentDate = start.clone();
@@ -413,6 +435,10 @@ export default function LeaveFormPage() {
         if (daysDiff === 0) {
             // ถ้าเป็นวันอาทิตย์และไม่ทำงานวันอาทิตย์ → 0 วัน
             if (!worksOnSun && start.day() === 0) {
+                return 0;
+            }
+            // ถ้าเป็นวันหยุด → 0 วัน
+            if (isHoliday(start, holidayList)) {
                 return 0;
             }
             // ลาเต็มวัน: 08:00 - 17:00
@@ -431,7 +457,7 @@ export default function LeaveFormPage() {
             const workedMinutes = endMinutes - startMinutes;
             const fullDayMinutes = WORK_END_DAY - WORK_START_MORNING; // 540 นาที = 9 ชม.
             const ratio = workedMinutes / fullDayMinutes;
-            
+
             if (ratio <= 0.6) return 0.5;
             return 1;
         }
@@ -444,9 +470,16 @@ export default function LeaveFormPage() {
 
         while (currentDate.isBefore(end) || currentDate.isSame(end, 'day')) {
             const isSunday = currentDate.day() === 0;
-            
+
             // ถ้าไม่ทำงานวันอาทิตย์ และวันนี้เป็นวันอาทิตย์ → ข้าม
             if (!worksOnSun && isSunday) {
+                currentDate = currentDate.add(1, 'day');
+                dayIndex++;
+                continue;
+            }
+
+            // ถ้าเป็นวันหยุด → ข้าม
+            if (isHoliday(currentDate, holidayList)) {
                 currentDate = currentDate.add(1, 'day');
                 dayIndex++;
                 continue;
@@ -491,17 +524,25 @@ export default function LeaveFormPage() {
         if (end.isBefore(start)) {
             return null;
         }
-        // นับจำนวนวันที่ทำงาน (ไม่รวมวันอาทิตย์ถ้าไม่ทำงาน)
+        // นับจำนวนวันที่ทำงาน (ไม่รวมวันอาทิตย์ถ้าไม่ทำงาน และไม่รวมวันหยุด)
         let count = 0;
         let currentDate = start.clone();
         while (currentDate.isBefore(end) || currentDate.isSame(end, 'day')) {
-            if (worksOnSunday || currentDate.day() !== 0) {
-                count++;
+            // ไม่นับวันอาทิตย์ (ถ้าไม่ทำงานวันอาทิตย์)
+            if (!worksOnSunday && currentDate.day() === 0) {
+                currentDate = currentDate.add(1, 'day');
+                continue;
             }
+            // ไม่นับวันหยุด
+            if (isHoliday(currentDate, holidays)) {
+                currentDate = currentDate.add(1, 'day');
+                continue;
+            }
+            count++;
             currentDate = currentDate.add(1, 'day');
         }
         return count;
-    }, [formData.startDate, formData.endDate, worksOnSunday]);
+    }, [formData.startDate, formData.endDate, worksOnSunday, holidays]);
 
     // คำนวณจำนวนวันลาเมื่อมีการเปลี่ยนแปลงวันที่หรือเวลา
     const recalculateTotalDays = (
@@ -509,9 +550,10 @@ export default function LeaveFormPage() {
         startTime: string,
         endDate: string,
         endTime: string,
-        worksOnSun: boolean = worksOnSunday
+        worksOnSun: boolean = worksOnSunday,
+        holidayList: HolidayData[] = holidays
     ) => {
-        const days = calculateLeaveDays(startDate, startTime, endDate, endTime, worksOnSun);
+        const days = calculateLeaveDays(startDate, startTime, endDate, endTime, worksOnSun, holidayList);
         if (days > 0) {
             handleFormChange('totalDays', days.toString());
         }
@@ -542,6 +584,24 @@ export default function LeaveFormPage() {
                     toastr.error('ไม่พบประเภทการลาที่เลือก');
                     router.push('/leave');
                 }
+
+                // ดึงข้อมูลวันหยุดของปีปัจจุบันและปีถัดไป
+                const nextYear = currentYear + 1;
+                const [holidaysCurrentRes, holidaysNextRes] = await Promise.all([
+                    fetch(`/api/holidays?year=${currentYear}`),
+                    fetch(`/api/holidays?year=${nextYear}`),
+                ]);
+
+                const holidaysData: HolidayData[] = [];
+                if (holidaysCurrentRes.ok) {
+                    const currentYearHolidays = await holidaysCurrentRes.json();
+                    holidaysData.push(...currentYearHolidays);
+                }
+                if (holidaysNextRes.ok) {
+                    const nextYearHolidays = await holidaysNextRes.json();
+                    holidaysData.push(...nextYearHolidays);
+                }
+                setHolidays(holidaysData);
             } catch (error) {
                 console.error('Error fetching data:', error);
                 toastr.error('เกิดข้อผิดพลาดในการโหลดข้อมูล');
@@ -559,7 +619,7 @@ export default function LeaveFormPage() {
             ...prev,
             [field]: value,
         }));
-        
+
         // Clear error when field is changed
         if (errors[field]) {
             setErrors(prev => {
@@ -763,6 +823,11 @@ export default function LeaveFormPage() {
             newErrors.attachments = 'กรุณาแนบหลักฐานการลากิจ';
         }
 
+        // ตรวจสอบลาย้อนหลังเกินกำหนด
+        if (backdateWarning?.isOverdue) {
+            newErrors.backdateOverdue = 'ไม่สามารถยื่นใบลาได้ เนื่องจากลาย้อนหลังเกินกำหนด';
+        }
+
         setErrors(newErrors);
         return { isValid: Object.keys(newErrors).length === 0, errors: newErrors };
     };
@@ -873,7 +938,7 @@ export default function LeaveFormPage() {
                         <Box sx={{ display: 'flex', alignItems: 'center', position: 'relative' }}>
                             {/* Back Button */}
                             <Skeleton variant="circular" width={40} height={40} sx={{ position: 'absolute', left: 0 }} />
-                            
+
                             {/* Title & Description */}
                             <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                                 <Skeleton variant="text" width={150} height={32} />
@@ -914,7 +979,7 @@ export default function LeaveFormPage() {
                             <Skeleton variant="rounded" width={28} height={28} sx={{ borderRadius: 1 }} />
                             <Skeleton variant="text" width={140} height={24} />
                         </Box>
-                        
+
                         {/* Date Write */}
                         <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2.5 }}>
                             <Skeleton variant="text" width={100} />
@@ -987,8 +1052,8 @@ export default function LeaveFormPage() {
                 </Container>
 
                 {/* Footer Skeleton */}
-                <Box 
-                    sx={{ 
+                <Box
+                    sx={{
                         position: 'fixed',
                         bottom: 0,
                         left: 0,
@@ -1028,59 +1093,59 @@ export default function LeaveFormPage() {
                 >
                     <Container maxWidth={false} sx={{ maxWidth: 1200 }}>
                         <Box sx={{ display: 'flex', alignItems: 'center', px: 2, py: 2, position: 'relative' }}>
-                        <IconButton 
-                            onClick={() => router.back()} 
-                            sx={{ 
-                                position: 'absolute',
-                                left: 8,
-                                color: '#1E293B',
-                                '&:hover': { bgcolor: 'rgba(0,0,0,0.04)' }
-                            }}
-                        >
-                            <ArrowLeft2 size={22} color="#1E293B" />
-                        </IconButton>
-                        
-                        <Box sx={{ flex: 1, textAlign: 'center' }}>
-                            <Typography variant="h6" sx={{ fontWeight: 'bold', lineHeight: 1.2, color: '#1E293B' }}>
-                                {t(`leave_${leaveType.code}`, leaveType.name)}
-                            </Typography>
-                            {leaveType.description && (
-                                <Typography variant="caption" sx={{ color: '#64748B' }}>
-                                    {leaveType.description}
+                            <IconButton
+                                onClick={() => router.back()}
+                                sx={{
+                                    position: 'absolute',
+                                    left: 8,
+                                    color: '#1E293B',
+                                    '&:hover': { bgcolor: 'rgba(0,0,0,0.04)' }
+                                }}
+                            >
+                                <ArrowLeft2 size={22} color="#1E293B" />
+                            </IconButton>
+
+                            <Box sx={{ flex: 1, textAlign: 'center' }}>
+                                <Typography variant="h6" sx={{ fontWeight: 'bold', lineHeight: 1.2, color: '#1E293B' }}>
+                                    {t(`leave_${leaveType.code}`, leaveType.name)}
                                 </Typography>
-                            )}
-                        </Box>
-                        {leaveType.maxDaysPerYear && (
-                            <Box sx={{ 
-                                position: 'absolute',
-                                right: 16,
-                                display: 'flex',
-                                flexDirection: 'column',
-                                alignItems: 'flex-end',
-                                gap: 0.5
-                            }}>
-                                <Chip 
-                                    size="small"
-                                    label={`${leaveType.maxDaysPerYear} ${t('leave_days_per_year', 'วัน/ปี')}`}
-                                    sx={{ 
-                                        bgcolor: config.lightColor, 
-                                        color: config.color,
-                                        fontWeight: 600,
-                                        fontSize: '0.7rem',
-                                    }}
-                                />
-                                <Chip 
-                                    size="small"
-                                    label={leaveType.isPaid ? t('dashboard_paid', 'ได้ค่าจ้าง') : t('dashboard_unpaid', 'ไม่ได้ค่าจ้าง')}
-                                    sx={{ 
-                                        bgcolor: leaveType.isPaid ? 'rgba(76, 175, 80, 0.15)' : 'rgba(255, 152, 0, 0.15)', 
-                                        color: leaveType.isPaid ? '#4CAF50' : '#FF9800',
-                                        fontWeight: 600,
-                                        fontSize: '0.65rem',
-                                    }}
-                                />
+                                {leaveType.description && (
+                                    <Typography variant="caption" sx={{ color: '#64748B' }}>
+                                        {leaveType.description}
+                                    </Typography>
+                                )}
                             </Box>
-                        )}
+                            {leaveType.maxDaysPerYear && (
+                                <Box sx={{
+                                    position: 'absolute',
+                                    right: 16,
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    alignItems: 'flex-end',
+                                    gap: 0.5
+                                }}>
+                                    <Chip
+                                        size="small"
+                                        label={`${leaveType.maxDaysPerYear} ${t('leave_days_per_year', 'วัน/ปี')}`}
+                                        sx={{
+                                            bgcolor: config.lightColor,
+                                            color: config.color,
+                                            fontWeight: 600,
+                                            fontSize: '0.7rem',
+                                        }}
+                                    />
+                                    <Chip
+                                        size="small"
+                                        label={leaveType.isPaid ? t('dashboard_paid', 'ได้ค่าจ้าง') : t('dashboard_unpaid', 'ไม่ได้ค่าจ้าง')}
+                                        sx={{
+                                            bgcolor: leaveType.isPaid ? 'rgba(76, 175, 80, 0.15)' : 'rgba(255, 152, 0, 0.15)',
+                                            color: leaveType.isPaid ? '#4CAF50' : '#FF9800',
+                                            fontWeight: 600,
+                                            fontSize: '0.65rem',
+                                        }}
+                                    />
+                                </Box>
+                            )}
                         </Box>
                     </Container>
                 </Box>
@@ -1090,20 +1155,20 @@ export default function LeaveFormPage() {
                     <Box sx={{ pt: 2 }}>
                         {/* ข้อมูลผู้ขอลา */}
                         <Box sx={{ mb: 2.5, p: 2, bgcolor: 'grey.50', borderRadius: 1, border: '1px solid', borderColor: 'grey.200' }}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 }}>
-                            <Box sx={{ 
-                                width: 28, height: 28, borderRadius: 1.5, 
-                                bgcolor: config.lightColor, 
-                                display: 'flex', alignItems: 'center', justifyContent: 'center' 
-                            }}>
-                                <User size={15} color={config.color} />
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 }}>
+                                <Box sx={{
+                                    width: 28, height: 28, borderRadius: 1.5,
+                                    bgcolor: config.lightColor,
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center'
+                                }}>
+                                    <User size={15} color={config.color} />
+                                </Box>
+                                <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
+                                    {t('leave_info', 'ข้อมูลผู้ขอลา')}
+                                </Typography>
                             </Box>
-                            <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
-                                {t('leave_info', 'ข้อมูลผู้ขอลา')}
-                            </Typography>
-                        </Box>
-                        
-                        <Box sx={{ display: 'grid', gap: 1.5 }}>
+
+                            <Box sx={{ display: 'grid', gap: 1.5 }}>
                                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                     <Typography variant="body2" color="text.secondary">{t('profile_name', 'ชื่อ-นามสกุล')}</Typography>
                                     <Typography variant="body2" fontWeight={600}>
@@ -1145,10 +1210,10 @@ export default function LeaveFormPage() {
                     {/* รายละเอียดการลา */}
                     <Box sx={{ mb: 3, p: 2, bgcolor: 'grey.50', borderRadius: 1, border: '1px solid', borderColor: 'grey.200' }}>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 }}>
-                            <Box sx={{ 
-                                width: 28, height: 28, borderRadius: 1.5, 
-                                bgcolor: config.lightColor, 
-                                display: 'flex', alignItems: 'center', justifyContent: 'center' 
+                            <Box sx={{
+                                width: 28, height: 28, borderRadius: 1.5,
+                                bgcolor: config.lightColor,
+                                display: 'flex', alignItems: 'center', justifyContent: 'center'
                             }}>
                                 <Calendar size={15} color={config.color} />
                             </Box>
@@ -1158,493 +1223,485 @@ export default function LeaveFormPage() {
                         </Box>
 
                         {/* วันที่เขียนใบลา */}
-                            <Box sx={{ 
-                                display: 'flex', 
-                                justifyContent: 'space-between', 
-                                alignItems: 'center',
-                                mb: 2.5,
-                                pb: 2,
-                                borderBottom: '1px dashed',
-                                borderColor: 'grey.200',
-                            }}>
-                                <Typography variant="body2" color="text.secondary">
-                                    {t('leave_date_write', 'วันที่เขียนใบลา')}
-                                </Typography>
-                                <Typography variant="body2" fontWeight={600} color={config.color}>
-                                    {dayjs().locale(locale).format('DD MMMM')} {locale === 'th' ? dayjs().year() + 543 : dayjs().year()}
-                                </Typography>
-                            </Box>
+                        <Box sx={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            mb: 2.5,
+                            pb: 2,
+                            borderBottom: '1px dashed',
+                            borderColor: 'grey.200',
+                        }}>
+                            <Typography variant="body2" color="text.secondary">
+                                {t('leave_date_write', 'วันที่เขียนใบลา')}
+                            </Typography>
+                            <Typography variant="body2" fontWeight={600} color={config.color}>
+                                {dayjs().locale(locale).format('DD MMMM')} {locale === 'th' ? dayjs().year() + 543 : dayjs().year()}
+                            </Typography>
+                        </Box>
 
-                            {/* เลือกกะทำงาน */}
-                            <Box sx={{ mb: 2.5, pb: 2, borderBottom: '1px dashed', borderColor: 'grey.200'}}>
-                                <FormControl component="fieldset" fullWidth>
-                                    <FormLabel 
-                                        component="legend" 
-                                        sx={{ 
-                                            fontSize: '0.875rem', 
-                                            fontWeight: 600, 
-                                            color: 'text.primary',
-                                            mb: 1,
-                                            
-                                            width: '100%',
-                                            '&.Mui-focused': { color: 'text.primary' }
-                                        }}
-                                    >
-                                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'left', gap: 1 }}>
-                                            <Clock size={16} color={config.color} />
-                                            {t('shift_type', 'กะทำงาน')}
-                                        </Box>
-                                    </FormLabel>
-                                    <RadioGroup
-                                        row
-                                        value={shiftType}
-                                        onChange={(e) => handleShiftChange(e.target.value as 'day' | 'night')}
-                                        sx={{ gap: 2, justifyContent: 'center' }}
-                                    >
-                                        <FormControlLabel
-                                            value="day"
-                                            control={
-                                                <Radio 
-                                                    size="small"
-                                                    sx={{
-                                                        color: config.color,
-                                                        '&.Mui-checked': { color: config.color },
-                                                    }}
-                                                />
-                                            }
-                                            label={
-                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                                    <Sun1 size={14} color='#E65100' variant='Bold' />
-                                                    <Typography variant="body2" sx={{ fontWeight: shiftType === 'day' ? 600 : 400 }}>
-                                                        {t('shift_day', 'กะเช้า')} (08:00 - 17:00)
-                                                    </Typography>
-                                                </Box>
-                                            }
-                                            sx={{
-                                                m: 0,
-                                                px: 1.5,
-                                                py: 0.75,
-                                                borderRadius: 2,
-                                                border: '1px solid',
-                                                borderColor: shiftType === 'day' ? config.color : 'grey.300',
-                                                bgcolor: shiftType === 'day' ? config.lightColor : 'transparent',
-                                                transition: 'all 0.2s',
-                                                '&:hover': { borderColor: config.color, bgcolor: config.lightColor },
-                                            }}
-                                        />
-                                        <FormControlLabel
-                                            value="night"
-                                            control={
-                                                <Radio 
-                                                    size="small"
-                                                    sx={{
-                                                        color: config.color,
-                                                        '&.Mui-checked': { color: config.color },
-                                                    }}
-                                                />
-                                            }
-                                            label={
-                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                                    <Moon size={14} variant='Bold' color="black" />
-                                                    <Typography variant="body2" sx={{ fontWeight: shiftType === 'night' ? 600 : 400 }}>
-                                                        {t('shift_night', 'กะดึก')} (20:00 - 05:00)
-                                                    </Typography>
-                                                </Box>
-                                            }
-                                            sx={{
-                                                m: 0,
-                                                px: 1.5,
-                                                py: 0.75,
-                                                borderRadius: 2,
-                                                border: '1px solid',
-                                                borderColor: shiftType === 'night' ? config.color : 'grey.300',
-                                                bgcolor: shiftType === 'night' ? config.lightColor : 'transparent',
-                                                transition: 'all 0.2s',
-                                                '&:hover': { borderColor: config.color, bgcolor: config.lightColor },
-                                            }}
-                                        />
-                                    </RadioGroup>
-                                </FormControl>
-                            </Box>
-
-                            {/* เลือกทำงานวันอาทิตย์ */}
-                            <Box sx={{ mb: 2.5, pb: 2, borderBottom: '1px dashed', borderColor: 'grey.200'}}>
-                                <FormControl component="fieldset" fullWidth>
-                                    <FormLabel 
-                                        component="legend" 
-                                        sx={{ 
-                                            fontSize: '0.875rem', 
-                                            fontWeight: 600, 
-                                            color: 'text.primary',
-                                            mb: 1,
-                                            width: '100%',
-                                            '&.Mui-focused': { color: 'text.primary' }
-                                        }}
-                                    >
-                                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'left', gap: 1 }}>
-                                            <Calendar size={16} color={config.color} />
-                                            {t('works_on_sunday', 'ทำงานวันอาทิตย์')}
-                                        </Box>
-                                    </FormLabel>
-                                    <RadioGroup
-                                        row
-                                        value={worksOnSunday ? 'yes' : 'no'}
-                                        onChange={(e) => handleWorksOnSundayChange(e.target.value === 'yes')}
-                                        sx={{ gap: 2, justifyContent: 'center' }}
-                                    >
-                                        <FormControlLabel
-                                            value="no"
-                                            control={
-                                                <Radio 
-                                                    size="small"
-                                                    sx={{
-                                                        color: config.color,
-                                                        '&.Mui-checked': { color: config.color },
-                                                    }}
-                                                />
-                                            }
-                                            label={
-                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                                    <CalendarRemove size={14} color='#ef5350' variant='Bold' />
-                                                    <Typography variant="body2" sx={{ fontWeight: !worksOnSunday ? 600 : 400 }}>
-                                                        {t('works_sunday_no', 'หยุดวันอาทิตย์')}
-                                                    </Typography>
-                                                </Box>
-                                            }
-                                            sx={{
-                                                m: 0,
-                                                px: 1.5,
-                                                py: 0.75,
-                                                borderRadius: 2,
-                                                border: '1px solid',
-                                                borderColor: !worksOnSunday ? config.color : 'grey.300',
-                                                bgcolor: !worksOnSunday ? config.lightColor : 'transparent',
-                                                transition: 'all 0.2s',
-                                                '&:hover': { borderColor: config.color, bgcolor: config.lightColor },
-                                            }}
-                                        />
-                                        <FormControlLabel
-                                            value="yes"
-                                            control={
-                                                <Radio 
-                                                    size="small"
-                                                    sx={{
-                                                        color: config.color,
-                                                        '&.Mui-checked': { color: config.color },
-                                                    }}
-                                                />
-                                            }
-                                            label={
-                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                                    <TickCircle size={14} color='#4CAF50' variant='Bold' />
-                                                    <Typography variant="body2" sx={{ fontWeight: worksOnSunday ? 600 : 400 }}>
-                                                        {t('works_sunday_yes', 'ทำงานวันอาทิตย์')}
-                                                    </Typography>
-                                                </Box>
-                                            }
-                                            sx={{
-                                                m: 0,
-                                                px: 1.5,
-                                                py: 0.75,
-                                                borderRadius: 2,
-                                                border: '1px solid',
-                                                borderColor: worksOnSunday ? config.color : 'grey.300',
-                                                bgcolor: worksOnSunday ? config.lightColor : 'transparent',
-                                                transition: 'all 0.2s',
-                                                '&:hover': { borderColor: config.color, bgcolor: config.lightColor },
-                                            }}
-                                        />
-                                        
-                                    </RadioGroup>
-                                    {!worksOnSunday && (
-                                        <Typography 
-                                            variant="caption" 
-                                            sx={{ 
-                                                display: 'block', 
-                                                textAlign: 'center', 
-                                                mt: 1.5, 
-                                                color: 'text.secondary',
-                                                bgcolor: 'rgba(25, 118, 210, 0.08)',
-                                                py: 0.75,
-                                                px: 1.5,
-                                                borderRadius: 1,
-                                            }}
-                                        >
-                                            <InfoCircle size={12} style={{ marginRight: 4, verticalAlign: 'middle' }} />
-                                            {t('sunday_not_counted', 'วันอาทิตย์จะไม่ถูกนับเป็นวันลา')}
-                                        </Typography>
-                                    )}
-                                </FormControl>
-                            </Box>
-
-                            {/* ส่วนเริ่มลา */}
-                            <Box sx={{ mb: 3 }}>
-                                <Typography variant="subtitle2" sx={{ mb: 1.5, color: 'text.secondary', display: 'flex', alignItems: 'center', gap: 1 }}>
-                                    <Box component="span" sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: '#4caf50', boxShadow: '0 0 0 2px rgba(76, 175, 80, 0.2)' }} />
-                                    {t('leave_start_section', 'เริ่มลา')}
-                                </Typography>
-                                <Box sx={{ pl: 2, borderLeft: '2px solid', borderColor: '#f0f0f0', display: 'flex', flexDirection: 'column', gap: 2 }}>
-                                    <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale={locale}>
-                                        <DatePicker
-                                            label={t('leave_start_date', 'วันที่')}
-                                            value={startDateValue}
-                                            onChange={(newValue) => {
-                                                setStartDateValue(newValue);
-                                                if (newValue && newValue.isValid()) {
-                                                    const newStartDate = newValue.format('YYYY-MM-DD');
-                                                    handleFormChange('startDate', newStartDate);
-                                                    // ตรวจสอบลาย้อนหลัง (เฉพาะเมื่อมี endDate แล้ว)
-                                                    if (formData.endDate) {
-                                                        checkBackdateWarning(newStartDate, worksOnSunday, formData.endDate);
-                                                    }
-                                                    // คำนวณจำนวนวันลาอัตโนมัติตามเวลา
-                                                    if (endDateValue && endDateValue.isValid()) {
-                                                        recalculateTotalDays(
-                                                            newStartDate,
-                                                            formData.startTime,
-                                                            formData.endDate,
-                                                            formData.endTime
-                                                        );
-                                                    }
-                                                } else {
-                                                    handleFormChange('startDate', '');
-                                                    setBackdateWarning(null);
-                                                }
-                                            }}
-                                            format="DD MMMM YYYY"
-                                            slotProps={{
-                                                textField: {
-                                                    size: 'small',
-                                                    fullWidth: true,
-                                                    error: !!errors.startDate,
-                                                    helperText: errors.startDate,
-                                                    sx: {
-                                                        '& .MuiOutlinedInput-root': {
-                                                            '& fieldset': { borderColor: '#e5e7eb' },
-                                                            '&:hover fieldset': { borderColor: config.color },
-                                                        },
-                                                    },
-                                                },
-                                            }}
-                                        />
-                                        <TimePicker
-                                            label={t('leave_start_time', 'เวลา')}
-                                            value={startTimeValue}
-                                            onChange={(newValue) => {
-                                                setStartTimeValue(newValue);
-                                                if (newValue && newValue.isValid()) {
-                                                    const newStartTime = newValue.format('HH:mm');
-                                                    handleFormChange('startTime', newStartTime);
-                                                    // คำนวณจำนวนวันลาอัตโนมัติเมื่อเปลี่ยนเวลา
-                                                    if (formData.startDate && formData.endDate) {
-                                                        recalculateTotalDays(
-                                                            formData.startDate,
-                                                            newStartTime,
-                                                            formData.endDate,
-                                                            formData.endTime
-                                                        );
-                                                    }
-                                                }
-                                            }}
-                                            ampm={false}
-                                            slotProps={{
-                                                textField: {
-                                                    size: 'small',
-                                                    fullWidth: true,
-                                                    sx: {
-                                                        '& .MuiOutlinedInput-root': {
-                                                            '& fieldset': { borderColor: '#e5e7eb' },
-                                                            '&:hover fieldset': { borderColor: config.color },
-                                                        },
-                                                    },
-                                                },
-                                            }}
-                                        />
-                                    </LocalizationProvider>
-                                </Box>
-                            </Box>
-
-                            {/* ส่วนสิ้นสุด */}
-                            <Box sx={{ mb: 1 }}>
-                                <Typography variant="subtitle2" sx={{ mb: 1.5, color: 'text.secondary', display: 'flex', alignItems: 'center', gap: 1 }}>
-                                    <Box component="span" sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: '#ef5350', boxShadow: '0 0 0 2px rgba(239, 83, 80, 0.2)' }} />
-                                    {t('leave_end_section', 'ถึงวันที่')}
-                                </Typography>
-                                <Box sx={{ pl: 2, borderLeft: '2px solid', borderColor: '#f0f0f0', display: 'flex', flexDirection: 'column', gap: 2 }}>
-                                    <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale={locale}>
-                                        <DatePicker
-                                            label={t('leave_end_date', 'วันที่')}
-                                            value={endDateValue}
-                                            onChange={(newValue) => {
-                                                setEndDateValue(newValue);
-                                                if (newValue && newValue.isValid()) {
-                                                    const newEndDate = newValue.format('YYYY-MM-DD');
-                                                    handleFormChange('endDate', newEndDate);
-                                                    // ตรวจสอบลาย้อนหลัง (ใช้ endDate ใหม่)
-                                                    if (formData.startDate) {
-                                                        checkBackdateWarning(formData.startDate, worksOnSunday, newEndDate);
-                                                    }
-                                                    // คำนวณจำนวนวันลาอัตโนมัติตามเวลา
-                                                    if (startDateValue && startDateValue.isValid()) {
-                                                        recalculateTotalDays(
-                                                            formData.startDate,
-                                                            formData.startTime,
-                                                            newEndDate,
-                                                            formData.endTime
-                                                        );
-                                                    }
-                                                } else {
-                                                    handleFormChange('endDate', '');
-                                                    // ถ้าลบ endDate ให้ซ่อน warning
-                                                    setBackdateWarning(null);
-                                                }
-                                            }}
-                                            minDate={startDateValue || undefined}
-                                            format="DD MMMM YYYY"
-                                            slotProps={{
-                                                textField: {
-                                                    size: 'small',
-                                                    fullWidth: true,
-                                                    error: !!errors.endDate,
-                                                    helperText: errors.endDate,
-                                                    sx: {
-                                                        '& .MuiOutlinedInput-root': {
-                                                            '& fieldset': { borderColor: '#e5e7eb' },
-                                                            '&:hover fieldset': { borderColor: config.color },
-                                                        },
-                                                    },
-                                                },
-                                            }}
-                                        />
-                                        <TimePicker
-                                            label={t('leave_end_time', 'เวลา')}
-                                            value={endTimeValue}
-                                            onChange={(newValue) => {
-                                                setEndTimeValue(newValue);
-                                                if (newValue && newValue.isValid()) {
-                                                    const newEndTime = newValue.format('HH:mm');
-                                                    handleFormChange('endTime', newEndTime);
-                                                    // คำนวณจำนวนวันลาอัตโนมัติเมื่อเปลี่ยนเวลา
-                                                    if (formData.startDate && formData.endDate) {
-                                                        recalculateTotalDays(
-                                                            formData.startDate,
-                                                            formData.startTime,
-                                                            formData.endDate,
-                                                            newEndTime
-                                                        );
-                                                    }
-                                                }
-                                            }}
-                                            ampm={false}
-                                            slotProps={{
-                                                textField: {
-                                                    size: 'small',
-                                                    fullWidth: true,
-                                                    sx: {
-                                                        '& .MuiOutlinedInput-root': {
-                                                            '& fieldset': { borderColor: '#e5e7eb' },
-                                                            '&:hover fieldset': { borderColor: config.color },
-                                                        },
-                                                    },
-                                                },
-                                            }}
-                                        />
-                                    </LocalizationProvider>
-                                </Box>
-                            </Box>
-
-                            {/* Warning สำหรับลาย้อนหลัง - Minimal Design */}
-                            {backdateWarning?.show && formData.endDate && (
-                                <Box
+                        {/* เลือกกะทำงาน */}
+                        <Box sx={{ mb: 2.5, pb: 2, borderBottom: '1px dashed', borderColor: 'grey.200' }}>
+                            <FormControl component="fieldset" fullWidth>
+                                <FormLabel
+                                    component="legend"
                                     sx={{
-                                        mt: 2,
-                                        p: 2,
-                                        borderRadius: 1,
-                                        bgcolor: backdateWarning.isOverdue ? '#FEF2F2' : '#FFFBEB',
-                                        borderLeft: '4px solid',
-                                        borderLeftColor: backdateWarning.isOverdue ? '#EF4444' : '#F59E0B',
+                                        fontSize: '0.875rem',
+                                        fontWeight: 600,
+                                        color: 'text.primary',
+                                        mb: 1,
+
+                                        width: '100%',
+                                        '&.Mui-focused': { color: 'text.primary' }
                                     }}
                                 >
-                                    {/* Header */}
-                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 }}>
-                                        <Warning2 
-                                            size={20} 
-                                            variant="Bold" 
-                                            color={backdateWarning.isOverdue ? '#EF4444' : '#F59E0B'} 
-                                        />
-                                        <Typography 
-                                            variant="subtitle2" 
-                                            sx={{ 
-                                                fontWeight: 700, 
-                                                color: backdateWarning.isOverdue ? '#DC2626' : '#D97706',
-                                            }}
-                                        >
-                                            {backdateWarning.isOverdue 
-                                                ? t('backdate_overdue_title', 'ลาย้อนหลังเกินกำหนด')
-                                                : t('backdate_warning_title', 'ลาย้อนหลัง')}
-                                        </Typography>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'left', gap: 1 }}>
+                                        <Clock size={16} color={config.color} />
+                                        {t('shift_type', 'กะทำงาน')}
                                     </Box>
-
-                                    {/* Info rows */}
-                                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75, ml: 3.5 }}>
-                                        <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                                            <Typography variant="body2" color="text.secondary">
-                                                {t('leave_date', 'วันที่ลา')}
-                                            </Typography>
-                                            <Typography variant="body2" fontWeight={500}>
-                                                {backdateWarning.leaveDate}
-                                            </Typography>
-                                        </Box>
-                                        <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                                            <Typography variant="body2" color="text.secondary">
-                                                {t('submit_deadline', 'ยื่นได้ถึง')}
-                                            </Typography>
-                                            <Typography 
-                                                variant="body2" 
-                                                fontWeight={600}
-                                                sx={{ color: backdateWarning.isOverdue ? '#DC2626' : '#D97706' }}
-                                            >
-                                                {backdateWarning.deadline}
-                                            </Typography>
-                                        </Box>
-                                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                            <Typography variant="body2" color="text.secondary">
-                                                {t('submit_date', 'วันที่ยื่น')}
-                                            </Typography>
+                                </FormLabel>
+                                <RadioGroup
+                                    row
+                                    value={shiftType}
+                                    onChange={(e) => handleShiftChange(e.target.value as 'day' | 'night')}
+                                    sx={{ gap: 2, justifyContent: 'center' }}
+                                >
+                                    <FormControlLabel
+                                        value="day"
+                                        control={
+                                            <Radio
+                                                size="small"
+                                                sx={{
+                                                    color: config.color,
+                                                    '&.Mui-checked': { color: config.color },
+                                                }}
+                                            />
+                                        }
+                                        label={
                                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                                <Typography 
-                                                    variant="body2" 
-                                                    fontWeight={600}
-                                                    sx={{ color: backdateWarning.isOverdue ? '#DC2626' : '#16A34A' }}
-                                                >
-                                                    {dayjs().locale(locale).format('DD MMM')} {locale === 'th' ? (dayjs().year() + 543).toString().slice(-2) : dayjs().year()}
+                                                <Sun1 size={14} color='#E65100' variant='Bold' />
+                                                <Typography variant="body2" sx={{ fontWeight: shiftType === 'day' ? 600 : 400 }}>
+                                                    {t('shift_day', 'กะเช้า')} (08:00 - 17:00)
                                                 </Typography>
-                                                {backdateWarning.isOverdue ? (
-                                                    <CloseCircle size={16} variant="Bold" color="#DC2626" />
-                                                ) : (
-                                                    <TickCircle size={16} variant="Bold" color="#16A34A" />
-                                                )}
                                             </Box>
+                                        }
+                                        sx={{
+                                            m: 0,
+                                            px: 1.5,
+                                            py: 0.75,
+                                            borderRadius: 2,
+                                            border: '1px solid',
+                                            borderColor: shiftType === 'day' ? config.color : 'grey.300',
+                                            bgcolor: shiftType === 'day' ? config.lightColor : 'transparent',
+                                            transition: 'all 0.2s',
+                                            '&:hover': { borderColor: config.color, bgcolor: config.lightColor },
+                                        }}
+                                    />
+                                    <FormControlLabel
+                                        value="night"
+                                        control={
+                                            <Radio
+                                                size="small"
+                                                sx={{
+                                                    color: config.color,
+                                                    '&.Mui-checked': { color: config.color },
+                                                }}
+                                            />
+                                        }
+                                        label={
+                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                                <Moon size={14} variant='Bold' color="black" />
+                                                <Typography variant="body2" sx={{ fontWeight: shiftType === 'night' ? 600 : 400 }}>
+                                                    {t('shift_night', 'กะดึก')} (20:00 - 05:00)
+                                                </Typography>
+                                            </Box>
+                                        }
+                                        sx={{
+                                            m: 0,
+                                            px: 1.5,
+                                            py: 0.75,
+                                            borderRadius: 2,
+                                            border: '1px solid',
+                                            borderColor: shiftType === 'night' ? config.color : 'grey.300',
+                                            bgcolor: shiftType === 'night' ? config.lightColor : 'transparent',
+                                            transition: 'all 0.2s',
+                                            '&:hover': { borderColor: config.color, bgcolor: config.lightColor },
+                                        }}
+                                    />
+                                </RadioGroup>
+                            </FormControl>
+                        </Box>
+
+                        {/* เลือกทำงานวันอาทิตย์ */}
+                        <Box sx={{ mb: 2.5, pb: 2, borderBottom: '1px dashed', borderColor: 'grey.200' }}>
+                            <FormControl component="fieldset" fullWidth>
+                                <FormLabel
+                                    component="legend"
+                                    sx={{
+                                        fontSize: '0.875rem',
+                                        fontWeight: 600,
+                                        color: 'text.primary',
+                                        mb: 1,
+                                        width: '100%',
+                                        '&.Mui-focused': { color: 'text.primary' }
+                                    }}
+                                >
+                                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'left', gap: 1 }}>
+                                        <Calendar size={16} color={config.color} />
+                                        {t('works_on_sunday', 'ทำงานวันอาทิตย์')}
+                                    </Box>
+                                </FormLabel>
+                                <RadioGroup
+                                    row
+                                    value={worksOnSunday ? 'yes' : 'no'}
+                                    onChange={(e) => handleWorksOnSundayChange(e.target.value === 'yes')}
+                                    sx={{ gap: 2, justifyContent: 'center' }}
+                                >
+                                    <FormControlLabel
+                                        value="no"
+                                        control={
+                                            <Radio
+                                                size="small"
+                                                sx={{
+                                                    color: config.color,
+                                                    '&.Mui-checked': { color: config.color },
+                                                }}
+                                            />
+                                        }
+                                        label={
+                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                                <CalendarRemove size={14} color='#ef5350' variant='Bold' />
+                                                <Typography variant="body2" sx={{ fontWeight: !worksOnSunday ? 600 : 400 }}>
+                                                    {t('works_sunday_no', 'หยุดวันอาทิตย์')}
+                                                </Typography>
+                                            </Box>
+                                        }
+                                        sx={{
+                                            m: 0,
+                                            px: 1.5,
+                                            py: 0.75,
+                                            borderRadius: 2,
+                                            border: '1px solid',
+                                            borderColor: !worksOnSunday ? config.color : 'grey.300',
+                                            bgcolor: !worksOnSunday ? config.lightColor : 'transparent',
+                                            transition: 'all 0.2s',
+                                            '&:hover': { borderColor: config.color, bgcolor: config.lightColor },
+                                        }}
+                                    />
+                                    <FormControlLabel
+                                        value="yes"
+                                        control={
+                                            <Radio
+                                                size="small"
+                                                sx={{
+                                                    color: config.color,
+                                                    '&.Mui-checked': { color: config.color },
+                                                }}
+                                            />
+                                        }
+                                        label={
+                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                                <TickCircle size={14} color='#4CAF50' variant='Bold' />
+                                                <Typography variant="body2" sx={{ fontWeight: worksOnSunday ? 600 : 400 }}>
+                                                    {t('works_sunday_yes', 'ทำงานวันอาทิตย์')}
+                                                </Typography>
+                                            </Box>
+                                        }
+                                        sx={{
+                                            m: 0,
+                                            px: 1.5,
+                                            py: 0.75,
+                                            borderRadius: 2,
+                                            border: '1px solid',
+                                            borderColor: worksOnSunday ? config.color : 'grey.300',
+                                            bgcolor: worksOnSunday ? config.lightColor : 'transparent',
+                                            transition: 'all 0.2s',
+                                            '&:hover': { borderColor: config.color, bgcolor: config.lightColor },
+                                        }}
+                                    />
+
+                                </RadioGroup>
+                                {!worksOnSunday && (
+                                    <Typography
+                                        variant="caption"
+                                        sx={{
+                                            display: 'block',
+                                            textAlign: 'center',
+                                            mt: 1.5,
+                                            color: 'text.secondary',
+                                            bgcolor: 'rgba(25, 118, 210, 0.08)',
+                                            py: 0.75,
+                                            px: 1.5,
+                                            borderRadius: 1,
+                                        }}
+                                    >
+                                        <InfoCircle size={12} style={{ marginRight: 4, verticalAlign: 'middle' }} />
+                                        {t('sunday_not_counted', 'วันอาทิตย์จะไม่ถูกนับเป็นวันลา')}
+                                    </Typography>
+                                )}
+                            </FormControl>
+                        </Box>
+
+                        {/* ส่วนเริ่มลา */}
+                        <Box sx={{ mb: 3 }}>
+                            <Typography variant="subtitle2" sx={{ mb: 1.5, color: 'text.secondary', display: 'flex', alignItems: 'center', gap: 1 }}>
+                                <Box component="span" sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: '#4caf50', boxShadow: '0 0 0 2px rgba(76, 175, 80, 0.2)' }} />
+                                {t('leave_start_section', 'เริ่มลา')}
+                            </Typography>
+                            <Box sx={{ pl: 2, borderLeft: '2px solid', borderColor: '#f0f0f0', display: 'flex', flexDirection: 'column', gap: 2 }}>
+                                <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale={locale}>
+                                    <DatePicker
+                                        label={t('leave_start_date', 'วันที่')}
+                                        value={startDateValue}
+                                        onChange={(newValue) => {
+                                            setStartDateValue(newValue);
+                                            if (newValue && newValue.isValid()) {
+                                                const newStartDate = newValue.format('YYYY-MM-DD');
+                                                handleFormChange('startDate', newStartDate);
+                                                // ตรวจสอบลาย้อนหลัง (เฉพาะเมื่อมี endDate แล้ว)
+                                                if (formData.endDate) {
+                                                    checkBackdateWarning(newStartDate, worksOnSunday, formData.endDate);
+                                                }
+                                                // คำนวณจำนวนวันลาอัตโนมัติตามเวลา
+                                                if (endDateValue && endDateValue.isValid()) {
+                                                    recalculateTotalDays(
+                                                        newStartDate,
+                                                        formData.startTime,
+                                                        formData.endDate,
+                                                        formData.endTime
+                                                    );
+                                                }
+                                            } else {
+                                                handleFormChange('startDate', '');
+                                                setBackdateWarning(null);
+                                            }
+                                        }}
+                                        format="DD MMMM YYYY"
+                                        slotProps={{
+                                            textField: {
+                                                size: 'small',
+                                                fullWidth: true,
+                                                error: !!errors.startDate,
+                                                helperText: errors.startDate,
+                                                sx: {
+                                                    '& .MuiOutlinedInput-root': {
+                                                        '& fieldset': { borderColor: '#e5e7eb' },
+                                                        '&:hover fieldset': { borderColor: config.color },
+                                                    },
+                                                },
+                                            },
+                                        }}
+                                    />
+                                    <TimePicker
+                                        label={t('leave_start_time', 'เวลา')}
+                                        value={startTimeValue}
+                                        onChange={(newValue) => {
+                                            setStartTimeValue(newValue);
+                                            if (newValue && newValue.isValid()) {
+                                                const newStartTime = newValue.format('HH:mm');
+                                                handleFormChange('startTime', newStartTime);
+                                                // คำนวณจำนวนวันลาอัตโนมัติเมื่อเปลี่ยนเวลา
+                                                if (formData.startDate && formData.endDate) {
+                                                    recalculateTotalDays(
+                                                        formData.startDate,
+                                                        newStartTime,
+                                                        formData.endDate,
+                                                        formData.endTime
+                                                    );
+                                                }
+                                            }
+                                        }}
+                                        ampm={false}
+                                        slotProps={{
+                                            textField: {
+                                                size: 'small',
+                                                fullWidth: true,
+                                                sx: {
+                                                    '& .MuiOutlinedInput-root': {
+                                                        '& fieldset': { borderColor: '#e5e7eb' },
+                                                        '&:hover fieldset': { borderColor: config.color },
+                                                    },
+                                                },
+                                            },
+                                        }}
+                                    />
+                                </LocalizationProvider>
+                            </Box>
+                        </Box>
+
+                        {/* ส่วนสิ้นสุด */}
+                        <Box sx={{ mb: 1 }}>
+                            <Typography variant="subtitle2" sx={{ mb: 1.5, color: 'text.secondary', display: 'flex', alignItems: 'center', gap: 1 }}>
+                                <Box component="span" sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: '#ef5350', boxShadow: '0 0 0 2px rgba(239, 83, 80, 0.2)' }} />
+                                {t('leave_end_section', 'ถึงวันที่')}
+                            </Typography>
+                            <Box sx={{ pl: 2, borderLeft: '2px solid', borderColor: '#f0f0f0', display: 'flex', flexDirection: 'column', gap: 2 }}>
+                                <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale={locale}>
+                                    <DatePicker
+                                        label={t('leave_end_date', 'วันที่')}
+                                        value={endDateValue}
+                                        onChange={(newValue) => {
+                                            setEndDateValue(newValue);
+                                            if (newValue && newValue.isValid()) {
+                                                const newEndDate = newValue.format('YYYY-MM-DD');
+                                                handleFormChange('endDate', newEndDate);
+                                                // ตรวจสอบลาย้อนหลัง (ใช้ endDate ใหม่)
+                                                if (formData.startDate) {
+                                                    checkBackdateWarning(formData.startDate, worksOnSunday, newEndDate);
+                                                }
+                                                // คำนวณจำนวนวันลาอัตโนมัติตามเวลา
+                                                if (startDateValue && startDateValue.isValid()) {
+                                                    recalculateTotalDays(
+                                                        formData.startDate,
+                                                        formData.startTime,
+                                                        newEndDate,
+                                                        formData.endTime
+                                                    );
+                                                }
+                                            } else {
+                                                handleFormChange('endDate', '');
+                                                // ถ้าลบ endDate ให้ซ่อน warning
+                                                setBackdateWarning(null);
+                                            }
+                                        }}
+                                        minDate={startDateValue || undefined}
+                                        format="DD MMMM YYYY"
+                                        slotProps={{
+                                            textField: {
+                                                size: 'small',
+                                                fullWidth: true,
+                                                error: !!errors.endDate,
+                                                helperText: errors.endDate,
+                                                sx: {
+                                                    '& .MuiOutlinedInput-root': {
+                                                        '& fieldset': { borderColor: '#e5e7eb' },
+                                                        '&:hover fieldset': { borderColor: config.color },
+                                                    },
+                                                },
+                                            },
+                                        }}
+                                    />
+                                    <TimePicker
+                                        label={t('leave_end_time', 'เวลา')}
+                                        value={endTimeValue}
+                                        onChange={(newValue) => {
+                                            setEndTimeValue(newValue);
+                                            if (newValue && newValue.isValid()) {
+                                                const newEndTime = newValue.format('HH:mm');
+                                                handleFormChange('endTime', newEndTime);
+                                                // คำนวณจำนวนวันลาอัตโนมัติเมื่อเปลี่ยนเวลา
+                                                if (formData.startDate && formData.endDate) {
+                                                    recalculateTotalDays(
+                                                        formData.startDate,
+                                                        formData.startTime,
+                                                        formData.endDate,
+                                                        newEndTime
+                                                    );
+                                                }
+                                            }
+                                        }}
+                                        ampm={false}
+                                        slotProps={{
+                                            textField: {
+                                                size: 'small',
+                                                fullWidth: true,
+                                                sx: {
+                                                    '& .MuiOutlinedInput-root': {
+                                                        '& fieldset': { borderColor: '#e5e7eb' },
+                                                        '&:hover fieldset': { borderColor: config.color },
+                                                    },
+                                                },
+                                            },
+                                        }}
+                                    />
+                                </LocalizationProvider>
+                            </Box>
+                        </Box>
+
+                        {/* Warning สำหรับลาย้อนหลังเกินกำหนดเท่านั้น */}
+                        {backdateWarning?.show && backdateWarning.isOverdue && formData.endDate && (
+                            <Box
+                                sx={{
+                                    mt: 2,
+                                    p: 2,
+                                    borderRadius: 1,
+                                    bgcolor: '#FEF2F2',
+                                    borderLeft: '4px solid',
+                                    borderLeftColor: '#EF4444',
+                                }}
+                            >
+                                {/* Header */}
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 }}>
+                                    <Warning2
+                                        size={20}
+                                        variant="Bold"
+                                        color="#EF4444"
+                                    />
+                                    <Typography
+                                        variant="subtitle2"
+                                        sx={{
+                                            fontWeight: 700,
+                                            color: '#DC2626',
+                                        }}
+                                    >
+                                        {t('backdate_overdue_title', 'ลาย้อนหลังเกินกำหนด')}
+                                    </Typography>
+                                </Box>
+
+                                {/* Info rows */}
+                                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75, ml: 3.5 }}>
+                                    <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                                        <Typography variant="body2" color="text.secondary">
+                                            {t('leave_date', 'วันที่ลา')}
+                                        </Typography>
+                                        <Typography variant="body2" fontWeight={500}>
+                                            {backdateWarning.leaveDate}
+                                        </Typography>
+                                    </Box>
+                                    <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                                        <Typography variant="body2" color="text.secondary">
+                                            {t('submit_deadline', 'ยื่นได้ถึง')}
+                                        </Typography>
+                                        <Typography
+                                            variant="body2"
+                                            fontWeight={600}
+                                            sx={{ color: '#DC2626' }}
+                                        >
+                                            {backdateWarning.deadline}
+                                        </Typography>
+                                    </Box>
+                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                        <Typography variant="body2" color="text.secondary">
+                                            {t('submit_date', 'วันที่ยื่น')}
+                                        </Typography>
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                            <Typography
+                                                variant="body2"
+                                                fontWeight={600}
+                                                sx={{ color: '#DC2626' }}
+                                            >
+                                                {dayjs().locale(locale).format('DD MMMM')} {locale === 'th' ? (dayjs().year() + 543).toString() : dayjs().year()}
+                                            </Typography>
+                                            <CloseCircle size={16} variant="Bold" color="#DC2626" />
                                         </Box>
                                     </Box>
-
-                                    {/* Error message */}
-                                    {backdateWarning.isOverdue && (
-                                        <Typography 
-                                            variant="caption" 
-                                            sx={{ 
-                                                display: 'block',
-                                                mt: 1.5, 
-                                                ml: 3.5,
-                                                color: '#DC2626',
-                                                fontWeight: 500,
-                                            }}
-                                        >
-                                            * {t('backdate_overdue_msg', 'ไม่สามารถยื่นใบลาได้ เนื่องจากเกินกำหนด')}
-                                        </Typography>
-                                    )}
                                 </Box>
-                            )}
+
+                                {/* Error message */}
+                                <Typography
+                                    variant="caption"
+                                    sx={{
+                                        display: 'block',
+                                        mt: 1.5,
+                                        ml: 3.5,
+                                        color: '#DC2626',
+                                        fontWeight: 500,
+                                    }}
+                                >
+                                    * {t('backdate_overdue_msg', 'ไม่สามารถยื่นใบลาได้ เนื่องจากเกินกำหนด')}
+                                </Typography>
+                            </Box>
+                        )}
                     </Box>
 
                     <Divider sx={{ my: 3 }} />
@@ -1652,10 +1709,10 @@ export default function LeaveFormPage() {
                     {/* จำนวนวันลา */}
                     <Box sx={{ mb: 3, p: 2, bgcolor: 'grey.50', borderRadius: 1, border: '1px solid', borderColor: 'grey.200' }}>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 }}>
-                            <Box sx={{ 
-                                width: 28, height: 28, borderRadius: 1.5, 
-                                bgcolor: config.lightColor, 
-                                display: 'flex', alignItems: 'center', justifyContent: 'center' 
+                            <Box sx={{
+                                width: 28, height: 28, borderRadius: 1.5,
+                                bgcolor: config.lightColor,
+                                display: 'flex', alignItems: 'center', justifyContent: 'center'
                             }}>
                                 <Calendar size={15} color={config.color} />
                             </Box>
@@ -1737,34 +1794,34 @@ export default function LeaveFormPage() {
                         </Box>
 
                         {/* Helper text */}
-                        <Typography 
-                            variant="caption" 
-                            sx={{ 
-                                display: 'block', 
-                                textAlign: 'center', 
+                        <Typography
+                            variant="caption"
+                            sx={{
+                                display: 'block',
+                                textAlign: 'center',
                                 color: errors.totalDays ? 'error.main' : 'text.secondary',
                                 mb: 2,
                             }}
                         >
                             {errors.totalDays || (
-                                maxLeaveDaysByRange 
+                                maxLeaveDaysByRange
                                     ? `${t('leave_adjust_hint', 'กดปุ่ม +/- เพื่อปรับทีละ 0.5 วัน')} (${t('max', 'สูงสุด')} ${maxLeaveDaysByRange} ${t('leave_days_unit', 'วัน')})`
                                     : t('leave_adjust_hint', 'กดปุ่ม +/- เพื่อปรับทีละ 0.5 วัน')
                             )}
                         </Typography>
 
-                            {leaveType.maxDaysPerYear && (
-                                <Typography 
-                                    variant="caption" 
-                                    color={(parseFloat(formData.totalDays) || 0) > leaveType.maxDaysPerYear ? 'error.main' : 'text.secondary'}
-                                    sx={{ mt: 1, display: 'block', textAlign: 'center', fontWeight: (parseFloat(formData.totalDays) || 0) > leaveType.maxDaysPerYear ? 'bold' : 'normal' }}
-                                >
-                                    {leaveType.isPaid 
-                                        ? t('leave_max_quota_paid', 'สิทธิ์ลา {days} วัน/ปี (ได้รับค่าจ้าง)').replace('{days}', leaveType.maxDaysPerYear.toString())
-                                        : t('leave_max_quota_unpaid', 'สิทธิ์ลา {days} วัน/ปี (ไม่ได้รับค่าจ้าง)').replace('{days}', leaveType.maxDaysPerYear.toString())
-                                    }
-                                </Typography>
-                            )}
+                        {leaveType.maxDaysPerYear && (
+                            <Typography
+                                variant="caption"
+                                color={(parseFloat(formData.totalDays) || 0) > leaveType.maxDaysPerYear ? 'error.main' : 'text.secondary'}
+                                sx={{ mt: 1, display: 'block', textAlign: 'center', fontWeight: (parseFloat(formData.totalDays) || 0) > leaveType.maxDaysPerYear ? 'bold' : 'normal' }}
+                            >
+                                {leaveType.isPaid
+                                    ? t('leave_max_quota_paid', 'สิทธิ์ลา {days} วัน/ปี (ได้รับค่าจ้าง)').replace('{days}', leaveType.maxDaysPerYear.toString())
+                                    : t('leave_max_quota_unpaid', 'สิทธิ์ลา {days} วัน/ปี (ไม่ได้รับค่าจ้าง)').replace('{days}', leaveType.maxDaysPerYear.toString())
+                                }
+                            </Typography>
+                        )}
                     </Box>
 
                     <Divider sx={{ my: 3 }} />
@@ -1772,10 +1829,10 @@ export default function LeaveFormPage() {
                     {/* เหตุผลการลา */}
                     <Box sx={{ mb: 3, p: 2, bgcolor: 'grey.50', borderRadius: 1, border: '1px solid', borderColor: 'grey.200' }}>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 }}>
-                            <Box sx={{ 
-                                width: 28, height: 28, borderRadius: 1.5, 
-                                bgcolor: config.lightColor, 
-                                display: 'flex', alignItems: 'center', justifyContent: 'center' 
+                            <Box sx={{
+                                width: 28, height: 28, borderRadius: 1.5,
+                                bgcolor: config.lightColor,
+                                display: 'flex', alignItems: 'center', justifyContent: 'center'
                             }}>
                                 <DocumentText size={15} color={config.color} />
                             </Box>
@@ -1785,42 +1842,42 @@ export default function LeaveFormPage() {
                         </Box>
 
                         <TextField
-                                multiline
-                                rows={3}
-                                fullWidth
-                                placeholder={t('leave_reason_placeholder', 'ระบุเหตุผลการลา...')}
-                                value={formData.reason}
-                                onChange={(e) => handleFormChange('reason', e.target.value)}
-                                error={!!errors.reason}
-                                helperText={errors.reason}
-                                sx={{
-                                    '& .MuiOutlinedInput-root': {
-                                        borderRadius: 1,
-                                        bgcolor: '#fafafa',
-                                    },
-                                }}
-                            />
+                            multiline
+                            rows={3}
+                            fullWidth
+                            placeholder={t('leave_reason_placeholder', 'ระบุเหตุผลการลา...')}
+                            value={formData.reason}
+                            onChange={(e) => handleFormChange('reason', e.target.value)}
+                            error={!!errors.reason}
+                            helperText={errors.reason}
+                            sx={{
+                                '& .MuiOutlinedInput-root': {
+                                    borderRadius: 1,
+                                    bgcolor: '#fafafa',
+                                },
+                            }}
+                        />
                     </Box>
 
                     <Divider sx={{ my: 3 }} />
 
                     {/* ไฟล์แนบ */}
-                      <Box sx={{ mb: 3, p: 2, bgcolor: 'grey.50', borderRadius: 1, border: '1px solid', borderColor: 'grey.200' }}>
+                    <Box sx={{ mb: 3, p: 2, bgcolor: 'grey.50', borderRadius: 1, border: '1px solid', borderColor: 'grey.200' }}>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 }}>
-                            <Box sx={{ 
-                                width: 28, height: 28, borderRadius: 1.5, 
-                                bgcolor: config.lightColor, 
-                                display: 'flex', alignItems: 'center', justifyContent: 'center' 
+                            <Box sx={{
+                                width: 28, height: 28, borderRadius: 1.5,
+                                bgcolor: config.lightColor,
+                                display: 'flex', alignItems: 'center', justifyContent: 'center'
                             }}>
                                 <Paperclip2 size={15} color={config.color} />
                             </Box>
                             <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
                                 {t('leave_attachments', 'ไฟล์แนบ')}
                                 {/* แสดง * บังคับแนบไฟล์ */}
-                                {((leaveCode === 'sick' && parseFloat(formData.totalDays) >= 3) || 
-                                  (leaveCode === 'personal' && parseFloat(formData.totalDays) >= 1)) && (
-                                    <Typography component="span" sx={{ color: 'error.main', ml: 0.5 }}>*</Typography>
-                                )}
+                                {((leaveCode === 'sick' && parseFloat(formData.totalDays) >= 3) ||
+                                    (leaveCode === 'personal' && parseFloat(formData.totalDays) >= 1)) && (
+                                        <Typography component="span" sx={{ color: 'error.main', ml: 0.5 }}>*</Typography>
+                                    )}
                             </Typography>
                         </Box>
 
@@ -1836,7 +1893,7 @@ export default function LeaveFormPage() {
                             </Alert>
                         )}
 
-                            {/* ปุ่มอัพโหลด */}
+                        {/* ปุ่มอัพโหลด */}
                         <input
                             ref={fileInputRef}
                             type="file"
@@ -1864,56 +1921,56 @@ export default function LeaveFormPage() {
                                     borderColor: config.color,
                                     bgcolor: config.lightColor,
                                 },
-                                    '&.Mui-disabled': {
-                                        borderColor: 'grey.300',
-                                        color: 'grey.400',
-                                        bgcolor: 'grey.50',
-                                    }
-                                }}
-                            >
-                                {processingAttachments
-                                    ? t('leave_upload_processing', 'กำลังประมวลผลไฟล์...')
-                                    : formData.attachments.length >= MAX_FILES
-                                        ? t('leave_upload_complete', `แนบไฟล์ครบ ${MAX_FILES} ไฟล์แล้ว`)
-                                        : t('leave_upload_btn', `อัพโหลดไฟล์แนบ (${formData.attachments.length}/${MAX_FILES})`)}
-                            </Button>
+                                '&.Mui-disabled': {
+                                    borderColor: 'grey.300',
+                                    color: 'grey.400',
+                                    bgcolor: 'grey.50',
+                                }
+                            }}
+                        >
+                            {processingAttachments
+                                ? t('leave_upload_processing', 'กำลังประมวลผลไฟล์...')
+                                : formData.attachments.length >= MAX_FILES
+                                    ? t('leave_upload_complete', `แนบไฟล์ครบ ${MAX_FILES} ไฟล์แล้ว`)
+                                    : t('leave_upload_btn', `อัพโหลดไฟล์แนบ (${formData.attachments.length}/${MAX_FILES})`)}
+                        </Button>
 
-                            {errors.attachments && (
-                                <Typography color="error" variant="caption" sx={{ display: 'block', mt: 0.5, mb: 1.5 }}>
-                                    {errors.attachments}
-                                </Typography>
-                            )}
+                        {errors.attachments && (
+                            <Typography color="error" variant="caption" sx={{ display: 'block', mt: 0.5, mb: 1.5 }}>
+                                {errors.attachments}
+                            </Typography>
+                        )}
 
-                            {/* รายการไฟล์แนบพร้อม Preview */}
-                            {formData.attachments.length > 0 && (
-                                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5, mb: 1.5 }}>
-                                    {formData.attachments.map((attachment, index) => (
+                        {/* รายการไฟล์แนบพร้อม Preview */}
+                        {formData.attachments.length > 0 && (
+                            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5, mb: 1.5 }}>
+                                {formData.attachments.map((attachment, index) => (
+                                    <Box
+                                        key={`${attachment.file.name}-${index}`}
+                                        sx={{
+                                            position: 'relative',
+                                            width: 100,
+                                            height: 100,
+                                        }}
+                                    >
+                                        {/* Container สำหรับรูปภาพ */}
                                         <Box
-                                            key={`${attachment.file.name}-${index}`}
                                             sx={{
-                                                position: 'relative',
-                                                width: 100,
-                                                height: 100,
+                                                width: '100%',
+                                                height: '100%',
+                                                borderRadius: 2,
+                                                overflow: 'hidden',
+                                                border: '1px solid',
+                                                borderColor: 'grey.200',
+                                                bgcolor: 'grey.50',
+                                                cursor: isImageFile(attachment.file) ? 'pointer' : 'default',
+                                            }}
+                                            onClick={() => {
+                                                if (isImageFile(attachment.file)) {
+                                                    setPreviewImage(attachment.previewUrl);
+                                                }
                                             }}
                                         >
-                                            {/* Container สำหรับรูปภาพ */}
-                                            <Box
-                                                sx={{
-                                                    width: '100%',
-                                                    height: '100%',
-                                                    borderRadius: 2,
-                                                    overflow: 'hidden',
-                                                    border: '1px solid',
-                                                    borderColor: 'grey.200',
-                                                    bgcolor: 'grey.50',
-                                                    cursor: isImageFile(attachment.file) ? 'pointer' : 'default',
-                                                }}
-                                                onClick={() => {
-                                                    if (isImageFile(attachment.file)) {
-                                                        setPreviewImage(attachment.previewUrl);
-                                                    }
-                                                }}
-                                            >
                                             {isImageFile(attachment.file) ? (
                                                 <Box
                                                     component="img"
@@ -1926,23 +1983,23 @@ export default function LeaveFormPage() {
                                                     }}
                                                 />
                                             ) : (
-                                                <Box 
-                                                    sx={{ 
-                                                        width: '100%', 
-                                                        height: '100%', 
-                                                        display: 'flex', 
+                                                <Box
+                                                    sx={{
+                                                        width: '100%',
+                                                        height: '100%',
+                                                        display: 'flex',
                                                         flexDirection: 'column',
-                                                        alignItems: 'center', 
+                                                        alignItems: 'center',
                                                         justifyContent: 'center',
                                                         p: 1,
                                                     }}
                                                 >
                                                     <DocumentText size={32} color={config.color} />
-                                                    <Typography 
-                                                        variant="caption" 
-                                                        noWrap 
-                                                        sx={{ 
-                                                            maxWidth: '100%', 
+                                                    <Typography
+                                                        variant="caption"
+                                                        noWrap
+                                                        sx={{
+                                                            maxWidth: '100%',
                                                             mt: 0.5,
                                                             fontSize: '0.65rem',
                                                         }}
@@ -1951,53 +2008,53 @@ export default function LeaveFormPage() {
                                                     </Typography>
                                                 </Box>
                                             )}
-                                            </Box>
-                                            
-                                            {/* ปุ่มลบ - มุมขวาบน พื้นสีดำ */}
-                                            <IconButton 
-                                                size="small" 
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    removeAttachment(index);
-                                                }} 
-                                                sx={{ 
-                                                    position: 'absolute',
-                                                    top: 2,
-                                                    right: 2,
-                                                    bgcolor: 'rgba(0,0,0,0.7)',
-                                                    color: 'white',
-                                                    p: 0.3,
-                                                    minWidth: 'auto',
-                                                    zIndex: 10,
-                                                    '&:hover': {
-                                                        bgcolor: 'rgba(0,0,0,0.9)',
-                                                    }
-                                                }}
-                                            >
-                                                <CloseCircle size={14} variant="Bold" color="#ffffff" />
-                                            </IconButton>
-                                            
-                                            {/* แสดงขนาดไฟล์ */}
-                                            <Typography
-                                                variant="caption"
-                                                sx={{
-                                                    position: 'absolute',
-                                                    bottom: 0,
-                                                    left: 0,
-                                                    right: 0,
-                                                    bgcolor: 'rgba(0,0,0,0.6)',
-                                                    color: 'white',
-                                                    textAlign: 'center',
-                                                    py: 0.25,
-                                                    fontSize: '0.6rem',
-                                                }}
-                                            >
-                                                {(attachment.file.size / (1024 * 1024)).toFixed(1)} MB
-                                            </Typography>
                                         </Box>
-                                    ))}
-                                </Box>
-                            )}
+
+                                        {/* ปุ่มลบ - มุมขวาบน พื้นสีดำ */}
+                                        <IconButton
+                                            size="small"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                removeAttachment(index);
+                                            }}
+                                            sx={{
+                                                position: 'absolute',
+                                                top: 2,
+                                                right: 2,
+                                                bgcolor: 'rgba(0,0,0,0.7)',
+                                                color: 'white',
+                                                p: 0.3,
+                                                minWidth: 'auto',
+                                                zIndex: 10,
+                                                '&:hover': {
+                                                    bgcolor: 'rgba(0,0,0,0.9)',
+                                                }
+                                            }}
+                                        >
+                                            <CloseCircle size={14} variant="Bold" color="#ffffff" />
+                                        </IconButton>
+
+                                        {/* แสดงขนาดไฟล์ */}
+                                        <Typography
+                                            variant="caption"
+                                            sx={{
+                                                position: 'absolute',
+                                                bottom: 0,
+                                                left: 0,
+                                                right: 0,
+                                                bgcolor: 'rgba(0,0,0,0.6)',
+                                                color: 'white',
+                                                textAlign: 'center',
+                                                py: 0.25,
+                                                fontSize: '0.6rem',
+                                            }}
+                                        >
+                                            {(attachment.file.size / (1024 * 1024)).toFixed(1)} MB
+                                        </Typography>
+                                    </Box>
+                                ))}
+                            </Box>
+                        )}
 
                         <Typography variant="caption" color="text.secondary">
                             {t('leave_attachments_hint', `รองรับไฟล์ .pdf, .jpg, .jpeg, .png (สูงสุด ${MAX_FILES} ไฟล์, ไฟล์ละไม่เกิน 15MB)`)}
@@ -2005,8 +2062,8 @@ export default function LeaveFormPage() {
 
                         {/* แจ้งเตือนลาป่วยเกิน 3 วัน */}
                         {leaveCode === 'sick' && (parseFloat(formData.totalDays) || 0) > 3 && formData.attachments.length === 0 && (
-                            <Alert 
-                                severity="warning" 
+                            <Alert
+                                severity="warning"
                                 icon={<Warning2 size={18} color="#ED6C02" />}
                                 sx={{ mt: 2, borderRadius: 2 }}
                             >
@@ -2018,8 +2075,8 @@ export default function LeaveFormPage() {
             </Box>
 
             {/* Fixed Footer - ปุ่มดำเนินการ */}
-            <Box 
-                sx={{ 
+            <Box
+                sx={{
                     position: 'fixed',
                     bottom: 0,
                     left: 0,
@@ -2106,7 +2163,7 @@ export default function LeaveFormPage() {
                                     const startYear = locale === 'th' ? start.year() + 543 : start.year();
                                     const endYear = locale === 'th' ? end.year() + 543 : end.year();
                                     return `${start.format('D MMM')} ${startYear} - ${end.format('D MMM')} ${endYear}`;
-                                  })()
+                                })()
                                 : t('leave_no_date_selected', 'ยังไม่ได้เลือกช่วงวัน')}
                         </Typography>
                         {formData.totalDays && (
@@ -2196,7 +2253,7 @@ export default function LeaveFormPage() {
                     >
                         <CloseCircle size={24} variant="Bold" color="#ffffff" />
                     </IconButton>
-                    
+
                     {/* รูปภาพ */}
                     {previewImage && (
                         <Box

@@ -26,6 +26,7 @@ import {
   ListSubheader,
 } from '@mui/material';
 import { Add, Trash, ArrowUp2, ArrowDown2, Hierarchy, Building, People } from 'iconsax-react';
+import { useToastr } from '@/app/components/Toastr';
 
 interface WorkflowDialogProps {
   open: boolean;
@@ -58,7 +59,7 @@ export default function WorkflowDialog({ open, onClose, onSave, workflow }: Work
   const [department, setDepartment] = useState('');
   const [section, setSection] = useState('');
   const [steps, setSteps] = useState<Step[]>([]);
-  
+
   const [companies, setCompanies] = useState<any[]>([]);
   const [departments, setDepartments] = useState<any[]>([]);
   const [sections, setSections] = useState<any[]>([]);
@@ -109,8 +110,8 @@ export default function WorkflowDialog({ open, onClose, onSave, workflow }: Work
       if (deptRes.ok) setDepartments(await deptRes.json());
       if (sectRes.ok) setSections(await sectRes.json());
       if (userRes.ok) {
-          const userData = await userRes.json();
-          setUsers(Array.isArray(userData) ? userData : userData.users || []);
+        const userData = await userRes.json();
+        setUsers(Array.isArray(userData) ? userData : userData.users || []);
       }
     } catch (error) {
       console.error('Error fetching options:', error);
@@ -118,24 +119,24 @@ export default function WorkflowDialog({ open, onClose, onSave, workflow }: Work
   };
 
   const handleAddStep = () => {
-    setSteps([...steps, { 
-      level: steps.length + 1, 
-      approverRole: 'section_head', 
-      approverId: null, 
-      type: 'role' 
+    setSteps([...steps, {
+      level: steps.length + 1,
+      approverRole: '',
+      approverId: null,
+      type: 'role'
     }]);
   };
 
   const handleMoveStep = (index: number, direction: 'up' | 'down') => {
     if ((direction === 'up' && index === 0) || (direction === 'down' && index === steps.length - 1)) return;
-    
+
     const newSteps = [...steps];
     const temp = newSteps[index];
     const targetIndex = direction === 'up' ? index - 1 : index + 1;
-    
+
     newSteps[index] = newSteps[targetIndex];
     newSteps[targetIndex] = temp;
-    
+
     // Re-index levels
     setSteps(newSteps.map((s, i) => ({ ...s, level: i + 1 })));
   };
@@ -148,49 +149,51 @@ export default function WorkflowDialog({ open, onClose, onSave, workflow }: Work
 
   const handleStepChange = (index: number, field: keyof Step, value: any) => {
     const newSteps = [...steps];
-    
+
     if (field === 'type') {
-        newSteps[index] = {
-            ...newSteps[index],
-            type: value,
-            approverRole: value === 'role' ? 'section_head' : null,
-            approverId: null,
-            approver: null
-        };
+      newSteps[index] = {
+        ...newSteps[index],
+        type: value,
+        approverRole: value === 'role' ? 'section_head' : null,
+        approverId: null,
+        approver: null
+      };
     } else {
-        newSteps[index] = { ...newSteps[index], [field]: value };
-        
-        if (field === 'approverRole') {
-             newSteps[index].approverId = null;
-             newSteps[index].approver = null;
-        } else if (field === 'approverId') {
-             newSteps[index].approverRole = null;
-             const user = users.find(u => u.id === value);
-             newSteps[index].approver = user;
-        }
+      newSteps[index] = { ...newSteps[index], [field]: value };
+
+      if (field === 'approverRole') {
+        newSteps[index].approverId = null;
+        newSteps[index].approver = null;
+      } else if (field === 'approverId') {
+        newSteps[index].approverRole = null;
+        const user = users.find(u => u.id === value);
+        newSteps[index].approver = user;
+      }
     }
-    
+
     setSteps(newSteps);
   };
+
+  const toastr = useToastr();
 
   const handleSubmit = async () => {
     // Validation
     if (!name.trim()) {
-      alert('Please enter a workflow name');
+      toastr.error('กรุณาระบุชื่อ Workflow');
       return;
     }
     if (steps.length === 0) {
-      alert('Please add at least one approval step');
+      toastr.error('กรุณาเพิ่มขั้นตอนการอนุมัติอย่างน้อย 1 ขั้นตอน');
       return;
     }
     for (let i = 0; i < steps.length; i++) {
       const step = steps[i];
       if (step.type === 'role' && !step.approverRole) {
-        alert(`Please select a role for step ${i + 1}`);
+        toastr.error(`กรุณาระบุตำแหน่งสำหรับขั้นตอนที่ ${i + 1}`);
         return;
       }
       if (step.type === 'user' && !step.approverId) {
-        alert(`Please select a user for step ${i + 1}`);
+        toastr.error(`กรุณาระบุผู้อนุมัติสำหรับขั้นตอนที่ ${i + 1}`);
         return;
       }
     }
@@ -210,10 +213,10 @@ export default function WorkflowDialog({ open, onClose, onSave, workflow }: Work
         }))
       };
 
-      const url = workflow 
+      const url = workflow
         ? `/api/admin/approval-workflows/${workflow.id}`
         : '/api/admin/approval-workflows';
-      
+
       const method = workflow ? 'PUT' : 'POST';
 
       const res = await fetch(url, {
@@ -223,11 +226,11 @@ export default function WorkflowDialog({ open, onClose, onSave, workflow }: Work
       });
 
       if (!res.ok) throw new Error('Failed to save');
-      
+
       onSave();
     } catch (error) {
       console.error('Error saving workflow:', error);
-      alert('Failed to save workflow');
+      toastr.error('เกิดข้อผิดพลาดในการบันทึก Workflow');
     } finally {
       setLoading(false);
     }
@@ -239,29 +242,29 @@ export default function WorkflowDialog({ open, onClose, onSave, workflow }: Work
   const filteredSections = sections.filter(s => !department || s.departmentId === (departments.find(d => d.code === department)?.id));
 
   return (
-    <Dialog 
-      open={open} 
-      onClose={onClose} 
-      maxWidth="md" 
+    <Dialog
+      open={open}
+      onClose={onClose}
+      maxWidth="md"
       fullWidth
       PaperProps={{
         sx: {
-          borderRadius: 2,
+          borderRadius: 1,
           maxHeight: '90vh',
         }
       }}
     >
-      <DialogTitle sx={{ 
-        pb: 1, 
-        display: 'flex', 
-        alignItems: 'center', 
+      <DialogTitle sx={{
+        pb: 1,
+        display: 'flex',
+        alignItems: 'center',
         gap: 1.5,
         borderBottom: '1px solid',
         borderColor: 'divider',
       }}>
-        <Box sx={{ 
-          p: 1, 
-          borderRadius: 1, 
+        <Box sx={{
+          p: 1,
+          borderRadius: 1,
           bgcolor: alpha(theme.palette.primary.main, 0.1),
           display: 'flex',
           alignItems: 'center',
@@ -307,7 +310,7 @@ export default function WorkflowDialog({ open, onClose, onSave, workflow }: Work
             />
           </Box>
         </Box>
-        
+
         {/* Scope Section */}
         <Box sx={{ mb: 3 }}>
           <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -382,10 +385,10 @@ export default function WorkflowDialog({ open, onClose, onSave, workflow }: Work
                 ลำดับผู้อนุมัติจากขั้นแรกถึงขั้นสุดท้าย
               </Typography>
             </Box>
-            <Button 
-              startIcon={<Add size={16} color="#6C63FF" />} 
-              onClick={handleAddStep} 
-              variant="outlined" 
+            <Button
+              startIcon={<Add size={16} color="#6C63FF" />}
+              onClick={handleAddStep}
+              variant="outlined"
               size="small"
               sx={{ borderRadius: 1 }}
             >
@@ -394,9 +397,9 @@ export default function WorkflowDialog({ open, onClose, onSave, workflow }: Work
           </Box>
 
           {steps.length === 0 ? (
-            <Box 
-              sx={{ 
-                py: 4, 
+            <Box
+              sx={{
+                py: 4,
                 textAlign: 'center',
                 bgcolor: alpha(theme.palette.grey[500], 0.04),
                 borderRadius: 1,
@@ -404,13 +407,13 @@ export default function WorkflowDialog({ open, onClose, onSave, workflow }: Work
                 borderColor: 'divider',
               }}
             >
-              
+
               <Typography color="text.secondary" sx={{ mt: 1 }}>
                 ยังไม่มีขั้นตอนอนุมัติ
               </Typography>
-              <Button 
-                startIcon={<Add size={16} color="#6C63FF" />} 
-                onClick={handleAddStep} 
+              <Button
+                startIcon={<Add size={16} color="#6C63FF" />}
+                onClick={handleAddStep}
                 size="small"
                 sx={{ mt: 1 }}
               >
@@ -420,10 +423,10 @@ export default function WorkflowDialog({ open, onClose, onSave, workflow }: Work
           ) : (
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
               {steps.map((step, index) => (
-                <Card 
-                  key={index} 
+                <Card
+                  key={index}
                   variant="outlined"
-                  sx={{ 
+                  sx={{
                     borderRadius: 1,
                     transition: 'all 0.2s',
                     '&:hover': {
@@ -435,10 +438,10 @@ export default function WorkflowDialog({ open, onClose, onSave, workflow }: Work
                   <CardContent sx={{ py: 1.5, px: 2, '&:last-child': { pb: 1.5 } }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
                       {/* Step Number */}
-                      <Box 
-                        sx={{ 
-                          width: 32, 
-                          height: 32, 
+                      <Box
+                        sx={{
+                          width: 32,
+                          height: 32,
                           borderRadius: '50%',
                           bgcolor: 'primary.main',
                           color: 'white',
@@ -452,7 +455,7 @@ export default function WorkflowDialog({ open, onClose, onSave, workflow }: Work
                       >
                         {index + 1}
                       </Box>
-                      
+
                       {/* Type Select */}
                       <FormControl size="small" sx={{ minWidth: 130 }}>
                         <InputLabel>ประเภท</InputLabel>
@@ -465,7 +468,7 @@ export default function WorkflowDialog({ open, onClose, onSave, workflow }: Work
                           <MenuItem value="user">ระบุคน</MenuItem>
                         </Select>
                       </FormControl>
-                      
+
                       {/* Role/User Select */}
                       <Box sx={{ flex: 1 }}>
                         {step.type === 'user' ? (
@@ -496,35 +499,35 @@ export default function WorkflowDialog({ open, onClose, onSave, workflow }: Work
                           </FormControl>
                         )}
                       </Box>
-                      
+
                       {/* Action Buttons */}
                       <Box sx={{ display: 'flex', gap: 0.5, flexShrink: 0 }}>
-                        <IconButton 
-                          size="small" 
+                        <IconButton
+                          size="small"
                           onClick={() => handleMoveStep(index, 'up')}
                           disabled={index === 0}
-                          sx={{ 
+                          sx={{
                             bgcolor: alpha(theme.palette.grey[500], 0.1),
                             '&:hover': { bgcolor: alpha(theme.palette.grey[500], 0.2) },
                           }}
                         >
                           <ArrowUp2 size={16} color="#64748B" />
                         </IconButton>
-                        <IconButton 
-                          size="small" 
+                        <IconButton
+                          size="small"
                           onClick={() => handleMoveStep(index, 'down')}
                           disabled={index === steps.length - 1}
-                          sx={{ 
+                          sx={{
                             bgcolor: alpha(theme.palette.grey[500], 0.1),
                             '&:hover': { bgcolor: alpha(theme.palette.grey[500], 0.2) },
                           }}
                         >
                           <ArrowDown2 size={16} color="#64748B" />
                         </IconButton>
-                        <IconButton 
+                        <IconButton
                           size="small"
                           onClick={() => handleRemoveStep(index)}
-                          sx={{ 
+                          sx={{
                             color: 'error.main',
                             bgcolor: alpha(theme.palette.error.main, 0.1),
                             '&:hover': { bgcolor: alpha(theme.palette.error.main, 0.2) },
@@ -546,11 +549,11 @@ export default function WorkflowDialog({ open, onClose, onSave, workflow }: Work
         <Button onClick={onClose} sx={{ borderRadius: 1 }}>
           ยกเลิก
         </Button>
-        <Button 
-          onClick={handleSubmit} 
-          variant="contained" 
+        <Button
+          onClick={handleSubmit}
+          variant="contained"
           disabled={loading || !name || steps.length === 0}
-          sx={{ 
+          sx={{
             borderRadius: 1,
             minWidth: 120,
           }}

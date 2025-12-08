@@ -27,6 +27,7 @@ import {
   InputLabel,
   Select,
   MenuItem,
+  Divider,
 } from '@mui/material';
 import {
   Add,
@@ -43,6 +44,7 @@ import {
 import HolidayDialog from './HolidayDialog';
 import ConfirmDialog from '../components/ConfirmDialog';
 import { useToastr } from '@/app/components/Toastr';
+import { useLocale } from '@/app/providers/LocaleProvider';
 import dayjs from 'dayjs';
 import 'dayjs/locale/th';
 
@@ -65,7 +67,7 @@ interface StatCardProps {
 
 function StatCard({ title, value, icon, color, subtitle }: StatCardProps) {
   const theme = useTheme();
-  
+
   const colorMap = {
     primary: { main: theme.palette.primary.main, light: alpha(theme.palette.primary.main, 0.1) },
     success: { main: theme.palette.success.main, light: theme.palette.success.light },
@@ -75,8 +77,8 @@ function StatCard({ title, value, icon, color, subtitle }: StatCardProps) {
   };
 
   return (
-    <Card 
-      sx={{ 
+    <Card
+      sx={{
         borderRadius: 1,
         border: '1px solid',
         borderColor: 'divider',
@@ -147,6 +149,7 @@ const typeLabels: Record<string, { label: string; color: 'error' | 'warning' | '
 
 export default function HolidaysPage() {
   const theme = useTheme();
+  const { t } = useLocale();
   const toastr = useToastr();
   const [holidays, setHolidays] = useState<Holiday[]>([]);
   const [loading, setLoading] = useState(true);
@@ -236,7 +239,7 @@ export default function HolidaysPage() {
     if (!searchQuery) return true;
     const query = searchQuery.toLowerCase();
     return (
-      h.name.toLowerCase().includes(query) ||
+      t(h.name).toLowerCase().includes(query) ||
       h.date.includes(query)
     );
   });
@@ -263,7 +266,7 @@ export default function HolidaysPage() {
             <Calendar size={24} variant="Bold" color="#6C63FF" />
           </Avatar>
           <Box>
-            <Typography variant="h5" fontWeight={700} color="text.primary">
+            <Typography variant="h4" component="h1" fontWeight={700}>
               จัดการวันหยุด
             </Typography>
             <Typography variant="body2" color="text.secondary">
@@ -349,11 +352,159 @@ export default function HolidaysPage() {
         </Box>
       </Paper>
 
-      {/* Table */}
+      {/* Mobile Card View (Visible on xs, sm) */}
+      <Box sx={{ display: { xs: 'flex', md: 'none' }, flexDirection: 'column', gap: 2 }}>
+        {loading ? (
+          Array.from({ length: 3 }).map((_, i) => (
+            <Skeleton key={i} variant="rounded" height={150} sx={{ borderRadius: 1 }} />
+          ))
+        ) : filteredHolidays.length === 0 ? (
+          <Paper sx={{ p: 4, textAlign: 'center', borderRadius: 1, bgcolor: alpha(theme.palette.primary.main, 0.04) }}>
+            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+              <Calendar size={48} variant="Bulk" color={theme.palette.text.disabled} />
+              <Typography color="text.secondary">
+                {searchQuery ? 'ไม่พบวันหยุดที่ค้นหา' : 'ยังไม่มีวันหยุดในปีนี้'}
+              </Typography>
+              {!searchQuery && (
+                <Button
+                  variant="contained"
+                  startIcon={<Add size={18} color={theme.palette.common.white} />}
+                  onClick={handleAdd}
+                  sx={{ mt: 2, borderRadius: 1 }}
+                >
+                  เพิ่มวันหยุด
+                </Button>
+              )}
+            </Box>
+          </Paper>
+        ) : (
+          filteredHolidays.map((holiday) => {
+            const typeInfo = typeLabels[holiday.type] || typeLabels.national;
+            const holidayDate = dayjs(holiday.date);
+            const isPast = holidayDate.isBefore(dayjs(), 'day');
+
+            return (
+              <Paper
+                key={holiday.id}
+                elevation={0}
+                sx={{
+                  p: 2,
+                  borderRadius: 1,
+                  border: '1px solid',
+                  borderColor: 'divider',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 2,
+                  opacity: isPast ? 0.6 : 1,
+                }}
+              >
+                {/* Card Header: Date & Name */}
+                <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2 }}>
+                  <Box
+                    sx={{
+                      width: 50,
+                      height: 50,
+                      borderRadius: 1,
+                      bgcolor: alpha(theme.palette.error.main, 0.1),
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexShrink: 0
+                    }}
+                  >
+                    <Typography
+                      sx={{ fontWeight: 700, fontSize: '1.2rem', color: 'error.main', lineHeight: 1 }}
+                    >
+                      {holidayDate.date()}
+                    </Typography>
+                    <Typography sx={{ fontSize: '0.75rem', color: 'error.main' }}>
+                      {holidayDate.locale('th').format('MMM')}
+                    </Typography>
+                  </Box>
+                  <Box>
+                    <Typography variant="subtitle1" fontWeight={700}>
+                      {t(holiday.name)}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      {holidayDate.locale('th').format('dddd')}
+                    </Typography>
+                  </Box>
+                </Box>
+
+                <Divider sx={{ borderStyle: 'dashed' }} />
+
+                {/* Details */}
+                <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
+                  <Box>
+                    <Typography variant="caption" color="text.secondary" display="block">ประเภท</Typography>
+                    <Chip
+                      label={typeInfo.label}
+                      color={typeInfo.color}
+                      size="small"
+                      sx={{ fontWeight: 500, height: 24 }}
+                    />
+                  </Box>
+                  <Box>
+                    <Typography variant="caption" color="text.secondary" display="block">ขอบเขต</Typography>
+                    {holiday.companyId ? (
+                      <Chip
+                        icon={<Building size={14} color="#F57C00" />}
+                        label="เฉพาะบริษัท"
+                        size="small"
+                        variant="outlined"
+                        color="warning"
+                        sx={{ height: 24, '& .MuiChip-icon': { color: 'inherit' } }}
+                      />
+                    ) : (
+                      <Chip
+                        icon={<Global size={14} color="#6C63FF" />}
+                        label="ทุกบริษัท"
+                        size="small"
+                        color="primary"
+                        variant="outlined"
+                        sx={{ height: 24, '& .MuiChip-icon': { color: 'inherit' } }}
+                      />
+                    )}
+                  </Box>
+                </Box>
+
+                {/* Actions */}
+                <Box sx={{ display: 'flex', gap: 1, pt: 1 }}>
+                  <Button
+                    fullWidth
+                    size="small"
+                    variant="outlined"
+                    startIcon={<Edit2 size={16} color={theme.palette.primary.main} />}
+                    onClick={() => handleEdit(holiday)}
+                    sx={{ borderRadius: 1 }}
+                  >
+                    แก้ไข
+                  </Button>
+                  <Button
+                    fullWidth
+                    size="small"
+                    variant="outlined"
+                    color="error"
+                    startIcon={<Trash size={16} color={theme.palette.error.main} />}
+                    onClick={() => handleDelete(holiday)}
+                    sx={{ borderRadius: 1 }}
+                  >
+                    ลบ
+                  </Button>
+                </Box>
+              </Paper>
+            );
+          })
+        )}
+      </Box>
+
+      {/* Table (Hidden on mobile) */}
       <Fade in>
         <TableContainer
           component={Paper}
           sx={{
+            display: { xs: 'none', md: 'block' },
             borderRadius: 1,
             border: '1px solid',
             borderColor: 'divider',
@@ -376,15 +527,15 @@ export default function HolidaysPage() {
                 {filteredHolidays.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={5} align="center" sx={{ py: 8 }}>
-                      <Box sx={{ textAlign: 'center' }}>
-                        <Calendar size={48} color="#9e9e9e" variant="Bulk" />
+                      <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                        <Calendar size={48} color={theme.palette.text.disabled} variant="Bulk" />
                         <Typography color="text.secondary" sx={{ mt: 2 }}>
                           {searchQuery ? 'ไม่พบวันหยุดที่ค้นหา' : 'ยังไม่มีวันหยุดในปีนี้'}
                         </Typography>
                         {!searchQuery && (
                           <Button
                             variant="contained"
-                            startIcon={<Add size={18} color="#fff" />}
+                            startIcon={<Add size={18} color={theme.palette.common.white} />}
                             onClick={handleAdd}
                             sx={{ mt: 2, borderRadius: 1 }}
                           >
@@ -437,7 +588,7 @@ export default function HolidaysPage() {
                           </Box>
                         </TableCell>
                         <TableCell>
-                          <Typography fontWeight={500}>{holiday.name}</Typography>
+                          <Typography fontWeight={500}>{t(holiday.name)}</Typography>
                         </TableCell>
                         <TableCell>
                           <Chip
@@ -455,6 +606,7 @@ export default function HolidaysPage() {
                               size="small"
                               variant="outlined"
                               color="warning"
+                              sx={{ '& .MuiChip-icon': { color: 'inherit' } }}
                             />
                           ) : (
                             <Chip
@@ -463,6 +615,7 @@ export default function HolidaysPage() {
                               size="small"
                               color="primary"
                               variant="outlined"
+                              sx={{ '& .MuiChip-icon': { color: 'inherit' } }}
                             />
                           )}
                         </TableCell>
@@ -476,7 +629,7 @@ export default function HolidaysPage() {
                                 '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.1) },
                               }}
                             >
-                              <Edit2 size={18} color="#6C63FF" />
+                              <Edit2 size={18} color={theme.palette.primary.main} />
                             </IconButton>
                             <IconButton
                               size="small"
@@ -486,7 +639,7 @@ export default function HolidaysPage() {
                                 '&:hover': { bgcolor: alpha(theme.palette.error.main, 0.1) },
                               }}
                             >
-                              <Trash size={18} color="#F44336" />
+                              <Trash size={18} color={theme.palette.error.main} />
                             </IconButton>
                           </Box>
                         </TableCell>
@@ -516,7 +669,7 @@ export default function HolidaysPage() {
       <ConfirmDialog
         open={deleteDialogOpen}
         title="ยืนยันการลบ"
-        message={`ต้องการลบวันหยุด "${holidayToDelete?.name}" หรือไม่?`}
+        message={`ต้องการลบวันหยุด "${t(holidayToDelete?.name || '')}" หรือไม่?`}
         onConfirm={confirmDelete}
         onClose={() => {
           setDeleteDialogOpen(false);

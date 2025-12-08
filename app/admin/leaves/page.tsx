@@ -167,10 +167,10 @@ interface Stats {
 }
 
 const statusConfig: Record<string, { label: string; color: 'warning' | 'success' | 'error' | 'default'; icon: React.ReactElement }> = {
-  pending: { label: 'รออนุมัติ', color: 'warning', icon: <ClockIcon size={14} variant="Outline" color="#fff" /> },
-  approved: { label: 'อนุมัติแล้ว', color: 'success', icon: <TickCircle size={14} variant="Outline" color="#fff" /> },
-  rejected: { label: 'ไม่อนุมัติ', color: 'error', icon: <CloseCircle size={14} variant="Outline" color="#fff" /> },
-  cancelled: { label: 'ยกเลิก', color: 'default', icon: <InfoCircle size={14} variant="Outline" color="#616161" /> },
+  pending: { label: 'รออนุมัติ', color: 'warning', icon: <ClockIcon size={14} variant="Bold" color="currentColor" /> },
+  approved: { label: 'อนุมัติแล้ว', color: 'success', icon: <TickCircle size={14} variant="Bold" color="currentColor" /> },
+  rejected: { label: 'ไม่อนุมัติ', color: 'error', icon: <CloseCircle size={14} variant="Bold" color="currentColor" /> },
+  cancelled: { label: 'ยกเลิก', color: 'default', icon: <InfoCircle size={14} variant="Bold" color="currentColor" /> },
 };
 
 const roleLabels: Record<string, string> = {
@@ -189,54 +189,78 @@ interface StatCardProps {
   value: number;
   icon: React.ReactNode;
   color: 'primary' | 'success' | 'warning' | 'error' | 'secondary';
+  onClick?: () => void;
+  isActive?: boolean;
 }
 
-function StatCard({ title, value, icon, color }: StatCardProps) {
+function StatCard({ title, value, icon, color, onClick, isActive }: StatCardProps) {
   const theme = useTheme();
-  
+
   const colorMap = {
-    primary: { main: theme.palette.primary.main, light: alpha(theme.palette.primary.main, 0.1) },
-    success: { main: theme.palette.success.main, light: alpha(theme.palette.success.main, 0.1) },
-    warning: { main: theme.palette.warning.main, light: alpha(theme.palette.warning.main, 0.1) },
-    error: { main: theme.palette.error.main, light: alpha(theme.palette.error.main, 0.1) },
-    secondary: { main: theme.palette.secondary.main, light: alpha(theme.palette.secondary.main, 0.1) },
+    primary: {
+      main: theme.palette.primary.main,
+      bg: alpha(theme.palette.primary.main, 0.1),
+    },
+    success: {
+      main: theme.palette.success.main,
+      bg: alpha(theme.palette.success.main, 0.1),
+    },
+    warning: {
+      main: theme.palette.warning.main,
+      bg: alpha(theme.palette.warning.main, 0.1),
+    },
+    error: {
+      main: theme.palette.error.main,
+      bg: alpha(theme.palette.error.main, 0.1),
+    },
+    secondary: {
+      main: theme.palette.secondary.main,
+      bg: alpha(theme.palette.secondary.main, 0.1),
+    },
   };
 
+  const currentColor = colorMap[color];
+
   return (
-    <Card 
-      sx={{ 
-        borderRadius: 1,
+    <Card
+      onClick={onClick}
+      elevation={0}
+      sx={{
+        borderRadius: 1, // Standard border radius
         border: '1px solid',
-        borderColor: 'divider',
-        boxShadow: '0 4px 20px rgba(0,0,0,0.04)',
-        transition: 'all 0.3s ease',
-        '&:hover': {
-          transform: 'translateY(-4px)',
-          boxShadow: '0 8px 30px rgba(0,0,0,0.08)',
-        },
+        borderColor: isActive ? currentColor.main : 'divider',
+        bgcolor: isActive ? alpha(currentColor.main, 0.04) : 'background.paper',
+        cursor: onClick ? 'pointer' : 'default',
+        transition: 'all 0.2s ease',
+        '&:hover': onClick ? {
+          borderColor: currentColor.main,
+          bgcolor: alpha(currentColor.main, 0.02),
+        } : {},
       }}
     >
-      <CardContent sx={{ p: 3 }}>
-        <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
-          <Box>
-            <Typography variant="body2" color="text.secondary" fontWeight={500} gutterBottom>
-              {title}
-            </Typography>
-            <Typography variant="h3" fontWeight={700} sx={{ color: colorMap[color].main }}>
-              {value}
-            </Typography>
-          </Box>
-          <Avatar
+      <CardContent sx={{ p: 2.5 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1.5 }}>
+          <Typography variant="body2" color="text.secondary" fontWeight={500}>
+            {title}
+          </Typography>
+          <Box
             sx={{
-              width: 56,
-              height: 56,
-              bgcolor: colorMap[color].light,
-              color: colorMap[color].main,
+              width: 36,
+              height: 36,
+              borderRadius: 1,
+              bgcolor: currentColor.bg,
+              color: currentColor.main,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
             }}
           >
             {icon}
-          </Avatar>
+          </Box>
         </Box>
+        <Typography variant="h4" fontWeight={600} sx={{ color: 'text.primary' }}>
+          {value}
+        </Typography>
       </CardContent>
     </Card>
   );
@@ -269,7 +293,7 @@ export default function AdminLeavesPage() {
   const [leaves, setLeaves] = useState<LeaveRequest[]>([]);
   const [stats, setStats] = useState<Stats>({ total: 0, pending: 0, approved: 0, rejected: 0, cancelled: 0 });
   const [searchQuery, setSearchQuery] = useState('');
-  
+
   // Pagination
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
@@ -280,21 +304,21 @@ export default function AdminLeavesPage() {
   const [companyFilter, setCompanyFilter] = useState<string>('all');
   const [departmentFilter, setDepartmentFilter] = useState<string>('all');
   const [sectionFilter, setSectionFilter] = useState<string>('all');
-  
+
   // Month/Year filters - Start from year 2568 (2025)
   const currentDate = new Date();
   const currentYear = currentDate.getFullYear();
   const currentMonth = currentDate.getMonth() + 1; // 1-12
   const [selectedMonth, setSelectedMonth] = useState<number>(0); // 0 = all months
   const [selectedYear, setSelectedYear] = useState<number>(currentYear); // Default current year
-  
+
   // Generate year options (from 2568/2025 to current year + 543 in Buddhist Era)
   const startYear = 2025; // Start from 2025 (พ.ศ. 2568)
   const yearOptions = Array.from(
     { length: currentYear - startYear + 1 },
     (_, i) => startYear + i
   ).reverse(); // Most recent year first
-  
+
   const monthOptions = [
     { value: 0, label: 'ทุกเดือน' },
     { value: 1, label: 'มกราคม' },
@@ -353,7 +377,7 @@ export default function AdminLeavesPage() {
         fetch('/api/sections'),
         fetch('/api/leave-types'),
       ]);
-      
+
       if (companiesRes.ok) setCompanies(await companiesRes.json());
       if (departmentsRes.ok) setDepartments(await departmentsRes.json());
       if (sectionsRes.ok) setSections(await sectionsRes.json());
@@ -388,7 +412,7 @@ export default function AdminLeavesPage() {
       if (departmentFilter !== 'all') params.append('department', departmentFilter);
       if (sectionFilter !== 'all') params.append('section', sectionFilter);
       if (searchQuery) params.append('search', searchQuery);
-      
+
       const dateRange = getDateRange();
       if (dateRange) {
         params.append('startDate', dateRange.start);
@@ -466,126 +490,152 @@ export default function AdminLeavesPage() {
   return (
     <Box>
       {/* Header */}
-      <Box sx={{ mb: 4, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 2 }}>
-        <Box>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1 }}>
-            <Avatar
+      <Box sx={{ mb: 4 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <Box
               sx={{
-                width: 48,
-                height: 48,
+                p: 1.5,
+                borderRadius: 1,
                 bgcolor: alpha(theme.palette.primary.main, 0.1),
                 color: 'primary.main',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
               }}
             >
-              <DocumentText size={24} variant="Outline" color="#6C63FF" />
-            </Avatar>
+              <DocumentText size={24} variant="Bulk" color={theme.palette.primary.main} />
+            </Box>
             <Box>
               <Typography variant="h4" component="h1" fontWeight={700}>
-                ใบลาทั้งหมด
+                จัดการใบลา
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                ดูและจัดการใบลาทั้งหมดในระบบ
+                ภาพรวมและประวัติการลางานทั้งหมด
               </Typography>
             </Box>
           </Box>
-        </Box>
-        <Tooltip title="รีเฟรชข้อมูล">
-          <IconButton 
-            onClick={fetchLeaves} 
+          <Button
+            variant="outlined"
+            startIcon={<Refresh2 size={18} color={theme.palette.primary.main} />}
+            onClick={fetchLeaves}
             disabled={loading}
             sx={{
-              bgcolor: 'background.paper',
-              border: '1px solid',
+              borderRadius: 1,
+              textTransform: 'none',
               borderColor: 'divider',
-              '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.1) },
+              color: 'text.primary',
+              '&:hover': {
+                borderColor: 'primary.main',
+                bgcolor: alpha(theme.palette.primary.main, 0.04)
+              }
             }}
           >
-            <Refresh2 size={20} variant="Outline" color="#6C63FF" />
-          </IconButton>
-        </Tooltip>
+            รีเฟรช
+          </Button>
+        </Box>
       </Box>
 
       {/* Stat Cards */}
       <Box
         sx={{
           display: 'grid',
-          gridTemplateColumns: { xs: '1fr 1fr', sm: 'repeat(3, 1fr)', md: 'repeat(5, 1fr)' },
+          gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(5, 1fr)' },
           gap: 2,
-          mb: 3,
+          mb: 4,
         }}
       >
         <StatCard
           title="ทั้งหมด"
           value={stats.total}
-          icon={<DocumentText size={28} variant="Outline" color="#6C63FF" />}
+          icon={<DocumentText size={20} variant="Bold" color="currentColor" />}
           color="primary"
+          onClick={() => { setStatusFilter('all'); setStatusTab(0); }}
+          isActive={statusFilter === 'all'}
         />
         <StatCard
           title="รออนุมัติ"
           value={stats.pending}
-          icon={<ClockIcon size={28} variant="Outline" color="#FF9800" />}
+          icon={<ClockIcon size={20} variant="Bold" color="currentColor" />}
           color="warning"
+          onClick={() => { setStatusFilter('pending'); setStatusTab(1); }}
+          isActive={statusFilter === 'pending'}
         />
         <StatCard
           title="อนุมัติแล้ว"
           value={stats.approved}
-          icon={<TickCircle size={28} variant="Outline" color="#4CAF50" />}
+          icon={<TickCircle size={20} variant="Bold" color="currentColor" />}
           color="success"
+          onClick={() => { setStatusFilter('approved'); setStatusTab(2); }}
+          isActive={statusFilter === 'approved'}
         />
         <StatCard
           title="ไม่อนุมัติ"
           value={stats.rejected}
-          icon={<CloseCircle size={28} variant="Outline" color="#F44336" />}
+          icon={<CloseCircle size={20} variant="Bold" color="currentColor" />}
           color="error"
+          onClick={() => { setStatusFilter('rejected'); setStatusTab(3); }}
+          isActive={statusFilter === 'rejected'}
         />
         <StatCard
           title="ยกเลิก"
           value={stats.cancelled}
-          icon={<InfoCircle size={28} variant="Outline" color="#9E9E9E" />}
+          icon={<InfoCircle size={20} variant="Bold" color="currentColor" />}
           color="secondary"
+          onClick={() => { setStatusFilter('cancelled'); setStatusTab(4); }}
+          isActive={statusFilter === 'cancelled'}
         />
       </Box>
 
       {/* Filters */}
       <Paper
+        elevation={0}
         sx={{
           p: 2.5,
-          mb: 2,
+          mb: 3,
           borderRadius: 1,
           border: '1px solid',
           borderColor: 'divider',
-          boxShadow: 'none',
+          bgcolor: 'background.paper',
         }}
       >
-        {/* Row 1: Search and Date */}
-        <Box 
-          sx={{ 
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2.5 }}>
+          <SearchNormal1 size={18} color={theme.palette.text.secondary} />
+          <Typography variant="subtitle1" fontWeight={600}>
+            ตัวกรองข้อมูล
+          </Typography>
+        </Box>
+
+        {/* Top Filters: Date & Search */}
+        <Box
+          sx={{
             display: 'grid',
-            gridTemplateColumns: { 
-              xs: '1fr 1fr', 
-              sm: '2fr 1fr 1fr auto',
-            },
+            gridTemplateColumns: { xs: '1fr', md: '2fr 1fr 1fr' },
             gap: 2,
-            alignItems: 'center',
             mb: 2,
           }}
         >
           <TextField
-            placeholder="ค้นหารหัส/ชื่อพนักงาน..."
+            placeholder="ค้นหาชื่อ, รหัสพนักงาน..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
+            fullWidth
             size="small"
-            sx={{ gridColumn: { xs: 'span 2', sm: 'span 1' } }}
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
-                  <SearchNormal1 size={18} color={theme.palette.text.secondary} variant="Outline" />
+                  <SearchNormal1 size={18} color={theme.palette.text.secondary} />
                 </InputAdornment>
               ),
             }}
+            sx={{
+              '& .MuiOutlinedInput-root': {
+                borderRadius: 1,
+              }
+            }}
           />
 
-          <FormControl size="small" fullWidth>
+          <FormControl fullWidth size="small">
             <InputLabel>เดือน</InputLabel>
             <Select
               value={selectedMonth}
@@ -594,6 +644,7 @@ export default function AdminLeavesPage() {
                 setPage(0);
               }}
               label="เดือน"
+              sx={{ borderRadius: 1 }}
             >
               {monthOptions.map((month) => (
                 <MenuItem key={month.value} value={month.value}>{month.label}</MenuItem>
@@ -601,7 +652,7 @@ export default function AdminLeavesPage() {
             </Select>
           </FormControl>
 
-          <FormControl size="small" fullWidth>
+          <FormControl fullWidth size="small">
             <InputLabel>ปี</InputLabel>
             <Select
               value={selectedYear}
@@ -610,35 +661,23 @@ export default function AdminLeavesPage() {
                 setPage(0);
               }}
               label="ปี"
+              sx={{ borderRadius: 1 }}
             >
               {yearOptions.map((year) => (
                 <MenuItem key={year} value={year}>พ.ศ. {year + 543}</MenuItem>
               ))}
             </Select>
           </FormControl>
-
-          <Chip 
-            label={`${leaves.length} รายการ`}
-            size="small"
-            sx={{ 
-              bgcolor: alpha(theme.palette.primary.main, 0.1),
-              color: 'primary.main',
-              fontWeight: 600,
-              display: { xs: 'none', sm: 'flex' },
-            }}
-          />
         </Box>
 
-        {/* Row 2: Cascading Filters */}
-        <Box 
-          sx={{ 
+        <Divider sx={{ mb: 2, borderStyle: 'dashed' }} />
+
+        {/* Detailed Filters */}
+        <Box
+          sx={{
             display: 'grid',
-            gridTemplateColumns: { 
-              xs: '1fr 1fr', 
-              sm: 'repeat(4, 1fr)',
-            },
+            gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: 'repeat(4, 1fr)' },
             gap: 2,
-            alignItems: 'center',
           }}
         >
           <FormControl size="small" fullWidth>
@@ -647,6 +686,7 @@ export default function AdminLeavesPage() {
               value={leaveTypeFilter}
               onChange={(e) => setLeaveTypeFilter(e.target.value)}
               label="ประเภทลา"
+              sx={{ borderRadius: 1 }}
             >
               <MenuItem value="all">ทั้งหมด</MenuItem>
               {leaveTypes.map((lt) => (
@@ -661,6 +701,7 @@ export default function AdminLeavesPage() {
               value={companyFilter}
               onChange={(e) => handleCompanyChange(e.target.value)}
               label="บริษัท"
+              sx={{ borderRadius: 1 }}
             >
               <MenuItem value="all">ทั้งหมด</MenuItem>
               {companies.map((company) => (
@@ -675,6 +716,7 @@ export default function AdminLeavesPage() {
               value={departmentFilter}
               onChange={(e) => handleDepartmentChange(e.target.value)}
               label="ฝ่าย"
+              sx={{ borderRadius: 1 }}
             >
               <MenuItem value="all">ทั้งหมด</MenuItem>
               {filteredDepartments.map((dept) => (
@@ -689,6 +731,7 @@ export default function AdminLeavesPage() {
               value={sectionFilter}
               onChange={(e) => setSectionFilter(e.target.value)}
               label="แผนก"
+              sx={{ borderRadius: 1 }}
             >
               <MenuItem value="all">ทั้งหมด</MenuItem>
               {filteredSections.map((section) => (
@@ -697,124 +740,149 @@ export default function AdminLeavesPage() {
             </Select>
           </FormControl>
         </Box>
-
-        {/* Mobile: Show count */}
-        <Box sx={{ display: { xs: 'flex', sm: 'none' }, justifyContent: 'flex-end', mt: 2 }}>
-          <Chip 
-            label={`${leaves.length} รายการ`}
-            size="small"
-            sx={{ 
-              bgcolor: alpha(theme.palette.primary.main, 0.1),
-              color: 'primary.main',
-              fontWeight: 600,
-            }}
-          />
-        </Box>
       </Paper>
+      {/* Mobile Card View (Visible on xs, sm) */}
+      <Box sx={{ display: { xs: 'flex', md: 'none' }, flexDirection: 'column', gap: 2 }}>
+        {loading ? (
+          Array.from({ length: 3 }).map((_, i) => (
+            <Skeleton key={i} variant="rounded" height={200} sx={{ borderRadius: 1 }} />
+          ))
+        ) : leaves.length === 0 ? (
+          <Paper sx={{ p: 4, textAlign: 'center', borderRadius: 1, bgcolor: alpha(theme.palette.primary.main, 0.04) }}>
+            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+              <Avatar sx={{ width: 60, height: 60, bgcolor: alpha(theme.palette.text.secondary, 0.1), color: 'text.secondary' }}>
+                <DocumentText size={30} variant="Outline" />
+              </Avatar>
+              <Typography variant="body1" fontWeight={600} color="text.secondary">
+                ไม่พบข้อมูลใบลา
+              </Typography>
+            </Box>
+          </Paper>
+        ) : (
+          paginatedLeaves.map((leave) => {
+            const statusInfo = statusConfig[leave.status] || statusConfig.pending;
+            const pendingApproval = leave.approvals.find(a => a.status === 'pending');
+            const currentApprover = pendingApproval?.approver;
 
-      {/* Status Tabs */}
-      <Paper
+            return (
+              <Paper
+                key={leave.id}
+                elevation={0}
+                sx={{
+                  p: 2,
+                  borderRadius: 1,
+                  border: '1px solid',
+                  borderColor: 'divider',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 2,
+                }}
+              >
+                {/* Card Header */}
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <Box sx={{ display: 'flex', gap: 1.5 }}>
+                    <Avatar
+                      src={leave.user.avatar || undefined}
+                      sx={{ width: 40, height: 40, bgcolor: theme.palette.primary.main }}
+                    >
+                      {leave.user.firstName.charAt(0)}
+                    </Avatar>
+                    <Box>
+                      <Typography variant="subtitle2" fontWeight={700}>
+                        {leave.user.firstName} {leave.user.lastName}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        {leave.user.employeeId} • {leave.user.departmentName || leave.user.department}
+                      </Typography>
+                    </Box>
+                  </Box>
+                  <Chip
+                    label={leave.leaveCode || `#${leave.id}`}
+                    size="small"
+                    sx={{ borderRadius: 1, bgcolor: alpha(theme.palette.primary.main, 0.1), color: 'primary.main', fontWeight: 600, fontSize: '0.7rem' }}
+                  />
+                </Box>
+
+                <Divider sx={{ borderStyle: 'dashed' }} />
+
+                {/* Card Body */}
+                <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
+                  <Box>
+                    <Typography variant="caption" color="text.secondary">ประเภท</Typography>
+                    <Typography variant="body2" fontWeight={500}>{leave.leaveTypeName}</Typography>
+                  </Box>
+                  <Box>
+                    <Typography variant="caption" color="text.secondary">จำนวน</Typography>
+                    <Typography variant="body2" fontWeight={500}>{leave.totalDays} วัน</Typography>
+                  </Box>
+                  <Box sx={{ gridColumn: '1 / -1' }}>
+                    <Typography variant="caption" color="text.secondary">ช่วงเวลา</Typography>
+                    <Typography variant="body2" fontWeight={500}>
+                      {formatDate(leave.startDate)} - {formatDate(leave.endDate)}
+                    </Typography>
+                  </Box>
+                </Box>
+
+                {/* Card Footer */}
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 1, pt: 2, borderTop: '1px solid', borderColor: 'divider' }}>
+                  <Chip
+                    icon={statusInfo.icon}
+                    label={statusInfo.label}
+                    size="small"
+                    color={statusInfo.color}
+                    sx={{ fontWeight: 500, borderRadius: 1 }}
+                  />
+
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    onClick={() => handleOpenDetail(leave)}
+                    endIcon={<EyeIcon size={16} color={theme.palette.primary.main} />}
+                    sx={{ borderRadius: 1 }}
+                  >
+                    รายละเอียด
+                  </Button>
+                </Box>
+
+                {leave.status === 'pending' && currentApprover && (
+                  <Box sx={{ bgcolor: alpha(theme.palette.warning.main, 0.05), p: 1, borderRadius: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <ClockIcon size={14} color={theme.palette.warning.main} variant="Bold" />
+                    <Typography variant="body2" color="text.secondary">
+                      รออนุมัติ: <strong>{currentApprover.firstName} {currentApprover.lastName}</strong> ({roleLabels[currentApprover.role]}) (ขั้นที่ {leave.currentLevel})
+                    </Typography>
+                  </Box>
+                )}
+              </Paper>
+            );
+          })
+        )}
+      </Box>
+
+      {/* Desktop Table View */}
+      {/* Desktop Table View */}
+      <TableContainer
+        component={Paper}
+        elevation={0}
         sx={{
-          mb: 3,
+          display: { xs: 'none', md: 'block' },
           borderRadius: 1,
           border: '1px solid',
           borderColor: 'divider',
-          boxShadow: 'none',
-          overflow: 'hidden',
-        }}
-      >
-        <Tabs
-          value={statusTab}
-          onChange={(_, newValue) => {
-            setStatusTab(newValue);
-            setStatusFilter(statusTabMap[newValue]);
-            setPage(0);
-          }}
-          variant="scrollable"
-          scrollButtons="auto"
-          sx={{
-            bgcolor: alpha(theme.palette.primary.main, 0.02),
-            '& .MuiTab-root': {
-              minHeight: 48,
-              textTransform: 'none',
-              fontWeight: 500,
-            },
-            '& .Mui-selected': {
-              fontWeight: 600,
-            },
-          }}
-        >
-          <Tab 
-            label={
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <DocumentText size={16} variant="Outline" color="#6C63FF" />
-                <span>ทั้งหมด</span>
-                <Chip label={stats.total} size="small" sx={{ height: 20, fontSize: '0.7rem' }} />
-              </Box>
-            } 
-          />
-          <Tab 
-            label={
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <ClockIcon size={16} variant="Outline" color="#FF9800" />
-                <span>รออนุมัติ</span>
-                <Chip label={stats.pending} size="small" color="warning" sx={{ height: 20, fontSize: '0.7rem' }} />
-              </Box>
-            } 
-          />
-          <Tab 
-            label={
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <TickCircle size={16} variant="Outline" color="#4CAF50" />
-                <span>อนุมัติแล้ว</span>
-                <Chip label={stats.approved} size="small" color="success" sx={{ height: 20, fontSize: '0.7rem' }} />
-              </Box>
-            } 
-          />
-          <Tab 
-            label={
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <CloseCircle size={16} variant="Outline" color="#F44336" />
-                <span>ไม่อนุมัติ</span>
-                <Chip label={stats.rejected} size="small" color="error" sx={{ height: 20, fontSize: '0.7rem' }} />
-              </Box>
-            } 
-          />
-          <Tab 
-            label={
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <InfoCircle size={16} variant="Outline" color="#9E9E9E" />
-                <span>ยกเลิก</span>
-                <Chip label={stats.cancelled} size="small" sx={{ height: 20, fontSize: '0.7rem', bgcolor: 'grey.300' }} />
-              </Box>
-            } 
-          />
-        </Tabs>
-      </Paper>
-
-      {/* Table */}
-      <TableContainer 
-        component={Paper} 
-        sx={{ 
-          borderRadius: 1,
-          border: '1px solid',
-          borderColor: 'divider',
-          boxShadow: 'none',
           overflow: 'hidden',
         }}
       >
         <Table>
           <TableHead>
             <TableRow sx={{ bgcolor: alpha(theme.palette.primary.main, 0.04) }}>
-              <TableCell sx={{ fontWeight: 600, color: 'text.secondary', py: 2, width: 60 }}>ลำดับ</TableCell>
-              <TableCell sx={{ fontWeight: 600, color: 'text.secondary', py: 2 }}>รหัสใบลา</TableCell>
-              <TableCell sx={{ fontWeight: 600, color: 'text.secondary', py: 2 }}>พนักงาน</TableCell>
-              <TableCell sx={{ fontWeight: 600, color: 'text.secondary', py: 2 }}>ประเภท</TableCell>
-              <TableCell sx={{ fontWeight: 600, color: 'text.secondary', py: 2 }}>วันที่ลา</TableCell>
-              <TableCell sx={{ fontWeight: 600, color: 'text.secondary', py: 2 }}>จำนวน</TableCell>
-              <TableCell sx={{ fontWeight: 600, color: 'text.secondary', py: 2 }}>สถานะ</TableCell>
-              <TableCell sx={{ fontWeight: 600, color: 'text.secondary', py: 2 }}>ขั้นตอน</TableCell>
-              <TableCell sx={{ fontWeight: 600, color: 'text.secondary', py: 2 }} align="right">จัดการ</TableCell>
+              <TableCell sx={{ fontWeight: 600, py: 1.5, pl: 3, fontSize: '0.85rem' }}>ลำดับ</TableCell>
+              <TableCell sx={{ fontWeight: 600, py: 1.5, fontSize: '0.85rem' }}>รหัสใบลา</TableCell>
+              <TableCell sx={{ fontWeight: 600, py: 1.5, fontSize: '0.85rem' }}>พนักงาน</TableCell>
+              <TableCell sx={{ fontWeight: 600, py: 1.5, fontSize: '0.85rem' }}>ประเภท</TableCell>
+              <TableCell sx={{ fontWeight: 600, py: 1.5, fontSize: '0.85rem' }}>วันที่ลา</TableCell>
+              <TableCell sx={{ fontWeight: 600, py: 1.5, fontSize: '0.85rem' }}>จำนวน</TableCell>
+              <TableCell sx={{ fontWeight: 600, py: 1.5, fontSize: '0.85rem' }}>สถานะ</TableCell>
+              <TableCell sx={{ fontWeight: 600, py: 1.5, fontSize: '0.85rem' }}>ขั้นตอนปัจจุบัน</TableCell>
+              <TableCell sx={{ fontWeight: 600, py: 1.5, pr: 3, fontSize: '0.85rem' }} align="right">จัดการ</TableCell>
             </TableRow>
           </TableHead>
           {loading ? (
@@ -824,18 +892,24 @@ export default function AdminLeavesPage() {
               <TableRow>
                 <TableCell colSpan={9} align="center" sx={{ py: 10 }}>
                   <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
-                    <Avatar
+                    <Box
                       sx={{
                         width: 80,
                         height: 80,
-                        bgcolor: alpha(theme.palette.text.secondary, 0.1),
-                        color: 'text.secondary',
+                        borderRadius: '50%',
+                        bgcolor: alpha(theme.palette.text.secondary, 0.05),
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
                       }}
                     >
-                      <DocumentText size={40} variant="Outline" color="#9E9E9E" />
-                    </Avatar>
-                    <Typography variant="h6" fontWeight={600}>
+                      <DocumentText size={40} variant="Bulk" color={theme.palette.text.secondary} />
+                    </Box>
+                    <Typography variant="h6" fontWeight={600} color="text.secondary">
                       ไม่พบข้อมูลใบลา
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      ลองปรับเปลี่ยนตัวกรองเพื่อค้นหาใหม่
                     </Typography>
                   </Box>
                 </TableCell>
@@ -847,33 +921,52 @@ export default function AdminLeavesPage() {
                 const statusInfo = statusConfig[leave.status] || statusConfig.pending;
                 const pendingApproval = leave.approvals.find(a => a.status === 'pending');
                 const currentApprover = pendingApproval?.approver;
-                
+
                 return (
                   <TableRow
                     key={leave.id}
+                    hover
+                    onClick={() => handleOpenDetail(leave)}
                     sx={{
-                      transition: 'background-color 0.2s ease',
-                      '&:hover': { 
-                        bgcolor: alpha(theme.palette.primary.main, 0.04),
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease',
+                      '&:hover': {
+                        bgcolor: alpha(theme.palette.primary.main, 0.02),
                       },
-                      '&:last-child td': { border: 0 },
                     }}
                   >
-                    <TableCell>
+                    <TableCell sx={{ py: 2, pl: 3 }}>
                       <Typography variant="body2" fontWeight={600} color="text.secondary">
                         {page * rowsPerPage + index + 1}
                       </Typography>
                     </TableCell>
-                    <TableCell>
-                      <Typography variant="body2" fontWeight={600} color="primary.main">
-                        {leave.leaveCode || `#${leave.id}`}
-                      </Typography>
+                    <TableCell sx={{ py: 2 }}>
+                      <Chip
+                        label={leave.leaveCode || `#${leave.id}`}
+                        size="small"
+                        sx={{
+                          borderRadius: 1,
+                          bgcolor: alpha(theme.palette.primary.main, 0.08),
+                          color: 'primary.main',
+                          fontWeight: 700,
+                          fontSize: '0.75rem',
+                          height: 24
+                        }}
+                      />
                     </TableCell>
-                    <TableCell>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                        <Avatar 
-                          src={leave.user.avatar || undefined} 
-                          sx={{ width: 36, height: 36, bgcolor: theme.palette.primary.main }}
+                    <TableCell sx={{ py: 2 }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                        <Avatar
+                          src={leave.user.avatar || undefined}
+                          sx={{
+                            width: 40,
+                            height: 40,
+                            bgcolor: theme.palette.primary.main,
+                            fontSize: '1rem',
+                            fontWeight: 600,
+                            border: `2px solid ${theme.palette.background.paper}`,
+                            boxShadow: '0 2px 8px rgba(0,0,0,0.08)'
+                          }}
                         >
                           {leave.user.firstName.charAt(0)}
                         </Avatar>
@@ -881,76 +974,82 @@ export default function AdminLeavesPage() {
                           <Typography variant="body2" fontWeight={600}>
                             {leave.user.firstName} {leave.user.lastName}
                           </Typography>
-                          <Typography variant="caption" color="text.secondary">
-                            {leave.user.employeeId}
+                          <Typography variant="caption" color="text.secondary" display="flex" alignItems="center" gap={0.5}>
+                            <UserIcon size={14} color={theme.palette.text.secondary} /> {leave.user.departmentName || '-'}
                           </Typography>
                         </Box>
                       </Box>
                     </TableCell>
-                    <TableCell>
-                      <Typography variant="body2">
+                    <TableCell sx={{ py: 1.5 }}>
+                      <Typography variant="body2" fontWeight={500}>
                         {leave.leaveTypeName}
                       </Typography>
                     </TableCell>
-                    <TableCell>
-                      <Typography variant="body2">
-                        {formatDate(leave.startDate)}
+                    <TableCell sx={{ py: 2 }}>
+                      <Box>
+                        <Typography variant="body2" fontWeight={600}>
+                          {formatDate(leave.startDate)}
+                        </Typography>
                         {leave.startDate !== leave.endDate && (
-                          <> - {formatDate(leave.endDate)}</>
+                          <Typography variant="caption" color="text.secondary">
+                            ถึง {formatDate(leave.endDate)}
+                          </Typography>
                         )}
-                      </Typography>
+                      </Box>
                     </TableCell>
-                    <TableCell>
-                      <Typography variant="body2" fontWeight={500}>
+                    <TableCell sx={{ py: 2 }}>
+                      <Typography variant="body2" fontWeight={600}>
                         {leave.totalDays} วัน
                       </Typography>
                     </TableCell>
-                    <TableCell>
+                    <TableCell sx={{ py: 2 }}>
                       <Chip
                         icon={statusInfo.icon}
                         label={statusInfo.label}
                         size="small"
                         color={statusInfo.color}
-                        sx={{ fontWeight: 500, borderRadius: 1 }}
+                        variant={leave.status === 'pending' ? 'filled' : 'outlined'}
+                        sx={{
+                          fontWeight: 600,
+                          borderRadius: 1,
+                          borderWidth: leave.status === 'pending' ? 0 : 1,
+                        }}
                       />
                     </TableCell>
-                    <TableCell>
+                    <TableCell sx={{ py: 2 }}>
                       {leave.status === 'pending' && currentApprover ? (
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                          <Chip
-                            label={`ขั้นที่ ${leave.currentLevel}`}
-                            size="small"
-                            variant="outlined"
-                            sx={{ fontWeight: 500, borderRadius: 1, fontSize: '0.7rem' }}
-                          />
-                          <Typography variant="caption" color="text.secondary">
-                            รอ {currentApprover.firstName}
-                          </Typography>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <Avatar
+                            sx={{ width: 24, height: 24, fontSize: '0.75rem', bgcolor: alpha(theme.palette.warning.main, 0.2), color: 'warning.main', fontWeight: 'bold' }}
+                          >
+                            {leave.currentLevel}
+                          </Avatar>
+                          <Box>
+                            <Typography variant="caption" color="text.secondary" display="block">
+                              รออนุมัติ
+                            </Typography>
+                            <Typography variant="caption" fontWeight={600}>
+                              {currentApprover.firstName}
+                            </Typography>
+                          </Box>
                         </Box>
-                      ) : leave.status === 'approved' ? (
-                        <Typography variant="caption" color="success.main">อนุมัติครบแล้ว</Typography>
-                      ) : leave.status === 'rejected' ? (
-                        <Typography variant="caption" color="error.main">ถูกปฏิเสธ</Typography>
                       ) : (
                         <Typography variant="caption" color="text.secondary">-</Typography>
                       )}
                     </TableCell>
-                    <TableCell align="right">
-                      <Tooltip title="ดูรายละเอียด">
-                        <IconButton
-                          onClick={() => handleOpenDetail(leave)}
-                          size="small"
-                          sx={{
-                            color: 'primary.main',
+                    <TableCell align="right" sx={{ py: 2, pr: 3 }}>
+                      <IconButton
+                        size="small"
+                        sx={{
+                          color: 'primary.main',
+                          bgcolor: alpha(theme.palette.primary.main, 0.05),
+                          '&:hover': {
                             bgcolor: alpha(theme.palette.primary.main, 0.1),
-                            '&:hover': {
-                              bgcolor: alpha(theme.palette.primary.main, 0.2),
-                            },
-                          }}
-                        >
-                          <EyeIcon size={18} variant="Outline" color="#6C63FF" />
-                        </IconButton>
-                      </Tooltip>
+                          },
+                        }}
+                      >
+                        <ArrowRight2 size={18} color="currentColor" />
+                      </IconButton>
                     </TableCell>
                   </TableRow>
                 );
@@ -963,12 +1062,14 @@ export default function AdminLeavesPage() {
       {/* Pagination */}
       {leaves.length > 0 && (
         <Paper
+          elevation={0}
           sx={{
             mt: 2,
             borderRadius: 1,
             border: '1px solid',
             borderColor: 'divider',
-            boxShadow: 'none',
+            bgcolor: 'background.paper',
+            p: 1,
           }}
         >
           <TablePagination
@@ -986,21 +1087,27 @@ export default function AdminLeavesPage() {
             labelDisplayedRows={({ from, to, count }) =>
               `${from}-${to} จาก ${count !== -1 ? count : `มากกว่า ${to}`}`
             }
+            sx={{
+              '& .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows': {
+                fontWeight: 500,
+                color: 'text.secondary',
+              },
+            }}
           />
         </Paper>
       )}
 
       {/* Detail Dialog */}
-      <Dialog 
-        open={detailDialogOpen} 
-        onClose={() => setDetailDialogOpen(false)} 
-        maxWidth="md" 
+      <Dialog
+        open={detailDialogOpen}
+        onClose={() => setDetailDialogOpen(false)}
+        maxWidth="md"
         fullWidth
         PaperProps={{ sx: { borderRadius: 1 } }}
       >
-        <DialogTitle sx={{ 
-          display: 'flex', 
-          alignItems: 'center', 
+        <DialogTitle sx={{
+          display: 'flex',
+          alignItems: 'center',
           justifyContent: 'space-between',
           borderBottom: '1px solid',
           borderColor: 'divider',
@@ -1027,11 +1134,11 @@ export default function AdminLeavesPage() {
         <DialogContent sx={{ p: 0 }}>
           {selectedLeave && (
             <>
-              <Tabs 
-                value={detailTab} 
+              <Tabs
+                value={detailTab}
                 onChange={(_, v) => setDetailTab(v)}
-                sx={{ 
-                  borderBottom: 1, 
+                sx={{
+                  borderBottom: 1,
                   borderColor: 'divider',
                   px: 3,
                 }}
@@ -1069,8 +1176,8 @@ export default function AdminLeavesPage() {
                       </Typography>
                       <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2, mt: 1.5 }}>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                          <Avatar 
-                            src={selectedLeave.user.avatar || undefined} 
+                          <Avatar
+                            src={selectedLeave.user.avatar || undefined}
                             sx={{ width: 48, height: 48, bgcolor: theme.palette.primary.main }}
                           >
                             {selectedLeave.user.firstName.charAt(0)}
@@ -1162,7 +1269,7 @@ export default function AdminLeavesPage() {
                       const isApproved = approval.status === 'approved';
                       const isRejected = approval.status === 'rejected';
                       const isCancelled = approval.status === 'cancelled';
-                      
+
                       // กำหนด label และ color ตาม status
                       const getStatusLabel = () => {
                         if (isPending) return 'รออนุมัติ';
@@ -1170,7 +1277,7 @@ export default function AdminLeavesPage() {
                         if (isCancelled) return 'ผู้ขอยกเลิก';
                         return 'ไม่อนุมัติ';
                       };
-                      
+
                       const getStatusColor = (): 'warning' | 'success' | 'default' | 'error' => {
                         if (isPending) return 'warning';
                         if (isApproved) return 'success';
@@ -1200,13 +1307,13 @@ export default function AdminLeavesPage() {
                         if (isRejected) return 'error.main';
                         return 'grey.400';
                       };
-                      
+
                       return (
-                        <Paper 
+                        <Paper
                           key={approval.id}
-                          variant="outlined" 
-                          sx={{ 
-                            p: 2, 
+                          variant="outlined"
+                          sx={{
+                            p: 2,
                             borderRadius: 1,
                             borderColor: getBorderColor(),
                             bgcolor: getBgColor(),
@@ -1229,7 +1336,7 @@ export default function AdminLeavesPage() {
                                 <Typography variant="body2" fontWeight={600}>
                                   {approval.approver.firstName} {approval.approver.lastName}
                                 </Typography>
-                                <Chip 
+                                <Chip
                                   label={roleLabels[approval.approver.role] || approval.approver.role}
                                   size="small"
                                   sx={{ height: 20, fontSize: '0.65rem' }}
@@ -1268,11 +1375,11 @@ export default function AdminLeavesPage() {
                 {detailTab === 2 && selectedLeave.attachments.length > 0 && (
                   <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                     {selectedLeave.attachments.map((file) => (
-                      <Paper 
+                      <Paper
                         key={file.id}
-                        variant="outlined" 
-                        sx={{ 
-                          p: 2, 
+                        variant="outlined"
+                        sx={{
+                          p: 2,
                           borderRadius: 1,
                           display: 'flex',
                           alignItems: 'center',
@@ -1283,8 +1390,8 @@ export default function AdminLeavesPage() {
                         onClick={() => handleFileClick(file)}
                       >
                         {isImageFile(file.mimeType) ? (
-                          <Avatar 
-                            src={file.filePath} 
+                          <Avatar
+                            src={file.filePath}
                             variant="rounded"
                             sx={{ width: 48, height: 48 }}
                           >
@@ -1337,9 +1444,9 @@ export default function AdminLeavesPage() {
           }
         }}
       >
-        <DialogTitle sx={{ 
-          display: 'flex', 
-          alignItems: 'center', 
+        <DialogTitle sx={{
+          display: 'flex',
+          alignItems: 'center',
           justifyContent: 'space-between',
           borderBottom: '1px solid',
           borderColor: 'divider',
@@ -1350,7 +1457,7 @@ export default function AdminLeavesPage() {
           </Typography>
           <Box sx={{ display: 'flex', gap: 1 }}>
             <Tooltip title="ดาวน์โหลด">
-              <IconButton 
+              <IconButton
                 size="small"
                 onClick={() => {
                   if (selectedImage) {
@@ -1365,7 +1472,7 @@ export default function AdminLeavesPage() {
               </IconButton>
             </Tooltip>
             <Tooltip title="เปิดในแท็บใหม่">
-              <IconButton 
+              <IconButton
                 size="small"
                 onClick={() => selectedImage && window.open(selectedImage.url, '_blank')}
               >
@@ -1377,10 +1484,10 @@ export default function AdminLeavesPage() {
             </IconButton>
           </Box>
         </DialogTitle>
-        <DialogContent sx={{ 
-          p: 0, 
-          display: 'flex', 
-          alignItems: 'center', 
+        <DialogContent sx={{
+          p: 0,
+          display: 'flex',
+          alignItems: 'center',
           justifyContent: 'center',
           bgcolor: alpha(theme.palette.common.black, 0.02),
           minHeight: 400,
@@ -1399,6 +1506,6 @@ export default function AdminLeavesPage() {
           )}
         </DialogContent>
       </Dialog>
-    </Box>
+    </Box >
   );
 }

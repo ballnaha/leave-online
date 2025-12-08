@@ -109,22 +109,22 @@ const PRIMARY_LIGHT = '#EAF2F8'; // Light blueish background
 
 // กำหนด icon และสีสำหรับแต่ละประเภทการลา
 const leaveTypeConfig: Record<string, { icon: any; color: string; lightColor: string }> = {
-    sick: { icon: Health, color: '#D32F2F', lightColor: '#FFEBEE' }, // แดง
-    personal: { icon: Briefcase, color: '#1976D2', lightColor: '#E3F2FD' }, // น้ำเงิน
-    vacation: { icon: Sun1, color: '#ED6C02', lightColor: '#FFF3E0' }, // ส้ม
-    annual: { icon: Sun, color: '#ED6C02', lightColor: '#FFF3E0' }, // ส้ม
-    maternity: { icon: People, color: '#9C27B0', lightColor: '#F3E5F5' }, // ม่วง
-    ordination: { icon: Building, color: '#ED6C02', lightColor: '#FFF3E0' }, // ส้ม
-    work_outside: { icon: Car, color: '#0288D1', lightColor: '#E1F5FE' }, // ฟ้า
-    military: { icon: Shield, color: '#2E7D32', lightColor: '#E8F5E9' }, // เขียว
-    marriage: { icon: Heart, color: '#E91E63', lightColor: '#FCE4EC' }, // ชมพู
-    funeral: { icon: Profile2User, color: '#424242', lightColor: '#F5F5F5' }, // เทา
-    paternity: { icon: User, color: '#1976D2', lightColor: '#E3F2FD' }, // น้ำเงิน
-    sterilization: { icon: Health, color: '#D32F2F', lightColor: '#FFEBEE' }, // แดง
-    business: { icon: Car, color: '#0288D1', lightColor: '#E1F5FE' }, // ฟ้า
-    unpaid: { icon: MoneySend, color: '#757575', lightColor: '#EEEEEE' }, // เทา
-    other: { icon: InfoCircle, color: '#607D8B', lightColor: '#ECEFF1' }, // เทาฟ้า - ลาอื่นๆ
-    default: { icon: InfoCircle, color: PRIMARY_COLOR, lightColor: PRIMARY_LIGHT },
+  sick: { icon: Health, color: '#D32F2F', lightColor: '#FFEBEE' }, // แดง
+  personal: { icon: Briefcase, color: '#1976D2', lightColor: '#E3F2FD' }, // น้ำเงิน
+  vacation: { icon: Sun1, color: '#ED6C02', lightColor: '#FFF3E0' }, // ส้ม
+  annual: { icon: Sun, color: '#ED6C02', lightColor: '#FFF3E0' }, // ส้ม
+  maternity: { icon: People, color: '#9C27B0', lightColor: '#F3E5F5' }, // ม่วง
+  ordination: { icon: Building, color: '#ED6C02', lightColor: '#FFF3E0' }, // ส้ม
+  work_outside: { icon: Car, color: '#0288D1', lightColor: '#E1F5FE' }, // ฟ้า
+  military: { icon: Shield, color: '#2E7D32', lightColor: '#E8F5E9' }, // เขียว
+  marriage: { icon: Heart, color: '#E91E63', lightColor: '#FCE4EC' }, // ชมพู
+  funeral: { icon: Profile2User, color: '#424242', lightColor: '#F5F5F5' }, // เทา
+  paternity: { icon: User, color: '#1976D2', lightColor: '#E3F2FD' }, // น้ำเงิน
+  sterilization: { icon: Health, color: '#D32F2F', lightColor: '#FFEBEE' }, // แดง
+  business: { icon: Car, color: '#0288D1', lightColor: '#E1F5FE' }, // ฟ้า
+  unpaid: { icon: MoneySend, color: '#757575', lightColor: '#EEEEEE' }, // เทา
+  other: { icon: InfoCircle, color: '#607D8B', lightColor: '#ECEFF1' }, // เทาฟ้า - ลาอื่นๆ
+  default: { icon: InfoCircle, color: PRIMARY_COLOR, lightColor: PRIMARY_LIGHT },
 };
 
 interface ApprovalItem {
@@ -187,51 +187,51 @@ export default function ApprovalPage() {
   const { data: session } = useSession();
   const theme = useTheme();
   const isMobileDevice = useMediaQuery(theme.breakpoints.down('md'));
-  
+
   // Check if user is hr_manager
   const isHrManager = session?.user?.role === 'hr_manager';
-  
+
   const [loading, setLoading] = useState(true);
   const [approvals, setApprovals] = useState<ApprovalItem[]>([]);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [tabValue, setTabValue] = useState(0);
   const [counts, setCounts] = useState({ pending: 0, approved: 0, rejected: 0, cancelled: 0, total: 0 });
-  
+
   // View mode: 'mobile' or 'desktop'
   const [viewMode, setViewMode] = useState<'mobile' | 'desktop'>('mobile');
-  
+
   // Auto-set view mode based on device on first load
   useEffect(() => {
     setViewMode(isMobileDevice ? 'mobile' : 'desktop');
   }, []);
-  
+
   // Pagination
   const [page, setPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
-  
+
   // Filter month/year
   const [filterMonth, setFilterMonth] = useState<number | 'all'>('all');
   const [filterYear, setFilterYear] = useState<number>(new Date().getFullYear());
-  
+
   // Filter department/section (for HR Manager)
   const [filterDepartment, setFilterDepartment] = useState<string>('all');
   const [filterSection, setFilterSection] = useState<string>('all');
-  
+
   // Group view mode (for HR Manager): 'list' or 'group'
   const [groupViewMode, setGroupViewMode] = useState<'list' | 'group'>('list');
-  
+
   // Mobile filter panel toggle
   const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
-  
+
   // Toggle expanded cards
   const [expandedCards, setExpandedCards] = useState<Set<number>>(new Set());
-  
+
   // Image modal state
   const [imageModalOpen, setImageModalOpen] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string>('');
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [currentAttachments, setCurrentAttachments] = useState<Array<{ id: number; fileName: string; filePath: string }>>([]);
-  
+
   // Dialog state
   const [selectedApproval, setSelectedApproval] = useState<ApprovalItem | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -239,7 +239,7 @@ export default function ApprovalPage() {
   const [comment, setComment] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
-  
+
   // Split Dialog state
   const [splitDialogOpen, setSplitDialogOpen] = useState(false);
   const [splitParts, setSplitParts] = useState<Array<{
@@ -252,7 +252,7 @@ export default function ApprovalPage() {
     reason: string;
   }>>([]);
   const [splitComment, setSplitComment] = useState('');
-  
+
   // Leave summary state (วันลาคงเหลือของ user)
   const [leaveSummary, setLeaveSummary] = useState<Array<{
     code: string;
@@ -263,7 +263,7 @@ export default function ApprovalPage() {
     isUnlimited: boolean;
   }>>([]);
   const [loadingSummary, setLoadingSummary] = useState(false);
-  
+
   // Bottom sheet state for leave type selector
   const [leaveTypeSheetOpen, setLeaveTypeSheetOpen] = useState(false);
   const [currentEditingPartIndex, setCurrentEditingPartIndex] = useState<number | null>(null);
@@ -273,12 +273,17 @@ export default function ApprovalPage() {
     fetchApprovals();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-  
+
   // Reset page when tab changes (ไม่ต้อง fetch ใหม่)
   useEffect(() => {
     setPage(1);
     setExpandedCards(new Set());
   }, [tabValue]);
+
+  // Reset expanded cards when view mode changes
+  useEffect(() => {
+    setExpandedCards(new Set());
+  }, [viewMode]);
 
   const fetchApprovals = async () => {
     setLoading(true);
@@ -295,13 +300,13 @@ export default function ApprovalPage() {
       setLoading(false);
     }
   };
-  
+
   // Helper function to check if file is an image
   const isImageFile = (fileName: string) => {
     const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.heic'];
     return imageExtensions.some(ext => fileName.toLowerCase().endsWith(ext));
   };
-  
+
   const handleFileClick = (file: { fileName: string; filePath: string }, e: React.MouseEvent, attachments?: Array<{ id: number; fileName: string; filePath: string }>) => {
     e.stopPropagation();
     if (isImageFile(file.fileName)) {
@@ -317,7 +322,7 @@ export default function ApprovalPage() {
       window.open(file.filePath, '_blank');
     }
   };
-  
+
   const toggleCard = (id: number) => {
     setExpandedCards(prev => {
       const newSet = new Set(prev);
@@ -337,7 +342,7 @@ export default function ApprovalPage() {
     setError('');
     setDialogOpen(true);
   };
-  
+
   // Fetch leave summary for a user
   const fetchLeaveSummary = async (userId: number, year: number) => {
     setLoadingSummary(true);
@@ -353,29 +358,29 @@ export default function ApprovalPage() {
       setLoadingSummary(false);
     }
   };
-  
+
   // Split Leave Functions
   const handleOpenSplitDialog = async (approval: ApprovalItem) => {
     setSelectedApproval(approval);
     setSplitComment('');
     setError('');
     setLeaveSummary([]);
-    
+
     // Initialize with 2 parts - first day as original type, rest as new type
     const startDate = new Date(approval.leaveRequest.startDate);
     const endDate = new Date(approval.leaveRequest.endDate);
     const totalDays = approval.leaveRequest.totalDays;
-    
+
     if (totalDays <= 1) {
       setError('ไม่สามารถแยกใบลาที่มีเพียง 1 วันได้');
       return;
     }
-    
+
     // Default split: first day = original type, remaining = 
     const firstDayEnd = new Date(startDate);
     const secondDayStart = new Date(startDate);
     secondDayStart.setDate(secondDayStart.getDate() + 1);
-    
+
     setSplitParts([
       {
         leaveType: approval.leaveRequest.leaveType,
@@ -396,20 +401,20 @@ export default function ApprovalPage() {
         reason: '',
       },
     ]);
-    
+
     setSplitDialogOpen(true);
-    
+
     // Fetch leave summary for the user
     const leaveYear = startDate.getFullYear();
     await fetchLeaveSummary(approval.leaveRequest.user.id, leaveYear);
   };
-  
+
   // Helper function to get remaining days for a leave type
   const getRemainingDays = (leaveTypeCode: string): { remaining: number; isUnlimited: boolean; name: string } => {
     const summary = leaveSummary.find(s => s.code === leaveTypeCode);
     if (summary) {
-      return { 
-        remaining: summary.remainingDays, 
+      return {
+        remaining: summary.remainingDays,
         isUnlimited: summary.isUnlimited,
         name: summary.name
       };
@@ -417,23 +422,23 @@ export default function ApprovalPage() {
     // Default for unknown types
     return { remaining: 0, isUnlimited: false, name: leaveTypeCode };
   };
-  
+
   // Helper function to calculate total days with period
   const calculateTotalDaysWithPeriod = (
-    startDate: string, 
-    endDate: string, 
-    startPeriod: string, 
+    startDate: string,
+    endDate: string,
+    startPeriod: string,
     endPeriod: string
   ): number => {
     const start = dayjs(startDate);
     const end = dayjs(endDate);
     if (!start.isValid() || !end.isValid() || end.isBefore(start)) return 0;
-    
+
     const daysDiff = end.diff(start, 'day');
-    
+
     // Period values: full = 1, half = 0.5
     const getPeriodValue = (period: string) => period === 'full' ? 1 : 0.5;
-    
+
     if (daysDiff === 0) {
       // Same day
       if (startPeriod === 'full' && endPeriod === 'full') return 1;
@@ -444,7 +449,7 @@ export default function ApprovalPage() {
       // กรณีอื่นๆ ในวันเดียวกัน
       return getPeriodValue(startPeriod);
     }
-    
+
     // Multiple days
     // First day: depends on startPeriod (full=1, half=0.5)
     const firstDayValue = getPeriodValue(startPeriod);
@@ -452,7 +457,7 @@ export default function ApprovalPage() {
     const lastDayValue = getPeriodValue(endPeriod);
     // Days in between are full days
     const middleDays = Math.max(0, daysDiff - 1);
-    
+
     return firstDayValue + middleDays + lastDayValue;
   };
 
@@ -460,7 +465,7 @@ export default function ApprovalPage() {
     setSplitParts(prev => {
       const updated = [...prev];
       updated[index] = { ...updated[index], [field]: value };
-      
+
       // Auto-calculate totalDays if dates or periods change
       if (field === 'startDate' || field === 'endDate' || field === 'startPeriod' || field === 'endPeriod') {
         updated[index].totalDays = calculateTotalDaysWithPeriod(
@@ -469,15 +474,15 @@ export default function ApprovalPage() {
           updated[index].startPeriod,
           updated[index].endPeriod
         );
-        
+
         // เมื่อเปลี่ยน endDate หรือ endPeriod ของส่วนที่ i ให้อัพเดท startDate/startPeriod ของส่วนถัดไป
         if ((field === 'endDate' || field === 'endPeriod') && index < updated.length - 1) {
           const currentEndPeriod = updated[index].endPeriod;
-          
+
           // กำหนด startPeriod ของส่วนถัดไปตาม endPeriod ของส่วนปัจจุบัน
           let nextStartDate = updated[index].endDate;
           let nextStartPeriod: 'full' | 'half' = 'full';
-          
+
           if (currentEndPeriod === 'half') {
             // ถ้าจบครึ่งวัน ส่วนถัดไปเริ่มครึ่งวันหลังวันเดียวกัน
             nextStartPeriod = 'half';
@@ -486,13 +491,13 @@ export default function ApprovalPage() {
             nextStartDate = dayjs(updated[index].endDate).add(1, 'day').format('YYYY-MM-DD');
             nextStartPeriod = 'full';
           }
-          
-          updated[index + 1] = { 
-            ...updated[index + 1], 
+
+          updated[index + 1] = {
+            ...updated[index + 1],
             startDate: nextStartDate,
-            startPeriod: nextStartPeriod 
+            startPeriod: nextStartPeriod
           };
-          
+
           // คำนวณ totalDays ของส่วนถัดไปใหม่
           updated[index + 1].totalDays = calculateTotalDaysWithPeriod(
             updated[index + 1].startDate,
@@ -501,14 +506,14 @@ export default function ApprovalPage() {
             updated[index + 1].endPeriod
           );
         }
-        
+
         // เมื่อเปลี่ยน startDate หรือ startPeriod ของส่วนที่ i ให้อัพเดท endDate/endPeriod ของส่วนก่อนหน้า
         if ((field === 'startDate' || field === 'startPeriod') && index > 0) {
           const currentStartPeriod = updated[index].startPeriod;
-          
+
           let prevEndDate = updated[index].startDate;
           let prevEndPeriod: 'full' | 'half' = 'full';
-          
+
           if (currentStartPeriod === 'half') {
             // ถ้าเริ่มครึ่งวันหลัง ส่วนก่อนหน้าจบครึ่งวันแรกวันเดียวกัน
             prevEndPeriod = 'half';
@@ -517,13 +522,13 @@ export default function ApprovalPage() {
             prevEndDate = dayjs(updated[index].startDate).subtract(1, 'day').format('YYYY-MM-DD');
             prevEndPeriod = 'full';
           }
-          
-          updated[index - 1] = { 
-            ...updated[index - 1], 
+
+          updated[index - 1] = {
+            ...updated[index - 1],
             endDate: prevEndDate,
-            endPeriod: prevEndPeriod 
+            endPeriod: prevEndPeriod
           };
-          
+
           // คำนวณ totalDays ของส่วนก่อนหน้าใหม่
           updated[index - 1].totalDays = calculateTotalDaysWithPeriod(
             updated[index - 1].startDate,
@@ -533,18 +538,18 @@ export default function ApprovalPage() {
           );
         }
       }
-      
+
       return updated;
     });
   };
-  
+
   const handleAddSplitPart = () => {
     if (!selectedApproval) return;
-    
+
     const lastPart = splitParts[splitParts.length - 1];
     const nextDay = new Date(lastPart.endDate);
     nextDay.setDate(nextDay.getDate() + 1);
-    
+
     setSplitParts(prev => [...prev, {
       leaveType: '',
       startDate: nextDay.toISOString().split('T')[0],
@@ -555,24 +560,24 @@ export default function ApprovalPage() {
       reason: '',
     }]);
   };
-  
+
   const handleRemoveSplitPart = (index: number) => {
     setSplitParts(prev => prev.filter((_, i) => i !== index));
   };
-  
+
   const handleSubmitSplit = async () => {
     if (!selectedApproval) return;
-    
+
     // Validate total days
     const totalSplitDays = splitParts.reduce((sum, p) => sum + p.totalDays, 0);
     if (Math.abs(totalSplitDays - selectedApproval.leaveRequest.totalDays) > 0.01) {
       setError(`จำนวนวันรวมไม่ตรง (เดิม: ${selectedApproval.leaveRequest.totalDays} วัน, แยก: ${totalSplitDays} วัน)`);
       return;
     }
-    
+
     setSubmitting(true);
     setError('');
-    
+
     try {
       const response = await fetch(`/api/leaves/${selectedApproval.leaveRequest.id}/split`, {
         method: 'POST',
@@ -582,14 +587,14 @@ export default function ApprovalPage() {
           comment: splitComment.trim() || undefined,
         }),
       });
-      
+
       const data = await response.json();
-      
+
       if (!response.ok) {
         setError(data.error || 'เกิดข้อผิดพลาด');
         return;
       }
-      
+
       setSplitDialogOpen(false);
       fetchApprovals();
     } catch (err) {
@@ -659,10 +664,10 @@ export default function ApprovalPage() {
     switch (tabValue) {
       case 0: // รออนุมัติ
         // ต้องตรวจสอบว่า leaveRequest ไม่ถูกยกเลิก และ approval status ยังเป็น pending
-        filtered = approvals.filter(a => 
-          a.status === 'pending' && 
-          a.leaveRequest.status !== 'cancelled' && 
-          a.leaveRequest.status !== 'approved' && 
+        filtered = approvals.filter(a =>
+          a.status === 'pending' &&
+          a.leaveRequest.status !== 'cancelled' &&
+          a.leaveRequest.status !== 'approved' &&
           a.leaveRequest.status !== 'rejected'
         );
         break;
@@ -678,7 +683,7 @@ export default function ApprovalPage() {
       default:
         filtered = approvals;
     }
-    
+
     // Apply month/year filter
     if (filterMonth !== 'all' || filterYear) {
       filtered = filtered.filter(a => {
@@ -688,7 +693,7 @@ export default function ApprovalPage() {
         return yearMatch && monthMatch;
       });
     }
-    
+
     // Apply department/section filter (for HR Manager)
     if (filterDepartment !== 'all') {
       filtered = filtered.filter(a => a.leaveRequest.user.department === filterDepartment);
@@ -696,10 +701,10 @@ export default function ApprovalPage() {
     if (filterSection !== 'all') {
       filtered = filtered.filter(a => a.leaveRequest.user.section === filterSection);
     }
-    
+
     return filtered;
   })();
-  
+
   // Get unique departments and sections from approvals (for HR Manager filter)
   const uniqueDepartments = useMemo(() => {
     const deps = new Set<string>();
@@ -710,7 +715,7 @@ export default function ApprovalPage() {
     });
     return Array.from(deps).sort();
   }, [approvals]);
-  
+
   const uniqueSections = useMemo(() => {
     const secs = new Set<string>();
     approvals.forEach(a => {
@@ -723,19 +728,19 @@ export default function ApprovalPage() {
     });
     return Array.from(secs).sort();
   }, [approvals, filterDepartment]);
-  
+
   // Department summary for HR Manager (pending approvals by department)
   const departmentSummary = useMemo(() => {
     const summary: Record<string, { pending: number; total: number; sections: Record<string, number> }> = {};
-    
+
     approvals.forEach(a => {
       const dept = a.leaveRequest.user.department || 'ไม่ระบุฝ่าย';
       const sec = a.leaveRequest.user.section || 'ไม่ระบุแผนก';
-      const isPending = a.status === 'pending' && 
-        a.leaveRequest.status !== 'cancelled' && 
-        a.leaveRequest.status !== 'approved' && 
+      const isPending = a.status === 'pending' &&
+        a.leaveRequest.status !== 'cancelled' &&
+        a.leaveRequest.status !== 'approved' &&
         a.leaveRequest.status !== 'rejected';
-      
+
       if (!summary[dept]) {
         summary[dept] = { pending: 0, total: 0, sections: {} };
       }
@@ -748,7 +753,7 @@ export default function ApprovalPage() {
         summary[dept].sections[sec]++;
       }
     });
-    
+
     return Object.entries(summary)
       .map(([dept, data]) => ({
         department: dept,
@@ -758,7 +763,7 @@ export default function ApprovalPage() {
       }))
       .sort((a, b) => b.pending - a.pending); // Sort by pending count
   }, [approvals]);
-  
+
   // Grouped approvals by department (for group view)
   const groupedApprovals = useMemo(() => {
     const groups: Record<string, ApprovalItem[]> = {};
@@ -771,7 +776,7 @@ export default function ApprovalPage() {
     });
     return Object.entries(groups).sort((a, b) => b[1].length - a[1].length);
   }, [filteredApprovals]);
-  
+
   // Pagination logic
   const totalPages = Math.ceil(filteredApprovals.length / itemsPerPage);
   const paginatedApprovals = filteredApprovals.slice(
@@ -795,9 +800,9 @@ export default function ApprovalPage() {
         <Container maxWidth={false} sx={{ maxWidth: 1200 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', px: 2, py: 2, position: 'relative' }}>
             {/* Custom Hamburger Icon - Same as Header.tsx */}
-            <IconButton 
-              onClick={() => setSidebarOpen(true)} 
-              sx={{ 
+            <IconButton
+              onClick={() => setSidebarOpen(true)}
+              sx={{
                 position: 'absolute',
                 left: 8,
                 color: 'text.primary',
@@ -830,7 +835,7 @@ export default function ApprovalPage() {
                 <Box component="span" sx={{ width: 20, bottom: 0, left: 0 }} />
               </Box>
             </IconButton>
-            
+
             <Box sx={{ flex: 1, textAlign: 'center' }}>
               <Typography variant="h6" sx={{ fontWeight: 'bold', lineHeight: 1.2, color: 'text.primary' }}>
                 {t('approval_title', 'รายการรออนุมัติ')}
@@ -840,7 +845,7 @@ export default function ApprovalPage() {
               </Typography>
             </Box>
           </Box>
-          
+
           {/* Tabs */}
           <Tabs
             value={tabValue}
@@ -848,38 +853,38 @@ export default function ApprovalPage() {
             variant="fullWidth"
             sx={{
               minHeight: 48,
-              '& .MuiTabs-indicator': { 
+              '& .MuiTabs-indicator': {
                 height: 3,
                 borderRadius: '3px 3px 0 0',
-                bgcolor: PRIMARY_COLOR 
+                bgcolor: PRIMARY_COLOR
               },
             }}
           >
-            <Tab 
+            <Tab
               label={
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                   <Clock size={18} variant={tabValue === 0 ? "Bold" : "Linear"} color={tabValue === 0 ? PRIMARY_COLOR : "#64748B"} />
                   <span style={{ fontWeight: tabValue === 0 ? 600 : 400 }}>รออนุมัติ</span>
                   {counts.pending > 0 && (
-                    <Chip 
-                      label={counts.pending} 
-                      size="small" 
-                      sx={{ 
-                        height: 20, 
+                    <Chip
+                      label={counts.pending}
+                      size="small"
+                      sx={{
+                        height: 20,
                         minWidth: 20,
                         bgcolor: tabValue === 0 ? PRIMARY_COLOR : '#f5f5f5',
                         color: tabValue === 0 ? 'white' : '#666',
                         fontSize: '0.7rem',
                         fontWeight: 600,
                         '& .MuiChip-label': { px: 0.5 }
-                      }} 
+                      }}
                     />
                   )}
                 </Box>
               }
               sx={{ textTransform: 'none', color: '#64748B', '&.Mui-selected': { color: PRIMARY_COLOR } }}
             />
-            <Tab 
+            <Tab
               label={
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                   <TickCircle size={18} variant={tabValue === 1 ? "Bold" : "Linear"} color={tabValue === 1 ? PRIMARY_COLOR : "#64748B"} />
@@ -888,7 +893,7 @@ export default function ApprovalPage() {
               }
               sx={{ textTransform: 'none', color: '#64748B', '&.Mui-selected': { color: PRIMARY_COLOR } }}
             />
-            <Tab 
+            <Tab
               label={
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                   <CloseCircle size={18} variant={tabValue === 2 ? "Bold" : "Linear"} color={tabValue === 2 ? PRIMARY_COLOR : "#64748B"} />
@@ -897,7 +902,7 @@ export default function ApprovalPage() {
               }
               sx={{ textTransform: 'none', color: '#64748B', '&.Mui-selected': { color: PRIMARY_COLOR } }}
             />
-            <Tab 
+            <Tab
               label={
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                   <Forbidden2 size={18} variant={tabValue === 3 ? "Bold" : "Linear"} color={tabValue === 3 ? PRIMARY_COLOR : "#64748B"} />
@@ -924,9 +929,9 @@ export default function ApprovalPage() {
               border: '1px solid #E2E8F0',
             }}
           >
-            <Box sx={{ 
-              display: 'flex', 
-              alignItems: 'center', 
+            <Box sx={{
+              display: 'flex',
+              alignItems: 'center',
               justifyContent: 'space-between',
               flexWrap: 'wrap',
               gap: 2,
@@ -981,12 +986,12 @@ export default function ApprovalPage() {
                     </Select>
                   </FormControl>
                 </Box>
-                
+
                 {/* Divider */}
                 {isHrManager && uniqueDepartments.length > 0 && (
                   <Divider orientation="vertical" flexItem sx={{ mx: 1 }} />
                 )}
-                
+
                 {/* Department/Section Filter - HR Manager Only */}
                 {isHrManager && uniqueDepartments.length > 0 && (
                   <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
@@ -1017,7 +1022,7 @@ export default function ApprovalPage() {
                         })}
                       </Select>
                     </FormControl>
-                    
+
                     {uniqueSections.length > 0 && (
                       <FormControl size="small" sx={{ minWidth: 160 }}>
                         <InputLabel>แผนก</InputLabel>
@@ -1039,7 +1044,7 @@ export default function ApprovalPage() {
                   </Box>
                 )}
               </Box>
-              
+
               {/* Right side - View toggles */}
               <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
                 {/* Group View Toggle - HR Manager Only */}
@@ -1060,11 +1065,11 @@ export default function ApprovalPage() {
                       <Tooltip title="แสดงรายการ"><RowVertical size={18} variant={groupViewMode === 'list' ? 'Bold' : 'Linear'} color="#1976D2" /></Tooltip>
                     </ToggleButton>
                     <ToggleButton value="group">
-                      <Tooltip title="จัดกลุ่มตามแผนก"><Category size={18} variant={groupViewMode === 'group' ? 'Bold' : 'Linear'}  color="#1976D2" /></Tooltip>
+                      <Tooltip title="จัดกลุ่มตามแผนก"><Category size={18} variant={groupViewMode === 'group' ? 'Bold' : 'Linear'} color="#1976D2" /></Tooltip>
                     </ToggleButton>
                   </ToggleButtonGroup>
                 )}
-                
+
                 <ToggleButtonGroup
                   value={viewMode}
                   exclusive
@@ -1088,7 +1093,7 @@ export default function ApprovalPage() {
             </Box>
           </Paper>
         )}
-        
+
         {/* ========== FILTER SECTION - MOBILE (Collapsible) ========== */}
         {!loading && (
           <Box sx={{ display: { xs: 'block', md: 'none' }, mb: 2 }}>
@@ -1098,8 +1103,8 @@ export default function ApprovalPage() {
                 size="small"
                 variant={mobileFilterOpen ? "contained" : "outlined"}
                 onClick={() => setMobileFilterOpen(!mobileFilterOpen)}
-                startIcon={<Setting4 size={18} variant={mobileFilterOpen ? "Bold" : "Linear"} />}
-                sx={{ 
+                startIcon={<Setting4 size={18} variant={mobileFilterOpen ? "Bold" : "Linear"} color={mobileFilterOpen ? 'white' : '#64748B'} />}
+                sx={{
                   borderRadius: 1,
                   textTransform: 'none',
                   fontWeight: 600,
@@ -1114,48 +1119,48 @@ export default function ApprovalPage() {
               >
                 ตัวกรอง
                 {(filterMonth !== 'all' || filterDepartment !== 'all' || filterSection !== 'all') && (
-                  <Chip 
+                  <Chip
                     label={
-                      (filterMonth !== 'all' ? 1 : 0) + 
-                      (filterDepartment !== 'all' ? 1 : 0) + 
+                      (filterMonth !== 'all' ? 1 : 0) +
+                      (filterDepartment !== 'all' ? 1 : 0) +
                       (filterSection !== 'all' ? 1 : 0)
-                    } 
-                    size="small" 
-                    sx={{ ml: 1, height: 20, bgcolor: mobileFilterOpen ? 'rgba(255,255,255,0.3)' : '#FFF3E0', color: mobileFilterOpen ? 'white' : '#E65100', fontWeight: 700 }} 
+                    }
+                    size="small"
+                    sx={{ ml: 1, height: 20, bgcolor: mobileFilterOpen ? 'rgba(255,255,255,0.3)' : '#FFF3E0', color: mobileFilterOpen ? 'white' : '#E65100', fontWeight: 700 }}
                   />
                 )}
               </Button>
-              
+
               {/* Mobile View Mode Toggle */}
               <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
                 {isHrManager && tabValue === 0 && (
-                  <IconButton 
-                    size="small" 
+                  <IconButton
+                    size="medium"
                     onClick={() => setGroupViewMode(groupViewMode === 'list' ? 'group' : 'list')}
-                    sx={{ 
+                    sx={{
                       bgcolor: groupViewMode === 'group' ? '#E3F2FD' : '#F1F5F9',
                       borderRadius: 1,
                     }}
                   >
-                    <Category size={18} variant={groupViewMode === 'group' ? 'Bold' : 'Linear'} color={groupViewMode === 'group' ? '#1976D2' : '#64748B'} />
+                    <Category size={20} variant={groupViewMode === 'group' ? 'Bold' : 'Linear'} color={groupViewMode === 'group' ? '#1976D2' : '#64748B'} />
                   </IconButton>
                 )}
-                <IconButton 
-                  size="small" 
+                <IconButton
+                  size="medium"
                   onClick={() => setViewMode(viewMode === 'mobile' ? 'desktop' : 'mobile')}
-                  sx={{ 
+                  sx={{
                     bgcolor: viewMode === 'desktop' ? PRIMARY_LIGHT : '#F1F5F9',
                     borderRadius: 1,
                   }}
                 >
-                  {viewMode === 'desktop' ? 
-                    <Monitor size={18} variant="Bold" color={PRIMARY_COLOR} /> : 
-                    <Mobile size={18} variant="Bold" color="#64748B" />
+                  {viewMode === 'desktop' ?
+                    <Monitor size={20} variant="Bold" color={PRIMARY_COLOR} /> :
+                    <Mobile size={20} variant="Bold" color="#64748B" />
                   }
                 </IconButton>
               </Box>
             </Box>
-            
+
             {/* Collapsible Filter Panel */}
             <Collapse in={mobileFilterOpen}>
               <Paper
@@ -1212,7 +1217,7 @@ export default function ApprovalPage() {
                       </FormControl>
                     </Box>
                   </Box>
-                  
+
                   {/* Department/Section Filters - HR Manager Only */}
                   {isHrManager && uniqueDepartments.length > 0 && (
                     <Box>
@@ -1251,7 +1256,7 @@ export default function ApprovalPage() {
                       </Box>
                     </Box>
                   )}
-                  
+
                   {/* Clear Filters Button */}
                   {(filterMonth !== 'all' || filterDepartment !== 'all' || filterSection !== 'all') && (
                     <Button
@@ -1274,7 +1279,7 @@ export default function ApprovalPage() {
             </Collapse>
           </Box>
         )}
-        
+
         {/* HR Manager Department Summary Cards - Show only when not filtering and pending tab */}
         {!loading && isHrManager && tabValue === 0 && filterDepartment === 'all' && departmentSummary.filter(d => d.pending > 0).length > 0 && groupViewMode === 'list' && (
           <Box sx={{ mb: 3 }}>
@@ -1283,10 +1288,10 @@ export default function ApprovalPage() {
               <Typography variant="subtitle1" fontWeight={700} color="text.primary">
                 สรุปรออนุมัติตามฝ่าย
               </Typography>
-              <Chip 
+              <Chip
                 label={`${departmentSummary.filter(d => d.pending > 0).length} ฝ่าย`}
                 size="small"
-                sx={{ 
+                sx={{
                   height: 22,
                   bgcolor: PRIMARY_LIGHT,
                   color: PRIMARY_COLOR,
@@ -1295,10 +1300,10 @@ export default function ApprovalPage() {
                 }}
               />
             </Box>
-            <Box sx={{ 
-              display: 'grid', 
-              gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(3, 1fr)', lg: 'repeat(4, 1fr)' }, 
-              gap: 2 
+            <Box sx={{
+              display: 'grid',
+              gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(3, 1fr)', lg: 'repeat(4, 1fr)' },
+              gap: 2
             }}>
               {departmentSummary.filter(d => d.pending > 0).slice(0, 8).map((dept) => (
                 <Paper
@@ -1316,7 +1321,7 @@ export default function ApprovalPage() {
                     borderColor: filterDepartment === dept.department ? PRIMARY_COLOR : '#E2E8F0',
                     cursor: 'pointer',
                     transition: 'all 0.2s ease',
-                    '&:hover': { 
+                    '&:hover': {
                       borderColor: PRIMARY_COLOR,
                       boxShadow: '0 4px 12px rgba(108, 99, 255, 0.15)',
                       transform: 'translateY(-2px)',
@@ -1325,9 +1330,9 @@ export default function ApprovalPage() {
                 >
                   <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
                     <Box sx={{ flex: 1 }}>
-                      <Typography sx={{ 
-                        fontWeight: 700, 
-                        fontSize: '0.95rem', 
+                      <Typography sx={{
+                        fontWeight: 700,
+                        fontSize: '0.95rem',
                         color: '#1E293B',
                         mb: 0.5,
                         overflow: 'hidden',
@@ -1343,13 +1348,13 @@ export default function ApprovalPage() {
                         </Typography>
                       </Box>
                     </Box>
-                    <Box sx={{ 
-                      bgcolor: '#FFF3E0', 
-                      borderRadius: '50%', 
-                      width: 48, 
-                      height: 48, 
-                      display: 'flex', 
-                      alignItems: 'center', 
+                    <Box sx={{
+                      bgcolor: '#FFF3E0',
+                      borderRadius: '50%',
+                      width: 48,
+                      height: 48,
+                      display: 'flex',
+                      alignItems: 'center',
                       justifyContent: 'center',
                       flexShrink: 0,
                     }}>
@@ -1397,8 +1402,8 @@ export default function ApprovalPage() {
             </Box>
             {departmentSummary.filter(d => d.pending > 0).length > 8 && (
               <Box sx={{ textAlign: 'center', mt: 2 }}>
-                <Button 
-                  size="small" 
+                <Button
+                  size="small"
                   onClick={() => setGroupViewMode('group')}
                   endIcon={<ArrowRight2 size={16} />}
                   sx={{ color: PRIMARY_COLOR }}
@@ -1409,13 +1414,13 @@ export default function ApprovalPage() {
             )}
           </Box>
         )}
-        
+
         {/* Active Filter Indicator */}
         {!loading && (filterDepartment !== 'all' || filterSection !== 'all') && (
-          <Box sx={{ 
-            mb: 2, 
-            p: 1.5, 
-            bgcolor: '#E3F2FD', 
+          <Box sx={{
+            mb: 2,
+            p: 1.5,
+            bgcolor: '#E3F2FD',
             borderRadius: 1,
             display: 'flex',
             alignItems: 'center',
@@ -1429,7 +1434,7 @@ export default function ApprovalPage() {
                 กำลังกรอง:
               </Typography>
               {filterDepartment !== 'all' && (
-                <Chip 
+                <Chip
                   label={`ฝ่าย: ${filterDepartment}`}
                   size="small"
                   onDelete={() => {
@@ -1437,8 +1442,8 @@ export default function ApprovalPage() {
                     setFilterSection('all');
                     setPage(1);
                   }}
-                  sx={{ 
-                    bgcolor: 'white', 
+                  sx={{
+                    bgcolor: 'white',
                     color: '#1976D2',
                     fontWeight: 600,
                     '& .MuiChip-deleteIcon': { color: '#1976D2' }
@@ -1446,15 +1451,15 @@ export default function ApprovalPage() {
                 />
               )}
               {filterSection !== 'all' && (
-                <Chip 
+                <Chip
                   label={`แผนก: ${filterSection}`}
                   size="small"
                   onDelete={() => {
                     setFilterSection('all');
                     setPage(1);
                   }}
-                  sx={{ 
-                    bgcolor: 'white', 
+                  sx={{
+                    bgcolor: 'white',
                     color: '#1976D2',
                     fontWeight: 600,
                     '& .MuiChip-deleteIcon': { color: '#1976D2' }
@@ -1462,8 +1467,8 @@ export default function ApprovalPage() {
                 />
               )}
             </Box>
-            <Button 
-              size="small" 
+            <Button
+              size="small"
               onClick={() => {
                 setFilterDepartment('all');
                 setFilterSection('all');
@@ -1478,11 +1483,11 @@ export default function ApprovalPage() {
 
         {/* Status Count Cards - Redesigned */}
         {!loading && (
-          <Box sx={{ 
-            display: 'grid', 
-            gridTemplateColumns: { xs: 'repeat(2, 1fr)', sm: 'repeat(4, 1fr)' }, 
-            gap: 2, 
-            mb: 3 
+          <Box sx={{
+            display: 'grid',
+            gridTemplateColumns: { xs: 'repeat(2, 1fr)', sm: 'repeat(4, 1fr)' },
+            gap: 2,
+            mb: 3
           }}>
             {/* Pending Card */}
             <Paper
@@ -1490,18 +1495,18 @@ export default function ApprovalPage() {
               sx={{
                 p: 2,
                 borderRadius: 1,
-                background: tabValue === 0 
-                  ? `linear-gradient(135deg, ${PRIMARY_COLOR} 0%, #8B7CF7 100%)` 
+                background: tabValue === 0
+                  ? `linear-gradient(135deg, ${PRIMARY_COLOR} 0%, #8B7CF7 100%)`
                   : 'linear-gradient(135deg, #F8F9FA 0%, #FFFFFF 100%)',
                 border: tabValue === 0 ? 'none' : '1px solid #E2E8F0',
                 cursor: 'pointer',
                 transition: 'all 0.3s ease',
                 position: 'relative',
                 overflow: 'hidden',
-                '&:hover': { 
+                '&:hover': {
                   transform: 'translateY(-2px)',
-                  boxShadow: tabValue === 0 
-                    ? '0 8px 25px rgba(108, 99, 255, 0.35)' 
+                  boxShadow: tabValue === 0
+                    ? '0 8px 25px rgba(108, 99, 255, 0.35)'
                     : '0 8px 25px rgba(0,0,0,0.08)',
                 }
               }}
@@ -1509,23 +1514,23 @@ export default function ApprovalPage() {
             >
               <Box sx={{ position: 'relative', zIndex: 1 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
-                  <Box sx={{ 
-                    p: 1, 
-                    borderRadius: 1, 
+                  <Box sx={{
+                    p: 1,
+                    borderRadius: 1,
                     bgcolor: tabValue === 0 ? 'rgba(255,255,255,0.2)' : '#EDE7F6',
                   }}>
                     <Clock size={20} color={tabValue === 0 ? 'white' : PRIMARY_COLOR} variant="Bold" />
                   </Box>
                 </Box>
-                <Typography 
-                  variant="h4" 
-                  fontWeight={800} 
+                <Typography
+                  variant="h4"
+                  fontWeight={800}
                   sx={{ color: tabValue === 0 ? 'white' : PRIMARY_COLOR, mb: 0.5 }}
                 >
                   {counts.pending}
                 </Typography>
-                <Typography 
-                  variant="body2" 
+                <Typography
+                  variant="body2"
                   sx={{ color: tabValue === 0 ? 'rgba(255,255,255,0.9)' : '#64748B', fontWeight: 500 }}
                 >
                   รออนุมัติ
@@ -1549,18 +1554,18 @@ export default function ApprovalPage() {
               sx={{
                 p: 2,
                 borderRadius: 1,
-                background: tabValue === 1 
-                  ? 'linear-gradient(135deg, #2E7D32 0%, #4CAF50 100%)' 
+                background: tabValue === 1
+                  ? 'linear-gradient(135deg, #2E7D32 0%, #4CAF50 100%)'
                   : 'linear-gradient(135deg, #F8F9FA 0%, #FFFFFF 100%)',
                 border: tabValue === 1 ? 'none' : '1px solid #E2E8F0',
                 cursor: 'pointer',
                 transition: 'all 0.3s ease',
                 position: 'relative',
                 overflow: 'hidden',
-                '&:hover': { 
+                '&:hover': {
                   transform: 'translateY(-2px)',
-                  boxShadow: tabValue === 1 
-                    ? '0 8px 25px rgba(46, 125, 50, 0.35)' 
+                  boxShadow: tabValue === 1
+                    ? '0 8px 25px rgba(46, 125, 50, 0.35)'
                     : '0 8px 25px rgba(0,0,0,0.08)',
                 }
               }}
@@ -1568,23 +1573,23 @@ export default function ApprovalPage() {
             >
               <Box sx={{ position: 'relative', zIndex: 1 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
-                  <Box sx={{ 
-                    p: 1, 
-                    borderRadius: 1, 
+                  <Box sx={{
+                    p: 1,
+                    borderRadius: 1,
                     bgcolor: tabValue === 1 ? 'rgba(255,255,255,0.2)' : '#E8F5E9',
                   }}>
                     <TickCircle size={20} color={tabValue === 1 ? 'white' : '#2E7D32'} variant="Bold" />
                   </Box>
                 </Box>
-                <Typography 
-                  variant="h4" 
-                  fontWeight={800} 
+                <Typography
+                  variant="h4"
+                  fontWeight={800}
                   sx={{ color: tabValue === 1 ? 'white' : '#2E7D32', mb: 0.5 }}
                 >
                   {counts.approved}
                 </Typography>
-                <Typography 
-                  variant="body2" 
+                <Typography
+                  variant="body2"
                   sx={{ color: tabValue === 1 ? 'rgba(255,255,255,0.9)' : '#64748B', fontWeight: 500 }}
                 >
                   อนุมัติแล้ว
@@ -1607,18 +1612,18 @@ export default function ApprovalPage() {
               sx={{
                 p: 2,
                 borderRadius: 1,
-                background: tabValue === 2 
-                  ? 'linear-gradient(135deg, #D32F2F 0%, #EF5350 100%)' 
+                background: tabValue === 2
+                  ? 'linear-gradient(135deg, #D32F2F 0%, #EF5350 100%)'
                   : 'linear-gradient(135deg, #F8F9FA 0%, #FFFFFF 100%)',
                 border: tabValue === 2 ? 'none' : '1px solid #E2E8F0',
                 cursor: 'pointer',
                 transition: 'all 0.3s ease',
                 position: 'relative',
                 overflow: 'hidden',
-                '&:hover': { 
+                '&:hover': {
                   transform: 'translateY(-2px)',
-                  boxShadow: tabValue === 2 
-                    ? '0 8px 25px rgba(211, 47, 47, 0.35)' 
+                  boxShadow: tabValue === 2
+                    ? '0 8px 25px rgba(211, 47, 47, 0.35)'
                     : '0 8px 25px rgba(0,0,0,0.08)',
                 }
               }}
@@ -1626,23 +1631,23 @@ export default function ApprovalPage() {
             >
               <Box sx={{ position: 'relative', zIndex: 1 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
-                  <Box sx={{ 
-                    p: 1, 
-                    borderRadius: 1, 
+                  <Box sx={{
+                    p: 1,
+                    borderRadius: 1,
                     bgcolor: tabValue === 2 ? 'rgba(255,255,255,0.2)' : '#FFEBEE',
                   }}>
                     <CloseCircle size={20} color={tabValue === 2 ? 'white' : '#D32F2F'} variant="Bold" />
                   </Box>
                 </Box>
-                <Typography 
-                  variant="h4" 
-                  fontWeight={800} 
+                <Typography
+                  variant="h4"
+                  fontWeight={800}
                   sx={{ color: tabValue === 2 ? 'white' : '#D32F2F', mb: 0.5 }}
                 >
                   {counts.rejected}
                 </Typography>
-                <Typography 
-                  variant="body2" 
+                <Typography
+                  variant="body2"
                   sx={{ color: tabValue === 2 ? 'rgba(255,255,255,0.9)' : '#64748B', fontWeight: 500 }}
                 >
                   ปฏิเสธ
@@ -1665,18 +1670,18 @@ export default function ApprovalPage() {
               sx={{
                 p: 2,
                 borderRadius: 1,
-                background: tabValue === 3 
-                  ? 'linear-gradient(135deg, #616161 0%, #9E9E9E 100%)' 
+                background: tabValue === 3
+                  ? 'linear-gradient(135deg, #616161 0%, #9E9E9E 100%)'
                   : 'linear-gradient(135deg, #F8F9FA 0%, #FFFFFF 100%)',
                 border: tabValue === 3 ? 'none' : '1px solid #E2E8F0',
                 cursor: 'pointer',
                 transition: 'all 0.3s ease',
                 position: 'relative',
                 overflow: 'hidden',
-                '&:hover': { 
+                '&:hover': {
                   transform: 'translateY(-2px)',
-                  boxShadow: tabValue === 3 
-                    ? '0 8px 25px rgba(97, 97, 97, 0.35)' 
+                  boxShadow: tabValue === 3
+                    ? '0 8px 25px rgba(97, 97, 97, 0.35)'
                     : '0 8px 25px rgba(0,0,0,0.08)',
                 }
               }}
@@ -1684,23 +1689,23 @@ export default function ApprovalPage() {
             >
               <Box sx={{ position: 'relative', zIndex: 1 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
-                  <Box sx={{ 
-                    p: 1, 
-                    borderRadius: 1, 
+                  <Box sx={{
+                    p: 1,
+                    borderRadius: 1,
                     bgcolor: tabValue === 3 ? 'rgba(255,255,255,0.2)' : '#F5F5F5',
                   }}>
                     <Forbidden2 size={20} color={tabValue === 3 ? 'white' : '#757575'} variant="Bold" />
                   </Box>
                 </Box>
-                <Typography 
-                  variant="h4" 
-                  fontWeight={800} 
+                <Typography
+                  variant="h4"
+                  fontWeight={800}
                   sx={{ color: tabValue === 3 ? 'white' : '#757575', mb: 0.5 }}
                 >
                   {counts.cancelled}
                 </Typography>
-                <Typography 
-                  variant="body2" 
+                <Typography
+                  variant="body2"
                   sx={{ color: tabValue === 3 ? 'rgba(255,255,255,0.9)' : '#64748B', fontWeight: 500 }}
                 >
                   ยกเลิก
@@ -1734,7 +1739,7 @@ export default function ApprovalPage() {
                   setItemsPerPage(Number(e.target.value));
                   setPage(1);
                 }}
-                sx={{ 
+                sx={{
                   height: 32,
                   bgcolor: 'white',
                   fontSize: '0.85rem',
@@ -1792,76 +1797,76 @@ export default function ApprovalPage() {
               </TableContainer>
             </Paper>
           ) : (
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            {[1, 2, 3].map((i) => (
-              <Paper 
-                key={i} 
-                elevation={0}
-                sx={{ 
-                  p: 2, 
-                  borderRadius: 1,
-                  border: '1px solid',
-                  borderColor: 'grey.200',
-                  bgcolor: 'white',
-                }}
-              >
-                {/* Row 1: Avatar + Name + Status */}
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1 }}>
-                  <Skeleton variant="circular" width={40} height={40} />
-                  <Box sx={{ flex: 1 }}>
-                    <Skeleton variant="text" width="50%" height={20} sx={{ mb: 0.5 }} />
-                    <Skeleton variant="text" width="30%" height={16} />
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              {[1, 2, 3].map((i) => (
+                <Paper
+                  key={i}
+                  elevation={0}
+                  sx={{
+                    p: 2,
+                    borderRadius: 1,
+                    border: '1px solid',
+                    borderColor: 'grey.200',
+                    bgcolor: 'white',
+                  }}
+                >
+                  {/* Row 1: Avatar + Name + Status */}
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1 }}>
+                    <Skeleton variant="circular" width={40} height={40} />
+                    <Box sx={{ flex: 1 }}>
+                      <Skeleton variant="text" width="50%" height={20} sx={{ mb: 0.5 }} />
+                      <Skeleton variant="text" width="30%" height={16} />
+                    </Box>
+                    <Skeleton variant="rounded" width={70} height={24} sx={{ borderRadius: 1 }} />
+                    <Skeleton variant="circular" width={20} height={20} />
                   </Box>
-                  <Skeleton variant="rounded" width={70} height={24} sx={{ borderRadius: 1 }} />
-                  <Skeleton variant="circular" width={20} height={20} />
-                </Box>
-                
-                {/* Row 2: Department */}
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 1 }}>
-                  <Skeleton variant="circular" width={14} height={14} />
-                  <Skeleton variant="text" width="40%" height={16} />
-                </Box>
-                
-                {/* Row 3: Leave Type and Days Chips */}
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 }}>
-                  <Skeleton variant="rounded" width={90} height={24} sx={{ borderRadius: 1 }} />
-                  <Skeleton variant="rounded" width={50} height={24} sx={{ borderRadius: 1 }} />
-                </Box>
-                
-                {/* Row 4: Date Box */}
-                <Skeleton 
-                  variant="rounded" 
-                  width="100%" 
-                  height={48} 
-                  sx={{ borderRadius: 1 }} 
-                />
-              </Paper>
-            ))}
-          </Box>
+
+                  {/* Row 2: Department */}
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 1 }}>
+                    <Skeleton variant="circular" width={14} height={14} />
+                    <Skeleton variant="text" width="40%" height={16} />
+                  </Box>
+
+                  {/* Row 3: Leave Type and Days Chips */}
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 }}>
+                    <Skeleton variant="rounded" width={90} height={24} sx={{ borderRadius: 1 }} />
+                    <Skeleton variant="rounded" width={50} height={24} sx={{ borderRadius: 1 }} />
+                  </Box>
+
+                  {/* Row 4: Date Box */}
+                  <Skeleton
+                    variant="rounded"
+                    width="100%"
+                    height={48}
+                    sx={{ borderRadius: 1 }}
+                  />
+                </Paper>
+              ))}
+            </Box>
           )
         ) : filteredApprovals.length === 0 ? (
           <Box sx={{ textAlign: 'center', py: 10, opacity: 0.7 }}>
-            <Box sx={{ 
-              bgcolor: '#f5f5f5', 
-              width: 100, 
-              height: 100, 
-              borderRadius: '50%', 
-              display: 'flex', 
-              alignItems: 'center', 
-              justifyContent: 'center', 
-              mx: 'auto', 
-              mb: 3 
+            <Box sx={{
+              bgcolor: '#f5f5f5',
+              width: 100,
+              height: 100,
+              borderRadius: '50%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              mx: 'auto',
+              mb: 3
             }}>
-              {tabValue === 0 ? <Clock size={48} color="#9e9e9e" variant="Bulk" /> : 
-               tabValue === 1 ? <TickCircle size={48} color="#9e9e9e" variant="Bulk" /> : 
-               tabValue === 2 ? <CloseCircle size={48} color="#9e9e9e" variant="Bulk" /> :
-               <Forbidden2 size={48} color="#9e9e9e" variant="Bulk" />}
+              {tabValue === 0 ? <Clock size={48} color="#9e9e9e" variant="Bulk" /> :
+                tabValue === 1 ? <TickCircle size={48} color="#9e9e9e" variant="Bulk" /> :
+                  tabValue === 2 ? <CloseCircle size={48} color="#9e9e9e" variant="Bulk" /> :
+                    <Forbidden2 size={48} color="#9e9e9e" variant="Bulk" />}
             </Box>
             <Typography variant="h6" color="text.secondary" fontWeight={600} gutterBottom>
-              {tabValue === 0 ? 'ไม่มีรายการรออนุมัติ' : 
-               tabValue === 1 ? 'ยังไม่มีรายการที่อนุมัติ' : 
-               tabValue === 2 ? 'ไม่มีรายการที่ถูกปฏิเสธ' :
-               'ไม่มีรายการที่ยกเลิก'}
+              {tabValue === 0 ? 'ไม่มีรายการรออนุมัติ' :
+                tabValue === 1 ? 'ยังไม่มีรายการที่อนุมัติ' :
+                  tabValue === 2 ? 'ไม่มีรายการที่ถูกปฏิเสธ' :
+                    'ไม่มีรายการที่ยกเลิก'}
             </Typography>
             <Typography variant="body2" color="text.secondary">
               {tabValue === 0 ? 'คุณจัดการรายการทั้งหมดเรียบร้อยแล้ว' : 'รายการจะแสดงที่นี่เมื่อมีการดำเนินการ'}
@@ -1871,29 +1876,29 @@ export default function ApprovalPage() {
           /* ========== GROUP BY DEPARTMENT VIEW (HR Manager Only) ========== */
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
             {groupedApprovals.map(([department, deptApprovals]) => (
-              <Paper 
-                key={department} 
-                elevation={0} 
-                sx={{ 
-                  borderRadius: 1, 
-                  border: '1px solid', 
+              <Paper
+                key={department}
+                elevation={0}
+                sx={{
+                  borderRadius: 1,
+                  border: '1px solid',
                   borderColor: 'grey.200',
                   overflow: 'hidden'
                 }}
               >
                 {/* Department Header */}
-                <Box sx={{ 
-                  bgcolor: PRIMARY_COLOR, 
-                  px: 2.5, 
+                <Box sx={{
+                  bgcolor: PRIMARY_COLOR,
+                  px: 2.5,
                   py: 1.5,
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between',
                 }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                    <Box sx={{ 
-                      bgcolor: 'rgba(255,255,255,0.2)', 
-                      borderRadius: 1, 
+                    <Box sx={{
+                      bgcolor: 'rgba(255,255,255,0.2)',
+                      borderRadius: 1,
                       p: 0.75,
                       display: 'flex',
                       alignItems: 'center',
@@ -1906,11 +1911,11 @@ export default function ApprovalPage() {
                     </Typography>
                   </Box>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Chip 
+                    <Chip
                       label={`${deptApprovals.length} รายการ`}
                       size="small"
-                      sx={{ 
-                        bgcolor: 'rgba(255,255,255,0.2)', 
+                      sx={{
+                        bgcolor: 'rgba(255,255,255,0.2)',
                         color: 'white',
                         fontWeight: 600,
                         fontSize: '0.8rem',
@@ -1923,8 +1928,8 @@ export default function ApprovalPage() {
                         setGroupViewMode('list');
                         setPage(1);
                       }}
-                      sx={{ 
-                        color: 'white', 
+                      sx={{
+                        color: 'white',
                         fontSize: '0.75rem',
                         minWidth: 'auto',
                         '&:hover': { bgcolor: 'rgba(255,255,255,0.1)' }
@@ -1935,7 +1940,7 @@ export default function ApprovalPage() {
                     </Button>
                   </Box>
                 </Box>
-                
+
                 {/* Department Approvals List */}
                 <Box sx={{ p: 2 }}>
                   {viewMode === 'desktop' ? (
@@ -1954,7 +1959,8 @@ export default function ApprovalPage() {
                           {deptApprovals.slice(0, 5).map((approval) => {
                             const config = leaveTypeConfig[approval.leaveRequest.leaveType] || leaveTypeConfig.default;
                             const LeaveIcon = config.icon;
-                            
+                            const isPending = approval.status === 'pending' && (approval.leaveRequest.status === 'pending' || approval.leaveRequest.status === 'in_progress');
+
                             return (
                               <TableRow key={approval.approvalId} hover>
                                 <TableCell>
@@ -1981,7 +1987,7 @@ export default function ApprovalPage() {
                                   </Typography>
                                 </TableCell>
                                 <TableCell>
-                                  <Chip 
+                                  <Chip
                                     label={`${t(`leave_${approval.leaveRequest.leaveType}`, approval.leaveRequest.leaveType)} (${approval.leaveRequest.totalDays} วัน)`}
                                     size="small"
                                     icon={<LeaveIcon size={12} color={config.color} variant="Bold" />}
@@ -1991,7 +1997,7 @@ export default function ApprovalPage() {
                                 <TableCell>
                                   <Typography sx={{ fontSize: '0.85rem' }}>
                                     {new Date(approval.leaveRequest.startDate).toLocaleDateString('th-TH', { day: 'numeric', month: 'short' })}
-                                    {approval.leaveRequest.startDate !== approval.leaveRequest.endDate && 
+                                    {approval.leaveRequest.startDate !== approval.leaveRequest.endDate &&
                                       ` → ${new Date(approval.leaveRequest.endDate).toLocaleDateString('th-TH', { day: 'numeric', month: 'short' })}`
                                     }
                                   </Typography>
@@ -2003,16 +2009,20 @@ export default function ApprovalPage() {
                                         <Eye size={16} color="#64748B" />
                                       </IconButton>
                                     </Tooltip>
-                                    <Tooltip title="อนุมัติ">
-                                      <IconButton size="small" onClick={() => handleOpenDialog(approval, 'approve')} sx={{ bgcolor: '#E8F5E9', width: 28, height: 28 }}>
-                                        <TickCircle size={16} color="#2E7D32" variant="Bold" />
-                                      </IconButton>
-                                    </Tooltip>
-                                    <Tooltip title="ปฏิเสธ">
-                                      <IconButton size="small" onClick={() => handleOpenDialog(approval, 'reject')} sx={{ bgcolor: '#FFEBEE', width: 28, height: 28 }}>
-                                        <CloseCircle size={16} color="#D32F2F" variant="Bold" />
-                                      </IconButton>
-                                    </Tooltip>
+                                    {isPending && (
+                                      <>
+                                        <Tooltip title="อนุมัติ">
+                                          <IconButton size="small" onClick={() => handleOpenDialog(approval, 'approve')} sx={{ bgcolor: '#E8F5E9', width: 28, height: 28 }}>
+                                            <TickCircle size={16} color="#2E7D32" variant="Bold" />
+                                          </IconButton>
+                                        </Tooltip>
+                                        <Tooltip title="ปฏิเสธ">
+                                          <IconButton size="small" onClick={() => handleOpenDialog(approval, 'reject')} sx={{ bgcolor: '#FFEBEE', width: 28, height: 28 }}>
+                                            <CloseCircle size={16} color="#D32F2F" variant="Bold" />
+                                          </IconButton>
+                                        </Tooltip>
+                                      </>
+                                    )}
                                   </Box>
                                 </TableCell>
                               </TableRow>
@@ -2026,14 +2036,15 @@ export default function ApprovalPage() {
                       {deptApprovals.slice(0, 5).map((approval) => {
                         const config = leaveTypeConfig[approval.leaveRequest.leaveType] || leaveTypeConfig.default;
                         const LeaveIcon = config.icon;
-                        
+                        const isPending = approval.status === 'pending' && (approval.leaveRequest.status === 'pending' || approval.leaveRequest.status === 'in_progress');
+
                         return (
-                          <Box 
+                          <Box
                             key={approval.approvalId}
-                            sx={{ 
-                              p: 1.5, 
-                              bgcolor: '#F8FAFC', 
-                              borderRadius: 1, 
+                            sx={{
+                              p: 1.5,
+                              bgcolor: '#F8FAFC',
+                              borderRadius: 1,
                               border: '1px solid #E2E8F0',
                               display: 'flex',
                               alignItems: 'center',
@@ -2051,7 +2062,7 @@ export default function ApprovalPage() {
                                 {approval.leaveRequest.user.firstName} {approval.leaveRequest.user.lastName}
                               </Typography>
                               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5, flexWrap: 'wrap' }}>
-                                <Chip 
+                                <Chip
                                   label={t(`leave_${approval.leaveRequest.leaveType}`, approval.leaveRequest.leaveType)}
                                   size="small"
                                   icon={<LeaveIcon size={12} color={config.color} variant="Bold" />}
@@ -2062,23 +2073,25 @@ export default function ApprovalPage() {
                                 </Typography>
                               </Box>
                             </Box>
-                            <Box sx={{ display: 'flex', gap: 0.5 }}>
-                              <IconButton size="small" onClick={() => handleOpenDialog(approval, 'approve')} sx={{ bgcolor: '#E8F5E9', width: 32, height: 32 }}>
-                                <TickCircle size={18} color="#2E7D32" variant="Bold" />
-                              </IconButton>
-                              <IconButton size="small" onClick={() => handleOpenDialog(approval, 'reject')} sx={{ bgcolor: '#FFEBEE', width: 32, height: 32 }}>
-                                <CloseCircle size={18} color="#D32F2F" variant="Bold" />
-                              </IconButton>
-                            </Box>
+                            {isPending && (
+                              <Box sx={{ display: 'flex', gap: 0.5 }}>
+                                <IconButton size="small" onClick={() => handleOpenDialog(approval, 'approve')} sx={{ bgcolor: '#E8F5E9', width: 32, height: 32 }}>
+                                  <TickCircle size={18} color="#2E7D32" variant="Bold" />
+                                </IconButton>
+                                <IconButton size="small" onClick={() => handleOpenDialog(approval, 'reject')} sx={{ bgcolor: '#FFEBEE', width: 32, height: 32 }}>
+                                  <CloseCircle size={18} color="#D32F2F" variant="Bold" />
+                                </IconButton>
+                              </Box>
+                            )}
                           </Box>
                         );
                       })}
                     </Box>
                   )}
-                  
+
                   {deptApprovals.length > 5 && (
                     <Box sx={{ textAlign: 'center', mt: 2, pt: 2, borderTop: '1px dashed #E2E8F0' }}>
-                      <Button 
+                      <Button
                         size="small"
                         onClick={() => {
                           setFilterDepartment(department);
@@ -2114,17 +2127,17 @@ export default function ApprovalPage() {
                 </TableHead>
                 <TableBody>
                   {paginatedApprovals.map((approval) => {
-                    const isPending = approval.status === 'pending' || approval.leaveRequest.status === 'pending' || approval.leaveRequest.status === 'in_progress';
+                    const isPending = approval.status === 'pending' && (approval.leaveRequest.status === 'pending' || approval.leaveRequest.status === 'in_progress');
                     const config = leaveTypeConfig[approval.leaveRequest.leaveType] || leaveTypeConfig.default;
                     const LeaveIcon = config.icon;
                     const statusInfo = statusConfig[approval.leaveRequest.status] || statusConfig[approval.status] || statusConfig.pending;
                     const StatusIcon = statusInfo.icon;
                     const hasAttachments = approval.leaveRequest.attachments && approval.leaveRequest.attachments.length > 0;
-                    
+
                     return (
-                      <TableRow 
+                      <TableRow
                         key={approval.approvalId}
-                        sx={{ 
+                        sx={{
                           '&:hover': { bgcolor: '#F8FAFC' },
                           bgcolor: approval.leaveRequest.isEscalated ? '#FFF8E1' : 'white',
                           cursor: 'pointer',
@@ -2136,9 +2149,9 @@ export default function ApprovalPage() {
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
                             <Avatar
                               src={approval.leaveRequest.user.avatar}
-                              sx={{ 
-                                width: 42, 
-                                height: 42, 
+                              sx={{
+                                width: 42,
+                                height: 42,
                                 bgcolor: config.lightColor,
                                 color: config.color,
                                 fontSize: '0.95rem',
@@ -2164,16 +2177,16 @@ export default function ApprovalPage() {
                             </Box>
                           </Box>
                         </TableCell>
-                        
+
                         {/* Leave Type + Days Combined */}
                         <TableCell>
                           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-                            <Chip 
+                            <Chip
                               label={t(`leave_${approval.leaveRequest.leaveType}`, approval.leaveRequest.leaveType)}
                               size="small"
                               icon={<LeaveIcon size={14} color={config.color} variant="Bold" />}
-                              sx={{ 
-                                bgcolor: config.lightColor, 
+                              sx={{
+                                bgcolor: config.lightColor,
                                 color: config.color,
                                 fontWeight: 600,
                                 fontSize: '0.8rem',
@@ -2187,7 +2200,7 @@ export default function ApprovalPage() {
                             </Typography>
                           </Box>
                         </TableCell>
-                        
+
                         {/* Date */}
                         <TableCell>
                           {approval.leaveRequest.startDate === approval.leaveRequest.endDate ? (
@@ -2211,13 +2224,13 @@ export default function ApprovalPage() {
                             </Box>
                           )}
                         </TableCell>
-                        
+
                         {/* Reason - New Column */}
                         <TableCell>
                           <Tooltip title={approval.leaveRequest.reason || '-'} placement="top">
-                            <Typography 
-                              sx={{ 
-                                fontSize: '0.875rem', 
+                            <Typography
+                              sx={{
+                                fontSize: '0.875rem',
                                 color: '#475569',
                                 overflow: 'hidden',
                                 textOverflow: 'ellipsis',
@@ -2231,15 +2244,15 @@ export default function ApprovalPage() {
                             </Typography>
                           </Tooltip>
                         </TableCell>
-                        
+
                         {/* Attachments - New Column */}
                         <TableCell align="center">
                           {hasAttachments ? (
                             <Tooltip title={`${approval.leaveRequest.attachments.length} ไฟล์แนบ`}>
-                              <Box 
-                                sx={{ 
-                                  display: 'inline-flex', 
-                                  alignItems: 'center', 
+                              <Box
+                                sx={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
                                   gap: 0.5,
                                   bgcolor: '#E3F2FD',
                                   color: '#1976D2',
@@ -2269,15 +2282,15 @@ export default function ApprovalPage() {
                             <Typography sx={{ fontSize: '0.85rem', color: '#CBD5E1' }}>-</Typography>
                           )}
                         </TableCell>
-                        
+
                         {/* Status */}
                         <TableCell>
-                          <Chip 
+                          <Chip
                             label={statusInfo.label}
                             size="small"
                             icon={<StatusIcon size={16} color={statusInfo.color} variant="Bold" />}
-                            sx={{ 
-                              bgcolor: statusInfo.bgcolor, 
+                            sx={{
+                              bgcolor: statusInfo.bgcolor,
                               color: statusInfo.color,
                               fontWeight: 600,
                               fontSize: '0.8rem',
@@ -2286,18 +2299,18 @@ export default function ApprovalPage() {
                             }}
                           />
                         </TableCell>
-                        
+
                         {/* Actions */}
                         <TableCell align="center">
                           <Box sx={{ display: 'flex', gap: 0.75, justifyContent: 'center' }}>
                             <Tooltip title="ดูรายละเอียด">
-                              <IconButton 
-                                size="small" 
+                              <IconButton
+                                size="small"
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   toggleCard(approval.approvalId);
                                 }}
-                                sx={{ 
+                                sx={{
                                   bgcolor: '#F1F5F9',
                                   width: 34,
                                   height: 34,
@@ -2310,13 +2323,13 @@ export default function ApprovalPage() {
                             {isPending && (
                               <>
                                 <Tooltip title="อนุมัติ">
-                                  <IconButton 
-                                    size="small" 
+                                  <IconButton
+                                    size="small"
                                     onClick={(e) => {
                                       e.stopPropagation();
                                       handleOpenDialog(approval, 'approve');
                                     }}
-                                    sx={{ 
+                                    sx={{
                                       bgcolor: '#E8F5E9',
                                       width: 34,
                                       height: 34,
@@ -2327,13 +2340,13 @@ export default function ApprovalPage() {
                                   </IconButton>
                                 </Tooltip>
                                 <Tooltip title="ปฏิเสธ">
-                                  <IconButton 
-                                    size="small" 
+                                  <IconButton
+                                    size="small"
                                     onClick={(e) => {
                                       e.stopPropagation();
                                       handleOpenDialog(approval, 'reject');
                                     }}
-                                    sx={{ 
+                                    sx={{
                                       bgcolor: '#FFEBEE',
                                       width: 34,
                                       height: 34,
@@ -2345,13 +2358,13 @@ export default function ApprovalPage() {
                                 </Tooltip>
                                 {isHrManager && approval.leaveRequest.totalDays > 1 && (
                                   <Tooltip title="แยกใบลา">
-                                    <IconButton 
-                                      size="small" 
+                                    <IconButton
+                                      size="small"
                                       onClick={(e) => {
                                         e.stopPropagation();
                                         handleOpenSplitDialog(approval);
                                       }}
-                                      sx={{ 
+                                      sx={{
                                         bgcolor: '#EDE7F6',
                                         width: 34,
                                         height: 34,
@@ -2372,7 +2385,7 @@ export default function ApprovalPage() {
                 </TableBody>
               </Table>
             </TableContainer>
-            
+
             {/* Desktop Detail Dialog */}
             {expandedCards.size > 0 && (
               <Dialog
@@ -2388,13 +2401,13 @@ export default function ApprovalPage() {
                   const expandedId = Array.from(expandedCards)[0];
                   const approval = paginatedApprovals.find(a => a.approvalId === expandedId);
                   if (!approval) return null;
-                  
-                  const isPending = approval.status === 'pending' || approval.leaveRequest.status === 'pending' || approval.leaveRequest.status === 'in_progress';
+
+                  const isPending = approval.status === 'pending' && (approval.leaveRequest.status === 'pending' || approval.leaveRequest.status === 'in_progress');
                   const config = leaveTypeConfig[approval.leaveRequest.leaveType] || leaveTypeConfig.default;
                   const LeaveIcon = config.icon;
                   const statusInfo = statusConfig[approval.leaveRequest.status] || statusConfig[approval.status] || statusConfig.pending;
                   const StatusIcon = statusInfo.icon;
-                  
+
                   return (
                     <>
                       <DialogTitle sx={{ pb: 1 }}>
@@ -2402,9 +2415,9 @@ export default function ApprovalPage() {
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                             <Avatar
                               src={approval.leaveRequest.user.avatar}
-                              sx={{ 
-                                width: 56, 
-                                height: 56, 
+                              sx={{
+                                width: 56,
+                                height: 56,
                                 bgcolor: config.lightColor,
                                 color: config.color,
                                 fontSize: '1.2rem',
@@ -2422,12 +2435,12 @@ export default function ApprovalPage() {
                               </Typography>
                             </Box>
                           </Box>
-                          <Chip 
+                          <Chip
                             label={statusInfo.label}
                             size="medium"
                             icon={<StatusIcon size={16} color={statusInfo.color} variant="Bold" />}
-                            sx={{ 
-                              bgcolor: statusInfo.bgcolor, 
+                            sx={{
+                              bgcolor: statusInfo.bgcolor,
                               color: statusInfo.color,
                               fontWeight: 600,
                               '& .MuiChip-icon': { ml: 0.5 }
@@ -2446,7 +2459,7 @@ export default function ApprovalPage() {
                               <Box sx={{ display: 'grid', gap: 2 }}>
                                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                   <Typography sx={{ fontSize: '0.9rem', color: 'text.secondary' }}>ประเภทการลา</Typography>
-                                  <Chip 
+                                  <Chip
                                     label={t(`leave_${approval.leaveRequest.leaveType}`, approval.leaveRequest.leaveType)}
                                     size="small"
                                     icon={<LeaveIcon size={14} color={config.color} variant="Bold" />}
@@ -2473,7 +2486,7 @@ export default function ApprovalPage() {
                                 </Box>
                               </Box>
                             </Paper>
-                            
+
                             <Typography sx={{ fontWeight: 600, color: '#64748B', mb: 1.5, mt: 3, textTransform: 'uppercase', fontSize: '0.8rem', letterSpacing: 0.5 }}>
                               เหตุผลการลา
                             </Typography>
@@ -2482,7 +2495,7 @@ export default function ApprovalPage() {
                                 {approval.leaveRequest.reason || '-'}
                               </Typography>
                             </Paper>
-                            
+
                             {/* Attachments */}
                             {approval.leaveRequest.attachments && approval.leaveRequest.attachments.length > 0 && (
                               <>
@@ -2491,29 +2504,29 @@ export default function ApprovalPage() {
                                 </Typography>
                                 <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5 }}>
                                   {approval.leaveRequest.attachments.map((file) => (
-                                    <Box 
+                                    <Box
                                       key={file.id}
                                       onClick={(e) => handleFileClick(file, e, approval.leaveRequest.attachments)}
-                                      sx={{ 
-                                        display: 'flex', 
-                                        alignItems: 'center', 
-                                        gap: 1.5, 
-                                        p: 1.5, 
-                                        bgcolor: '#F8FAFC', 
+                                      sx={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: 1.5,
+                                        p: 1.5,
+                                        bgcolor: '#F8FAFC',
                                         borderRadius: 1,
                                         cursor: 'pointer',
                                         transition: 'all 0.2s',
-                                        '&:hover': { 
+                                        '&:hover': {
                                           bgcolor: '#EDF2F7',
                                           transform: 'translateY(-2px)',
                                         }
                                       }}
                                     >
                                       {isImageFile(file.fileName) ? (
-                                        <Box 
-                                          component="img" 
-                                          src={file.filePath} 
-                                          sx={{ width: 48, height: 48, borderRadius: 1, objectFit: 'cover' }} 
+                                        <Box
+                                          component="img"
+                                          src={file.filePath}
+                                          sx={{ width: 48, height: 48, borderRadius: 1, objectFit: 'cover' }}
                                         />
                                       ) : (
                                         <Box sx={{ width: 48, height: 48, borderRadius: 1, bgcolor: '#E2E8F0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -2529,7 +2542,7 @@ export default function ApprovalPage() {
                               </>
                             )}
                           </Box>
-                          
+
                           {/* Right Column - Employee Info & History */}
                           <Box>
                             <Typography sx={{ fontWeight: 600, color: '#64748B', mb: 1.5, textTransform: 'uppercase', fontSize: '0.8rem', letterSpacing: 0.5 }}>
@@ -2559,7 +2572,7 @@ export default function ApprovalPage() {
                                 </Box>
                               </Box>
                             </Paper>
-                            
+
                             {/* Approval History */}
                             {approval.leaveRequest.approvalHistory && approval.leaveRequest.approvalHistory.length > 0 && (
                               <>
@@ -2569,10 +2582,10 @@ export default function ApprovalPage() {
                                 <Paper elevation={0} sx={{ p: 2, bgcolor: '#F8FAFC', borderRadius: 1 }}>
                                   {approval.leaveRequest.approvalHistory.map((hist, idx) => (
                                     <Box key={idx} sx={{ display: 'flex', gap: 2, mb: idx < approval.leaveRequest.approvalHistory.length - 1 ? 2 : 0 }}>
-                                      <Box sx={{ 
-                                        width: 28, 
-                                        height: 28, 
-                                        borderRadius: '50%', 
+                                      <Box sx={{
+                                        width: 28,
+                                        height: 28,
+                                        borderRadius: '50%',
                                         bgcolor: statusConfig[hist.status]?.bgcolor || '#F1F5F9',
                                         display: 'flex',
                                         alignItems: 'center',
@@ -2585,16 +2598,21 @@ export default function ApprovalPage() {
                                         {hist.status === 'skipped' && <Clock size={16} color="#9e9e9e" variant="Bold" />}
                                       </Box>
                                       <Box sx={{ flex: 1 }}>
-                                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                          <Typography sx={{ fontSize: '0.9rem', fontWeight: 600 }}>
-                                            {hist.approver.firstName} {hist.approver.lastName}
-                                          </Typography>
-                                          <Chip 
+                                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                          <Box>
+                                            <Typography sx={{ fontSize: '0.9rem', fontWeight: 600, lineHeight: 1.2 }}>
+                                              {hist.approver.firstName} {hist.approver.lastName}
+                                            </Typography>
+                                            <Typography sx={{ fontSize: '0.75rem', color: '#64748B' }}>
+                                              {hist.approver.position || '-'}
+                                            </Typography>
+                                          </Box>
+                                          <Chip
                                             label={statusConfig[hist.status]?.label || hist.status}
                                             size="small"
-                                            sx={{ 
-                                              height: 22, 
-                                              fontSize: '0.75rem', 
+                                            sx={{
+                                              height: 22,
+                                              fontSize: '0.75rem',
                                               bgcolor: statusConfig[hist.status]?.bgcolor,
                                               color: statusConfig[hist.status]?.color,
                                               fontWeight: 600
@@ -2615,7 +2633,7 @@ export default function ApprovalPage() {
                           </Box>
                         </Box>
                       </DialogContent>
-                      
+
                       {isPending && (
                         <DialogActions sx={{ p: 3, pt: 1, flexDirection: 'column', gap: 1.5 }}>
                           {isHrManager && approval.leaveRequest.totalDays > 1 && (
@@ -2627,7 +2645,7 @@ export default function ApprovalPage() {
                                 handleOpenSplitDialog(approval);
                               }}
                               startIcon={<Scissor size={18} color={PRIMARY_COLOR} variant="Bold" />}
-                              sx={{ 
+                              sx={{
                                 borderColor: PRIMARY_COLOR,
                                 color: PRIMARY_COLOR,
                                 py: 1.25,
@@ -2646,7 +2664,7 @@ export default function ApprovalPage() {
                                 handleOpenDialog(approval, 'reject');
                               }}
                               startIcon={<CloseCircle size={18} color="#fff" variant="Bold" />}
-                              sx={{ 
+                              sx={{
                                 flex: 1,
                                 py: 1.25,
                                 borderRadius: 1,
@@ -2663,7 +2681,7 @@ export default function ApprovalPage() {
                                 handleOpenDialog(approval, 'approve');
                               }}
                               startIcon={<TickCircle size={18} color="#fff" variant="Bold" />}
-                              sx={{ 
+                              sx={{
                                 flex: 1,
                                 py: 1.25,
                                 borderRadius: 1,
@@ -2676,7 +2694,7 @@ export default function ApprovalPage() {
                           </Box>
                         </DialogActions>
                       )}
-                      
+
                       {!isPending && (
                         <DialogActions sx={{ p: 3, pt: 1 }}>
                           <Button
@@ -2693,13 +2711,13 @@ export default function ApprovalPage() {
                 })()}
               </Dialog>
             )}
-            
+
             {/* Pagination for Desktop */}
             {totalPages > 1 && (
               <Box sx={{ display: 'flex', justifyContent: 'center', py: 3, borderTop: '1px solid', borderColor: 'grey.200' }}>
-                <Pagination 
-                  count={totalPages} 
-                  page={page} 
+                <Pagination
+                  count={totalPages}
+                  page={page}
                   onChange={(_, value) => {
                     setPage(value);
                     setExpandedCards(new Set());
@@ -2716,18 +2734,18 @@ export default function ApprovalPage() {
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
             {paginatedApprovals.map((approval) => {
               const isExpanded = expandedCards.has(approval.approvalId);
-              const isPending = approval.status === 'pending' || approval.leaveRequest.status === 'pending' || approval.leaveRequest.status === 'in_progress';
+              const isPending = approval.status === 'pending' && (approval.leaveRequest.status === 'pending' || approval.leaveRequest.status === 'in_progress');
               const config = leaveTypeConfig[approval.leaveRequest.leaveType] || leaveTypeConfig.default;
               const LeaveIcon = config.icon;
               const statusInfo = statusConfig[approval.leaveRequest.status] || statusConfig[approval.status] || statusConfig.pending;
               const StatusIcon = statusInfo.icon;
-              
+
               return (
-                <Paper 
-                  key={approval.approvalId} 
+                <Paper
+                  key={approval.approvalId}
                   elevation={0}
-                  sx={{ 
-                    borderRadius: 1, 
+                  sx={{
+                    borderRadius: 1,
                     overflow: 'hidden',
                     border: '1px solid',
                     borderColor: isExpanded ? PRIMARY_COLOR : 'grey.200',
@@ -2747,10 +2765,10 @@ export default function ApprovalPage() {
                   )}
 
                   {/* Header - Clickable */}
-                  <Box 
+                  <Box
                     onClick={() => toggleCard(approval.approvalId)}
-                    sx={{ 
-                      p: 2, 
+                    sx={{
+                      p: 2,
                       cursor: 'pointer',
                       bgcolor: 'white',
                     }}
@@ -2759,9 +2777,9 @@ export default function ApprovalPage() {
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1 }}>
                       <Avatar
                         src={approval.leaveRequest.user.avatar}
-                        sx={{ 
-                          width: 40, 
-                          height: 40, 
+                        sx={{
+                          width: 40,
+                          height: 40,
                           bgcolor: config.lightColor,
                           color: config.color,
                           fontSize: '1rem',
@@ -2772,7 +2790,7 @@ export default function ApprovalPage() {
                       >
                         {approval.leaveRequest.user.firstName[0]}
                       </Avatar>
-                      
+
                       <Box sx={{ flex: 1, minWidth: 0 }}>
                         <Typography sx={{ fontWeight: 700, fontSize: '0.95rem', color: '#1E293B', lineHeight: 1.2 }}>
                           {approval.leaveRequest.user.firstName} {approval.leaveRequest.user.lastName}
@@ -2781,13 +2799,13 @@ export default function ApprovalPage() {
                           {approval.leaveRequest.user.position || '-'}
                         </Typography>
                       </Box>
-                      
-                      <Chip 
+
+                      <Chip
                         label={statusInfo.label}
                         size="small"
                         icon={<StatusIcon size={14} color={statusInfo.color} variant="Bold" />}
-                        sx={{ 
-                          bgcolor: statusInfo.bgcolor, 
+                        sx={{
+                          bgcolor: statusInfo.bgcolor,
                           color: statusInfo.color,
                           fontWeight: 600,
                           fontSize: '0.7rem',
@@ -2796,15 +2814,15 @@ export default function ApprovalPage() {
                           '& .MuiChip-icon': { ml: 0.5 }
                         }}
                       />
-                      
+
                       <Box sx={{ flexShrink: 0 }}>
-                        {isExpanded ? 
-                          <ArrowUp2 size={20} color="#94A3B8" /> : 
+                        {isExpanded ?
+                          <ArrowUp2 size={20} color="#94A3B8" /> :
                           <ArrowDown2 size={20} color="#94A3B8" />
                         }
                       </Box>
                     </Box>
-                    
+
                     {/* Row 2: Department / Section - Full width, left aligned */}
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 1 }}>
                       <Building size={14} color="#94A3B8" variant="Bold" />
@@ -2812,15 +2830,15 @@ export default function ApprovalPage() {
                         {approval.leaveRequest.user.department || '-'} {approval.leaveRequest.user.section ? `/ ${approval.leaveRequest.user.section}` : ''}
                       </Typography>
                     </Box>
-                    
+
                     {/* Row 3: Leave Type and Days */}
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap', mb: 1.5 }}>
-                      <Chip 
+                      <Chip
                         label={t(`leave_${approval.leaveRequest.leaveType}`, approval.leaveRequest.leaveType)}
                         size="small"
                         icon={<LeaveIcon size={14} color={config.color} variant="Bold" />}
-                        sx={{ 
-                          bgcolor: config.lightColor, 
+                        sx={{
+                          bgcolor: config.lightColor,
                           color: config.color,
                           fontWeight: 600,
                           fontSize: '0.75rem',
@@ -2829,11 +2847,11 @@ export default function ApprovalPage() {
                           borderColor: 'transparent',
                         }}
                       />
-                      <Chip 
+                      <Chip
                         label={`${approval.leaveRequest.totalDays} วัน`}
                         size="small"
-                        sx={{ 
-                          bgcolor: '#F1F5F9', 
+                        sx={{
+                          bgcolor: '#F1F5F9',
                           color: '#475569',
                           fontWeight: 600,
                           fontSize: '0.75rem',
@@ -2841,20 +2859,20 @@ export default function ApprovalPage() {
                         }}
                       />
                     </Box>
-                    
+
                     {/* Row 4: Date/Time Display - Full width */}
-                    <Box sx={{ 
-                      bgcolor: '#F8FAFC', 
-                      borderRadius: 1, 
+                    <Box sx={{
+                      bgcolor: '#F8FAFC',
+                      borderRadius: 1,
                       p: 1.5,
                       border: '1px solid #E2E8F0'
                     }}>
                       {/* Single Day Leave */}
                       {approval.leaveRequest.startDate === approval.leaveRequest.endDate ? (
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                          <Box sx={{ 
-                            bgcolor: '#4CAF50', 
-                            borderRadius: 1, 
+                          <Box sx={{
+                            bgcolor: '#4CAF50',
+                            borderRadius: 1,
                             p: 0.5,
                             display: 'flex',
                             alignItems: 'center',
@@ -2866,7 +2884,7 @@ export default function ApprovalPage() {
                             {new Date(approval.leaveRequest.startDate).toLocaleDateString('th-TH', { weekday: 'short', day: 'numeric', month: 'short', year: '2-digit' })}
                           </Typography>
                           {(approval.leaveRequest.startTime || approval.leaveRequest.endTime) && (
-                            <Typography sx={{ fontSize: '0.8rem', color: '#1E293B' , fontWeight: 600 }}>
+                            <Typography sx={{ fontSize: '0.8rem', color: '#1E293B', fontWeight: 600 }}>
                               ({approval.leaveRequest.startTime || '08:00'} - {approval.leaveRequest.endTime || '17:00'})
                             </Typography>
                           )}
@@ -2874,9 +2892,9 @@ export default function ApprovalPage() {
                       ) : (
                         /* Multiple Days Leave - Compact inline style */
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
-                          <Box sx={{ 
-                            bgcolor: '#4CAF50', 
-                            borderRadius: 1, 
+                          <Box sx={{
+                            bgcolor: '#4CAF50',
+                            borderRadius: 1,
                             p: 0.5,
                             display: 'flex',
                             alignItems: 'center',
@@ -2969,36 +2987,36 @@ export default function ApprovalPage() {
                           </Typography>
                           <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5 }}>
                             {approval.leaveRequest.attachments.map((file) => (
-                              <Box 
+                              <Box
                                 key={file.id}
                                 onClick={(e) => handleFileClick(file, e, approval.leaveRequest.attachments)}
-                                sx={{ 
-                                  display: 'flex', 
-                                  alignItems: 'center', 
-                                  gap: 1.5, 
-                                  p: 1.5, 
-                                  bgcolor: 'white', 
+                                sx={{
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: 1.5,
+                                  p: 1.5,
+                                  bgcolor: 'white',
                                   borderRadius: 1,
                                   border: '1px solid',
                                   borderColor: 'grey.200',
                                   cursor: 'pointer',
                                   transition: 'all 0.2s',
-                                  '&:hover': { 
+                                  '&:hover': {
                                     borderColor: PRIMARY_COLOR,
                                     boxShadow: '0 2px 8px rgba(0,0,0,0.05)'
                                   }
                                 }}
                               >
                                 {isImageFile(file.fileName) ? (
-                                  <Box 
-                                    component="img" 
-                                    src={file.filePath} 
-                                    sx={{ 
-                                      width: 40, 
-                                      height: 40, 
-                                      borderRadius: 1, 
-                                      objectFit: 'cover' 
-                                    }} 
+                                  <Box
+                                    component="img"
+                                    src={file.filePath}
+                                    sx={{
+                                      width: 40,
+                                      height: 40,
+                                      borderRadius: 1,
+                                      objectFit: 'cover'
+                                    }}
                                   />
                                 ) : (
                                   <Box sx={{ width: 40, height: 40, borderRadius: 1, bgcolor: '#F1F5F9', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -3006,14 +3024,14 @@ export default function ApprovalPage() {
                                   </Box>
                                 )}
                                 <Box>
-                                  <Typography sx={{ 
-                                    fontSize: '0.85rem', 
+                                  <Typography sx={{
+                                    fontSize: '0.85rem',
                                     color: '#334155',
                                     fontWeight: 500,
-                                    maxWidth: 150, 
-                                    overflow: 'hidden', 
-                                    textOverflow: 'ellipsis', 
-                                    whiteSpace: 'nowrap' 
+                                    maxWidth: 150,
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                    whiteSpace: 'nowrap'
                                   }}>
                                     {file.fileName}
                                   </Typography>
@@ -3038,21 +3056,21 @@ export default function ApprovalPage() {
                               <Box key={idx} sx={{ position: 'relative', pb: idx === approval.leaveRequest.approvalHistory.length - 1 ? 0 : 2 }}>
                                 {/* Timeline line */}
                                 {idx !== approval.leaveRequest.approvalHistory.length - 1 && (
-                                  <Box sx={{ 
-                                    position: 'absolute', 
-                                    left: 10, 
-                                    top: 24, 
-                                    bottom: 0, 
-                                    width: 2, 
-                                    bgcolor: '#F1F5F9' 
+                                  <Box sx={{
+                                    position: 'absolute',
+                                    left: 10,
+                                    top: 24,
+                                    bottom: 0,
+                                    width: 2,
+                                    bgcolor: '#F1F5F9'
                                   }} />
                                 )}
-                                
+
                                 <Box sx={{ display: 'flex', gap: 2 }}>
-                                  <Box sx={{ 
-                                    width: 22, 
-                                    height: 22, 
-                                    borderRadius: '50%', 
+                                  <Box sx={{
+                                    width: 22,
+                                    height: 22,
+                                    borderRadius: '50%',
                                     bgcolor: statusConfig[hist.status]?.bgcolor || '#F1F5F9',
                                     display: 'flex',
                                     alignItems: 'center',
@@ -3065,18 +3083,18 @@ export default function ApprovalPage() {
                                     {hist.status === 'cancelled' && <Forbidden2 size={14} color={statusConfig.cancelled.color} variant="Bold" />}
                                     {hist.status === 'skipped' && <Clock size={14} color="#9e9e9e" variant="Bold" />}
                                   </Box>
-                                  
+
                                   <Box sx={{ flex: 1 }}>
                                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
                                       <Typography sx={{ fontSize: '0.9rem', fontWeight: 600, color: '#334155' }}>
                                         {hist.approver.firstName} {hist.approver.lastName}
                                       </Typography>
-                                      <Chip 
+                                      <Chip
                                         label={statusConfig[hist.status]?.label || hist.status}
                                         size="small"
-                                        sx={{ 
-                                          height: 20, 
-                                          fontSize: '0.65rem', 
+                                        sx={{
+                                          height: 20,
+                                          fontSize: '0.65rem',
                                           bgcolor: statusConfig[hist.status]?.bgcolor,
                                           color: statusConfig[hist.status]?.color,
                                           fontWeight: 600
@@ -3086,7 +3104,7 @@ export default function ApprovalPage() {
                                     <Typography sx={{ fontSize: '0.75rem', color: '#94A3B8' }}>
                                       {hist.approver.position || 'ผู้อนุมัติ'}
                                     </Typography>
-                                    
+
                                     {hist.comment && (
                                       <Paper elevation={0} sx={{ mt: 1, p: 1.5, bgcolor: '#F8FAFC', borderRadius: 1 }}>
                                         <Typography sx={{ fontSize: '0.8rem', color: '#475569', fontStyle: 'italic' }}>
@@ -3102,12 +3120,12 @@ export default function ApprovalPage() {
                         </Box>
                       )}
                     </Box>
-                    
+
                     {/* Actions - only for pending */}
                     {isPending && (
-                      <Box sx={{ 
-                        p: 2, 
-                        bgcolor: '#FAFAFA', 
+                      <Box sx={{
+                        p: 2,
+                        bgcolor: '#FAFAFA',
                         borderTop: '1px solid',
                         borderColor: 'grey.200',
                       }}>
@@ -3120,17 +3138,17 @@ export default function ApprovalPage() {
                               e.stopPropagation();
                               handleOpenSplitDialog(approval);
                             }}
-                            sx={{ 
+                            sx={{
                               mb: 1.5,
                               borderColor: PRIMARY_COLOR,
                               color: 'white',
-                              bgcolor: PRIMARY_COLOR ,
+                              bgcolor: PRIMARY_COLOR,
                               borderRadius: 1,
                               py: 1,
                               fontWeight: 600,
                               fontSize: '0.85rem',
                               textTransform: 'none',
-                              '&:hover': { 
+                              '&:hover': {
                                 bgcolor: '#1976D2',
                                 borderColor: PRIMARY_COLOR,
                                 color: 'white',
@@ -3141,7 +3159,7 @@ export default function ApprovalPage() {
                             แยกใบลา
                           </Button>
                         )}
-                        
+
                         <Box sx={{ display: 'flex', gap: 1.5 }}>
                           <Button
                             variant="contained"
@@ -3149,7 +3167,7 @@ export default function ApprovalPage() {
                               e.stopPropagation();
                               handleOpenDialog(approval, 'reject');
                             }}
-                            sx={{ 
+                            sx={{
                               flex: 1,
                               bgcolor: '#D32F2F',
                               color: 'white',
@@ -3159,7 +3177,7 @@ export default function ApprovalPage() {
                               fontSize: '0.95rem',
                               textTransform: 'none',
                               boxShadow: '0 4px 12px rgba(211, 47, 47, 0.25)',
-                              '&:hover': { 
+                              '&:hover': {
                                 bgcolor: '#B71C1C',
                                 boxShadow: '0 6px 16px rgba(211, 47, 47, 0.35)',
                               }
@@ -3174,9 +3192,9 @@ export default function ApprovalPage() {
                               e.stopPropagation();
                               handleOpenDialog(approval, 'approve');
                             }}
-                            sx={{ 
+                            sx={{
                               flex: 1,
-                              bgcolor: '#2E7D32', 
+                              bgcolor: '#2E7D32',
                               color: 'white',
                               borderRadius: 1,
                               py: 1.5,
@@ -3184,7 +3202,7 @@ export default function ApprovalPage() {
                               fontSize: '0.95rem',
                               textTransform: 'none',
                               boxShadow: '0 4px 12px rgba(46, 125, 50, 0.25)',
-                              '&:hover': { 
+                              '&:hover': {
                                 bgcolor: '#1B5E20',
                                 boxShadow: '0 6px 16px rgba(46, 125, 50, 0.35)',
                               }
@@ -3200,40 +3218,40 @@ export default function ApprovalPage() {
                 </Paper>
               );
             })}
-          
-          {/* Pagination */}
-          {totalPages > 1 && (
-            <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
-              <Pagination 
-                count={totalPages} 
-                page={page} 
-                onChange={(_, value) => {
-                  setPage(value);
-                  setExpandedCards(new Set());
-                }}
-                color="primary"
-                shape="rounded"
-                sx={{
-                  '& .MuiPaginationItem-root': {
-                    fontWeight: 600,
-                  }
-                }}
-              />
-            </Box>
-          )}
-        </Box>
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
+                <Pagination
+                  count={totalPages}
+                  page={page}
+                  onChange={(_, value) => {
+                    setPage(value);
+                    setExpandedCards(new Set());
+                  }}
+                  color="primary"
+                  shape="rounded"
+                  sx={{
+                    '& .MuiPaginationItem-root': {
+                      fontWeight: 600,
+                    }
+                  }}
+                />
+              </Box>
+            )}
+          </Box>
         )}
       </Container>
 
       {/* Confirm Dialog - Fullscreen on mobile, normal dialog on desktop */}
-      <Dialog 
-        open={dialogOpen} 
-        onClose={() => setDialogOpen(false)} 
-        maxWidth="sm" 
+      <Dialog
+        open={dialogOpen}
+        onClose={() => setDialogOpen(false)}
+        maxWidth="sm"
         fullWidth
         fullScreen={viewMode === 'mobile'}
         PaperProps={{
-          sx: { 
+          sx: {
             borderRadius: viewMode === 'desktop' ? 1 : 0,
             display: 'flex',
             flexDirection: 'column',
@@ -3249,10 +3267,10 @@ export default function ApprovalPage() {
           <CloseCircle size={28} color="#9CA3AF" />
         </IconButton>
         <DialogTitle sx={{ textAlign: 'center', pt: 4, pb: 2 }}>
-          <Box sx={{ 
-            width: 60, 
-            height: 60, 
-            borderRadius: '50%', 
+          <Box sx={{
+            width: 60,
+            height: 60,
+            borderRadius: '50%',
             bgcolor: actionType === 'approve' ? '#E8F5E9' : '#FFEBEE',
             display: 'flex',
             alignItems: 'center',
@@ -3260,8 +3278,8 @@ export default function ApprovalPage() {
             mx: 'auto',
             mb: 2
           }}>
-            {actionType === 'approve' 
-              ? <TickCircle size={40} variant="Bold" color="#4CAF50" /> 
+            {actionType === 'approve'
+              ? <TickCircle size={40} variant="Bold" color="#4CAF50" />
               : <CloseCircle size={40} variant="Bold" color="#F44336" />}
           </Box>
           <Typography variant="h6" component="span" fontWeight={700} sx={{ display: 'block' }}>
@@ -3270,8 +3288,8 @@ export default function ApprovalPage() {
         </DialogTitle>
         <DialogContent sx={{ flex: 1, display: 'flex', flexDirection: 'column', px: 3 }}>
           <Typography variant="body1" color="text.secondary" textAlign="center" sx={{ mb: 3 }}>
-            {actionType === 'approve' 
-              ? 'คุณต้องการอนุมัติคำขอลาของพนักงานใช่หรือไม่?' 
+            {actionType === 'approve'
+              ? 'คุณต้องการอนุมัติคำขอลาของพนักงานใช่หรือไม่?'
               : 'คุณต้องการปฏิเสธคำขอลาของพนักงานใช่หรือไม่?'}
           </Typography>
 
@@ -3285,13 +3303,13 @@ export default function ApprovalPage() {
                 <Typography variant="body2" color="text.secondary">ประเภท</Typography>
                 <Typography variant="body2" fontWeight={600}>{t(`leave_${selectedApproval.leaveRequest.leaveType}`, selectedApproval.leaveRequest.leaveType)}</Typography>
               </Box>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between' , mb: 1.5}}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1.5 }}>
                 <Typography variant="body2" color="text.secondary">ตั้งแต่วันที่</Typography>
                 <Typography variant="body2" fontWeight={600}>
                   {new Date(selectedApproval.leaveRequest.startDate).toLocaleDateString('th-TH', { weekday: 'short', day: 'numeric', month: 'short', year: '2-digit' })}
                 </Typography>
               </Box>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between' , mb: 1.5}}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1.5 }}>
                 <Typography variant="body2" color="text.secondary">ถึงวันที่</Typography>
                 <Typography variant="body2" fontWeight={600}>
                   {new Date(selectedApproval.leaveRequest.endDate).toLocaleDateString('th-TH', { weekday: 'short', day: 'numeric', month: 'short', year: '2-digit' })}
@@ -3325,15 +3343,15 @@ export default function ApprovalPage() {
               }
             }}
           />
-          
+
           {/* Spacer to push buttons to bottom */}
           <Box sx={{ flex: 1 }} />
         </DialogContent>
         <DialogActions sx={{ p: 3, gap: 1.5, flexDirection: 'column' }}>
           <Box sx={{ display: 'flex', gap: 1.5, width: '100%' }}>
-            <Button 
+            <Button
               variant="outlined"
-              onClick={() => setDialogOpen(false)} 
+              onClick={() => setDialogOpen(false)}
               disabled={submitting}
               size="large"
               sx={{ flex: 1, borderRadius: 1, py: 1.25, borderColor: 'grey.300', color: 'text.primary' }}
@@ -3345,7 +3363,7 @@ export default function ApprovalPage() {
               onClick={handleSubmitAction}
               disabled={submitting}
               size="large"
-              sx={{ 
+              sx={{
                 flex: 1,
                 borderRadius: 1,
                 py: 1.25,
@@ -3363,14 +3381,14 @@ export default function ApprovalPage() {
       </Dialog>
 
       {/* Split Leave Dialog - Redesigned for better UX */}
-      <Dialog 
-        open={splitDialogOpen} 
-        onClose={() => setSplitDialogOpen(false)} 
-        maxWidth="md" 
+      <Dialog
+        open={splitDialogOpen}
+        onClose={() => setSplitDialogOpen(false)}
+        maxWidth="md"
         fullWidth
         fullScreen={isMobileDevice}
         PaperProps={{
-          sx: { 
+          sx: {
             borderRadius: isMobileDevice ? 0 : 1,
             display: 'flex',
             flexDirection: 'column',
@@ -3380,8 +3398,8 @@ export default function ApprovalPage() {
         }}
       >
         {/* Header */}
-        <Box sx={{ 
-          bgcolor: 'white', 
+        <Box sx={{
+          bgcolor: 'white',
           borderBottom: '1px solid #E2E8F0',
           px: 2,
           py: 2,
@@ -3390,10 +3408,10 @@ export default function ApprovalPage() {
           justifyContent: 'space-between',
         }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-            <Box sx={{ 
-              width: 40, 
-              height: 40, 
-              borderRadius: 1, 
+            <Box sx={{
+              width: 40,
+              height: 40,
+              borderRadius: 1,
               bgcolor: `${PRIMARY_COLOR}15`,
               display: 'flex',
               alignItems: 'center',
@@ -3436,7 +3454,7 @@ export default function ApprovalPage() {
                   <Typography variant="caption" color="text.secondary">วันที่</Typography>
                   <Typography variant="body2" fontWeight={500}>
                     {new Date(selectedApproval.leaveRequest.startDate).toLocaleDateString('th-TH', { day: 'numeric', month: 'short' })}
-                    {selectedApproval.leaveRequest.startDate !== selectedApproval.leaveRequest.endDate && 
+                    {selectedApproval.leaveRequest.startDate !== selectedApproval.leaveRequest.endDate &&
                       ` - ${new Date(selectedApproval.leaveRequest.endDate).toLocaleDateString('th-TH', { day: 'numeric', month: 'short' })}`
                     }
                   </Typography>
@@ -3491,19 +3509,19 @@ export default function ApprovalPage() {
                 เพิ่มส่วน
               </Button>
             </Box>
-            
+
             {splitParts.map((part, index) => {
               const leaveInfo = getRemainingDays(part.leaveType);
               const isOverLimit = !leaveInfo.isUnlimited && part.totalDays > leaveInfo.remaining;
-              
+
               return (
-                <Paper 
-                  key={index} 
-                  elevation={0} 
-                  sx={{ 
-                    p: 2, 
-                    mb: 1.5, 
-                    borderRadius: 1, 
+                <Paper
+                  key={index}
+                  elevation={0}
+                  sx={{
+                    p: 2,
+                    mb: 1.5,
+                    borderRadius: 1,
                     bgcolor: 'white',
                     border: '2px solid',
                     borderColor: isOverLimit ? '#FFCDD2' : index === 0 ? '#C8E6C9' : '#FFE0B2',
@@ -3511,22 +3529,22 @@ export default function ApprovalPage() {
                 >
                   {/* Part Header */}
                   <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
-                    <Chip 
-                      label={`ส่วนที่ ${index + 1}`} 
-                      size="small" 
-                      sx={{ 
-                        bgcolor: index === 0 ? '#E8F5E9' : '#FFF3E0', 
+                    <Chip
+                      label={`ส่วนที่ ${index + 1}`}
+                      size="small"
+                      sx={{
+                        bgcolor: index === 0 ? '#E8F5E9' : '#FFF3E0',
                         color: index === 0 ? '#2E7D32' : '#E65100',
                         fontWeight: 700,
                         fontSize: '0.75rem',
-                      }} 
+                      }}
                     />
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                       <Typography variant="h6" fontWeight={800} color={isOverLimit ? 'error.main' : 'primary.main'}>
                         {part.totalDays} วัน
                       </Typography>
-                      <IconButton 
-                        size="small" 
+                      <IconButton
+                        size="small"
                         onClick={() => handleRemoveSplitPart(index)}
                         sx={{ color: '#EF5350', p: 0.5 }}
                       >
@@ -3534,7 +3552,7 @@ export default function ApprovalPage() {
                       </IconButton>
                     </Box>
                   </Box>
-              
+
                   {/* Leave Type Selector - Compact */}
                   <Box
                     onClick={() => {
@@ -3575,14 +3593,14 @@ export default function ApprovalPage() {
                       <ArrowDown2 size={16} color="#94A3B8" />
                     </Box>
                   </Box>
-              
+
                   {/* Date Range - Inline on Desktop, Stack on Mobile */}
                   <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale="th">
-                    <Box sx={{ 
-                      display: 'grid', 
-                      gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, 
-                      gap: 1.5, 
-                      mb: 2 
+                    <Box sx={{
+                      display: 'grid',
+                      gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' },
+                      gap: 1.5,
+                      mb: 2
                     }}>
                       {/* Start Date + Period */}
                       <Box>
@@ -3649,7 +3667,7 @@ export default function ApprovalPage() {
                       </Box>
                     </Box>
                   </LocalizationProvider>
-              
+
                   {/* Reason - Optional */}
                   <TextField
                     placeholder="เหตุผล (ถ้ามี)"
@@ -3680,10 +3698,10 @@ export default function ApprovalPage() {
         {/* Footer - Summary & Actions */}
         <Box sx={{ bgcolor: 'white', borderTop: '1px solid #E2E8F0', p: 2 }}>
           {/* Summary Bar */}
-          <Box sx={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            justifyContent: 'space-between', 
+          <Box sx={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
             mb: 2,
             p: 1.5,
             borderRadius: 1,
@@ -3693,9 +3711,9 @@ export default function ApprovalPage() {
               รวมทั้งหมด
             </Typography>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <Typography 
-                variant="h6" 
-                fontWeight={800} 
+              <Typography
+                variant="h6"
+                fontWeight={800}
                 color={Math.abs(splitParts.reduce((sum, p) => sum + p.totalDays, 0) - (selectedApproval?.leaveRequest.totalDays || 0)) < 0.01 ? 'success.main' : 'error.main'}
               >
                 {splitParts.reduce((sum, p) => sum + p.totalDays, 0)}
@@ -3713,9 +3731,9 @@ export default function ApprovalPage() {
 
           {/* Action Buttons */}
           <Box sx={{ display: 'flex', gap: 1.5 }}>
-            <Button 
+            <Button
               variant="outlined"
-              onClick={() => setSplitDialogOpen(false)} 
+              onClick={() => setSplitDialogOpen(false)}
               disabled={submitting}
               sx={{ flex: 1, borderRadius: 1, py: 1.25, borderColor: '#E2E8F0', color: 'text.secondary' }}
             >
@@ -3725,8 +3743,8 @@ export default function ApprovalPage() {
               variant="contained"
               onClick={handleSubmitSplit}
               disabled={submitting || Math.abs(splitParts.reduce((sum, p) => sum + p.totalDays, 0) - (selectedApproval?.leaveRequest.totalDays || 0)) > 0.01}
-              sx={{ 
-                flex: 2, 
+              sx={{
+                flex: 2,
                 borderRadius: 1,
                 py: 1.25,
                 bgcolor: PRIMARY_COLOR,
@@ -3745,7 +3763,7 @@ export default function ApprovalPage() {
         onClose={() => setImageModalOpen(false)}
         fullScreen
         PaperProps={{
-          sx: { 
+          sx: {
             bgcolor: 'rgba(0,0,0,0.95)',
             overflow: 'hidden',
           }
@@ -3764,9 +3782,9 @@ export default function ApprovalPage() {
               zIndex: 10,
             }}
           >
-            <CloseCircle size={28} color="white" variant='Outline'/>
+            <CloseCircle size={28} color="white" variant='Outline' />
           </IconButton>
-          
+
           {currentAttachments.length > 1 ? (
             <Swiper
               modules={[Navigation, SwiperPagination, Zoom]}
@@ -3775,18 +3793,18 @@ export default function ApprovalPage() {
               zoom={{ maxRatio: 5 }}
               initialSlide={currentImageIndex}
               spaceBetween={10}
-              style={{ 
+              style={{
                 width: '100%',
                 height: '100%',
               }}
             >
               {currentAttachments.map((file) => (
                 <SwiperSlide key={file.id}>
-                  <Box 
+                  <Box
                     className="swiper-zoom-container"
-                    sx={{ 
-                      display: 'flex', 
-                      justifyContent: 'center', 
+                    sx={{
+                      display: 'flex',
+                      justifyContent: 'center',
                       alignItems: 'center',
                       height: '100vh',
                       p: 2,
@@ -3807,10 +3825,10 @@ export default function ApprovalPage() {
               ))}
             </Swiper>
           ) : (
-            <Box sx={{ 
-              display: 'flex', 
-              justifyContent: 'center', 
-              alignItems: 'center', 
+            <Box sx={{
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
               height: '100%',
               p: 2,
             }}>
@@ -3825,15 +3843,15 @@ export default function ApprovalPage() {
               />
             </Box>
           )}
-          
+
           {currentAttachments.length > 1 && (
-            <Typography sx={{ 
+            <Typography sx={{
               position: 'absolute',
               bottom: 20,
               left: '50%',
               transform: 'translateX(-50%)',
-              textAlign: 'center', 
-              color: 'white', 
+              textAlign: 'center',
+              color: 'white',
               fontSize: '0.85rem',
               textShadow: '0 1px 3px rgba(0,0,0,0.5)',
               bgcolor: 'rgba(0,0,0,0.5)',
@@ -3868,15 +3886,15 @@ export default function ApprovalPage() {
       >
         <Box sx={{ p: 2, borderBottom: '1px solid #eee' }}>
           {/* Handle bar */}
-          <Box sx={{ 
-            width: 40, 
-            height: 4, 
-            bgcolor: '#ddd', 
-            borderRadius: 1, 
-            mx: 'auto', 
-            mb: 2 
+          <Box sx={{
+            width: 40,
+            height: 4,
+            bgcolor: '#ddd',
+            borderRadius: 1,
+            mx: 'auto',
+            mb: 2
           }} />
-          
+
           <Typography variant="h6" fontWeight={700} sx={{ textAlign: 'center' }}>
             {t('select_leave_type', 'เลือกประเภทการลา')}
           </Typography>
@@ -3884,181 +3902,181 @@ export default function ApprovalPage() {
             {t('for_part', 'สำหรับส่วนที่')} {currentEditingPartIndex !== null ? currentEditingPartIndex + 1 : ''}
           </Typography>
         </Box>
-          
+
         <List sx={{ overflow: 'auto' }}>
-            {loadingSummary ? (
-              <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-                <Typography variant="body2" color="text.secondary">{t('loading', 'กำลังโหลด...')}</Typography>
-              </Box>
-            ) : leaveSummary.length > 0 ? (
-              leaveSummary.map((leave) => {
-                const currentPartLeaveType = currentEditingPartIndex !== null ? splitParts[currentEditingPartIndex]?.leaveType : null;
-                const isDisabled = !leave.isUnlimited && leave.remainingDays <= 0 && leave.code !== currentPartLeaveType;
-                const isSelected = currentPartLeaveType === leave.code;
-                const config = leaveTypeConfig[leave.code] || leaveTypeConfig.default;
-                const LeaveIcon = config.icon;
-                
-                return (
-                  <ListItem 
-                    key={leave.code} 
-                    disablePadding
+          {loadingSummary ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+              <Typography variant="body2" color="text.secondary">{t('loading', 'กำลังโหลด...')}</Typography>
+            </Box>
+          ) : leaveSummary.length > 0 ? (
+            leaveSummary.map((leave) => {
+              const currentPartLeaveType = currentEditingPartIndex !== null ? splitParts[currentEditingPartIndex]?.leaveType : null;
+              const isDisabled = !leave.isUnlimited && leave.remainingDays <= 0 && leave.code !== currentPartLeaveType;
+              const isSelected = currentPartLeaveType === leave.code;
+              const config = leaveTypeConfig[leave.code] || leaveTypeConfig.default;
+              const LeaveIcon = config.icon;
+
+              return (
+                <ListItem
+                  key={leave.code}
+                  disablePadding
+                >
+                  <ListItemButton
+                    onClick={() => {
+                      if (!isDisabled && currentEditingPartIndex !== null) {
+                        handleUpdateSplitPart(currentEditingPartIndex, 'leaveType', leave.code);
+                        setLeaveTypeSheetOpen(false);
+                        setCurrentEditingPartIndex(null);
+                      }
+                    }}
+                    disabled={isDisabled}
+                    sx={{
+                      py: 1.5,
+                      bgcolor: isSelected ? 'rgba(108, 99, 255, 0.08)' : 'transparent',
+                      '&.Mui-disabled': {
+                        opacity: 0.5,
+                        bgcolor: 'grey.100',
+                      }
+                    }}
                   >
-                    <ListItemButton
-                      onClick={() => {
-                        if (!isDisabled && currentEditingPartIndex !== null) {
-                          handleUpdateSplitPart(currentEditingPartIndex, 'leaveType', leave.code);
-                          setLeaveTypeSheetOpen(false);
-                          setCurrentEditingPartIndex(null);
-                        }
-                      }}
-                      disabled={isDisabled}
-                      sx={{
-                        py: 1.5,
-                        bgcolor: isSelected ? 'rgba(108, 99, 255, 0.08)' : 'transparent',
-                        '&.Mui-disabled': {
-                          opacity: 0.5,
-                          bgcolor: 'grey.100',
-                        }
-                      }}
-                    >
-                      <ListItemIcon sx={{ minWidth: 44 }}>
-                        <Box sx={{ 
-                          width: 36, 
-                          height: 36, 
-                          borderRadius: 1, 
-                          bgcolor: config.lightColor,
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center'
-                        }}>
-                          <LeaveIcon size={20} color={config.color} variant="Bold" />
-                        </Box>
-                      </ListItemIcon>
-                      <ListItemText
-                        primary={
-                          <Typography variant="body1" fontWeight={isSelected ? 700 : 500}>
-                            {t(`leave_${leave.code}`, leave.name)}
-                          </Typography>
-                        }
-                        secondary={
-                          <Typography variant="caption" color="text.secondary">
-                            {leave.isUnlimited 
-                              ? t('unlimited_days', 'ไม่จำกัดจำนวนวัน') 
-                              : t('used_days_format', 'ใช้ไป {{used}} / {{max}} วัน').replace('{{used}}', String(leave.usedDays)).replace('{{max}}', String(leave.maxDays))}
-                          </Typography>
-                        }
-                      />
-                      <Chip
-                        label={leave.isUnlimited ? t('unlimited', 'ไม่จำกัด') : t('remaining_days_format', 'เหลือ {{days}} วัน').replace('{{days}}', String(leave.remainingDays))}
-                        size="small"
-                        sx={{
-                          height: 24,
-                          fontSize: '0.75rem',
-                          bgcolor: leave.isUnlimited 
-                            ? '#E3F2FD' 
-                            : leave.remainingDays > 0 
-                              ? '#E8F5E9' 
-                              : '#FFEBEE',
-                          color: leave.isUnlimited 
-                            ? '#1976D2' 
-                            : leave.remainingDays > 0 
-                              ? '#2E7D32' 
-                              : '#D32F2F',
-                          fontWeight: 600,
-                        }}
-                      />
-                      {isSelected && (
-                        <TickCircle size={22} color={PRIMARY_COLOR} variant="Bold" style={{ marginLeft: 8 }} />
-                      )}
-                    </ListItemButton>
-                  </ListItem>
-                );
-              })
-            ) : (
-              // Fallback options
-              ['sick', 'personal', 'vacation', 'unpaid', 'maternity', 'ordination', 'work_outside', 'other'].map((code) => {
-                const config = leaveTypeConfig[code] || leaveTypeConfig.default;
-                const LeaveIcon = config.icon;
-                const names: Record<string, string> = {
-                  sick: 'ลาป่วย',
-                  personal: 'ลากิจ',
-                  vacation: 'ลาพักร้อน',
-                  unpaid: 'ลาไม่รับค่าจ้าง',
-                  maternity: 'ลาคลอด',
-                  ordination: 'ลาบวช',
-                  work_outside: 'ปฏิบัติงานนอกสถานที่',
-                  other: 'ลาอื่นๆ',
-                };
-                const currentPartLeaveType = currentEditingPartIndex !== null ? splitParts[currentEditingPartIndex]?.leaveType : null;
-                const isSelected = currentPartLeaveType === code;
-                
-                return (
-                  <ListItem key={code} disablePadding sx={{ mb: 1 }}>
-                    <ListItemButton
-                      onClick={() => {
-                        if (currentEditingPartIndex !== null) {
-                          handleUpdateSplitPart(currentEditingPartIndex, 'leaveType', code);
-                          setLeaveTypeSheetOpen(false);
-                          setCurrentEditingPartIndex(null);
-                        }
-                      }}
-                      sx={{
+                    <ListItemIcon sx={{ minWidth: 44 }}>
+                      <Box sx={{
+                        width: 36,
+                        height: 36,
                         borderRadius: 1,
-                        border: '1px solid',
-                        borderColor: isSelected ? PRIMARY_COLOR : 'grey.200',
-                        bgcolor: isSelected ? `${PRIMARY_COLOR}10` : 'white',
-                        py: 1.5,
+                        bgcolor: config.lightColor,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}>
+                        <LeaveIcon size={20} color={config.color} variant="Bold" />
+                      </Box>
+                    </ListItemIcon>
+                    <ListItemText
+                      primary={
+                        <Typography variant="body1" fontWeight={isSelected ? 700 : 500}>
+                          {t(`leave_${leave.code}`, leave.name)}
+                        </Typography>
+                      }
+                      secondary={
+                        <Typography variant="caption" color="text.secondary">
+                          {leave.isUnlimited
+                            ? t('unlimited_days', 'ไม่จำกัดจำนวนวัน')
+                            : t('used_days_format', 'ใช้ไป {{used}} / {{max}} วัน').replace('{{used}}', String(leave.usedDays)).replace('{{max}}', String(leave.maxDays))}
+                        </Typography>
+                      }
+                    />
+                    <Chip
+                      label={leave.isUnlimited ? t('unlimited', 'ไม่จำกัด') : t('remaining_days_format', 'เหลือ {{days}} วัน').replace('{{days}}', String(leave.remainingDays))}
+                      size="small"
+                      sx={{
+                        height: 24,
+                        fontSize: '0.75rem',
+                        bgcolor: leave.isUnlimited
+                          ? '#E3F2FD'
+                          : leave.remainingDays > 0
+                            ? '#E8F5E9'
+                            : '#FFEBEE',
+                        color: leave.isUnlimited
+                          ? '#1976D2'
+                          : leave.remainingDays > 0
+                            ? '#2E7D32'
+                            : '#D32F2F',
+                        fontWeight: 600,
                       }}
-                    >
-                      <ListItemIcon sx={{ minWidth: 44 }}>
-                        <Box sx={{ 
-                          width: 36, 
-                          height: 36, 
-                          borderRadius: 1, 
-                          bgcolor: config.lightColor,
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center'
-                        }}>
-                          <LeaveIcon size={20} color={config.color} variant="Bold" />
-                        </Box>
-                      </ListItemIcon>
-                      <ListItemText
-                        primary={
-                          <Typography variant="body1" fontWeight={isSelected ? 700 : 500}>
-                            {t(`leave_${code}`, names[code])}
-                          </Typography>
-                        }
-                      />
-                      {isSelected && (
-                        <TickCircle size={22} color={PRIMARY_COLOR} variant="Bold" />
-                      )}
-                    </ListItemButton>
-                  </ListItem>
-                );
-              })
-            )}
-          </List>
-          
-          {/* Cancel Button */}
-          <Box sx={{ p: 2, borderTop: '1px solid #eee' }}>
-            <Button
-              fullWidth
-              variant="outlined"
-              onClick={() => {
-                setLeaveTypeSheetOpen(false);
-                setCurrentEditingPartIndex(null);
-              }}
-              sx={{ 
-                py: 1.5, 
-                borderRadius: 1,
-                borderColor: 'grey.300',
-                color: 'text.primary',
-              }}
-            >
-              {t('cancel', 'ยกเลิก')}
-            </Button>
-          </Box>
+                    />
+                    {isSelected && (
+                      <TickCircle size={22} color={PRIMARY_COLOR} variant="Bold" style={{ marginLeft: 8 }} />
+                    )}
+                  </ListItemButton>
+                </ListItem>
+              );
+            })
+          ) : (
+            // Fallback options
+            ['sick', 'personal', 'vacation', 'unpaid', 'maternity', 'ordination', 'work_outside', 'other'].map((code) => {
+              const config = leaveTypeConfig[code] || leaveTypeConfig.default;
+              const LeaveIcon = config.icon;
+              const names: Record<string, string> = {
+                sick: 'ลาป่วย',
+                personal: 'ลากิจ',
+                vacation: 'ลาพักร้อน',
+                unpaid: 'ลาไม่รับค่าจ้าง',
+                maternity: 'ลาคลอด',
+                ordination: 'ลาบวช',
+                work_outside: 'ปฏิบัติงานนอกสถานที่',
+                other: 'ลาอื่นๆ',
+              };
+              const currentPartLeaveType = currentEditingPartIndex !== null ? splitParts[currentEditingPartIndex]?.leaveType : null;
+              const isSelected = currentPartLeaveType === code;
+
+              return (
+                <ListItem key={code} disablePadding sx={{ mb: 1 }}>
+                  <ListItemButton
+                    onClick={() => {
+                      if (currentEditingPartIndex !== null) {
+                        handleUpdateSplitPart(currentEditingPartIndex, 'leaveType', code);
+                        setLeaveTypeSheetOpen(false);
+                        setCurrentEditingPartIndex(null);
+                      }
+                    }}
+                    sx={{
+                      borderRadius: 1,
+                      border: '1px solid',
+                      borderColor: isSelected ? PRIMARY_COLOR : 'grey.200',
+                      bgcolor: isSelected ? `${PRIMARY_COLOR}10` : 'white',
+                      py: 1.5,
+                    }}
+                  >
+                    <ListItemIcon sx={{ minWidth: 44 }}>
+                      <Box sx={{
+                        width: 36,
+                        height: 36,
+                        borderRadius: 1,
+                        bgcolor: config.lightColor,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}>
+                        <LeaveIcon size={20} color={config.color} variant="Bold" />
+                      </Box>
+                    </ListItemIcon>
+                    <ListItemText
+                      primary={
+                        <Typography variant="body1" fontWeight={isSelected ? 700 : 500}>
+                          {t(`leave_${code}`, names[code])}
+                        </Typography>
+                      }
+                    />
+                    {isSelected && (
+                      <TickCircle size={22} color={PRIMARY_COLOR} variant="Bold" />
+                    )}
+                  </ListItemButton>
+                </ListItem>
+              );
+            })
+          )}
+        </List>
+
+        {/* Cancel Button */}
+        <Box sx={{ p: 2, borderTop: '1px solid #eee' }}>
+          <Button
+            fullWidth
+            variant="outlined"
+            onClick={() => {
+              setLeaveTypeSheetOpen(false);
+              setCurrentEditingPartIndex(null);
+            }}
+            sx={{
+              py: 1.5,
+              borderRadius: 1,
+              borderColor: 'grey.300',
+              color: 'text.primary',
+            }}
+          >
+            {t('cancel', 'ยกเลิก')}
+          </Button>
+        </Box>
       </Drawer>
 
       <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />

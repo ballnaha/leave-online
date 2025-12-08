@@ -18,7 +18,7 @@ import {
     TextField,
     Alert,
 } from '@mui/material';
-import { ArrowLeft2, Notification, TickCircle, Trash, Clock, MessageNotif, Send2, DocumentText, InfoCircle, CloseCircle, ArrowRight2 } from 'iconsax-react';
+import { ArrowLeft2, Notification, TickCircle, Trash, Clock, MessageNotif, Send2, DocumentText, InfoCircle, CloseCircle, ArrowRight2, Status } from 'iconsax-react';
 import { useRouter } from 'next/navigation';
 import { useLocale } from '../providers/LocaleProvider';
 import { useSession } from 'next-auth/react';
@@ -54,6 +54,8 @@ const getNotificationCategory = (type: string): TabType => {
     }
 };
 
+import { Drawer } from 'vaul';
+
 // Leave type translation map for notification messages
 const leaveTypeTranslations: Record<string, Record<string, string>> = {
     'vacation': { th: 'ลาพักร้อน', en: 'Vacation Leave', my: 'အားလပ်ခွင့်' },
@@ -76,16 +78,16 @@ export default function NotificationsPage() {
     const [loading, setLoading] = useState(true);
     const [unreadCount, setUnreadCount] = useState(0);
     const [activeTab, setActiveTab] = useState<TabType>('all');
-    
-    // Dialog state for approve/reject
-    const [dialogOpen, setDialogOpen] = useState(false);
+
+    // Drawer state for approve/reject
+    const [drawerOpen, setDrawerOpen] = useState(false);
     const [selectedNotification, setSelectedNotification] = useState<NotificationItem | null>(null);
     const [actionType, setActionType] = useState<'approve' | 'reject'>('approve');
     const [comment, setComment] = useState('');
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState('');
-    const [attachments, setAttachments] = useState<any[]>([]);
-    const [loadingAttachments, setLoadingAttachments] = useState(false);
+    const [leaveDetails, setLeaveDetails] = useState<any>(null);
+    const [loadingDetails, setLoadingDetails] = useState(false);
 
     const dateLocale = locale === 'th' ? 'th-TH' : locale === 'my' ? 'my-MM' : 'en-US';
 
@@ -107,7 +109,7 @@ export default function NotificationsPage() {
     const getTranslatedMessage = useCallback((notification: NotificationItem): string => {
         const messageKey = `notif_msg_${notification.type}`;
         let translated = t(messageKey, '');
-        
+
         if (!translated) {
             return notification.message;
         }
@@ -181,18 +183,19 @@ export default function NotificationsPage() {
 
     // Mark single notification as read
     const markAsRead = async (notificationId: number) => {
+        // Optimistic update
+        setNotifications(prev =>
+            prev.map(n => (n.id === notificationId ? { ...n, isRead: true } : n))
+        );
+        setUnreadCount(prev => Math.max(0, prev - 1));
+
         try {
-            const res = await fetch('/api/notifications', {
+            await fetch('/api/notifications', {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ notificationId }),
+                body: JSON.stringify({ notificationIds: [notificationId] }),
+                keepalive: true,
             });
-            if (res.ok) {
-                setNotifications(prev =>
-                    prev.map(n => (n.id === notificationId ? { ...n, isRead: true } : n))
-                );
-                setUnreadCount(prev => Math.max(0, prev - 1));
-            }
         } catch (error) {
             console.error('Error marking notification as read:', error);
         }
@@ -205,6 +208,7 @@ export default function NotificationsPage() {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ markAllAsRead: true }),
+                keepalive: true,
             });
             if (res.ok) {
                 setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
@@ -215,33 +219,33 @@ export default function NotificationsPage() {
         }
     };
 
-    // Open approve/reject dialog
-    const handleOpenDialog = async (notification: NotificationItem, action: 'approve' | 'reject') => {
+    // Open approve/reject drawer
+    const handleOpenDrawer = async (notification: NotificationItem, action: 'approve' | 'reject' = 'approve') => {
         setSelectedNotification(notification);
         setActionType(action);
         setComment('');
         setError('');
-        setAttachments([]);
-        setDialogOpen(true);
-        
+        setLeaveDetails(null);
+        setDrawerOpen(true);
+
         // Mark as read
         if (!notification.isRead) {
             markAsRead(notification.id);
         }
-        
-        // Fetch attachments from leave request
+
+        // Fetch leave details including attachments and latest status
         if (notification.data?.leaveRequestId) {
-            setLoadingAttachments(true);
+            setLoadingDetails(true);
             try {
                 const res = await fetch(`/api/leaves/${notification.data.leaveRequestId}`);
                 if (res.ok) {
                     const data = await res.json();
-                    setAttachments(data.attachments || []);
+                    setLeaveDetails(data);
                 }
             } catch (err) {
-                console.error('Error fetching attachments:', err);
+                console.error('Error fetching leave details:', err);
             } finally {
-                setLoadingAttachments(false);
+                setLoadingDetails(false);
             }
         }
     };
@@ -274,11 +278,13 @@ export default function NotificationsPage() {
                 return;
             }
 
-            setDialogOpen(false);
-            
-            // Remove the notification from list or refresh
-            setNotifications(prev => prev.filter(n => n.id !== selectedNotification.id));
-            
+            setDrawerOpen(false);
+            setLeaveDetails(null);
+
+            // Keep notification in list for history (don't remove)
+            // Refresh to ensure latest status is reflected if needed
+            fetchNotifications();
+
             // Show success (optional: could use toast)
         } catch (err) {
             setError(t('connection_error', 'เกิดข้อผิดพลาดในการเชื่อมต่อ'));
@@ -350,12 +356,12 @@ export default function NotificationsPage() {
     // Handle notification click
     const handleNotificationClick = async (notification: NotificationItem) => {
         if (!notification.isRead) {
-            await markAsRead(notification.id);
+            markAsRead(notification.id);
         }
-        
+
         // Navigate based on notification type and data
         const leaveRequestId = notification.data?.leaveRequestId;
-        
+
         switch (notification.type) {
             case 'approval_pending':
             case 'reminder':
@@ -557,7 +563,7 @@ export default function NotificationsPage() {
                             variant="body2"
                             sx={{ mt: 0.5, color: '#CBD5E1', textAlign: 'center' }}
                         >
-                            {activeTab === 'all' 
+                            {activeTab === 'all'
                                 ? t('no_notifications_desc', 'เมื่อมีการแจ้งเตือนใหม่ จะแสดงที่นี่')
                                 : activeTab === 'submitted'
                                     ? t('no_submitted_notifications', 'ไม่มีการแจ้งเตือนการส่งใบลา')
@@ -635,13 +641,13 @@ export default function NotificationsPage() {
                                         >
                                             {getTranslatedMessage(notification)}
                                         </Typography>
-                                        
+
                                         {/* Show leave details if available */}
                                         {(notification.data?.totalDays || notification.data?.startDate) && (
-                                            <Box sx={{ 
-                                                mt: 1, 
-                                                p: 1.5, 
-                                                bgcolor: '#F8FAFC', 
+                                            <Box sx={{
+                                                mt: 1,
+                                                p: 1.5,
+                                                bgcolor: '#F8FAFC',
                                                 borderRadius: 1,
                                                 border: '1px solid #E2E8F0'
                                             }}>
@@ -668,7 +674,7 @@ export default function NotificationsPage() {
                                                         )}
                                                     </Typography>
                                                 )}
-                                                
+
                                                 {/* Reason */}
                                                 {notification.data?.reason && (
                                                     <Typography
@@ -686,66 +692,120 @@ export default function NotificationsPage() {
                                                 )}
                                             </Box>
                                         )}
-                                        
-                                        {/* Action buttons for approval_pending and reminder */}
-                                        {(notification.type === 'approval_pending' || notification.type === 'reminder') && notification.data?.leaveRequestId && (
-                                            <Box sx={{ display: 'flex', gap: 1, mt: 1.5 }}>
-                                                <Button
-                                                    size="small"
-                                                    variant="contained"
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        if (!notification.isRead) markAsRead(notification.id);
-                                                        handleOpenDialog(notification, 'approve');
-                                                    }}
-                                                    sx={{
-                                                        bgcolor: '#4CAF50',
-                                                        color: 'white',
-                                                        textTransform: 'none',
-                                                        fontSize: '0.75rem',
-                                                        fontWeight: 600,
-                                                        py: 0.5,
-                                                        px: 1.5,
-                                                        borderRadius: 1,
-                                                        boxShadow: 'none',
-                                                        '&:hover': {
-                                                            bgcolor: '#43A047',
-                                                            boxShadow: 'none',
-                                                        },
-                                                    }}
-                                                    startIcon={<TickCircle size={14} color="#ffffff" />}
-                                                >
-                                                    {t('approve', 'อนุมัติ')}
-                                                </Button>
-                                                <Button
-                                                    size="small"
-                                                    variant="outlined"
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        if (!notification.isRead) markAsRead(notification.id);
-                                                        handleOpenDialog(notification, 'reject');
-                                                    }}
-                                                    sx={{
-                                                        borderColor: '#F44336',
-                                                        color: '#F44336',
-                                                        textTransform: 'none',
-                                                        fontSize: '0.75rem',
-                                                        fontWeight: 600,
-                                                        py: 0.5,
-                                                        px: 1.5,
-                                                        borderRadius: 1,
-                                                        '&:hover': {
-                                                            borderColor: '#D32F2F',
-                                                            bgcolor: 'rgba(244, 67, 54, 0.04)',
-                                                        },
-                                                    }}
-                                                    startIcon={<CloseCircle size={14} color="#F44336" />}
-                                                >
-                                                    {t('reject', 'ปฏิเสธ')}
-                                                </Button>
-                                            </Box>
-                                        )}
-                                        
+
+                                        {/* Action Logic based on Real-Time Status */}
+                                        {(() => {
+                                            const isActionableType = (notification.type === 'approval_pending' || notification.type === 'reminder') && notification.data?.leaveRequestId;
+                                            if (!isActionableType) return null;
+
+                                            const realTimeStatus = notification.data?.realTimeStatus; // 'pending', 'approved', 'rejected', 'cancelled'
+
+                                            // Show Buttons if status is pending, OR if status is unknown and it's an unread notification (legacy behavior)
+                                            const showButtons = realTimeStatus === 'pending' || (!realTimeStatus && !notification.isRead);
+
+                                            if (showButtons) {
+                                                return (
+                                                    <Box sx={{ display: 'flex', gap: 1, mt: 1.5 }}>
+                                                        <Button
+                                                            size="small"
+                                                            variant="contained"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                if (!notification.isRead) markAsRead(notification.id);
+                                                                handleOpenDrawer(notification, 'approve');
+                                                            }}
+                                                            sx={{
+                                                                bgcolor: '#4CAF50',
+                                                                color: 'white',
+                                                                textTransform: 'none',
+                                                                fontSize: '0.75rem',
+                                                                fontWeight: 600,
+                                                                py: 0.5,
+                                                                px: 1.5,
+                                                                borderRadius: 1,
+                                                                boxShadow: 'none',
+                                                                '&:hover': {
+                                                                    bgcolor: '#43A047',
+                                                                    boxShadow: 'none',
+                                                                },
+                                                            }}
+                                                            startIcon={<TickCircle size={14} color="#ffffff" />}
+                                                        >
+                                                            {t('approve', 'อนุมัติ')}
+                                                        </Button>
+                                                        <Button
+                                                            size="small"
+                                                            variant="outlined"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                if (!notification.isRead) markAsRead(notification.id);
+                                                                handleOpenDrawer(notification, 'reject');
+                                                            }}
+                                                            sx={{
+                                                                borderColor: '#F44336',
+                                                                color: '#F44336',
+                                                                textTransform: 'none',
+                                                                fontSize: '0.75rem',
+                                                                fontWeight: 600,
+                                                                py: 0.5,
+                                                                px: 1.5,
+                                                                borderRadius: 1,
+                                                                '&:hover': {
+                                                                    borderColor: '#D32F2F',
+                                                                    bgcolor: 'rgba(244, 67, 54, 0.04)',
+                                                                },
+                                                            }}
+                                                            startIcon={<CloseCircle size={14} color="#F44336" />}
+                                                        >
+                                                            {t('reject', 'ปฏิเสธ')}
+                                                        </Button>
+                                                    </Box>
+                                                );
+                                            }
+
+                                            // If not pending (Approved/Rejected/Cancelled) or unknown read
+                                            if (realTimeStatus && realTimeStatus !== 'pending') {
+                                                let statusColor = '#64748B';
+                                                let statusText = realTimeStatus;
+                                                let Icon = InfoCircle;
+
+                                                if (realTimeStatus === 'approved') {
+                                                    statusColor = '#4CAF50';
+                                                    statusText = t('approved', 'อนุมัติแล้ว');
+                                                    Icon = TickCircle;
+                                                } else if (realTimeStatus === 'rejected') {
+                                                    statusColor = '#F44336';
+                                                    statusText = t('rejected', 'ปฏิเสธแล้ว');
+                                                    Icon = CloseCircle;
+                                                } else if (realTimeStatus === 'cancelled') {
+                                                    statusColor = '#9E9E9E';
+                                                    statusText = t('cancelled', 'ยกเลิกแล้ว');
+                                                    Icon = CloseCircle;
+                                                }
+
+                                                return (
+                                                    <Box sx={{ mt: 1.5, display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                                        <Icon size={16} color={statusColor} variant="Bold" />
+                                                        <Typography variant="body2" sx={{ color: statusColor, fontWeight: 600 }}>
+                                                            {statusText}
+                                                        </Typography>
+                                                    </Box>
+                                                );
+                                            }
+
+                                            // Fallback for "Read but no status" (legacy)
+                                            if (!realTimeStatus && notification.isRead) {
+                                                return (
+                                                    <Box sx={{ mt: 1.5, display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                                        <InfoCircle size={14} color="#94A3B8" />
+                                                        <Typography variant="caption" sx={{ color: '#64748B' }}>
+                                                            {t('click_to_view_status', 'คลิกเพื่อดูสถานะปัจจุบัน')}
+                                                        </Typography>
+                                                    </Box>
+                                                );
+                                            }
+                                        })()}
+
                                         <Typography
                                             sx={{
                                                 color: '#94A3B8',
@@ -781,177 +841,318 @@ export default function NotificationsPage() {
             </Container>
 
             {/* Approval/Rejection Dialog */}
-            <Dialog
-                open={dialogOpen}
-                onClose={() => !submitting && setDialogOpen(false)}
-                maxWidth="sm"
-                fullWidth
-                PaperProps={{
-                    sx: {
-                        borderRadius: 1,
-                        mx: 2,
-                    },
-                }}
+            <Drawer.Root
+                open={drawerOpen}
+                onOpenChange={setDrawerOpen}
+                shouldScaleBackground={false}
             >
-                <DialogTitle sx={{ pb: 1 }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                        {actionType === 'approve' ? (
-                            <TickCircle size={28} color="#4CAF50" variant="Bold" />
-                        ) : (
-                            <CloseCircle size={28} color="#F44336" variant="Bold" />
-                        )}
-                        <Typography variant="h6" fontWeight={600}>
-                            {actionType === 'approve'
-                                ? t('confirmApproval', 'ยืนยันการอนุมัติ')
-                                : t('confirmRejection', 'ยืนยันการปฏิเสธ')}
-                        </Typography>
-                    </Box>
-                </DialogTitle>
-                <DialogContent>
-                    {error && (
-                        <Alert severity="error" sx={{ mb: 2 }}>
-                            {error}
-                        </Alert>
-                    )}
-
-                    {/* Leave Info Summary */}
-                    {selectedNotification && (
-                        <Box
-                            sx={{
-                                bgcolor: '#F8FAFC',
-                                borderRadius: 1,
-                                p: 2,
-                                mb: 2,
-                            }}
-                        >
-                            <Typography fontWeight={600} sx={{ mb: 1 }}>
-                                {selectedNotification.title}
-                            </Typography>
-                            <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
-                                {selectedNotification.message}
-                            </Typography>
-                            {selectedNotification.data?.startDate && (
-                                <Typography variant="body2" color="text.secondary">
-                                    📅 {new Date(selectedNotification.data.startDate).toLocaleDateString(dateLocale, { day: 'numeric', month: 'short', year: 'numeric' })}
-                                    {selectedNotification.data?.endDate && selectedNotification.data.startDate !== selectedNotification.data.endDate && (
-                                        <> - {new Date(selectedNotification.data.endDate).toLocaleDateString(dateLocale, { day: 'numeric', month: 'short', year: 'numeric' })}</>
-                                    )}
-                                    {selectedNotification.data?.totalDays && (
-                                        <Box component="span" sx={{ color: '#6C63FF', fontWeight: 600, ml: 0.5 }}>
-                                            ({selectedNotification.data.totalDays} {t('days', 'วัน')})
-                                        </Box>
-                                    )}
-                                </Typography>
-                            )}
-                            {selectedNotification.data?.reason && (
-                                <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-                                    💬 {selectedNotification.data.reason}
-                                </Typography>
-                            )}
-                            
-                            {/* Attachments */}
-                            {loadingAttachments && (
-                                <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                                    {t('loading_attachments', 'กำลังโหลดไฟล์แนบ...')}
-                                </Typography>
-                            )}
-                            {!loadingAttachments && attachments.length > 0 && (
-                                <Box sx={{ mt: 1 }}>
-                                    <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
-                                        📎 {t('attachments', 'ไฟล์แนบ')} ({attachments.length})
-                                    </Typography>
-                                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                                        {attachments.map((file: any, index: number) => (
-                                            <Box
-                                                key={file.id || index}
-                                                component="a"
-                                                href={file.filePath}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                sx={{
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    gap: 0.5,
-                                                    bgcolor: '#E8F4FD',
-                                                    color: '#1976D2',
-                                                    px: 1.5,
-                                                    py: 0.5,
-                                                    borderRadius: 1,
-                                                    fontSize: '0.75rem',
-                                                    textDecoration: 'none',
-                                                    '&:hover': {
-                                                        bgcolor: '#D0E8FA',
-                                                    },
-                                                }}
-                                            >
-                                                <DocumentText size={14} color="#1976D2" />
-                                                {file.fileName || `ไฟล์ ${index + 1}`}
-                                            </Box>
-                                        ))}
-                                    </Box>
-                                </Box>
-                            )}
-                        </Box>
-                    )}
-
-                    <TextField
-                        fullWidth
-                        multiline
-                        rows={3}
-                        label={actionType === 'approve'
-                            ? t('approvalComment', 'ความคิดเห็น (ถ้ามี)')
-                            : t('rejectionReason', 'เหตุผลในการปฏิเสธ')}
-                        value={comment}
-                        onChange={(e) => setComment(e.target.value)}
-                        placeholder={actionType === 'approve'
-                            ? t('enterApprovalComment', 'ใส่ความคิดเห็น...')
-                            : t('enterRejectionReason', 'ใส่เหตุผลในการปฏิเสธ...')}
-                        required={actionType === 'reject'}
-                        disabled={submitting}
-                        sx={{
-                            '& .MuiOutlinedInput-root': {
-                                borderRadius: 1,
-                            },
+                <Drawer.Portal>
+                    <Drawer.Overlay
+                        className="vaul-overlay"
+                        style={{
+                            position: 'fixed',
+                            inset: 0,
+                            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                            zIndex: 1300,
                         }}
                     />
-                </DialogContent>
-                <DialogActions sx={{ px: 3, pb: 3 }}>
-                    <Button
-                        onClick={() => setDialogOpen(false)}
-                        disabled={submitting}
-                        sx={{
-                            color: '#64748B',
-                            textTransform: 'none',
+                    <Drawer.Content
+                        className="vaul-content"
+                        style={{
+                            backgroundColor: 'white',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            borderTopLeftRadius: '16px',
+                            borderTopRightRadius: '16px',
+                            maxHeight: '85vh',
+                            position: 'fixed',
+                            bottom: 0,
+                            left: 0,
+                            right: 0,
+                            zIndex: 1301,
+                            outline: 'none',
                         }}
                     >
-                        {t('cancel', 'ยกเลิก')}
-                    </Button>
-                    <Button
-                        variant="contained"
-                        onClick={handleSubmitAction}
-                        disabled={submitting || (actionType === 'reject' && !comment.trim())}
-                        sx={{
-                            bgcolor: actionType === 'approve' ? '#4CAF50' : '#F44336',
-                            textTransform: 'none',
-                            fontWeight: 600,
-                            px: 3,
-                            borderRadius: 1,
-                            '&:hover': {
-                                bgcolor: actionType === 'approve' ? '#43A047' : '#D32F2F',
-                            },
-                        }}
-                        startIcon={actionType === 'approve'
-                            ? <TickCircle size={18} color="#ffffff" />
-                            : <CloseCircle size={18} color="#ffffff" />}
-                    >
-                        {submitting
-                            ? t('processing', 'กำลังดำเนินการ...')
-                            : actionType === 'approve'
-                                ? t('approve', 'อนุมัติ')
-                                : t('reject', 'ปฏิเสธ')}
-                    </Button>
-                </DialogActions>
-            </Dialog>
+                        <Drawer.Title style={{ position: 'absolute', width: 1, height: 1, padding: 0, margin: -1, overflow: 'hidden', clip: 'rect(0, 0, 0, 0)', whiteSpace: 'nowrap', borderWidth: 0 }}>
+                            {t('notification_action', 'การดำเนินการ')}
+                        </Drawer.Title>
+
+                        <Box sx={{ p: 2, borderBottom: '1px solid #E2E8F0', display: 'flex', justifyContent: 'center', flexShrink: 0 }}>
+                            <Box sx={{ width: 40, height: 4, bgcolor: '#E2E8F0', borderRadius: 2 }} />
+                        </Box>
+
+                        <Box sx={{ p: 3, overflowY: 'auto', WebkitOverflowScrolling: 'touch' }}>
+                            {/* Loading State */}
+                            {loadingDetails ? (
+                                <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', py: 4 }}>
+                                    <Skeleton variant="circular" width={60} height={60} sx={{ mb: 2 }} />
+                                    <Skeleton variant="text" width={200} height={30} />
+                                    <Skeleton variant="text" width={150} height={20} />
+                                </Box>
+                            ) : leaveDetails ? (
+                                <>
+                                    {/* Status Check: If already processed, show banner */}
+                                    {leaveDetails.status && leaveDetails.status !== 'pending' && leaveDetails.status !== 'in_progress' ? (
+                                        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', mb: 3, py: 2 }}>
+                                            <Box
+                                                sx={{
+                                                    width: 72,
+                                                    height: 72,
+                                                    borderRadius: '50%',
+                                                    bgcolor: leaveDetails.status === 'approved' ? '#E8F5E9' : '#FFEBEE',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    mb: 2,
+                                                }}
+                                            >
+                                                {leaveDetails.status === 'approved' ? (
+                                                    <TickCircle size={40} color="#2E7D32" variant="Bold" />
+                                                ) : (
+                                                    <CloseCircle size={40} color="#D32F2F" variant="Bold" />
+                                                )}
+                                            </Box>
+                                            <Typography variant="h6" sx={{ fontWeight: 700, color: leaveDetails.status === 'approved' ? '#2E7D32' : '#D32F2F', mb: 0.5 }}>
+                                                {leaveDetails.status === 'approved' ? t('approved_completed', 'อนุมัติเรียบร้อยแล้ว') : t('rejected_completed', 'ปฏิเสธเรียบร้อยแล้ว')}
+                                            </Typography>
+                                            <Typography variant="body2" sx={{ color: '#64748B' }}>
+                                                {leaveDetails.updatedAt ? formatTimeAgo(leaveDetails.updatedAt) : formatTimeAgo(leaveDetails.createdAt)}
+                                            </Typography>
+                                        </Box>
+                                    ) : (
+                                        /* Normal Action UI */
+                                        <Box sx={{ mb: 3 }}>
+                                            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', mb: 3 }}>
+                                                <Box
+                                                    sx={{
+                                                        width: 56,
+                                                        height: 56,
+                                                        borderRadius: '50%',
+                                                        bgcolor: actionType === 'approve' ? '#E8F5E9' : '#FFEBEE',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        mb: 2,
+                                                    }}
+                                                >
+                                                    {actionType === 'approve' ? (
+                                                        <TickCircle size={28} color="#2E7D32" variant="Bold" />
+                                                    ) : (
+                                                        <CloseCircle size={28} color="#D32F2F" variant="Bold" />
+                                                    )}
+                                                </Box>
+                                                <Typography variant="h6" sx={{ fontWeight: 700, textAlign: 'center' }}>
+                                                    {actionType === 'approve' ? t('confirm_approve', 'ยืนยันการอนุมัติ') : t('confirm_reject', 'ยืนยันการปฏิเสธ')}
+                                                </Typography>
+                                            </Box>
+
+                                            <Box sx={{ bgcolor: '#F8FAFC', p: 2.5, borderRadius: 1, mb: 3, border: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column', gap: 2 }}>
+                                                {/* User Info */}
+                                                {leaveDetails.user && (
+                                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, pb: 2, borderBottom: '1px dashed #CBD5E1' }}>
+                                                        <Box sx={{
+                                                            width: 48,
+                                                            height: 48,
+                                                            borderRadius: '50%',
+                                                            bgcolor: 'white',
+                                                            color: '#4F46E5',
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'center',
+                                                            fontWeight: 700,
+                                                            fontSize: '1.2rem',
+                                                            boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
+                                                            border: '1px solid #E2E8F0'
+                                                        }}>
+                                                            {leaveDetails.user.firstName?.[0] || 'U'}
+                                                        </Box>
+                                                        <Box>
+                                                            <Typography variant="subtitle1" sx={{ fontWeight: 700, color: '#1E293B', lineHeight: 1.2 }}>
+                                                                {leaveDetails.user.firstName} {leaveDetails.user.lastName}
+                                                            </Typography>
+                                                            <Typography variant="body2" sx={{ color: '#64748B', mt: 0.5 }}>
+                                                                {leaveDetails.user.department}{leaveDetails.user.section ? ` • ${leaveDetails.user.section}` : ''}
+                                                            </Typography>
+                                                        </Box>
+                                                    </Box>
+                                                )}
+
+                                                {/* Leave Info */}
+                                                <Box>
+                                                    <Typography variant="caption" sx={{ color: '#64748B', display: 'block', mb: 0.5, fontWeight: 500 }}>
+                                                        {t('leave_details', 'รายละเอียดการลา')}
+                                                    </Typography>
+                                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                                                        <Typography variant="body1" sx={{ fontWeight: 600, color: '#1E293B' }}>
+                                                            {translateLeaveType(leaveDetails.leaveType)}
+                                                        </Typography>
+                                                        <Chip
+                                                            label={`${leaveDetails.totalDays} ${t('days', 'วัน')}`}
+                                                            size="small"
+                                                            sx={{
+                                                                bgcolor: '#EEF2FF',
+                                                                color: '#4F46E5',
+                                                                fontWeight: 600,
+                                                                height: 24,
+                                                                border: '1px solid #E0E7FF'
+                                                            }}
+                                                        />
+                                                    </Box>
+                                                    <Typography variant="body2" sx={{ color: '#475569', display: 'flex', alignItems: 'center', gap: 0.75 }}>
+                                                        <Clock size={16} variant="Bulk" color="#64748B" />
+                                                        {new Date(leaveDetails.startDate).toLocaleDateString(dateLocale, { day: 'numeric', month: 'short' })} - {new Date(leaveDetails.endDate).toLocaleDateString(dateLocale, { day: 'numeric', month: 'short', year: 'numeric' })}
+                                                    </Typography>
+                                                </Box>
+
+                                                {/* Reason */}
+                                                {leaveDetails.reason && (
+                                                    <Box sx={{ pt: 2, borderTop: '1px dashed #CBD5E1' }}>
+                                                        <Typography variant="caption" sx={{ color: '#64748B', display: 'block', mb: 0.5, fontWeight: 500 }}>
+                                                            {t('reason', 'เหตุผลการลา')}
+                                                        </Typography>
+                                                        <Typography variant="body2" sx={{ color: '#334155', lineHeight: 1.6 }}>
+                                                            {leaveDetails.reason}
+                                                        </Typography>
+                                                    </Box>
+                                                )}
+                                            </Box>
+
+                                            <Typography variant="subtitle2" sx={{ mb: 1, color: '#1E293B' }}>
+                                                {actionType === 'approve' ? t('comment', 'ความคิดเห็นเพิ่มเติม (ถ้ามี)') : t('reject_reason', 'ระบุเหตุผลในการปฏิเสธ *')}
+                                            </Typography>
+                                            <TextField
+                                                fullWidth
+                                                multiline
+                                                rows={3}
+                                                variant="outlined"
+                                                placeholder={t('comment_placeholder', 'ระบุรายละเอียด...')}
+                                                value={comment}
+                                                onChange={(e) => setComment(e.target.value)}
+                                                error={!!error}
+                                                helperText={error}
+                                                sx={{
+                                                    '& .MuiOutlinedInput-root': {
+                                                        bgcolor: '#F8FAFC',
+                                                        '& fieldset': { borderColor: '#E2E8F0' },
+                                                        '&:hover fieldset': { borderColor: '#CBD5E1' },
+                                                        '&.Mui-focused fieldset': { borderColor: '#6C63FF' },
+                                                    },
+                                                }}
+                                            />
+                                        </Box>
+                                    )}
+
+                                    {/* Attachments Preview (if any) */}
+                                    {leaveDetails.attachments && leaveDetails.attachments.length > 0 && (
+                                        <Box sx={{ mb: 3 }}>
+                                            <Typography variant="subtitle2" sx={{ mb: 1, color: '#64748B', fontSize: '0.85rem' }}>
+                                                {t('attachments', 'ไฟล์แนบ')} ({leaveDetails.attachments.length})
+                                            </Typography>
+                                            <Box sx={{ display: 'flex', gap: 1.5, overflowX: 'auto', pb: 1 }}>
+                                                {leaveDetails.attachments.map((file: any, index: number) => (
+                                                    <Box
+                                                        key={file.id || index}
+                                                        component="a"
+                                                        href={file.filePath}
+                                                        target="_blank"
+                                                        sx={{
+                                                            width: 80,
+                                                            height: 80,
+                                                            borderRadius: 2,
+                                                            bgcolor: '#F8FAFC',
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'center',
+                                                            flexShrink: 0,
+                                                            border: '1px solid #E2E8F0',
+                                                            textDecoration: 'none',
+                                                            position: 'relative',
+                                                            overflow: 'hidden'
+                                                        }}
+                                                    >
+                                                        {file.fileName.match(/\.(jpg|jpeg|png|gif|webp)$/i) ? (
+                                                            <Box component="img" src={file.filePath} sx={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                                        ) : (
+                                                            <DocumentText size={28} color="#64748B" />
+                                                        )}
+                                                    </Box>
+                                                ))}
+                                            </Box>
+                                        </Box>
+                                    )}
+
+                                    {/* Action Buttons */}
+                                    <Box sx={{ display: 'flex', gap: 2, pb: 2 }}>
+                                        {(leaveDetails.status === 'pending' || leaveDetails.status === 'in_progress') ? (
+                                            <>
+                                                <Button
+                                                    fullWidth
+                                                    variant="outlined"
+                                                    onClick={() => setDrawerOpen(false)}
+                                                    sx={{
+                                                        py: 1.5,
+                                                        borderRadius: 1.5,
+                                                        borderColor: '#E2E8F0',
+                                                        color: '#64748B',
+                                                        textTransform: 'none',
+                                                        fontSize: '0.95rem',
+                                                        '&:hover': { borderColor: '#CBD5E1', bgcolor: '#F8FAFC' }
+                                                    }}
+                                                    disabled={submitting}
+                                                >
+                                                    {t('cancel', 'ยกเลิก')}
+                                                </Button>
+                                                <Button
+                                                    fullWidth
+                                                    variant="contained"
+                                                    onClick={handleSubmitAction}
+                                                    disabled={submitting || (actionType === 'reject' && !comment.trim())}
+                                                    sx={{
+                                                        py: 1.5,
+                                                        borderRadius: 1.5,
+                                                        bgcolor: actionType === 'approve' ? '#4CAF50' : '#F44336',
+                                                        color: 'white',
+                                                        fontWeight: 600,
+                                                        textTransform: 'none',
+                                                        fontSize: '0.95rem',
+                                                        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+                                                        '&:hover': {
+                                                            bgcolor: actionType === 'approve' ? '#43A047' : '#D32F2F',
+                                                            boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
+                                                        }
+                                                    }}
+                                                >
+                                                    {submitting
+                                                        ? t('processing', 'กำลังดำเนินการ...')
+                                                        : (actionType === 'approve' ? t('confirm_approve', 'ยืนยันอนุมัติ') : t('confirm_reject', 'ยืนยันปฏิเสธ'))
+                                                    }
+                                                </Button>
+                                            </>
+                                        ) : (
+                                            <Button
+                                                fullWidth
+                                                variant="outlined"
+                                                onClick={() => setDrawerOpen(false)}
+                                                sx={{
+                                                    py: 1.5,
+                                                    borderRadius: 1.5,
+                                                    borderColor: '#E2E8F0',
+                                                    color: '#64748B',
+                                                    textTransform: 'none',
+                                                    fontSize: '0.95rem',
+                                                    '&:hover': { borderColor: '#CBD5E1', bgcolor: '#F8FAFC' }
+                                                }}
+                                            >
+                                                {t('close', 'ปิด')}
+                                            </Button>
+                                        )}
+                                    </Box>
+                                </>
+                            ) : null}
+                        </Box>
+                    </Drawer.Content>
+                </Drawer.Portal>
+            </Drawer.Root>
 
             <BottomNav />
         </Box>

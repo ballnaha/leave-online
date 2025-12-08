@@ -115,7 +115,7 @@ interface StatCardProps {
 
 function StatCard({ title, value, icon, color, subtitle }: StatCardProps) {
   const theme = useTheme();
-  
+
   const colorMap = {
     primary: { main: theme.palette.primary.main, light: alpha(theme.palette.primary.main, 0.1) },
     success: { main: theme.palette.success.main, light: theme.palette.success.light },
@@ -125,8 +125,8 @@ function StatCard({ title, value, icon, color, subtitle }: StatCardProps) {
   };
 
   return (
-    <Card 
-      sx={{ 
+    <Card
+      sx={{
         borderRadius: 1,
         border: '1px solid',
         borderColor: 'divider',
@@ -208,7 +208,7 @@ export default function ApprovalWorkflowsPage() {
   // Pagination State
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
-  
+
   // Confirm Dialog State
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<ApprovalWorkflow | null>(null);
@@ -290,7 +290,7 @@ export default function ApprovalWorkflowsPage() {
 
   const handleConfirmDelete = async () => {
     if (!deleteTarget) return;
-    
+
     setDeleteLoading(true);
     try {
       const res = await fetch(`/api/admin/approval-workflows/${deleteTarget.id}`, {
@@ -346,9 +346,9 @@ export default function ApprovalWorkflowsPage() {
       (workflow.description?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false) ||
       companyName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (workflow.department?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false);
-    
+
     const matchesCompany = companyFilter === 'all' || workflow.company === companyFilter;
-    
+
     return matchesSearch && matchesCompany;
   });
 
@@ -409,7 +409,7 @@ export default function ApprovalWorkflowsPage() {
           variant="contained"
           startIcon={<Add size={18} color="#fff" />}
           onClick={handleCreate}
-          sx={{ 
+          sx={{
             borderRadius: 1,
             px: 3,
             py: 1.25,
@@ -425,8 +425,8 @@ export default function ApprovalWorkflowsPage() {
 
       {/* Error Alert */}
       {error && (
-        <Alert 
-          severity="error" 
+        <Alert
+          severity="error"
           sx={{ mb: 3, borderRadius: 1 }}
           action={
             <Button color="inherit" size="small" onClick={fetchWorkflows}>
@@ -439,8 +439,8 @@ export default function ApprovalWorkflowsPage() {
       )}
 
       {/* Stats Cards */}
-      <Box 
-        sx={{ 
+      <Box
+        sx={{
           display: 'grid',
           gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(4, 1fr)' },
           gap: 3,
@@ -477,17 +477,17 @@ export default function ApprovalWorkflowsPage() {
       </Box>
 
       {/* Filters */}
-      <Paper 
-        sx={{ 
-          p: 2.5, 
-          mb: 3, 
+      <Paper
+        sx={{
+          p: 2.5,
+          mb: 3,
           borderRadius: 1,
           border: '1px solid',
           borderColor: 'divider',
         }}
       >
-        <Box 
-          sx={{ 
+        <Box
+          sx={{
             display: 'grid',
             gridTemplateColumns: { xs: '1fr', sm: '2fr 1fr auto' },
             gap: 2,
@@ -508,7 +508,7 @@ export default function ApprovalWorkflowsPage() {
               ),
             }}
           />
-          
+
           <FormControl size="small" fullWidth>
             <InputLabel>บริษัท</InputLabel>
             <Select
@@ -524,8 +524,8 @@ export default function ApprovalWorkflowsPage() {
           </FormControl>
 
           <Tooltip title="รีเฟรช">
-            <IconButton 
-              onClick={fetchWorkflows} 
+            <IconButton
+              onClick={fetchWorkflows}
               disabled={loading}
               sx={{
                 bgcolor: alpha(theme.palette.primary.main, 0.1),
@@ -538,9 +538,160 @@ export default function ApprovalWorkflowsPage() {
         </Box>
       </Paper>
 
-      {/* Table */}
-      <Paper 
-        sx={{ 
+      {/* Mobile Card View (Visible on xs, sm) */}
+      <Box sx={{ display: { xs: 'flex', md: 'none' }, flexDirection: 'column', gap: 2 }}>
+        {loading ? (
+          Array.from({ length: 3 }).map((_, i) => (
+            <Skeleton key={i} variant="rounded" height={150} sx={{ borderRadius: 1 }} />
+          ))
+        ) : filteredWorkflows.length === 0 ? (
+          <Paper sx={{ p: 4, textAlign: 'center', borderRadius: 1, bgcolor: alpha(theme.palette.primary.main, 0.04) }}>
+            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+              <Hierarchy size={48} color={theme.palette.text.disabled} />
+              <Typography color="text.secondary">
+                {searchQuery || companyFilter !== 'all'
+                  ? 'ไม่พบข้อมูลที่ค้นหา'
+                  : 'ยังไม่มี Workflow กรุณาเพิ่มใหม่'}
+              </Typography>
+            </Box>
+          </Paper>
+        ) : (
+          paginatedWorkflows.map((workflow) => (
+            <Paper
+              key={workflow.id}
+              elevation={0}
+              sx={{
+                p: 2,
+                borderRadius: 1,
+                border: '1px solid',
+                borderColor: 'divider',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 2,
+              }}
+            >
+              {/* Card Header */}
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <Box>
+                  <Typography variant="subtitle1" fontWeight={600}>
+                    {workflow.name}
+                  </Typography>
+                  {workflow.description && (
+                    <Typography variant="caption" color="text.secondary">
+                      {workflow.description}
+                    </Typography>
+                  )}
+                </Box>
+                <Chip
+                  label={`${workflow.steps.length} ขั้น`}
+                  size="small"
+                  sx={{ borderRadius: 1, height: 24, fontSize: '0.7rem' }}
+                />
+              </Box>
+
+              {/* Scope Chips */}
+              <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap sx={{ mt: -1 }}>
+                {workflow.company && (
+                  <Chip
+                    label={getCompanyName(workflow.company)}
+                    size="small"
+                    color="primary"
+                    variant="outlined"
+                    icon={<Building size={12} color="#6C63FF" />}
+                  />
+                )}
+                {workflow.department && (
+                  <Chip
+                    label={getDepartmentName(workflow.department)}
+                    size="small"
+                    color="secondary"
+                    variant="outlined"
+                    icon={<Layer size={12} color="#64748B" />}
+                  />
+                )}
+                {workflow.section && (
+                  <Chip
+                    label={getSectionName(workflow.section)}
+                    size="small"
+                    color="info"
+                    variant="outlined"
+                  />
+                )}
+                {!workflow.company && !workflow.department && !workflow.section && (
+                  <Chip
+                    label="Global"
+                    size="small"
+                    color="success"
+                    icon={<People size={12} color="#22C55E" />}
+                  />
+                )}
+              </Stack>
+
+              {/* Steps */}
+              <Box sx={{ bgcolor: alpha(theme.palette.background.default, 0.5), p: 1.5, borderRadius: 1 }}>
+                <Typography variant="caption" color="text.secondary" gutterBottom display="block">
+                  ขั้นตอนการอนุมัติ:
+                </Typography>
+                <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
+                  {workflow.steps.map((step, index) => (
+                    <React.Fragment key={step.id}>
+                      {index > 0 && (
+                        <ArrowRight2 size={12} color={theme.palette.text.disabled} />
+                      )}
+                      <Chip
+                        label={
+                          step.approverRole
+                            ? formatRole(step.approverRole)
+                            : step.approver
+                              ? `${step.approver.firstName}`
+                              : '?'
+                        }
+                        size="small"
+                        sx={{
+                          bgcolor: 'background.paper',
+                          border: '1px solid',
+                          borderColor: 'divider',
+                          height: 24,
+                          fontSize: '0.75rem',
+                        }}
+                      />
+                    </React.Fragment>
+                  ))}
+                </Stack>
+              </Box>
+
+              {/* Actions */}
+              <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mt: 1, pt: 2, borderTop: '1px solid', borderColor: 'divider' }}>
+                <Button
+                  size="small"
+                  variant="outlined"
+                  color="primary"
+                  startIcon={<Edit2 size={16} color="#6C63FF" />}
+                  onClick={() => handleEdit(workflow)}
+                  sx={{ borderRadius: 1 }}
+                >
+                  แก้ไข
+                </Button>
+                <Button
+                  size="small"
+                  variant="outlined"
+                  color="error"
+                  startIcon={<Trash size={16} color="#DC2626" />}
+                  onClick={() => handleDelete(workflow)}
+                  sx={{ borderRadius: 1 }}
+                >
+                  ลบ
+                </Button>
+              </Box>
+            </Paper>
+          ))
+        )}
+      </Box>
+
+      {/* Desktop Table View (Hidden on xs, sm) */}
+      <Paper
+        sx={{
+          display: { xs: 'none', md: 'block' },
           borderRadius: 1,
           border: '1px solid',
           borderColor: 'divider',
@@ -586,9 +737,9 @@ export default function ApprovalWorkflowsPage() {
                   </TableRow>
                 ) : (
                   paginatedWorkflows.map((workflow) => (
-                    <TableRow 
+                    <TableRow
                       key={workflow.id}
-                      sx={{ 
+                      sx={{
                         '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.02) },
                         transition: 'background-color 0.2s',
                       }}
@@ -608,35 +759,35 @@ export default function ApprovalWorkflowsPage() {
                       <TableCell>
                         <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap>
                           {workflow.company && (
-                            <Chip 
-                              label={getCompanyName(workflow.company)} 
-                              size="small" 
-                              color="primary" 
+                            <Chip
+                              label={getCompanyName(workflow.company)}
+                              size="small"
+                              color="primary"
                               variant="outlined"
                               icon={<Building size={12} color="#6C63FF" />}
                             />
                           )}
                           {workflow.department && (
-                            <Chip 
-                              label={getDepartmentName(workflow.department)} 
-                              size="small" 
-                              color="secondary" 
+                            <Chip
+                              label={getDepartmentName(workflow.department)}
+                              size="small"
+                              color="secondary"
                               variant="outlined"
                               icon={<Layer size={12} color="#64748B" />}
                             />
                           )}
                           {workflow.section && (
-                            <Chip 
-                              label={getSectionName(workflow.section)} 
-                              size="small" 
-                              color="info" 
+                            <Chip
+                              label={getSectionName(workflow.section)}
+                              size="small"
+                              color="info"
                               variant="outlined"
                             />
                           )}
                           {!workflow.company && !workflow.department && !workflow.section && (
-                            <Chip 
-                              label="Global" 
-                              size="small" 
+                            <Chip
+                              label="Global"
+                              size="small"
                               color="success"
                               icon={<People size={12} color="#22C55E" />}
                             />
@@ -655,12 +806,12 @@ export default function ApprovalWorkflowsPage() {
                                   step.approverRole
                                     ? formatRole(step.approverRole)
                                     : step.approver
-                                    ? `${step.approver.firstName}`
-                                    : '?'
+                                      ? `${step.approver.firstName}`
+                                      : '?'
                                 }
                                 size="small"
                                 variant="filled"
-                                sx={{ 
+                                sx={{
                                   bgcolor: alpha(theme.palette.primary.main, 0.1),
                                   color: 'primary.main',
                                   fontWeight: 500,
@@ -671,8 +822,8 @@ export default function ApprovalWorkflowsPage() {
                         </Stack>
                       </TableCell>
                       <TableCell align="center">
-                        <Chip 
-                          label={workflow.steps.length} 
+                        <Chip
+                          label={workflow.steps.length}
                           size="small"
                           color="default"
                         />
@@ -680,10 +831,10 @@ export default function ApprovalWorkflowsPage() {
                       <TableCell align="right" sx={{ pr: 2 }}>
                         <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 0.5 }}>
                           <Tooltip title="แก้ไข">
-                            <IconButton 
-                              onClick={() => handleEdit(workflow)} 
+                            <IconButton
+                              onClick={() => handleEdit(workflow)}
                               size="small"
-                              sx={{ 
+                              sx={{
                                 color: 'primary.main',
                                 '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.1) },
                               }}
@@ -692,10 +843,10 @@ export default function ApprovalWorkflowsPage() {
                             </IconButton>
                           </Tooltip>
                           <Tooltip title="ลบ">
-                            <IconButton 
-                              onClick={() => handleDelete(workflow)} 
+                            <IconButton
+                              onClick={() => handleDelete(workflow)}
                               size="small"
-                              sx={{ 
+                              sx={{
                                 color: 'error.main',
                                 '&:hover': { bgcolor: alpha(theme.palette.error.main, 0.1) },
                               }}
@@ -712,7 +863,7 @@ export default function ApprovalWorkflowsPage() {
             )}
           </Table>
         </TableContainer>
-        
+
         {/* Pagination */}
         <TablePagination
           component="div"

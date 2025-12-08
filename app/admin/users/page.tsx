@@ -33,6 +33,7 @@ import {
   Tabs,
   Tab,
   Badge,
+  Divider,
 } from '@mui/material';
 import {
   Add,
@@ -91,7 +92,7 @@ interface StatCardProps {
 
 function StatCard({ title, value, icon, color, subtitle }: StatCardProps) {
   const theme = useTheme();
-  
+
   const colorMap = {
     primary: { main: theme.palette.primary.main, light: alpha(theme.palette.primary.main, 0.1) },
     success: { main: theme.palette.success.main, light: theme.palette.success.light },
@@ -101,8 +102,8 @@ function StatCard({ title, value, icon, color, subtitle }: StatCardProps) {
   };
 
   return (
-    <Card 
-      sx={{ 
+    <Card
+      sx={{
         borderRadius: 1,
         border: '1px solid',
         borderColor: 'divider',
@@ -179,19 +180,19 @@ export default function UsersPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<UserData | undefined>(undefined);
   const [searchQuery, setSearchQuery] = useState('');
-  
+
   // Role Tab
   const [roleTab, setRoleTab] = useState<string>('all');
-  
+
   // Filters
   const [companyFilter, setCompanyFilter] = useState<string>('all');
   const [departmentFilter, setDepartmentFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
-  
+
   // Pagination State
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
-  
+
   // Confirm Dialog State
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<UserData | null>(null);
@@ -211,14 +212,14 @@ export default function UsersPage() {
         fetch('/api/departments'),
         fetch('/api/sections'),
       ]);
-      
+
       if (deptRes.ok) {
         const deptData = await deptRes.json();
         setDepartments(deptData);
       } else {
         console.error('Failed to fetch departments');
       }
-      
+
       if (sectRes.ok) {
         const sectData = await sectRes.json();
         setSections(sectData);
@@ -276,7 +277,7 @@ export default function UsersPage() {
 
   const handleConfirmDelete = async () => {
     if (!deleteTarget) return;
-    
+
     setDeleteLoading(true);
     try {
       const res = await fetch(`/api/admin/users/${deleteTarget.id}`, {
@@ -306,7 +307,7 @@ export default function UsersPage() {
   // Get unique values for filters
   const uniqueCompanies = [...new Set(users.map((u) => u.company))].filter(Boolean);
   const uniqueDepartments = [...new Set(users.map((u) => u.department))].filter(Boolean);
-  
+
   // Create department code to name map
   const departmentNameMap = new Map(users.map((u) => [u.department, u.departmentName]));
 
@@ -319,6 +320,7 @@ export default function UsersPage() {
     { value: 'hr', label: 'HR', color: 'info' },
     { value: 'dept_manager', label: 'ผจก.ฝ่าย', color: 'success' },
     { value: 'section_head', label: 'หัวหน้าแผนก', color: 'secondary' },
+    { value: 'shift_supervisor', label: 'หัวหน้ากะ', color: 'warning' },
   ] as const;
 
   // Count users by role
@@ -330,6 +332,7 @@ export default function UsersPage() {
     hr: users.filter(u => u.role === 'hr').length,
     dept_manager: users.filter(u => u.role === 'dept_manager').length,
     section_head: users.filter(u => u.role === 'section_head').length,
+    shift_supervisor: users.filter(u => u.role === 'shift_supervisor').length,
   };
 
   // Filter users
@@ -339,7 +342,7 @@ export default function UsersPage() {
       user.firstName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       user.lastName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (user.email?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false);
-    
+
     const matchesCompany = companyFilter === 'all' || user.company === companyFilter;
     const matchesDepartment = departmentFilter === 'all' || user.department === departmentFilter;
     const matchesRole = roleTab === 'all' || user.role === roleTab;
@@ -347,7 +350,7 @@ export default function UsersPage() {
       statusFilter === 'all' ||
       (statusFilter === 'active' && user.isActive) ||
       (statusFilter === 'inactive' && !user.isActive);
-    
+
     return matchesSearch && matchesCompany && matchesDepartment && matchesRole && matchesStatus;
   });
 
@@ -409,7 +412,7 @@ export default function UsersPage() {
           variant="contained"
           startIcon={<Add size={18} color="#fff" />}
           onClick={handleCreate}
-          sx={{ 
+          sx={{
             borderRadius: 1,
             px: 3,
             py: 1.25,
@@ -500,10 +503,10 @@ export default function UsersPage() {
                       minWidth: 28,
                       fontSize: '0.75rem',
                       fontWeight: 700,
-                      bgcolor: roleTab === tab.value 
+                      bgcolor: roleTab === tab.value
                         ? alpha(theme.palette.primary.main, 0.15)
                         : alpha(theme.palette.text.secondary, 0.1),
-                      color: roleTab === tab.value 
+                      color: roleTab === tab.value
                         ? 'primary.main'
                         : 'text.secondary',
                     }}
@@ -516,10 +519,10 @@ export default function UsersPage() {
       </Paper>
 
       {/* Search & Filters */}
-      <Paper 
-        sx={{ 
-          p: 2.5, 
-          mb: 3, 
+      <Paper
+        sx={{
+          p: 2.5,
+          mb: 3,
           borderRadius: 1,
           border: '1px solid',
           borderColor: 'divider',
@@ -532,7 +535,7 @@ export default function UsersPage() {
             size="small"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            sx={{ 
+            sx={{
               flex: 1,
               minWidth: 200,
               '& .MuiOutlinedInput-root': {
@@ -618,31 +621,31 @@ export default function UsersPage() {
             </Select>
           </FormControl>
 
-          <Chip 
+          <Chip
             label={`${filteredUsers.length} รายการ`}
             size="small"
-            sx={{ 
+            sx={{
               bgcolor: alpha(theme.palette.primary.main, 0.1),
               color: 'primary.main',
               fontWeight: 600,
             }}
           />
           <Tooltip title="รีเฟรชข้อมูล">
-            <IconButton 
-              onClick={fetchUsers} 
+            <IconButton
+              onClick={fetchUsers}
               disabled={loading}
               sx={{
                 bgcolor: 'background.default',
                 '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.1) },
               }}
             >
-              <Refresh2 
-                size={20} 
+              <Refresh2
+                size={20}
                 color={theme.palette.text.secondary}
-                style={{ 
+                style={{
                   transition: 'transform 0.3s ease',
                   transform: loading ? 'rotate(360deg)' : 'rotate(0deg)',
-                }} 
+                }}
               />
             </IconButton>
           </Tooltip>
@@ -651,10 +654,10 @@ export default function UsersPage() {
 
       {/* Error Alert */}
       {error && (
-        <Alert 
-          severity="error" 
-          sx={{ 
-            mb: 3, 
+        <Alert
+          severity="error"
+          sx={{
+            mb: 3,
             borderRadius: 1,
             '& .MuiAlert-icon': {
               color: theme.palette.error.main,
@@ -665,11 +668,158 @@ export default function UsersPage() {
         </Alert>
       )}
 
+      {/* Mobile Card View (Visible on xs, sm) */}
+      <Box sx={{ display: { xs: 'flex', md: 'none' }, flexDirection: 'column', gap: 2 }}>
+        {loading ? (
+          Array.from({ length: 3 }).map((_, i) => (
+            <Skeleton key={i} variant="rounded" height={220} sx={{ borderRadius: 1 }} />
+          ))
+        ) : filteredUsers.length === 0 ? (
+          <Paper sx={{ p: 4, textAlign: 'center', borderRadius: 1, bgcolor: alpha(theme.palette.primary.main, 0.04) }}>
+            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+              <People size={48} variant="Bold" color={theme.palette.text.disabled} />
+              <Typography variant="body1" fontWeight={600} color="text.secondary">
+                {searchQuery ? 'ไม่พบผู้ใช้งานที่ค้นหา' : 'ยังไม่มีข้อมูลผู้ใช้งาน'}
+              </Typography>
+            </Box>
+          </Paper>
+        ) : (
+          paginatedUsers.map((user) => (
+            <Paper
+              key={user.id}
+              elevation={0}
+              sx={{
+                p: 2,
+                borderRadius: 1,
+                border: '1px solid',
+                borderColor: 'divider',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 2,
+              }}
+            >
+              {/* Card Header */}
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+                  <Avatar
+                    src={user.avatar || undefined}
+                    alt={`${user.firstName} ${user.lastName}`}
+                    sx={{ width: 48, height: 48, bgcolor: theme.palette.primary.main }}
+                  >
+                    {user.firstName.charAt(0)}
+                  </Avatar>
+                  <Box>
+                    <Typography variant="subtitle1" fontWeight={700}>
+                      {user.firstName} {user.lastName}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      {user.employeeId}
+                    </Typography>
+                  </Box>
+                </Box>
+                <Chip
+                  icon={user.isActive
+                    ? <TickCircle size={14} color={theme.palette.success.main} variant="Bold" />
+                    : <CloseCircle size={14} color={theme.palette.text.secondary} variant="Bold" />
+                  }
+                  label={user.isActive ? 'Active' : 'Inactive'}
+                  size="small"
+                  sx={{
+                    height: 24,
+                    fontWeight: 500,
+                    bgcolor: user.isActive
+                      ? alpha(theme.palette.success.main, 0.1)
+                      : alpha(theme.palette.text.secondary, 0.1),
+                    color: user.isActive
+                      ? theme.palette.success.main
+                      : 'text.secondary',
+                    '& .MuiChip-icon': { color: 'inherit' },
+                  }}
+                />
+              </Box>
+
+              <Divider sx={{ borderStyle: 'dashed' }} />
+
+              {/* Details */}
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <Typography variant="body2" color="text.secondary">สังกัด</Typography>
+                  <Box sx={{ textAlign: 'right' }}>
+                    <Typography variant="body2" fontWeight={600}>{user.departmentName}</Typography>
+                    <Typography variant="caption" color="text.secondary">{user.company}</Typography>
+                    {user.sectionName && (
+                      <Typography variant="caption" display="block" color="text.secondary">
+                        {user.sectionName}
+                      </Typography>
+                    )}
+                  </Box>
+                </Box>
+
+                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <Typography variant="body2" color="text.secondary">ตำแหน่ง</Typography>
+                  <Typography variant="body2" fontWeight={600}>{user.position || '-'}</Typography>
+                </Box>
+
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Typography variant="body2" color="text.secondary">สิทธิ์การใช้งาน</Typography>
+                  <Chip
+                    label={user.role}
+                    size="small"
+                    sx={{
+                      height: 24,
+                      bgcolor: alpha(theme.palette.info.main, 0.1),
+                      color: theme.palette.info.main,
+                      fontWeight: 500,
+                      borderRadius: 1,
+                      textTransform: 'capitalize',
+                    }}
+                  />
+                </Box>
+              </Box>
+
+              {/* Actions */}
+              <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 1, pt: 1 }}>
+                <Button
+                  variant="outlined"
+                  size="small"
+                  color="info"
+                  startIcon={<Eye size={16} color={theme.palette.info.main} />}
+                  onClick={() => handleView(user)}
+                  sx={{ borderRadius: 1 }}
+                >
+                  ดูข้อมูล
+                </Button>
+                <Button
+                  variant="outlined"
+                  size="small"
+                  startIcon={<Edit2 size={16} color={theme.palette.primary.main} />}
+                  onClick={() => handleEdit(user)}
+                  sx={{ borderRadius: 1 }}
+                >
+                  แก้ไข
+                </Button>
+                <Button
+                  variant="outlined"
+                  size="small"
+                  color="error"
+                  startIcon={<Trash size={16} color={theme.palette.error.main} />}
+                  onClick={() => handleDelete(user)}
+                  sx={{ borderRadius: 1 }}
+                >
+                  ลบ
+                </Button>
+              </Box>
+            </Paper>
+          ))
+        )}
+      </Box>
+
       {/* Table */}
       <Fade in={true} timeout={500}>
-        <TableContainer 
-          component={Paper} 
-          sx={{ 
+        <TableContainer
+          component={Paper}
+          sx={{
+            display: { xs: 'none', md: 'block' },
             borderRadius: 1,
             border: '1px solid',
             borderColor: 'divider',
@@ -708,12 +858,12 @@ export default function UsersPage() {
                       <Box sx={{ textAlign: 'center' }}>
                         <Typography variant="h6" fontWeight={600} gutterBottom>
                           {searchQuery || companyFilter !== 'all' || departmentFilter !== 'all' || roleTab !== 'all' || statusFilter !== 'all'
-                            ? 'ไม่พบผู้ใช้งานที่ค้นหา' 
+                            ? 'ไม่พบผู้ใช้งานที่ค้นหา'
                             : 'ยังไม่มีข้อมูลผู้ใช้งาน'}
                         </Typography>
                         <Typography variant="body2" color="text.secondary">
                           {searchQuery || companyFilter !== 'all' || departmentFilter !== 'all' || roleTab !== 'all' || statusFilter !== 'all'
-                            ? 'ลองค้นหาด้วยคำค้นอื่น หรือเปลี่ยนตัวกรอง' 
+                            ? 'ลองค้นหาด้วยคำค้นอื่น หรือเปลี่ยนตัวกรอง'
                             : 'เริ่มต้นใช้งานโดยการเพิ่มผู้ใช้งานใหม่'}
                         </Typography>
                       </Box>
@@ -738,7 +888,7 @@ export default function UsersPage() {
                     key={user.id}
                     sx={{
                       transition: 'background-color 0.2s ease',
-                      '&:hover': { 
+                      '&:hover': {
                         bgcolor: alpha(theme.palette.primary.main, 0.04),
                       },
                       '&:last-child td': { border: 0 },
@@ -746,8 +896,8 @@ export default function UsersPage() {
                   >
                     <TableCell>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                        <Avatar 
-                          src={user.avatar || undefined} 
+                        <Avatar
+                          src={user.avatar || undefined}
                           alt={`${user.firstName} ${user.lastName}`}
                           sx={{ bgcolor: theme.palette.primary.main }}
                         >
@@ -769,11 +919,11 @@ export default function UsersPage() {
                           {user.departmentName}
                         </Typography>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexWrap: 'wrap' }}>
-                          <Chip 
-                            label={user.company} 
-                            size="small" 
+                          <Chip
+                            label={user.company}
+                            size="small"
                             variant="outlined"
-                            sx={{ height: 20, fontSize: '0.65rem' }} 
+                            sx={{ height: 20, fontSize: '0.65rem' }}
                           />
                           {user.sectionName && (
                             <Typography variant="caption" color="text.secondary">
@@ -806,7 +956,7 @@ export default function UsersPage() {
                                     </Box>
                                   );
                                 }
-                              } catch (e) {}
+                              } catch (e) { }
                               return null;
                             })()}
                             {user.managedSections && (() => {
@@ -831,7 +981,7 @@ export default function UsersPage() {
                                     </Box>
                                   );
                                 }
-                              } catch (e) {}
+                              } catch (e) { }
                               return null;
                             })()}
                           </Box>
@@ -847,7 +997,7 @@ export default function UsersPage() {
                       <Chip
                         label={user.role}
                         size="small"
-                        sx={{ 
+                        sx={{
                           bgcolor: alpha(theme.palette.info.main, 0.1),
                           color: theme.palette.info.main,
                           fontWeight: 500,
@@ -858,19 +1008,19 @@ export default function UsersPage() {
                     </TableCell>
                     <TableCell align="center">
                       <Chip
-                        icon={user.isActive 
-                          ? <TickCircle size={14} color={theme.palette.success.main} variant="Bold" /> 
+                        icon={user.isActive
+                          ? <TickCircle size={14} color={theme.palette.success.main} variant="Bold" />
                           : <CloseCircle size={14} color={theme.palette.text.secondary} variant="Bold" />
                         }
                         label={user.isActive ? 'Active' : 'Inactive'}
                         size="small"
                         sx={{
                           fontWeight: 500,
-                          bgcolor: user.isActive 
-                            ? theme.palette.success.light 
+                          bgcolor: user.isActive
+                            ? theme.palette.success.light
                             : alpha(theme.palette.text.secondary, 0.1),
-                          color: user.isActive 
-                            ? theme.palette.success.main 
+                          color: user.isActive
+                            ? theme.palette.success.main
                             : 'text.secondary',
                           '& .MuiChip-icon': {
                             color: 'inherit',

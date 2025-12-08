@@ -141,42 +141,7 @@ const menuGroups: MenuGroup[] = [
             },
         ],
     },
-    {
-        groupLabel: 'ระบบ',
-        items: [
-            {
-                text: 'Notifications',
-                icon: Notification,
-                iconColor: '#6C63FF',
-                children: [
-                    {
-                        text: 'Dashboard',
-                        icon: Bell,
-                        iconColor: '#6C63FF',
-                        path: '/admin/notifications',
-                    },
-                    {
-                        text: 'ประวัติแจ้งเตือน',
-                        icon: History,
-                        iconColor: '#6C63FF',
-                        path: '/admin/notifications/logs',
-                    },
-                    {
-                        text: 'Subscribers',
-                        icon: Users,
-                        iconColor: '#6C63FF',
-                        path: '/admin/notifications/subscribers',
-                    },
-                    {
-                        text: 'ทดสอบ Push',
-                        icon: Send,
-                        iconColor: '#6C63FF',
-                        path: '/admin/test-notification',
-                    },
-                ],
-            },
-        ],
-    },
+
     {
         groupLabel: 'Admin',
         items: [
@@ -223,6 +188,42 @@ const menuGroups: MenuGroup[] = [
             },
         ],
     },
+    {
+        groupLabel: 'ระบบ',
+        items: [
+            {
+                text: 'Notifications',
+                icon: Notification,
+                iconColor: '#6C63FF',
+                children: [
+                    {
+                        text: 'Dashboard',
+                        icon: Bell,
+                        iconColor: '#6C63FF',
+                        path: '/admin/notifications',
+                    },
+                    {
+                        text: 'ประวัติแจ้งเตือน',
+                        icon: History,
+                        iconColor: '#6C63FF',
+                        path: '/admin/notifications/logs',
+                    },
+                    {
+                        text: 'Subscribers',
+                        icon: Users,
+                        iconColor: '#6C63FF',
+                        path: '/admin/notifications/subscribers',
+                    },
+                    {
+                        text: 'ทดสอบ Push',
+                        icon: Send,
+                        iconColor: '#6C63FF',
+                        path: '/admin/test-notification',
+                    },
+                ],
+            },
+        ],
+    },
 ];
 
 // Flatten menu items for search/active check
@@ -241,15 +242,18 @@ export default function AdminLayout({
     const toastr = useToastr();
 
     const [mobileOpen, setMobileOpen] = useState(false);
-    const [collapsed, setCollapsed] = useState(false);
+    const [collapsedState, setCollapsedState] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-    const [expandedMenus, setExpandedMenus] = useState<string[]>(['Notifications']); // Default expand Notifications
+    const [expandedMenus, setExpandedMenus] = useState<string[]>([]); // Default collapsed
+
+    // Derived collapsed state: Always false (expanded) on mobile
+    const collapsed = isMobile ? false : collapsedState;
 
     // Toggle submenu expand/collapse
     const toggleSubmenu = (menuText: string) => {
-        setExpandedMenus(prev => 
-            prev.includes(menuText) 
+        setExpandedMenus(prev =>
+            prev.includes(menuText)
                 ? prev.filter(m => m !== menuText)
                 : [...prev, menuText]
         );
@@ -274,7 +278,7 @@ export default function AdminLayout({
     useEffect(() => {
         const savedCollapsed = localStorage.getItem('admin-sidebar-collapsed');
         if (savedCollapsed !== null) {
-            setCollapsed(savedCollapsed === 'true');
+            setCollapsedState(savedCollapsed === 'true');
         }
         // Small delay to ensure smooth transition
         const timer = setTimeout(() => {
@@ -285,8 +289,8 @@ export default function AdminLayout({
 
     // Save collapsed state to localStorage
     const handleToggleCollapsed = () => {
-        const newCollapsed = !collapsed;
-        setCollapsed(newCollapsed);
+        const newCollapsed = !collapsedState;
+        setCollapsedState(newCollapsed);
         localStorage.setItem('admin-sidebar-collapsed', String(newCollapsed));
     };
 
@@ -429,8 +433,8 @@ export default function AdminLayout({
                                                 justifyContent: collapsed ? 'center' : 'flex-start',
                                                 px: collapsed ? 1 : 1.5,
                                                 py: 0.75,
-                                                bgcolor: (item.path && isActiveRoute(item.path)) || hasActiveChild(item.children) 
-                                                    ? item.children ? 'action.selected' : 'primary.main' 
+                                                bgcolor: (item.path && isActiveRoute(item.path)) || hasActiveChild(item.children)
+                                                    ? item.children ? 'action.selected' : 'primary.main'
                                                     : 'transparent',
                                                 color: (item.path && isActiveRoute(item.path)) ? 'white' : 'text.primary',
                                                 boxShadow: (item.path && isActiveRoute(item.path)) ? '0 4px 12px rgba(108, 99, 255, 0.4)' : 'none',
@@ -450,15 +454,15 @@ export default function AdminLayout({
                                                 }}
                                             >
                                                 {'variant' in item.icon ? (
-                                                    <item.icon 
-                                                        size={18} 
-                                                        variant="Outline" 
-                                                        color={(item.path && isActiveRoute(item.path)) ? '#ffffff' : item.iconColor} 
+                                                    <item.icon
+                                                        size={18}
+                                                        variant="Outline"
+                                                        color={(item.path && isActiveRoute(item.path)) ? '#ffffff' : item.iconColor}
                                                     />
                                                 ) : (
-                                                    <item.icon 
-                                                        size={18} 
-                                                        color={(item.path && isActiveRoute(item.path)) ? '#ffffff' : item.iconColor} 
+                                                    <item.icon
+                                                        size={18}
+                                                        color={(item.path && isActiveRoute(item.path)) ? '#ffffff' : item.iconColor}
                                                     />
                                                 )}
                                             </ListItemIcon>
@@ -483,15 +487,15 @@ export default function AdminLayout({
                                                     }}
                                                 />
                                                 {item.children && !collapsed && (
-                                                    expandedMenus.includes(item.text) 
-                                                        ? <ChevronUp size={16} /> 
+                                                    expandedMenus.includes(item.text)
+                                                        ? <ChevronUp size={16} />
                                                         : <ChevronDown size={16} />
                                                 )}
                                             </Box>
                                         </ListItemButton>
                                     </Tooltip>
                                 </ListItem>
-                                
+
                                 {/* Submenu items */}
                                 {item.children && !collapsed && (
                                     <Collapse in={expandedMenus.includes(item.text)} timeout="auto" unmountOnExit>
@@ -520,9 +524,9 @@ export default function AdminLayout({
                                                                 color: isActiveRoute(child.path, true) ? 'white' : 'text.secondary',
                                                             }}
                                                         >
-                                                            <child.icon 
-                                                                size={16} 
-                                                                color={isActiveRoute(child.path, true) ? '#ffffff' : child.iconColor} 
+                                                            <child.icon
+                                                                size={16}
+                                                                color={isActiveRoute(child.path, true) ? '#ffffff' : child.iconColor}
                                                             />
                                                         </ListItemIcon>
                                                         <ListItemText
@@ -562,7 +566,7 @@ export default function AdminLayout({
                         },
                     }}
                 >
-                    <ListItemIcon sx={{ 
+                    <ListItemIcon sx={{
                         minWidth: collapsed ? 'auto' : 32,
                         transition: 'min-width 0.35s cubic-bezier(0.4, 0, 0.2, 1)',
                     }}>
@@ -658,9 +662,9 @@ export default function AdminLayout({
                                 aria-label="toggle sidebar"
                                 edge="start"
                                 onClick={handleToggleCollapsed}
-                                sx={{ 
-                                    mr: 2, 
-                                    display: { xs: 'none', md: 'flex' }, 
+                                sx={{
+                                    mr: 2,
+                                    display: { xs: 'none', md: 'flex' },
                                     color: 'text.primary',
                                     width: 40,
                                     height: 40,
@@ -716,7 +720,7 @@ export default function AdminLayout({
                                 </Box>
                             </IconButton>
                         </Tooltip>
-                        
+
                         {/* Hamburger Menu for Mobile */}
                         <Tooltip title="เปิดเมนู">
                             <IconButton
@@ -724,9 +728,9 @@ export default function AdminLayout({
                                 aria-label="open drawer"
                                 edge="start"
                                 onClick={handleDrawerToggle}
-                                sx={{ 
-                                    mr: 2, 
-                                    display: { xs: 'flex', md: 'none' }, 
+                                sx={{
+                                    mr: 2,
+                                    display: { xs: 'flex', md: 'none' },
                                     color: 'text.primary',
                                     width: 40,
                                     height: 40,
@@ -791,14 +795,6 @@ export default function AdminLayout({
                     </Box>
 
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        {/* Notifications */}
-                        <Tooltip title="การแจ้งเตือน">
-                            <IconButton sx={{ color: 'text.secondary' }}>
-                                <Badge badgeContent={3} color="error">
-                                    <Notification size={22} variant="Bold" color="#6C63FF" />
-                                </Badge>
-                            </IconButton>
-                        </Tooltip>
 
                         {/* User Menu */}
                         <Box
@@ -826,9 +822,9 @@ export default function AdminLayout({
                                     {user?.firstName} {user?.lastName}
                                 </Typography>
                                 <Typography variant="caption" color="text.secondary">
-                                    {user?.role === 'admin' ? 'ผู้ดูแลระบบ' : 
-                                     user?.role === 'hr' ? 'HR' : 
-                                     user?.role === 'hr_manager' ? 'HR Manager' : user?.role}
+                                    {user?.role === 'admin' ? 'ผู้ดูแลระบบ' :
+                                        user?.role === 'hr' ? 'HR' :
+                                            user?.role === 'hr_manager' ? 'HR Manager' : user?.role}
                                 </Typography>
                             </Box>
                             <ArrowDown2 size={16} color={theme.palette.text.secondary} />

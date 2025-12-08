@@ -1,5 +1,5 @@
 'use client';
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
     Box,
     Typography,
@@ -42,6 +42,16 @@ export default function HolidayDrawer({ open, onClose, initialYear }: HolidayDra
     const [selectedYear, setSelectedYear] = useState(initialYear || dayjs().year());
     const [holidays, setHolidays] = useState<Holiday[]>([]);
     const [loading, setLoading] = useState(false);
+    
+    // Swipe to close states
+    const [dragY, setDragY] = useState(0);
+    const [isDragging, setIsDragging] = useState(false);
+    const [isClosing, setIsClosing] = useState(false);
+    const startYRef = useRef(0);
+    const velocityRef = useRef(0);
+    const lastYRef = useRef(0);
+    const lastTimeRef = useRef(0);
+    const contentRef = useRef<HTMLDivElement>(null);
 
     // Generate years for dropdown
     const currentYear = dayjs().year();
@@ -90,20 +100,147 @@ export default function HolidayDrawer({ open, onClose, initialYear }: HolidayDra
 
     const months = Object.keys(holidaysByMonth).map(Number).sort((a, b) => a - b);
 
+    // Handle touch/swipe to close
+    const handleTouchStart = (e: React.TouchEvent) => {
+        // Check if content is scrolled to top or touching the handle area
+        const target = e.target as HTMLElement;
+        const isHandle = target.closest('[data-drag-handle]');
+        const isScrolledToTop = contentRef.current ? contentRef.current.scrollTop <= 0 : true;
+        
+        if (isHandle || isScrolledToTop) {
+            startYRef.current = e.touches[0].clientY;
+            lastYRef.current = e.touches[0].clientY;
+            lastTimeRef.current = Date.now();
+            velocityRef.current = 0;
+            setIsDragging(true);
+        }
+    };
+
+    const handleTouchMove = (e: React.TouchEvent) => {
+        if (!isDragging) return;
+        
+        const currentY = e.touches[0].clientY;
+        const currentTime = Date.now();
+        const diff = currentY - startYRef.current;
+        
+        // Calculate velocity for momentum
+        const timeDiff = currentTime - lastTimeRef.current;
+        if (timeDiff > 0) {
+            velocityRef.current = (currentY - lastYRef.current) / timeDiff;
+        }
+        lastYRef.current = currentY;
+        lastTimeRef.current = currentTime;
+        
+        // Only allow dragging down with resistance effect
+        if (diff > 0) {
+            // Add rubber band effect - resistance increases as you drag further
+            const resistance = 0.55;
+            const resistedDiff = diff * resistance;
+            setDragY(resistedDiff);
+            
+            // Prevent scroll when dragging
+            e.preventDefault();
+        }
+    };
+
+    const handleTouchEnd = () => {
+        if (!isDragging) return;
+        setIsDragging(false);
+        
+        // Use velocity and distance to determine if should close
+        const shouldClose = dragY > 80 || (velocityRef.current > 0.5 && dragY > 30);
+        
+        if (shouldClose) {
+            setIsClosing(true);
+            // Let the drawer close first, then call onClose
+            requestAnimationFrame(() => {
+                onClose();
+                // Reset states after a short delay
+                setTimeout(() => {
+                    setIsClosing(false);
+                    setDragY(0);
+                }, 50);
+            });
+        } else {
+            // Snap back with spring animation
+            setDragY(0);
+        }
+    };
+
+    // Reset drag when drawer closes
+    useEffect(() => {
+        if (!open) {
+            setDragY(0);
+            setIsDragging(false);
+            setIsClosing(false);
+        }
+    }, [open]);
+
     return (
         <Drawer
             anchor="bottom"
-            open={open}
+            open={open && !isClosing}
             onClose={onClose}
+            transitionDuration={{
+                enter: 300,
+                exit: 200,
+            }}
+            slotProps={{
+                backdrop: {
+                    sx: {
+                        bgcolor: 'rgba(0, 0, 0, 0.5)',
+                        opacity: dragY > 0 ? `${Math.max(0, 1 - dragY / 300)} !important` : undefined,
+                        transition: isDragging ? 'none' : 'opacity 0.2s ease-out',
+                    },
+                },
+            }}
             PaperProps={{
                 sx: {
-                    borderTopLeftRadius: 20,
-                    borderTopRightRadius: 20,
+                    borderTopLeftRadius: 12,
+                    borderTopRightRadius: 12,
                     maxHeight: '85vh',
+                    transform: dragY > 0 ? `translateY(${dragY}px) !important` : undefined,
+                    transition: isDragging 
+                        ? 'none' 
+                        : 'transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
+                    willChange: 'transform',
                 },
             }}
         >
-            <Box sx={{ width: '100%' }}>
+            <Box 
+                sx={{ 
+                    width: '100%',
+                    touchAction: isDragging ? 'none' : 'auto',
+                }}
+                onTouchStart={handleTouchStart}
+                onTouchMove={handleTouchMove}
+                onTouchEnd={handleTouchEnd}
+            >
+                {/* Drag Handle */}
+                <Box
+                    data-drag-handle
+                    sx={{
+                        display: 'flex',
+                        justifyContent: 'center',
+                        pt: 1,
+                        pb: 0.5,
+                        cursor: 'grab',
+                        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                        borderTopLeftRadius: 12,
+                        borderTopRightRadius: 12,
+                        touchAction: 'none',
+                        userSelect: 'none',
+                    }}
+                >
+                    <Box
+                        sx={{
+                            width: 36,
+                            height: 4,
+                            borderRadius: 2,
+                            bgcolor: 'rgba(255,255,255,0.4)',
+                        }}
+                    />
+                </Box>
                 {/* Header */}
                 <Box
                     sx={{
@@ -111,11 +248,10 @@ export default function HolidayDrawer({ open, onClose, initialYear }: HolidayDra
                         alignItems: 'center',
                         justifyContent: 'space-between',
                         p: 2,
+                        pt: 1,
                         borderBottom: '1px solid #E5E7EB',
                         background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                         color: 'white',
-                        borderTopLeftRadius: 20,
-                        borderTopRightRadius: 20,
                     }}
                 >
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
@@ -172,13 +308,22 @@ export default function HolidayDrawer({ open, onClose, initialYear }: HolidayDra
                 </Box>
 
                 {/* Holiday List */}
-                <Box sx={{ p: 2, maxHeight: 'calc(85vh - 180px)', overflowY: 'auto' }}>
+                <Box 
+                    ref={contentRef}
+                    sx={{ 
+                        p: 2, 
+                        maxHeight: 'calc(85vh - 180px)', 
+                        overflowY: 'auto',
+                        overscrollBehavior: 'contain',
+                        WebkitOverflowScrolling: 'touch',
+                    }}
+                >
                     {loading ? (
                         <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
                             <CircularProgress size={32} />
                         </Box>
                     ) : months.length === 0 ? (
-                        <Box sx={{ textAlign: 'center', py: 4 }}>
+                        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', py: 4 }}>
                             <Calendar size={48} color="#9CA3AF" variant="Bulk" />
                             <Typography color="text.secondary" sx={{ mt: 2 }}>
                                 {t('holiday_no_data', 'ไม่มีข้อมูลวันหยุดสำหรับปีนี้')}

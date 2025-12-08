@@ -39,21 +39,22 @@ import {
   ListItem,
   ListItemText,
   ListItemIcon,
+  Divider,
 } from '@mui/material';
 import {
-  Plus,
-  Pencil,
-  Trash2,
-  Layers,
-  Search,
-  RefreshCw,
-  CheckCircle,
-  XCircle,
-  Building2,
-  FolderTree,
+  Add,
+  Edit2,
+  Trash,
+  Layer,
+  SearchNormal1,
+  Refresh2,
+  TickCircle,
+  CloseCircle,
+  Building,
+  FolderOpen,
   Filter,
-  Hash,
-} from 'lucide-react';
+  Hashtag,
+} from 'iconsax-react';
 import DepartmentDialog from './DepartmentDialog';
 import ConfirmDialog from '../components/ConfirmDialog';
 import { useToastr } from '@/app/components/Toastr';
@@ -90,7 +91,7 @@ interface StatCardProps {
 
 function StatCard({ title, value, icon, color, subtitle }: StatCardProps) {
   const theme = useTheme();
-  
+
   const colorMap = {
     primary: { main: theme.palette.primary.main, light: alpha(theme.palette.primary.main, 0.1) },
     success: { main: theme.palette.success.main, light: theme.palette.success.light },
@@ -100,8 +101,8 @@ function StatCard({ title, value, icon, color, subtitle }: StatCardProps) {
   };
 
   return (
-    <Card 
-      sx={{ 
+    <Card
+      sx={{
         borderRadius: 1,
         border: '1px solid',
         borderColor: 'divider',
@@ -178,7 +179,7 @@ export default function DepartmentsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [companyFilter, setCompanyFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
-  
+
   // Section Dialog State
   const [sectionDialogOpen, setSectionDialogOpen] = useState(false);
   const [selectedDepartmentForSections, setSelectedDepartmentForSections] = useState<Department | null>(null);
@@ -186,7 +187,7 @@ export default function DepartmentsPage() {
   // Pagination State
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
-  
+
   // Confirm Dialog State
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Department | null>(null);
@@ -232,7 +233,7 @@ export default function DepartmentsPage() {
 
   const handleConfirmDelete = async () => {
     if (!deleteTarget) return;
-    
+
     setDeleteLoading(true);
     try {
       const res = await fetch(`/api/admin/departments/${deleteTarget.id}`, {
@@ -273,13 +274,13 @@ export default function DepartmentsPage() {
       department.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
       department.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       department.company.toLowerCase().includes(searchQuery.toLowerCase());
-    
+
     const matchesCompany = companyFilter === 'all' || department.company === companyFilter;
     const matchesStatus =
       statusFilter === 'all' ||
       (statusFilter === 'active' && department.isActive) ||
       (statusFilter === 'inactive' && !department.isActive);
-    
+
     return matchesSearch && matchesCompany && matchesStatus;
   });
 
@@ -324,7 +325,7 @@ export default function DepartmentsPage() {
                 color: 'primary.main',
               }}
             >
-              <Layers size={24} />
+              <Layer size={24} variant="Bold" color={theme.palette.primary.main} />
             </Avatar>
             <Box>
               <Typography variant="h4" component="h1" fontWeight={700}>
@@ -338,9 +339,9 @@ export default function DepartmentsPage() {
         </Box>
         <Button
           variant="contained"
-          startIcon={<Plus size={18} />}
+          startIcon={<Add size={18} color="#fff" />}
           onClick={handleCreate}
-          sx={{ 
+          sx={{
             borderRadius: 1,
             px: 3,
             py: 1.25,
@@ -359,38 +360,38 @@ export default function DepartmentsPage() {
         <StatCard
           title="ฝ่ายทั้งหมด"
           value={departments.length}
-          icon={<Layers size={26} />}
+          icon={<Layer size={26} variant="Bold" color={theme.palette.primary.main} />}
           color="primary"
           subtitle="ในระบบ"
         />
         <StatCard
           title="เปิดใช้งาน"
           value={activeDepartments}
-          icon={<CheckCircle size={26} />}
+          icon={<TickCircle size={26} variant="Bold" color={theme.palette.success.main} />}
           color="success"
           subtitle="พร้อมใช้งาน"
         />
         <StatCard
           title="ปิดใช้งาน"
           value={inactiveDepartments}
-          icon={<XCircle size={26} />}
+          icon={<CloseCircle size={26} variant="Bold" color={theme.palette.text.secondary} />}
           color="secondary"
           subtitle="ไม่ได้ใช้งาน"
         />
         <StatCard
           title="แผนก"
           value={totalSections}
-          icon={<FolderTree size={26} />}
+          icon={<FolderOpen size={26} variant="Bold" color={theme.palette.warning.main} />}
           color="warning"
           subtitle="ทั้งหมด"
         />
       </Box>
 
       {/* Search & Actions */}
-      <Paper 
-        sx={{ 
-          p: 2.5, 
-          mb: 3, 
+      <Paper
+        sx={{
+          p: 2.5,
+          mb: 3,
           borderRadius: 1,
           border: '1px solid',
           borderColor: 'divider',
@@ -403,7 +404,7 @@ export default function DepartmentsPage() {
             size="small"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            sx={{ 
+            sx={{
               flex: 1,
               minWidth: 180,
               '& .MuiOutlinedInput-root': {
@@ -420,7 +421,7 @@ export default function DepartmentsPage() {
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
-                  <Search size={18} color={theme.palette.text.secondary} />
+                  <SearchNormal1 size={18} color={theme.palette.text.secondary} />
                 </InputAdornment>
               ),
             }}
@@ -430,7 +431,7 @@ export default function DepartmentsPage() {
           <FormControl size="small" sx={{ minWidth: 150 }}>
             <InputLabel>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                <Building2 size={16} />
+                <Building size={16} />
                 บริษัท
               </Box>
             </InputLabel>
@@ -478,43 +479,44 @@ export default function DepartmentsPage() {
               <MenuItem value="all">ทั้งหมด</MenuItem>
               <MenuItem value="active">
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <CheckCircle size={16} color={theme.palette.success.main} />
+                  <TickCircle size={16} color={theme.palette.success.main} />
                   เปิดใช้งาน
                 </Box>
               </MenuItem>
               <MenuItem value="inactive">
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <XCircle size={16} color={theme.palette.text.secondary} />
+                  <CloseCircle size={16} color={theme.palette.text.secondary} />
                   ปิดใช้งาน
                 </Box>
               </MenuItem>
             </Select>
           </FormControl>
 
-          <Chip 
+          <Chip
             label={`${filteredDepartments.length} รายการ`}
             size="small"
-            sx={{ 
+            sx={{
               bgcolor: alpha(theme.palette.primary.main, 0.1),
               color: 'primary.main',
               fontWeight: 600,
             }}
           />
           <Tooltip title="รีเฟรชข้อมูล">
-            <IconButton 
-              onClick={fetchDepartments} 
+            <IconButton
+              onClick={fetchDepartments}
               disabled={loading}
               sx={{
                 bgcolor: 'background.default',
                 '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.1) },
               }}
             >
-              <RefreshCw 
-                size={20} 
-                style={{ 
+              <Refresh2
+                size={20}
+                color={theme.palette.primary.main}
+                style={{
                   transition: 'transform 0.3s ease',
                   transform: loading ? 'rotate(360deg)' : 'rotate(0deg)',
-                }} 
+                }}
               />
             </IconButton>
           </Tooltip>
@@ -523,10 +525,10 @@ export default function DepartmentsPage() {
 
       {/* Error Alert */}
       {error && (
-        <Alert 
-          severity="error" 
-          sx={{ 
-            mb: 3, 
+        <Alert
+          severity="error"
+          sx={{
+            mb: 3,
             borderRadius: 1,
             '& .MuiAlert-icon': {
               color: theme.palette.error.main,
@@ -537,11 +539,151 @@ export default function DepartmentsPage() {
         </Alert>
       )}
 
-      {/* Table */}
+      {/* Mobile Card View (Visible on xs, sm) */}
+      <Box sx={{ display: { xs: 'flex', md: 'none' }, flexDirection: 'column', gap: 2 }}>
+        {loading ? (
+          Array.from({ length: 3 }).map((_, i) => (
+            <Skeleton key={i} variant="rounded" height={180} sx={{ borderRadius: 1 }} />
+          ))
+        ) : filteredDepartments.length === 0 ? (
+          <Paper sx={{ p: 4, textAlign: 'center', borderRadius: 1, bgcolor: alpha(theme.palette.primary.main, 0.04) }}>
+            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+              <Layer size={48} variant="Bold" color={theme.palette.text.disabled} />
+              <Typography variant="body1" fontWeight={600} color="text.secondary">
+                {searchQuery ? 'ไม่พบฝ่ายที่ค้นหา' : 'ยังไม่มีข้อมูลฝ่าย'}
+              </Typography>
+            </Box>
+          </Paper>
+        ) : (
+          paginatedDepartments.map((department) => (
+            <Paper
+              key={department.id}
+              elevation={0}
+              sx={{
+                p: 2,
+                borderRadius: 1,
+                border: '1px solid',
+                borderColor: 'divider',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 2,
+              }}
+            >
+              {/* Card Header */}
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <Box>
+                  <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                    <Typography variant="subtitle1" fontWeight={700}>
+                      {department.name}
+                    </Typography>
+                    <Chip
+                      label={department.code}
+                      size="small"
+                      sx={{
+                        height: 20,
+                        fontSize: '0.65rem',
+                        fontWeight: 600,
+                        bgcolor: alpha(theme.palette.primary.main, 0.1),
+                        color: 'primary.main',
+                        borderRadius: 1,
+                      }}
+                    />
+                  </Box>
+                </Box>
+              </Box>
+
+              <Divider sx={{ borderStyle: 'dashed' }} />
+
+              {/* Details */}
+              <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
+                <Box>
+                  <Typography variant="caption" color="text.secondary" display="block">บริษัท</Typography>
+                  <Chip
+                    icon={<Building size={14} color={theme.palette.primary.main} />}
+                    label={department.company}
+                    size="small"
+                    variant="outlined"
+                    sx={{
+                      borderRadius: 1,
+                      '& .MuiChip-icon': {
+                        color: theme.palette.primary.main,
+                      },
+                    }}
+                  />
+                </Box>
+                <Box>
+                  <Typography variant="caption" color="text.secondary" display="block">แผนก</Typography>
+                  <Chip
+                    label={`${department.sections?.length || department._count?.sections || 0} แผนก`}
+                    size="small"
+                    onClick={() => handleViewSections(department)}
+                    sx={{
+                      bgcolor: alpha(theme.palette.warning.main, 0.1),
+                      color: theme.palette.warning.main,
+                      fontWeight: 500,
+                      borderRadius: 1,
+                      cursor: 'pointer',
+                    }}
+                  />
+                </Box>
+                <Box>
+                  <Typography variant="caption" color="text.secondary" display="block">สถานะ</Typography>
+                  <Chip
+                    icon={department.isActive
+                      ? <TickCircle size={14} color={theme.palette.success.main} />
+                      : <CloseCircle size={14} color={theme.palette.text.secondary} />
+                    }
+                    label={department.isActive ? 'เปิดใช้งาน' : 'ปิดใช้งาน'}
+                    size="small"
+                    sx={{
+                      fontWeight: 500,
+                      bgcolor: department.isActive
+                        ? alpha(theme.palette.success.main, 0.1)
+                        : alpha(theme.palette.text.secondary, 0.1),
+                      color: department.isActive
+                        ? theme.palette.success.main
+                        : 'text.secondary',
+                      '& .MuiChip-icon': { color: 'inherit' },
+                    }}
+                  />
+                </Box>
+              </Box>
+
+              {/* Actions */}
+              <Box sx={{ display: 'flex', gap: 1, pt: 1 }}>
+                <Button
+                  fullWidth
+                  size="small"
+                  variant="outlined"
+                  startIcon={<Edit2 size={16} color={theme.palette.primary.main} />}
+                  onClick={() => handleEdit(department)}
+                  sx={{ borderRadius: 1 }}
+                >
+                  แก้ไข
+                </Button>
+                <Button
+                  fullWidth
+                  size="small"
+                  variant="outlined"
+                  color="error"
+                  startIcon={<Trash size={16} color={theme.palette.error.main} />}
+                  onClick={() => handleDelete(department)}
+                  sx={{ borderRadius: 1 }}
+                >
+                  ลบ
+                </Button>
+              </Box>
+            </Paper>
+          ))
+        )}
+      </Box>
+
+      {/* Table (Hidden on mobile) */}
       <Fade in={true} timeout={500}>
-        <TableContainer 
-          component={Paper} 
-          sx={{ 
+        <TableContainer
+          component={Paper}
+          sx={{
+            display: { xs: 'none', md: 'block' },
             borderRadius: 1,
             border: '1px solid',
             borderColor: 'divider',
@@ -572,25 +714,24 @@ export default function DepartmentsPage() {
                           width: 80,
                           height: 80,
                           bgcolor: alpha(theme.palette.text.secondary, 0.1),
-                          color: 'text.secondary',
                         }}
                       >
-                        <Layers size={40} />
+                        <Layer size={40} variant="Bold" color={theme.palette.text.secondary} />
                       </Avatar>
                       <Box sx={{ textAlign: 'center' }}>
                         <Typography variant="h6" fontWeight={600} gutterBottom>
                           {searchQuery ? 'ไม่พบฝ่ายที่ค้นหา' : 'ยังไม่มีข้อมูลฝ่าย'}
                         </Typography>
                         <Typography variant="body2" color="text.secondary">
-                          {searchQuery 
-                            ? 'ลองค้นหาด้วยคำค้นอื่น' 
+                          {searchQuery
+                            ? 'ลองค้นหาด้วยคำค้นอื่น'
                             : 'เริ่มต้นใช้งานโดยการเพิ่มฝ่ายใหม่'}
                         </Typography>
                       </Box>
                       {!searchQuery && (
                         <Button
                           variant="contained"
-                          startIcon={<Plus size={18} />}
+                          startIcon={<Add size={18} color="#fff" />}
                           onClick={handleCreate}
                           sx={{ mt: 1, borderRadius: 1 }}
                         >
@@ -608,7 +749,7 @@ export default function DepartmentsPage() {
                     key={department.id}
                     sx={{
                       transition: 'background-color 0.2s ease',
-                      '&:hover': { 
+                      '&:hover': {
                         bgcolor: alpha(theme.palette.primary.main, 0.04),
                       },
                       '&:last-child td': { border: 0 },
@@ -618,7 +759,7 @@ export default function DepartmentsPage() {
                       <Chip
                         label={department.code}
                         size="small"
-                        sx={{ 
+                        sx={{
                           fontWeight: 600,
                           bgcolor: alpha(theme.palette.primary.main, 0.1),
                           color: 'primary.main',
@@ -633,11 +774,11 @@ export default function DepartmentsPage() {
                     </TableCell>
                     <TableCell>
                       <Chip
-                        icon={<Building2 size={14} />}
+                        icon={<Building size={14} color={theme.palette.text.primary} />}
                         label={department.company}
                         size="small"
                         variant="outlined"
-                        sx={{ 
+                        sx={{
                           borderRadius: 1,
                           '& .MuiChip-icon': {
                             color: 'inherit',
@@ -650,7 +791,7 @@ export default function DepartmentsPage() {
                         label={`${department.sections?.length || department._count?.sections || 0} แผนก`}
                         size="small"
                         onClick={() => handleViewSections(department)}
-                        sx={{ 
+                        sx={{
                           bgcolor: alpha(theme.palette.warning.main, 0.1),
                           color: theme.palette.warning.main,
                           fontWeight: 500,
@@ -664,19 +805,19 @@ export default function DepartmentsPage() {
                     </TableCell>
                     <TableCell align="center">
                       <Chip
-                        icon={department.isActive 
-                          ? <CheckCircle size={14} /> 
-                          : <XCircle size={14} />
+                        icon={department.isActive
+                          ? <TickCircle size={14} color={theme.palette.success.main} />
+                          : <CloseCircle size={14} color={theme.palette.error.main} />
                         }
                         label={department.isActive ? 'เปิดใช้งาน' : 'ปิดใช้งาน'}
                         size="small"
                         sx={{
                           fontWeight: 500,
-                          bgcolor: department.isActive 
-                            ? theme.palette.success.light 
+                          bgcolor: department.isActive
+                            ? alpha(theme.palette.success.main, 0.1)
                             : alpha(theme.palette.text.secondary, 0.1),
-                          color: department.isActive 
-                            ? theme.palette.success.main 
+                          color: department.isActive
+                            ? theme.palette.success.main
                             : 'text.secondary',
                           '& .MuiChip-icon': {
                             color: 'inherit',
@@ -698,7 +839,7 @@ export default function DepartmentsPage() {
                               },
                             }}
                           >
-                            <Pencil size={18} />
+                            <Edit2 size={18} color={theme.palette.primary.main} />
                           </IconButton>
                         </Tooltip>
                         <Tooltip title="ลบ">
@@ -713,7 +854,7 @@ export default function DepartmentsPage() {
                               },
                             }}
                           >
-                            <Trash2 size={18} />
+                            <Trash size={18} color={theme.palette.error.main} />
                           </IconButton>
                         </Tooltip>
                       </Box>
@@ -777,8 +918,8 @@ export default function DepartmentsPage() {
           setDeleteTarget(null);
         }}
         onConfirm={handleConfirmDelete}
-        title="ยืนยันการลบแผนก"
-        message={`คุณต้องการลบแผนก "${deleteTarget?.name}" ใช่หรือไม่? การดำเนินการนี้ไม่สามารถย้อนกลับได้`}
+        title="ยืนยันการลบฝ่าย"
+        message={`คุณต้องการลบฝ่าย "${deleteTarget?.name}" ใช่หรือไม่? การดำเนินการนี้ไม่สามารถย้อนกลับได้`}
         type="delete"
         confirmText="ลบ"
         loading={deleteLoading}
@@ -792,7 +933,7 @@ export default function DepartmentsPage() {
         fullWidth
       >
         <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <FolderTree size={24} />
+          <FolderOpen size={24} variant="Bold" color={theme.palette.warning.main} />
           รายชื่อแผนก - {selectedDepartmentForSections?.name}
         </DialogTitle>
         <DialogContent dividers>
@@ -801,17 +942,29 @@ export default function DepartmentsPage() {
               {selectedDepartmentForSections.sections.map((section) => (
                 <ListItem key={section.id} divider>
                   <ListItemIcon>
-                    <Hash size={20} />
+                    <Hashtag size={20} color={theme.palette.text.secondary} />
                   </ListItemIcon>
                   <ListItemText
                     primary={section.name}
-                    secondary={`รหัส: ${section.code} | สถานะ: ${section.isActive ? 'เปิดใช้งาน' : 'ปิดใช้งาน'}`}
+                    secondary={`รหัส: ${section.code}`}
                   />
                   <Chip
-                    label={section.isActive ? 'Active' : 'Inactive'}
+                    icon={section.isActive
+                      ? <TickCircle size={14} color={theme.palette.success.main} />
+                      : <CloseCircle size={14} color={theme.palette.text.secondary} />
+                    }
+                    label={section.isActive ? 'เปิดใช้งาน' : 'ปิดใช้งาน'}
                     size="small"
-                    color={section.isActive ? 'success' : 'default'}
-                    variant="outlined"
+                    sx={{
+                      fontWeight: 500,
+                      bgcolor: section.isActive
+                        ? alpha(theme.palette.success.main, 0.1)
+                        : alpha(theme.palette.text.secondary, 0.1),
+                      color: section.isActive
+                        ? theme.palette.success.main
+                        : 'text.secondary',
+                      '& .MuiChip-icon': { color: 'inherit' },
+                    }}
                   />
                 </ListItem>
               ))}
