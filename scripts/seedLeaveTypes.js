@@ -9,7 +9,7 @@ const leaveTypes = [
     { code: 'maternity', name: 'ลาคลอด', description: 'ลาคลอดบุตร', maxDaysPerYear: 120, isPaid: true },
     { code: 'ordination', name: 'ลาบวช', description: 'ลาอุปสมบท (อายุงานครบ 1 ปี)', maxDaysPerYear: 30, isPaid: false },
     { code: 'work_outside', name: 'ทำงานนอกสถานที่', description: 'ปฏิบัติงานนอกสถานที่', maxDaysPerYear: null, isPaid: true },
-    { code: 'unpaid', name: 'ลาไม่ได้รับค่าจ้าง', description: 'ลากิจส่วนตัวโดยไม่ได้รับค่าจ้าง', maxDaysPerYear: null, isPaid: false },
+    { code: 'unpaid', name: 'ลาไม่รับค่าจ้าง', description: 'ลากิจส่วนตัวโดยไม่ได้รับค่าจ้าง', maxDaysPerYear: null, isPaid: false },
     { code: 'other', name: 'ลาอื่นๆ', description: 'ลาที่ไม่ระบุประเภท', maxDaysPerYear: null, isPaid: true },
 ];
    
