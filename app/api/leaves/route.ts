@@ -122,10 +122,10 @@ export async function POST(request: Request) {
                     { status: 400 }
                 );
             }
-            
+
             const serviceYears = (new Date().getTime() - new Date(user.startDate).getTime()) / (1000 * 60 * 60 * 24 * 365);
             if (serviceYears < 1) {
-                 return NextResponse.json(
+                return NextResponse.json(
                     { error: 'Ordination leave requires at least 1 year of service' },
                     { status: 400 }
                 );
@@ -139,7 +139,7 @@ export async function POST(request: Request) {
                 where: { code: 'vacation' },
                 select: { maxDaysPerYear: true }
             });
-            
+
             const maxVacationDays = calculateVacationDays(
                 user.startDate,
                 leaveYear,
@@ -172,7 +172,7 @@ export async function POST(request: Request) {
 
             if (Number(totalDays) > remainingDays) {
                 return NextResponse.json(
-                    { error: `สิทธิ์ลาพักร้อนไม่เพียงพอ (เหลือ ${remainingDays} วัน จากทั้งหมด ${maxVacationDays} วัน)` },
+                    { error: `สิทธิ์ลาพักร้อนไม่เพียงพอ (ขอลา ${totalDays} วัน แต่เหลือ ${remainingDays} วัน จากทั้งหมด ${maxVacationDays} วัน)` },
                     { status: 400 }
                 );
             }
@@ -209,13 +209,13 @@ export async function POST(request: Request) {
                 attachments:
                     attachmentList.length > 0
                         ? {
-                              create: attachmentList.map((file: AttachmentPayload) => ({
-                                  fileName: file.fileName,
-                                  filePath: file.filePath,
-                                  fileSize: file.fileSize,
-                                  mimeType: file.mimeType,
-                              })),
-                          }
+                            create: attachmentList.map((file: AttachmentPayload) => ({
+                                fileName: file.fileName,
+                                filePath: file.filePath,
+                                fileSize: file.fileSize,
+                                mimeType: file.mimeType,
+                            })),
+                        }
                         : undefined,
             },
             include: {

@@ -210,7 +210,7 @@ export default function ApprovalPage() {
   const [itemsPerPage, setItemsPerPage] = useState(10);
 
   // Filter month/year
-  const [filterMonth, setFilterMonth] = useState<number | 'all'>('all');
+  const [filterMonth, setFilterMonth] = useState<number | 'all'>(new Date().getMonth() + 1);
   const [filterYear, setFilterYear] = useState<number>(new Date().getFullYear());
 
   // Filter department/section (for HR Manager)
@@ -886,18 +886,18 @@ export default function ApprovalPage() {
                       }}
                     >
                       <MenuItem value="all">ทั้งหมด</MenuItem>
-                      <MenuItem value={1}>ม.ค.</MenuItem>
-                      <MenuItem value={2}>ก.พ.</MenuItem>
-                      <MenuItem value={3}>มี.ค.</MenuItem>
-                      <MenuItem value={4}>เม.ย.</MenuItem>
-                      <MenuItem value={5}>พ.ค.</MenuItem>
-                      <MenuItem value={6}>มิ.ย.</MenuItem>
-                      <MenuItem value={7}>ก.ค.</MenuItem>
-                      <MenuItem value={8}>ส.ค.</MenuItem>
-                      <MenuItem value={9}>ก.ย.</MenuItem>
-                      <MenuItem value={10}>ต.ค.</MenuItem>
-                      <MenuItem value={11}>พ.ย.</MenuItem>
-                      <MenuItem value={12}>ธ.ค.</MenuItem>
+                      <MenuItem value={1}>มกราคม</MenuItem>
+                      <MenuItem value={2}>กุมภาพันธ์</MenuItem>
+                      <MenuItem value={3}>มีนาคม</MenuItem>
+                      <MenuItem value={4}>เมษายน</MenuItem>
+                      <MenuItem value={5}>พฤษภาคม</MenuItem>
+                      <MenuItem value={6}>มิถุนายน</MenuItem>
+                      <MenuItem value={7}>กรกฎาคม</MenuItem>
+                      <MenuItem value={8}>สิงหาคม</MenuItem>
+                      <MenuItem value={9}>กันยายน</MenuItem>
+                      <MenuItem value={10}>ตุลาคม</MenuItem>
+                      <MenuItem value={11}>พฤศจิกายน</MenuItem>
+                      <MenuItem value={12}>ธันวาคม</MenuItem>
                     </Select>
                   </FormControl>
                   <FormControl size="small" sx={{ minWidth: 100 }}>
@@ -1123,18 +1123,18 @@ export default function ApprovalPage() {
                           onChange={(e) => { setFilterMonth(e.target.value as number | 'all'); setPage(1); }}
                         >
                           <MenuItem value="all">ทั้งหมด</MenuItem>
-                          <MenuItem value={1}>ม.ค.</MenuItem>
-                          <MenuItem value={2}>ก.พ.</MenuItem>
-                          <MenuItem value={3}>มี.ค.</MenuItem>
-                          <MenuItem value={4}>เม.ย.</MenuItem>
-                          <MenuItem value={5}>พ.ค.</MenuItem>
-                          <MenuItem value={6}>มิ.ย.</MenuItem>
-                          <MenuItem value={7}>ก.ค.</MenuItem>
-                          <MenuItem value={8}>ส.ค.</MenuItem>
-                          <MenuItem value={9}>ก.ย.</MenuItem>
-                          <MenuItem value={10}>ต.ค.</MenuItem>
-                          <MenuItem value={11}>พ.ย.</MenuItem>
-                          <MenuItem value={12}>ธ.ค.</MenuItem>
+                          <MenuItem value={1}>มกราคม</MenuItem>
+                          <MenuItem value={2}>กุมภาพันธ์</MenuItem>
+                          <MenuItem value={3}>มีนาคม</MenuItem>
+                          <MenuItem value={4}>เมษายน</MenuItem>
+                          <MenuItem value={5}>พฤษภาคม</MenuItem>
+                          <MenuItem value={6}>มิถุนายน</MenuItem>
+                          <MenuItem value={7}>กรกฎาคม</MenuItem>
+                          <MenuItem value={8}>สิงหาคม</MenuItem>
+                          <MenuItem value={9}>กันยายน</MenuItem>
+                          <MenuItem value={10}>ตุลาคม</MenuItem>
+                          <MenuItem value={11}>พฤศจิกายน</MenuItem>
+                          <MenuItem value={12}>ธันวาคม</MenuItem>
                         </Select>
                       </FormControl>
                       <FormControl size="small" fullWidth>
@@ -1416,35 +1416,37 @@ export default function ApprovalPage() {
           </Box>
         )}
 
-        {/* Status Tabs - Sliding Style */}
+        {/* Status Tabs - Neumorphism Style */}
         {!loading && (
           <Box sx={{ mb: 4 }}>
             <Box
               sx={{
-                bgcolor: '#F1F5F9',
-                p: 0.5,
+                background: 'linear-gradient(145deg, #E8ECF0 0%, #F8FAFC 100%)',
+                p: 0.75,
                 borderRadius: 3,
                 display: 'grid',
                 gridTemplateColumns: 'repeat(4, 1fr)',
                 position: 'relative',
                 isolation: 'isolate',
-                border: '1px solid #E2E8F0'
+                boxShadow: 'inset 0 2px 8px rgba(0,0,0,0.08), inset 0 -1px 2px rgba(255,255,255,0.8), 0 4px 12px rgba(0,0,0,0.06)',
+                border: '1px solid rgba(255,255,255,0.6)',
               }}
             >
               {/* Sliding Background */}
               <Box
                 sx={{
                   position: 'absolute',
-                  top: 4,
-                  bottom: 4,
-                  left: 4,
-                  width: 'calc(25% - 6px)',
-                  bgcolor: 'white',
+                  top: 6,
+                  bottom: 6,
+                  left: 6,
+                  width: 'calc(25% - 9px)',
+                  background: 'linear-gradient(145deg, #FFFFFF 0%, #F8FAFC 100%)',
                   borderRadius: 2.5,
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04)',
-                  transition: 'transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)',
+                  boxShadow: '0 4px 15px rgba(0,0,0,0.1), 0 2px 6px rgba(0,0,0,0.08), inset 0 1px 0 rgba(255,255,255,1)',
+                  transition: 'transform 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
                   transform: `translateX(${tabValue * 100}%)`,
-                  zIndex: 0
+                  zIndex: 0,
+                  border: '1px solid rgba(255,255,255,0.9)',
                 }}
               />
 
@@ -1476,20 +1478,25 @@ export default function ApprovalPage() {
                   <Typography fontWeight={tabValue === 0 ? 700 : 500} fontSize={{ xs: '0.75rem', sm: '0.9rem' }}>
                     รออนุมัติ
                   </Typography>
-                  <Chip
-                    label={counts.pending}
-                    size="small"
+                  <Box
                     sx={{
-                      height: 20,
-                      minWidth: 20,
-                      fontSize: '0.7rem',
-                      fontWeight: 700,
-                      bgcolor: tabValue === 0 ? '#FFF3E0' : '#E2E8F0',
-                      color: tabValue === 0 ? '#E65100' : '#64748B',
+                      height: 26,
+                      minWidth: 26,
+                      px: 1,
+                      borderRadius: '13px',
+                      fontSize: '0.8rem',
+                      fontWeight: 800,
+                      bgcolor: tabValue === 0 ? '#E65100' : '#CBD5E1',
+                      color: 'white',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
                       transition: 'all 0.2s',
-                      '& .MuiChip-label': { px: 0.8 }
+                      boxShadow: tabValue === 0 ? '0 2px 6px rgba(230, 81, 0, 0.4)' : 'none',
                     }}
-                  />
+                  >
+                    {counts.pending}
+                  </Box>
                 </Box>
               </Box>
 
@@ -1521,20 +1528,25 @@ export default function ApprovalPage() {
                   <Typography fontWeight={tabValue === 1 ? 700 : 500} fontSize={{ xs: '0.75rem', sm: '0.9rem' }}>
                     อนุมัติ
                   </Typography>
-                  <Chip
-                    label={counts.approved}
-                    size="small"
+                  <Box
                     sx={{
-                      height: 20,
-                      minWidth: 20,
-                      fontSize: '0.7rem',
-                      fontWeight: 700,
-                      bgcolor: tabValue === 1 ? '#E8F5E9' : '#E2E8F0',
-                      color: tabValue === 1 ? '#2E7D32' : '#64748B',
+                      height: 26,
+                      minWidth: 26,
+                      px: 1,
+                      borderRadius: '13px',
+                      fontSize: '0.8rem',
+                      fontWeight: 800,
+                      bgcolor: tabValue === 1 ? '#2E7D32' : '#CBD5E1',
+                      color: 'white',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
                       transition: 'all 0.2s',
-                      '& .MuiChip-label': { px: 0.8 }
+                      boxShadow: tabValue === 1 ? '0 2px 6px rgba(46, 125, 50, 0.4)' : 'none',
                     }}
-                  />
+                  >
+                    {counts.approved}
+                  </Box>
                 </Box>
               </Box>
 
@@ -1566,20 +1578,25 @@ export default function ApprovalPage() {
                   <Typography fontWeight={tabValue === 2 ? 700 : 500} fontSize={{ xs: '0.75rem', sm: '0.9rem' }}>
                     ปฏิเสธ
                   </Typography>
-                  <Chip
-                    label={counts.rejected}
-                    size="small"
+                  <Box
                     sx={{
-                      height: 20,
-                      minWidth: 20,
-                      fontSize: '0.7rem',
-                      fontWeight: 700,
-                      bgcolor: tabValue === 2 ? '#FFEBEE' : '#E2E8F0',
-                      color: tabValue === 2 ? '#D32F2F' : '#64748B',
+                      height: 26,
+                      minWidth: 26,
+                      px: 1,
+                      borderRadius: '13px',
+                      fontSize: '0.8rem',
+                      fontWeight: 800,
+                      bgcolor: tabValue === 2 ? '#D32F2F' : '#CBD5E1',
+                      color: 'white',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
                       transition: 'all 0.2s',
-                      '& .MuiChip-label': { px: 0.8 }
+                      boxShadow: tabValue === 2 ? '0 2px 6px rgba(211, 47, 47, 0.4)' : 'none',
                     }}
-                  />
+                  >
+                    {counts.rejected}
+                  </Box>
                 </Box>
               </Box>
 
@@ -1611,20 +1628,25 @@ export default function ApprovalPage() {
                   <Typography fontWeight={tabValue === 3 ? 700 : 500} fontSize={{ xs: '0.75rem', sm: '0.9rem' }}>
                     ยกเลิก
                   </Typography>
-                  <Chip
-                    label={counts.cancelled}
-                    size="small"
+                  <Box
                     sx={{
-                      height: 20,
-                      minWidth: 20,
-                      fontSize: '0.7rem',
-                      fontWeight: 700,
-                      bgcolor: tabValue === 3 ? '#F5F5F5' : '#E2E8F0',
-                      color: tabValue === 3 ? '#757575' : '#64748B',
+                      height: 26,
+                      minWidth: 26,
+                      px: 1,
+                      borderRadius: '13px',
+                      fontSize: '0.8rem',
+                      fontWeight: 800,
+                      bgcolor: tabValue === 3 ? '#757575' : '#CBD5E1',
+                      color: 'white',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
                       transition: 'all 0.2s',
-                      '& .MuiChip-label': { px: 0.8 }
+                      boxShadow: tabValue === 3 ? '0 2px 6px rgba(117, 117, 117, 0.4)' : 'none',
                     }}
-                  />
+                  >
+                    {counts.cancelled}
+                  </Box>
                 </Box>
               </Box>
             </Box>
@@ -1752,33 +1774,87 @@ export default function ApprovalPage() {
             </Box>
           )
         ) : filteredApprovals.length === 0 ? (
-          <Box sx={{ textAlign: 'center', py: 10, opacity: 0.7 }}>
-            <Box sx={{
-              bgcolor: '#f5f5f5',
-              width: 100,
-              height: 100,
-              borderRadius: '50%',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              mx: 'auto',
-              mb: 3
-            }}>
-              {tabValue === 0 ? <Clock size={48} color="#9e9e9e" variant="Bulk" /> :
-                tabValue === 1 ? <TickCircle size={48} color="#9e9e9e" variant="Bulk" /> :
-                  tabValue === 2 ? <CloseCircle size={48} color="#9e9e9e" variant="Bulk" /> :
-                    <Forbidden2 size={48} color="#9e9e9e" variant="Bulk" />}
+          viewMode === 'desktop' ? (
+            /* Desktop Empty State with Table Header */
+            <Paper elevation={0} sx={{ borderRadius: 1, border: '1px solid', borderColor: 'grey.200', overflow: 'hidden' }}>
+              <TableContainer>
+                <Table>
+                  <TableHead>
+                    <TableRow sx={{ bgcolor: '#F8FAFC' }}>
+                      <TableCell sx={{ fontWeight: 600, width: '25%' }}>พนักงาน</TableCell>
+                      <TableCell sx={{ fontWeight: 600, width: '15%' }}>ประเภทการลา</TableCell>
+                      <TableCell sx={{ fontWeight: 600, width: '20%' }}>วันที่</TableCell>
+                      <TableCell sx={{ fontWeight: 600, width: '10%' }}>จำนวน</TableCell>
+                      <TableCell sx={{ fontWeight: 600, width: '15%' }}>สถานะ</TableCell>
+                      <TableCell sx={{ fontWeight: 600, width: '15%' }} align="center">ดำเนินการ</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    <TableRow>
+                      <TableCell colSpan={6}>
+                        <Box sx={{ textAlign: 'center', py: 8, opacity: 0.7 }}>
+                          <Box sx={{
+                            bgcolor: '#f5f5f5',
+                            width: 80,
+                            height: 80,
+                            borderRadius: '50%',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            mx: 'auto',
+                            mb: 2
+                          }}>
+                            {tabValue === 0 ? <Clock size={40} color="#9e9e9e" variant="Bulk" /> :
+                              tabValue === 1 ? <TickCircle size={40} color="#9e9e9e" variant="Bulk" /> :
+                                tabValue === 2 ? <CloseCircle size={40} color="#9e9e9e" variant="Bulk" /> :
+                                  <Forbidden2 size={40} color="#9e9e9e" variant="Bulk" />}
+                          </Box>
+                          <Typography variant="subtitle1" color="text.secondary" fontWeight={600} gutterBottom>
+                            {tabValue === 0 ? 'ไม่มีรายการรออนุมัติ' :
+                              tabValue === 1 ? 'ยังไม่มีรายการที่อนุมัติ' :
+                                tabValue === 2 ? 'ไม่มีรายการที่ถูกปฏิเสธ' :
+                                  'ไม่มีรายการที่ยกเลิก'}
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            {tabValue === 0 ? 'คุณจัดการรายการทั้งหมดเรียบร้อยแล้ว' : 'รายการจะแสดงที่นี่เมื่อมีการดำเนินการ'}
+                          </Typography>
+                        </Box>
+                      </TableCell>
+                    </TableRow>
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            </Paper>
+          ) : (
+            /* Mobile Empty State */
+            <Box sx={{ textAlign: 'center', py: 10, opacity: 0.7 }}>
+              <Box sx={{
+                bgcolor: '#f5f5f5',
+                width: 100,
+                height: 100,
+                borderRadius: '50%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                mx: 'auto',
+                mb: 3
+              }}>
+                {tabValue === 0 ? <Clock size={48} color="#9e9e9e" variant="Bulk" /> :
+                  tabValue === 1 ? <TickCircle size={48} color="#9e9e9e" variant="Bulk" /> :
+                    tabValue === 2 ? <CloseCircle size={48} color="#9e9e9e" variant="Bulk" /> :
+                      <Forbidden2 size={48} color="#9e9e9e" variant="Bulk" />}
+              </Box>
+              <Typography variant="h6" color="text.secondary" fontWeight={600} gutterBottom>
+                {tabValue === 0 ? 'ไม่มีรายการรออนุมัติ' :
+                  tabValue === 1 ? 'ยังไม่มีรายการที่อนุมัติ' :
+                    tabValue === 2 ? 'ไม่มีรายการที่ถูกปฏิเสธ' :
+                      'ไม่มีรายการที่ยกเลิก'}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                {tabValue === 0 ? 'คุณจัดการรายการทั้งหมดเรียบร้อยแล้ว' : 'รายการจะแสดงที่นี่เมื่อมีการดำเนินการ'}
+              </Typography>
             </Box>
-            <Typography variant="h6" color="text.secondary" fontWeight={600} gutterBottom>
-              {tabValue === 0 ? 'ไม่มีรายการรออนุมัติ' :
-                tabValue === 1 ? 'ยังไม่มีรายการที่อนุมัติ' :
-                  tabValue === 2 ? 'ไม่มีรายการที่ถูกปฏิเสธ' :
-                    'ไม่มีรายการที่ยกเลิก'}
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              {tabValue === 0 ? 'คุณจัดการรายการทั้งหมดเรียบร้อยแล้ว' : 'รายการจะแสดงที่นี่เมื่อมีการดำเนินการ'}
-            </Typography>
-          </Box>
+          )
         ) : isHrManager && groupViewMode === 'group' && tabValue === 0 ? (
           /* ========== GROUP BY DEPARTMENT VIEW (HR Manager Only) ========== */
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>

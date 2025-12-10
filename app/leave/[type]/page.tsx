@@ -903,7 +903,10 @@ export default function LeaveFormPage() {
 
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({ error: 'เกิดข้อผิดพลาดในการบันทึกข้อมูล' }));
-                throw new Error(errorData.error || 'ไม่สามารถบันทึกคำขอลาได้');
+                await cleanupUploadedFiles();
+                toastr.error(errorData.error || 'ไม่สามารถบันทึกคำขอลาได้');
+                setSubmitting(false);
+                return;
             }
 
             toastr.success('ส่งคำขอลาเรียบร้อยแล้ว');

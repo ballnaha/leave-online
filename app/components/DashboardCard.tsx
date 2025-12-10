@@ -58,12 +58,12 @@ const DashboardCard: React.FC<DashboardCardProps> = ({ leaveTypes, leaveRequests
     const [selectedCode, setSelectedCode] = useState<string>('');
     const [drilldownOpen, setDrilldownOpen] = useState(false);
     const [drilldownStatus, setDrilldownStatus] = useState<'approved' | 'pending' | 'rejected' | 'cancelled' | null>(null);
-    
+
     // State for LeaveDetailDrawer
     const [selectedLeave, setSelectedLeave] = useState<LeaveRequest | null>(null);
     const [detailDrawerOpen, setDetailDrawerOpen] = useState(false);
     const [isImageViewerOpen, setIsImageViewerOpen] = useState(false);
-    
+
     // State for chart tooltip
     const [activeTooltip, setActiveTooltip] = useState<'approved' | 'pending' | 'remaining' | null>(null);
 
@@ -87,7 +87,7 @@ const DashboardCard: React.FC<DashboardCardProps> = ({ leaveTypes, leaveRequests
 
         leaveTypes.forEach(type => {
             const maxDays = type.maxDaysPerYear || 0; // If null (unlimited), treat as 0 or handle specifically
-            
+
             // Calculate used days for this type in selected year
             // Use leaveType field (which contains the leave type code like 'personal', 'sick', etc.)
             const requests = leaveRequests.filter(req => req.leaveType === type.code);
@@ -132,17 +132,17 @@ const DashboardCard: React.FC<DashboardCardProps> = ({ leaveTypes, leaveRequests
     // Get filtered requests for drilldown
     const drilldownRequests = useMemo(() => {
         if (!drilldownStatus || !selectedCode) return [];
-        
+
         return leaveRequests.filter(req => {
             const matchType = req.leaveType === selectedCode;
             let matchStatus = false;
-            
+
             if (drilldownStatus === 'pending') {
                 matchStatus = ['pending', 'in_progress'].includes(req.status);
             } else {
                 matchStatus = req.status === drilldownStatus;
             }
-            
+
             return matchType && matchStatus;
         });
     }, [leaveRequests, selectedCode, drilldownStatus]);
@@ -152,7 +152,7 @@ const DashboardCard: React.FC<DashboardCardProps> = ({ leaveTypes, leaveRequests
         dayjs.locale(locale === 'th' ? 'th' : locale === 'my' ? 'my' : 'en');
         const start = dayjs(startDate);
         const end = dayjs(endDate);
-        
+
         if (start.isSame(end, 'day')) {
             return start.format('D MMM YYYY');
         }
@@ -190,7 +190,7 @@ const DashboardCard: React.FC<DashboardCardProps> = ({ leaveTypes, leaveRequests
 
     const currentBalance = balances[selectedCode] || { total: 0, used: 0, approved: 0, pending: 0, rejected: 0, cancelled: 0, remaining: 0, name: '', isPaid: true };
     const isUnlimited = currentBalance.total === 0;
-    
+
     // Calculate percentage for graph
     let approvedPercentage = 0;
     let pendingPercentage = 0;
@@ -205,7 +205,7 @@ const DashboardCard: React.FC<DashboardCardProps> = ({ leaveTypes, leaveRequests
             pendingPercentage = (currentBalance.pending / currentBalance.total) * 100;
         }
     } else {
-        approvedPercentage = 0; 
+        approvedPercentage = 0;
     }
 
     // Color logic - Multi-ring colors like the reference image
@@ -371,15 +371,15 @@ const DashboardCard: React.FC<DashboardCardProps> = ({ leaveTypes, leaveRequests
                 }} />
 
                 {/* Header: Leave Type Name + Year Selector */}
-                <Box sx={{ 
-                    display: 'flex', 
-                    justifyContent: 'space-between', 
-                    alignItems: 'center', 
+                <Box sx={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
                     mb: 2,
                     position: 'relative',
                     zIndex: 10
                 }}>
-                    <Typography variant="subtitle1" sx={{ fontWeight: 600, fontSize: '0.95rem' , color:'#FFFFFF;' }}>
+                    <Typography variant="subtitle1" sx={{ fontWeight: 600, fontSize: '0.95rem', color: '#FFFFFF;' }}>
                         {t(`leave_${selectedCode}`, currentBalance.name)}
                     </Typography>
                     <Select
@@ -418,204 +418,253 @@ const DashboardCard: React.FC<DashboardCardProps> = ({ leaveTypes, leaveRequests
                     {/* Left Side: Multi-ring Circular Progress */}
                     <Box sx={{ width: '45%', display: 'flex', justifyContent: 'center' }}>
                         <ClickAwayListener onClickAway={() => setActiveTooltip(null)}>
-                        <Box sx={{ position: 'relative', width: 160, height: 160 }}>
-                            {/* Multi-ring Chart using nested circles */}
-                            <Box sx={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}>
-                                {/* Outer ring - Approved (Green) */}
-                                <MuiTooltip
-                                    open={activeTooltip === 'approved'}
-                                    title={
-                                        <Box sx={{ p: 0.5 }}>
-                                            <Typography sx={{ fontWeight: 600, fontSize: '0.85rem', color: '#2ECC71' }}>
-                                                {t('dashboard_approved_title', 'อนุมัติแล้ว')}
-                                            </Typography>
-                                            <Typography sx={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.9)' }}>
-                                                {currentBalance.approved} {t('days', 'วัน')} ({Math.round(calculatePercentage.approved)}%)
-                                            </Typography>
-                                        </Box>
-                                    }
-                                    placement="top"
-                                    arrow
-                                    componentsProps={{
-                                        tooltip: {
-                                            sx: {
-                                                bgcolor: 'rgba(0, 0, 0, 0.85)',
-                                                color: '#fff',
-                                                boxShadow: '0 4px 20px rgba(0,0,0,0.3)',
-                                                borderRadius: 1,
-                                                '& .MuiTooltip-arrow': {
-                                                    color: 'rgba(0, 0, 0, 0.85)',
+                            <Box sx={{ position: 'relative', width: 160, height: 160 }}>
+                                {/* Multi-ring Chart using nested circles */}
+                                <Box sx={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}>
+                                    {/* Outer ring - Approved (Green) */}
+                                    <MuiTooltip
+                                        open={activeTooltip === 'approved'}
+                                        title={
+                                            <Box sx={{ p: 0.5 }}>
+                                                <Typography sx={{ fontWeight: 600, fontSize: '0.85rem', color: '#2ECC71' }}>
+                                                    {t('dashboard_approved_title', 'อนุมัติแล้ว')}
+                                                </Typography>
+                                                <Typography sx={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.9)' }}>
+                                                    {currentBalance.approved} {t('days', 'วัน')} ({Math.round(calculatePercentage.approved)}%)
+                                                </Typography>
+                                            </Box>
+                                        }
+                                        placement="top"
+                                        arrow
+                                        componentsProps={{
+                                            tooltip: {
+                                                sx: {
+                                                    bgcolor: 'rgba(0, 0, 0, 0.85)',
+                                                    color: '#fff',
+                                                    boxShadow: '0 4px 20px rgba(0,0,0,0.3)',
+                                                    borderRadius: 1,
+                                                    '& .MuiTooltip-arrow': {
+                                                        color: 'rgba(0, 0, 0, 0.85)',
+                                                    },
                                                 },
                                             },
-                                        },
-                                    }}
-                                >
-                                    <svg 
-                                        viewBox="0 0 100 100" 
-                                        style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', transform: 'rotate(-90deg)', cursor: 'pointer' }}
-                                        onClick={() => setActiveTooltip(activeTooltip === 'approved' ? null : 'approved')}
+                                        }}
                                     >
-                                        {/* Background circle */}
-                                        <circle cx="50" cy="50" r="45" fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="8" />
-                                        {/* Progress circle */}
-                                        <circle 
-                                            cx="50" cy="50" r="45" 
-                                            fill="none" 
-                                            stroke="#2ECC71" 
-                                            strokeWidth="8" 
-                                            strokeLinecap="round"
-                                            strokeDasharray={`${calculatePercentage.approved * 2.83} 283`}
-                                            style={{ transition: 'stroke-dasharray 0.8s ease-out' }}
-                                        />
-                                    </svg>
-                                </MuiTooltip>
-                                {/* Middle ring - Pending (Orange) */}
-                                <MuiTooltip
-                                    open={activeTooltip === 'pending'}
-                                    title={
-                                        <Box sx={{ p: 0.5 }}>
-                                            <Typography sx={{ fontWeight: 600, fontSize: '0.85rem', color: '#F39C12' }}>
-                                                {t('dashboard_pending_title', 'รออนุมัติ')}
-                                            </Typography>
-                                            <Typography sx={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.9)' }}>
-                                                {currentBalance.pending} {t('days', 'วัน')} ({Math.round(calculatePercentage.pending)}%)
-                                            </Typography>
-                                        </Box>
-                                    }
-                                    placement="top"
-                                    arrow
-                                    componentsProps={{
-                                        tooltip: {
-                                            sx: {
-                                                bgcolor: 'rgba(0, 0, 0, 0.85)',
-                                                color: '#fff',
-                                                boxShadow: '0 4px 20px rgba(0,0,0,0.3)',
-                                                borderRadius: 1,
-                                                '& .MuiTooltip-arrow': {
-                                                    color: 'rgba(0, 0, 0, 0.85)',
+                                        <svg
+                                            viewBox="0 0 100 100"
+                                            style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', transform: 'rotate(-90deg)', cursor: 'pointer' }}
+                                            onClick={() => setActiveTooltip(activeTooltip === 'approved' ? null : 'approved')}
+                                        >
+                                            {/* Background circle */}
+                                            <circle cx="50" cy="50" r="45" fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="8" />
+                                            {/* Progress circle */}
+                                            <circle
+                                                cx="50" cy="50" r="45"
+                                                fill="none"
+                                                stroke="#2ECC71"
+                                                strokeWidth="8"
+                                                strokeLinecap="round"
+                                                strokeDasharray={`${calculatePercentage.approved * 2.83} 283`}
+                                                style={{ transition: 'stroke-dasharray 0.8s ease-out' }}
+                                            />
+                                        </svg>
+                                    </MuiTooltip>
+                                    {/* Middle ring - Pending (Orange) */}
+                                    <MuiTooltip
+                                        open={activeTooltip === 'pending'}
+                                        title={
+                                            <Box sx={{ p: 0.5 }}>
+                                                <Typography sx={{ fontWeight: 600, fontSize: '0.85rem', color: '#F39C12' }}>
+                                                    {t('dashboard_pending_title', 'รออนุมัติ')}
+                                                </Typography>
+                                                <Typography sx={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.9)' }}>
+                                                    {currentBalance.pending} {t('days', 'วัน')} ({Math.round(calculatePercentage.pending)}%)
+                                                </Typography>
+                                            </Box>
+                                        }
+                                        placement="top"
+                                        arrow
+                                        componentsProps={{
+                                            tooltip: {
+                                                sx: {
+                                                    bgcolor: 'rgba(0, 0, 0, 0.85)',
+                                                    color: '#fff',
+                                                    boxShadow: '0 4px 20px rgba(0,0,0,0.3)',
+                                                    borderRadius: 1,
+                                                    '& .MuiTooltip-arrow': {
+                                                        color: 'rgba(0, 0, 0, 0.85)',
+                                                    },
                                                 },
                                             },
-                                        },
-                                    }}
-                                >
-                                    <svg 
-                                        viewBox="0 0 100 100" 
-                                        style={{ position: 'absolute', top: '12%', left: '12%', width: '76%', height: '76%', transform: 'rotate(-90deg)', cursor: 'pointer' }}
-                                        onClick={() => setActiveTooltip(activeTooltip === 'pending' ? null : 'pending')}
+                                        }}
                                     >
-                                        {/* Background circle */}
-                                        <circle cx="50" cy="50" r="45" fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="10" />
-                                        {/* Progress circle */}
-                                        <circle 
-                                            cx="50" cy="50" r="45" 
-                                            fill="none" 
-                                            stroke="#F39C12" 
-                                            strokeWidth="10" 
-                                            strokeLinecap="round"
-                                            strokeDasharray={`${calculatePercentage.pending * 2.83} 283`}
-                                            style={{ transition: 'stroke-dasharray 0.8s ease-out' }}
-                                        />
-                                    </svg>
-                                </MuiTooltip>
-                                {/* Inner ring - Remaining (Blue) */}
-                                <MuiTooltip
-                                    open={activeTooltip === 'remaining'}
-                                    title={
-                                        <Box sx={{ p: 0.5 }}>
-                                            <Typography sx={{ fontWeight: 600, fontSize: '0.85rem', color: isOverLimit ? '#E74C3C' : '#5DADE2' }}>
-                                                {isOverLimit ? t('dashboard_exceeded_title', 'เกินสิทธิ์') : t('dashboard_remaining_title', 'คงเหลือ')}
-                                            </Typography>
-                                            <Typography sx={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.9)' }}>
-                                                {isOverLimit ? Math.abs(currentBalance.remaining) : currentBalance.remaining} {t('days', 'วัน')} ({Math.round(calculatePercentage.remaining)}%)
-                                            </Typography>
-                                        </Box>
-                                    }
-                                    placement="top"
-                                    arrow
-                                    componentsProps={{
-                                        tooltip: {
-                                            sx: {
-                                                bgcolor: 'rgba(0, 0, 0, 0.85)',
-                                                color: '#fff',
-                                                boxShadow: '0 4px 20px rgba(0,0,0,0.3)',
-                                                borderRadius: 1,
-                                                '& .MuiTooltip-arrow': {
-                                                    color: 'rgba(0, 0, 0, 0.85)',
+                                        <svg
+                                            viewBox="0 0 100 100"
+                                            style={{ position: 'absolute', top: '12%', left: '12%', width: '76%', height: '76%', transform: 'rotate(-90deg)', cursor: 'pointer' }}
+                                            onClick={() => setActiveTooltip(activeTooltip === 'pending' ? null : 'pending')}
+                                        >
+                                            {/* Background circle */}
+                                            <circle cx="50" cy="50" r="45" fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="10" />
+                                            {/* Progress circle */}
+                                            <circle
+                                                cx="50" cy="50" r="45"
+                                                fill="none"
+                                                stroke="#F39C12"
+                                                strokeWidth="10"
+                                                strokeLinecap="round"
+                                                strokeDasharray={`${calculatePercentage.pending * 2.83} 283`}
+                                                style={{ transition: 'stroke-dasharray 0.8s ease-out' }}
+                                            />
+                                        </svg>
+                                    </MuiTooltip>
+                                    {/* Inner ring - Remaining (Blue) */}
+                                    <MuiTooltip
+                                        open={activeTooltip === 'remaining'}
+                                        title={
+                                            <Box sx={{ p: 0.5 }}>
+                                                <Typography sx={{ fontWeight: 600, fontSize: '0.85rem', color: isOverLimit ? '#E74C3C' : '#5DADE2' }}>
+                                                    {isOverLimit ? t('dashboard_exceeded_title', 'เกินสิทธิ์') : t('dashboard_remaining_title', 'คงเหลือ')}
+                                                </Typography>
+                                                <Typography sx={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.9)' }}>
+                                                    {isOverLimit ? Math.abs(currentBalance.remaining) : currentBalance.remaining} {t('days', 'วัน')} ({Math.round(calculatePercentage.remaining)}%)
+                                                </Typography>
+                                            </Box>
+                                        }
+                                        placement="top"
+                                        arrow
+                                        componentsProps={{
+                                            tooltip: {
+                                                sx: {
+                                                    bgcolor: 'rgba(0, 0, 0, 0.85)',
+                                                    color: '#fff',
+                                                    boxShadow: '0 4px 20px rgba(0,0,0,0.3)',
+                                                    borderRadius: 1,
+                                                    '& .MuiTooltip-arrow': {
+                                                        color: 'rgba(0, 0, 0, 0.85)',
+                                                    },
                                                 },
                                             },
-                                        },
-                                    }}
-                                >
-                                    <svg 
-                                        viewBox="0 0 100 100" 
-                                        style={{ position: 'absolute', top: '24%', left: '24%', width: '52%', height: '52%', transform: 'rotate(-90deg)', cursor: 'pointer' }}
-                                        onClick={() => setActiveTooltip(activeTooltip === 'remaining' ? null : 'remaining')}
+                                        }}
                                     >
-                                        {/* Background circle */}
-                                        <circle cx="50" cy="50" r="45" fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="12" />
-                                        {/* Progress circle */}
-                                        <circle 
-                                            cx="50" cy="50" r="45" 
-                                            fill="none" 
-                                            stroke="#5DADE2" 
-                                            strokeWidth="12" 
-                                            strokeLinecap="round"
-                                            strokeDasharray={`${calculatePercentage.remaining * 2.83} 283`}
-                                            style={{ transition: 'stroke-dasharray 0.8s ease-out' }}
-                                        />
-                                    </svg>
-                                </MuiTooltip>
-                            </Box>
+                                        <svg
+                                            viewBox="0 0 100 100"
+                                            style={{ position: 'absolute', top: '24%', left: '24%', width: '52%', height: '52%', transform: 'rotate(-90deg)', cursor: 'pointer' }}
+                                            onClick={() => setActiveTooltip(activeTooltip === 'remaining' ? null : 'remaining')}
+                                        >
+                                            {/* Background circle */}
+                                            <circle cx="50" cy="50" r="45" fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="12" />
+                                            {/* Progress circle */}
+                                            <circle
+                                                cx="50" cy="50" r="45"
+                                                fill="none"
+                                                stroke="#5DADE2"
+                                                strokeWidth="12"
+                                                strokeLinecap="round"
+                                                strokeDasharray={`${calculatePercentage.remaining * 2.83} 283`}
+                                                style={{ transition: 'stroke-dasharray 0.8s ease-out' }}
+                                            />
+                                        </svg>
+                                    </MuiTooltip>
+                                </Box>
 
-                            {/* Text Content Overlay - Days Remaining */}
-                            <Box sx={{
-                                position: 'absolute',
-                                top: 0,
-                                left: 0,
-                                width: '100%',
-                                height: '100%',
-                                display: 'flex',
-                                flexDirection: 'column',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                color: '#333',
-                                zIndex: 1,
-                                pointerEvents: 'none'
-                            }}>
-                                <Typography variant="caption" sx={{ fontSize: '0.7rem', color: 'white', mb: -0.5 }}>
-                                    {isOverLimit ? t('dashboard_over_limit', 'เกินสิทธิ์') : t('dashboard_remaining', 'คงเหลือ')}
-                                </Typography>
-                                <Typography variant="h4" sx={{ fontWeight: 'bold', color: isOverLimit ? '#E74C3C' : 'white', fontSize: '2.2rem' }}>
-                                    {isOverLimit ? Math.abs(currentBalance.remaining) : (isUnlimited ? '∞' : currentBalance.remaining)}
-                                </Typography>
-                                <Typography variant="caption" sx={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.7)' }}>
-                                    {isUnlimited ? t('dashboard_unlimited', 'ไม่จำกัด') : t('dashboard_from_total', 'จาก {{total}} วัน').replace('{{total}}', String(currentBalance.total))}
-                                </Typography>
+                                {/* Text Content Overlay - Days Remaining */}
+                                <Box sx={{
+                                    position: 'absolute',
+                                    top: 0,
+                                    left: 0,
+                                    width: '100%',
+                                    height: '100%',
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    color: '#333',
+                                    zIndex: 1,
+                                    pointerEvents: 'none'
+                                }}>
+                                    <Typography variant="caption" sx={{ fontSize: '0.7rem', color: 'white', mb: -0.5 }}>
+                                        {isOverLimit ? t('dashboard_over_limit', 'เกินสิทธิ์') : t('dashboard_remaining', 'คงเหลือ')}
+                                    </Typography>
+                                    <Typography variant="h4" sx={{ fontWeight: 'bold', color: isOverLimit ? '#E74C3C' : 'white', fontSize: '2.2rem' }}>
+                                        {isOverLimit ? Math.abs(currentBalance.remaining) : (isUnlimited ? '∞' : currentBalance.remaining)}
+                                    </Typography>
+                                    <Typography variant="caption" sx={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.7)' }}>
+                                        {isUnlimited ? t('dashboard_unlimited', 'ไม่จำกัด') : t('dashboard_from_total', 'จาก {{total}} วัน').replace('{{total}}', String(currentBalance.total))}
+                                    </Typography>
+                                </Box>
                             </Box>
-                        </Box>
                         </ClickAwayListener>
                     </Box>
 
                     {/* Right Side: Stats */}
                     <Box sx={{ width: '55%' }}>
-                        {/* แสดงสิทธิ์คงเหลือในปีนี้ */}
-                        <Typography variant="caption" sx={{ display: 'block', mb: 1.25, opacity: 0.8, fontSize: '0.75rem' }}>
-                            {isUnlimited 
-                                ? t('dashboard_unlimited_quota', 'สิทธิ์ลาไม่จำกัด')
-                                : t('dashboard_remaining_quota', 'สิทธิ์คงเหลือ: {{remaining}}/{{total}} วัน')
-                                    .replace('{{year}}', String(year + 543))
-                                    .replace('{{remaining}}', String(Math.max(0, currentBalance.remaining)))
-                                    .replace('{{total}}', String(currentBalance.total))
-                            }
-                        </Typography>
-                        
+                        {/* Quota Display - Polished inline style */}
+                        <Box sx={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 0.5,
+                            mb: 1,
+                            py: 0.625,
+                            px: 1,
+                            background: 'linear-gradient(135deg, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0.08) 100%)',
+                            borderRadius: 1,
+                            border: '1px solid rgba(255,255,255,0.12)',
+                            boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.1)',
+                        }}>
+                            <Typography sx={{ fontSize: '0.7rem', fontWeight: 500, opacity: 0.9, whiteSpace: 'nowrap' }}>
+                                {t('dashboard_quota_short', 'สิทธิ์:')}
+                            </Typography>
+                            <Typography sx={{
+                                fontSize: '0.9rem',
+                                fontWeight: 700,
+                                color: isOverLimit ? '#FF6B6B' : '#fff',
+                                textShadow: '0 1px 2px rgba(0,0,0,0.1)',
+                                minWidth: 16,
+                                textAlign: 'center'
+                            }}>
+                                {isUnlimited ? '∞' : Math.max(0, currentBalance.remaining)}
+                            </Typography>
+                            <Typography sx={{ fontSize: '0.7rem', opacity: 0.7, fontWeight: 500 }}>
+                                {isUnlimited
+                                    ? t('dashboard_unlimited_short', 'ไม่จำกัด')
+                                    : `/ ${currentBalance.total} ${t('days_short', 'วัน')}`
+                                }
+                            </Typography>
+                            {!isUnlimited && (
+                                <Box sx={{
+                                    ml: 'auto',
+                                    width: 48,
+                                    height: 4,
+                                    borderRadius: 2,
+                                    bgcolor: 'rgba(255,255,255,0.15)',
+                                    overflow: 'hidden',
+                                    position: 'relative',
+                                    boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.1)'
+                                }}>
+                                    <Box sx={{
+                                        position: 'absolute',
+                                        left: 0,
+                                        top: 0,
+                                        height: '100%',
+                                        width: `${Math.min(((currentBalance.approved + currentBalance.pending) / currentBalance.total) * 100, 100)}%`,
+                                        background: currentBalance.remaining > 0
+                                            ? 'linear-gradient(90deg, #2ECC71 0%, #27AE60 100%)'
+                                            : 'linear-gradient(90deg, #E74C3C 0%, #C0392B 100%)',
+                                        borderRadius: 2,
+                                        transition: 'width 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
+                                        boxShadow: '0 0 4px rgba(46, 204, 113, 0.3)'
+                                    }} />
+                                </Box>
+                            )}
+                        </Box>
+
                         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                             {/* อนุมัติแล้ว - Green outer ring */}
-                            <Box 
+                            <Box
                                 onClick={() => currentBalance.approved > 0 && handleDrilldownClick('approved')}
-                                sx={{ 
-                                    display: 'flex', 
-                                    alignItems: 'center', 
+                                sx={{
+                                    display: 'flex',
+                                    alignItems: 'center',
                                     gap: 1.25,
                                     cursor: currentBalance.approved > 0 ? 'pointer' : 'default',
                                     py: 0.375,
@@ -626,10 +675,10 @@ const DashboardCard: React.FC<DashboardCardProps> = ({ leaveTypes, leaveRequests
                                     '&:hover': currentBalance.approved > 0 ? { bgcolor: 'rgba(255,255,255,0.1)' } : {}
                                 }}
                             >
-                                <Box sx={{ 
-                                    width: 10, 
-                                    height: 10, 
-                                    borderRadius: '50%', 
+                                <Box sx={{
+                                    width: 10,
+                                    height: 10,
+                                    borderRadius: '50%',
                                     bgcolor: '#2ECC71',
                                     flexShrink: 0
                                 }} />
@@ -639,11 +688,11 @@ const DashboardCard: React.FC<DashboardCardProps> = ({ leaveTypes, leaveRequests
                                 {currentBalance.approved > 0 && <ArrowRight size={15} color="rgba(255,255,255,0.5)" />}
                             </Box>
                             {/* รออนุมัติ - Orange middle ring */}
-                            <Box 
+                            <Box
                                 onClick={() => currentBalance.pending > 0 && handleDrilldownClick('pending')}
-                                sx={{ 
-                                    display: 'flex', 
-                                    alignItems: 'center', 
+                                sx={{
+                                    display: 'flex',
+                                    alignItems: 'center',
                                     gap: 1.25,
                                     cursor: currentBalance.pending > 0 ? 'pointer' : 'default',
                                     py: 0.375,
@@ -654,10 +703,10 @@ const DashboardCard: React.FC<DashboardCardProps> = ({ leaveTypes, leaveRequests
                                     '&:hover': currentBalance.pending > 0 ? { bgcolor: 'rgba(255,255,255,0.1)' } : {}
                                 }}
                             >
-                                <Box sx={{ 
-                                    width: 10, 
-                                    height: 10, 
-                                    borderRadius: '50%', 
+                                <Box sx={{
+                                    width: 10,
+                                    height: 10,
+                                    borderRadius: '50%',
                                     bgcolor: '#F39C12',
                                     flexShrink: 0
                                 }} />
@@ -668,26 +717,26 @@ const DashboardCard: React.FC<DashboardCardProps> = ({ leaveTypes, leaveRequests
                             </Box>
                             {/* เหลือ / เกินสิทธิ์ - Blue inner ring */}
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25, py: 0.375, px: 0.5, mx: -0.5 }}>
-                                <Box sx={{ 
-                                    width: 10, 
-                                    height: 10, 
-                                    borderRadius: '50%', 
+                                <Box sx={{
+                                    width: 10,
+                                    height: 10,
+                                    borderRadius: '50%',
                                     bgcolor: isOverLimit ? '#E74C3C' : '#5DADE2',
                                     flexShrink: 0
                                 }} />
                                 <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
-                                    {isOverLimit 
+                                    {isOverLimit
                                         ? t('dashboard_exceeded', 'เกิน {{days}} วัน').replace('{{days}}', String(Math.abs(currentBalance.remaining)))
                                         : t('dashboard_left', 'เหลือ {{days}} วัน').replace('{{days}}', isUnlimited ? '-' : String(currentBalance.remaining))
                                     }
                                 </Typography>
                             </Box>
                             {/* ไม่อนุมัติ */}
-                            <Box 
+                            <Box
                                 onClick={() => currentBalance.rejected > 0 && handleDrilldownClick('rejected')}
-                                sx={{ 
-                                    display: 'flex', 
-                                    alignItems: 'center', 
+                                sx={{
+                                    display: 'flex',
+                                    alignItems: 'center',
                                     gap: 1.25,
                                     cursor: currentBalance.rejected > 0 ? 'pointer' : 'default',
                                     py: 0.375,
@@ -698,10 +747,10 @@ const DashboardCard: React.FC<DashboardCardProps> = ({ leaveTypes, leaveRequests
                                     '&:hover': currentBalance.rejected > 0 ? { bgcolor: 'rgba(255,255,255,0.1)' } : {}
                                 }}
                             >
-                                <Box sx={{ 
-                                    width: 10, 
-                                    height: 10, 
-                                    borderRadius: '50%', 
+                                <Box sx={{
+                                    width: 10,
+                                    height: 10,
+                                    borderRadius: '50%',
                                     bgcolor: '#E74C3C',
                                     flexShrink: 0
                                 }} />
@@ -711,11 +760,11 @@ const DashboardCard: React.FC<DashboardCardProps> = ({ leaveTypes, leaveRequests
                                 {currentBalance.rejected > 0 && <ArrowRight size={15} color="rgba(255,255,255,0.5)" />}
                             </Box>
                             {/* ยกเลิก */}
-                            <Box 
+                            <Box
                                 onClick={() => currentBalance.cancelled > 0 && handleDrilldownClick('cancelled')}
-                                sx={{ 
-                                    display: 'flex', 
-                                    alignItems: 'center', 
+                                sx={{
+                                    display: 'flex',
+                                    alignItems: 'center',
                                     gap: 1.25,
                                     cursor: currentBalance.cancelled > 0 ? 'pointer' : 'default',
                                     py: 0.375,
@@ -726,10 +775,10 @@ const DashboardCard: React.FC<DashboardCardProps> = ({ leaveTypes, leaveRequests
                                     '&:hover': currentBalance.cancelled > 0 ? { bgcolor: 'rgba(255,255,255,0.1)' } : {}
                                 }}
                             >
-                                <Box sx={{ 
-                                    width: 10, 
-                                    height: 10, 
-                                    borderRadius: '50%', 
+                                <Box sx={{
+                                    width: 10,
+                                    height: 10,
+                                    borderRadius: '50%',
                                     bgcolor: '#9B59B6',
                                     flexShrink: 0
                                 }} />
@@ -750,10 +799,10 @@ const DashboardCard: React.FC<DashboardCardProps> = ({ leaveTypes, leaveRequests
                         </Typography>
                     </Box>
 
-                    <Box sx={{ 
-                        display: 'flex', 
-                        gap: 2, 
-                        overflowX: 'auto', 
+                    <Box sx={{
+                        display: 'flex',
+                        gap: 2,
+                        overflowX: 'auto',
                         pb: 0.5,
                         '::-webkit-scrollbar': { display: 'none' },
                         msOverflowStyle: 'none',
@@ -765,13 +814,13 @@ const DashboardCard: React.FC<DashboardCardProps> = ({ leaveTypes, leaveRequests
                             const isSelected = selectedCode === type.code;
 
                             return (
-                                <Box 
-                                    key={type.id} 
+                                <Box
+                                    key={type.id}
                                     onClick={() => setSelectedCode(type.code)}
-                                    sx={{ 
-                                        display: 'flex', 
-                                        flexDirection: 'column', 
-                                        alignItems: 'center', 
+                                    sx={{
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        alignItems: 'center',
                                         gap: 0.75,
                                         cursor: 'pointer',
                                         minWidth: 56,
@@ -790,16 +839,16 @@ const DashboardCard: React.FC<DashboardCardProps> = ({ leaveTypes, leaveRequests
                                         justifyContent: 'center',
                                         backdropFilter: 'blur(5px)',
                                     }}>
-                                        <Icon 
-                                            size={20} 
-                                            color={isSelected ? '#6C63FF' : 'white'} 
-                                            variant="Bold" 
+                                        <Icon
+                                            size={20}
+                                            color={isSelected ? '#6C63FF' : 'white'}
+                                            variant="Bold"
                                         />
                                     </Box>
-                                    <Typography 
-                                        variant="caption" 
-                                        sx={{ 
-                                            fontSize: '0.7rem', 
+                                    <Typography
+                                        variant="caption"
+                                        sx={{
+                                            fontSize: '0.7rem',
                                             textAlign: 'center',
                                             whiteSpace: 'nowrap',
                                             maxWidth: 56,
@@ -817,8 +866,8 @@ const DashboardCard: React.FC<DashboardCardProps> = ({ leaveTypes, leaveRequests
             </Paper>
 
             {/* Drilldown Drawer */}
-            <Drawer.Root 
-                open={drilldownOpen && !isImageViewerOpen} 
+            <Drawer.Root
+                open={drilldownOpen && !isImageViewerOpen}
                 onOpenChange={(isOpen) => {
                     if (!isOpen && !isImageViewerOpen) {
                         setDrilldownOpen(false);
@@ -828,7 +877,7 @@ const DashboardCard: React.FC<DashboardCardProps> = ({ leaveTypes, leaveRequests
                 preventScrollRestoration={true}
             >
                 <Drawer.Portal>
-                    <Drawer.Overlay 
+                    <Drawer.Overlay
                         className="vaul-overlay"
                         style={{
                             position: 'fixed',
@@ -863,164 +912,164 @@ const DashboardCard: React.FC<DashboardCardProps> = ({ leaveTypes, leaveRequests
                         <Drawer.Description style={{ position: 'absolute', width: 1, height: 1, padding: 0, margin: -1, overflow: 'hidden', clip: 'rect(0, 0, 0, 0)', whiteSpace: 'nowrap', border: 0 }}>
                             {t(`leave_${selectedCode}`, currentBalance.name)}
                         </Drawer.Description>
-                <Box sx={{ width: '100%', bgcolor: 'white', display: 'flex', flexDirection: 'column', maxHeight: '80vh' }}>
-                    {/* Drag Handle */}
-                    <Drawer.Handle 
-                        style={{
-                            width: 40,
-                            height: 5,
-                            borderRadius: 2.5,
-                            backgroundColor: '#E2E8F0',
-                            margin: '12px auto 8px',
-                        }}
-                    />
+                        <Box sx={{ width: '100%', bgcolor: 'white', display: 'flex', flexDirection: 'column', maxHeight: '80vh' }}>
+                            {/* Drag Handle */}
+                            <Drawer.Handle
+                                style={{
+                                    width: 40,
+                                    height: 5,
+                                    borderRadius: 2.5,
+                                    backgroundColor: '#E2E8F0',
+                                    margin: '12px auto 8px',
+                                }}
+                            />
 
-                    {/* Header */}
-                    <Box
-                        sx={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'space-between',
-                            px: 2.5,
-                            py: 1.5,
-                            borderBottom: '1px solid #F1F5F9',
-                        }}
-                    >
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                            {drilldownStatus && (() => {
-                                const statusConfig = getStatusConfig(drilldownStatus);
-                                const StatusIcon = statusConfig.icon;
-                                const typeConfig = leaveTypeConfig[selectedCode] || leaveTypeConfig.default;
-                                const TypeIcon = typeConfig.icon;
-                                return (
-                                    <>
-                                        <Box sx={{
-                                            width: 48,
-                                            height: 48,
-                                            borderRadius: 1,
-                                            bgcolor: statusConfig.bgColor,
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'center'
-                                        }}>
-                                            <StatusIcon size={24} color={statusConfig.color} variant="Bold" />
-                                        </Box>
-                                        <Box>
-                                            <Typography variant="h6" sx={{ fontWeight: 700, color: '#1E293B', fontSize: '1rem' }}>
-                                                {statusConfig.label}
-                                            </Typography>
-                                            <Typography sx={{ fontSize: '0.8rem', color: '#64748B' }}>
-                                                {t(`leave_${selectedCode}`, currentBalance.name)} • {drilldownRequests.length} {t('items', 'รายการ')}
-                                            </Typography>
-                                        </Box>
-                                    </>
-                                );
-                            })()}
-                        </Box>
-                        <IconButton onClick={() => setDrilldownOpen(false)} size="small">
-                            <CloseCircle size={32} color="#64748B" />
-                        </IconButton>
-                    </Box>
-
-                    {/* Content */}
-                    <Box 
-                        sx={{ 
-                            px: 2.5, 
-                            py: 2, 
-                            overflowY: 'auto', 
-                            overflowX: 'hidden', 
-                            flex: 1,
-                            overscrollBehavior: 'contain'
-                        }}
-                    >
-
-                        {/* List of leaves */}
-                        {drilldownRequests.length > 0 ? (
-                            drilldownRequests.map((leave, index) => {
-                                const statusConfig = getStatusConfig(leave.status);
-                                const typeConfig = leaveTypeConfig[selectedCode] || leaveTypeConfig.default;
-                                return (
-                                    <Box 
-                                        key={leave.id}
-                                        onClick={() => handleLeaveItemClick(leave)}
-                                        sx={{ 
-                                            p: 2, 
-                                            mb: 1.5, 
-                                            bgcolor: '#F8FAFC', 
-                                            borderRadius: 1,
-                                            border: '1px solid #E2E8F0',
-                                            cursor: 'pointer',
-                                            transition: 'all 0.2s ease',
-                                            '&:hover': {
-                                                bgcolor: '#F1F5F9',
-                                                borderColor: '#CBD5E1'
-                                            },
-                                            '&:active': {
-                                                transform: 'scale(0.98)',
-                                                bgcolor: '#E2E8F0'
-                                            }
-                                        }}
-                                    >
-                                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1.5 }}>
-                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                            {/* Header */}
+                            <Box
+                                sx={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'space-between',
+                                    px: 2.5,
+                                    py: 1.5,
+                                    borderBottom: '1px solid #F1F5F9',
+                                }}
+                            >
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                                    {drilldownStatus && (() => {
+                                        const statusConfig = getStatusConfig(drilldownStatus);
+                                        const StatusIcon = statusConfig.icon;
+                                        const typeConfig = leaveTypeConfig[selectedCode] || leaveTypeConfig.default;
+                                        const TypeIcon = typeConfig.icon;
+                                        return (
+                                            <>
                                                 <Box sx={{
-                                                    width: 32,
-                                                    height: 32,
+                                                    width: 48,
+                                                    height: 48,
                                                     borderRadius: 1,
-                                                    bgcolor: `${typeConfig.color}15`,
+                                                    bgcolor: statusConfig.bgColor,
                                                     display: 'flex',
                                                     alignItems: 'center',
                                                     justifyContent: 'center'
                                                 }}>
-                                                    <Calendar size={16} color={typeConfig.color} />
+                                                    <StatusIcon size={24} color={statusConfig.color} variant="Bold" />
                                                 </Box>
                                                 <Box>
-                                                    <Typography sx={{ fontWeight: 600, color: '#1E293B', fontSize: '0.9rem' }}>
-                                                        {formatDate(leave.startDate, leave.endDate)}
+                                                    <Typography variant="h6" sx={{ fontWeight: 700, color: '#1E293B', fontSize: '1rem' }}>
+                                                        {statusConfig.label}
                                                     </Typography>
-                                                    {leave.leaveCode && (
-                                                        <Typography sx={{ color: '#94A3B8', fontSize: '0.75rem' }}>
-                                                            {leave.leaveCode}
-                                                        </Typography>
-                                                    )}
+                                                    <Typography sx={{ fontSize: '0.8rem', color: '#64748B' }}>
+                                                        {t(`leave_${selectedCode}`, currentBalance.name)} • {drilldownRequests.length} {t('items', 'รายการ')}
+                                                    </Typography>
                                                 </Box>
-                                            </Box>
-                                            <Chip 
-                                                label={`${leave.totalDays} ${t('days', 'วัน')}`}
-                                                size="small"
-                                                sx={{ 
-                                                    bgcolor: statusConfig.bgColor,
-                                                    color: statusConfig.color,
-                                                    fontWeight: 600,
-                                                    fontSize: '0.75rem',
-                                                    height: 24
-                                                }}
-                                            />
-                                        </Box>
-                                        {leave.reason && (
-                                            <Box sx={{ 
-                                                pl: 6, 
-                                                borderLeft: `2px solid ${typeConfig.color}30`,
-                                                ml: 2
-                                            }}>
-                                                <Typography sx={{ color: '#64748B', fontSize: '0.85rem', lineHeight: 1.5 }}>
-                                                    {leave.reason.length > 100 ? `${leave.reason.substring(0, 100)}...` : leave.reason}
-                                                </Typography>
-                                            </Box>
-                                        )}
-                                    </Box>
-                                );
-                            })
-                        ) : (
-                            <Box sx={{ textAlign: 'center', py: 6, color: '#64748B' }}>
-                                <Archive size={48} color="#CBD5E1" />
-                                <Typography sx={{ mt: 2, fontWeight: 500, color: '#94A3B8' }}>
-                                    {t('no_leave_records', 'ไม่มีรายการ')}
-                                </Typography>
+                                            </>
+                                        );
+                                    })()}
+                                </Box>
+                                <IconButton onClick={() => setDrilldownOpen(false)} size="small">
+                                    <CloseCircle size={32} color="#64748B" />
+                                </IconButton>
                             </Box>
-                        )}
-                    </Box>
-                </Box>
+
+                            {/* Content */}
+                            <Box
+                                sx={{
+                                    px: 2.5,
+                                    py: 2,
+                                    overflowY: 'auto',
+                                    overflowX: 'hidden',
+                                    flex: 1,
+                                    overscrollBehavior: 'contain'
+                                }}
+                            >
+
+                                {/* List of leaves */}
+                                {drilldownRequests.length > 0 ? (
+                                    drilldownRequests.map((leave, index) => {
+                                        const statusConfig = getStatusConfig(leave.status);
+                                        const typeConfig = leaveTypeConfig[selectedCode] || leaveTypeConfig.default;
+                                        return (
+                                            <Box
+                                                key={leave.id}
+                                                onClick={() => handleLeaveItemClick(leave)}
+                                                sx={{
+                                                    p: 2,
+                                                    mb: 1.5,
+                                                    bgcolor: '#F8FAFC',
+                                                    borderRadius: 1,
+                                                    border: '1px solid #E2E8F0',
+                                                    cursor: 'pointer',
+                                                    transition: 'all 0.2s ease',
+                                                    '&:hover': {
+                                                        bgcolor: '#F1F5F9',
+                                                        borderColor: '#CBD5E1'
+                                                    },
+                                                    '&:active': {
+                                                        transform: 'scale(0.98)',
+                                                        bgcolor: '#E2E8F0'
+                                                    }
+                                                }}
+                                            >
+                                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1.5 }}>
+                                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                                                        <Box sx={{
+                                                            width: 32,
+                                                            height: 32,
+                                                            borderRadius: 1,
+                                                            bgcolor: `${typeConfig.color}15`,
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'center'
+                                                        }}>
+                                                            <Calendar size={16} color={typeConfig.color} />
+                                                        </Box>
+                                                        <Box>
+                                                            <Typography sx={{ fontWeight: 600, color: '#1E293B', fontSize: '0.9rem' }}>
+                                                                {formatDate(leave.startDate, leave.endDate)}
+                                                            </Typography>
+                                                            {leave.leaveCode && (
+                                                                <Typography sx={{ color: '#94A3B8', fontSize: '0.75rem' }}>
+                                                                    {leave.leaveCode}
+                                                                </Typography>
+                                                            )}
+                                                        </Box>
+                                                    </Box>
+                                                    <Chip
+                                                        label={`${leave.totalDays} ${t('days', 'วัน')}`}
+                                                        size="small"
+                                                        sx={{
+                                                            bgcolor: statusConfig.bgColor,
+                                                            color: statusConfig.color,
+                                                            fontWeight: 600,
+                                                            fontSize: '0.75rem',
+                                                            height: 24
+                                                        }}
+                                                    />
+                                                </Box>
+                                                {leave.reason && (
+                                                    <Box sx={{
+                                                        pl: 6,
+                                                        borderLeft: `2px solid ${typeConfig.color}30`,
+                                                        ml: 2
+                                                    }}>
+                                                        <Typography sx={{ color: '#64748B', fontSize: '0.85rem', lineHeight: 1.5 }}>
+                                                            {leave.reason.length > 100 ? `${leave.reason.substring(0, 100)}...` : leave.reason}
+                                                        </Typography>
+                                                    </Box>
+                                                )}
+                                            </Box>
+                                        );
+                                    })
+                                ) : (
+                                    <Box sx={{ textAlign: 'center', py: 6, color: '#64748B' }}>
+                                        <Archive size={48} color="#CBD5E1" />
+                                        <Typography sx={{ mt: 2, fontWeight: 500, color: '#94A3B8' }}>
+                                            {t('no_leave_records', 'ไม่มีรายการ')}
+                                        </Typography>
+                                    </Box>
+                                )}
+                            </Box>
+                        </Box>
                     </Drawer.Content>
                 </Drawer.Portal>
             </Drawer.Root>

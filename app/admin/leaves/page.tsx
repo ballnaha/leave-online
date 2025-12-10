@@ -36,6 +36,14 @@ import {
   Tabs,
   Tab,
 } from '@mui/material';
+
+// Swiper
+import { Swiper, SwiperSlide } from 'swiper/react';
+import { Navigation, Pagination, Zoom } from 'swiper/modules';
+import 'swiper/css';
+import 'swiper/css/navigation';
+import 'swiper/css/pagination';
+import 'swiper/css/zoom';
 import {
   SearchNormal1,
   Refresh2,
@@ -352,7 +360,7 @@ export default function AdminLeavesPage() {
 
   // Image modal
   const [imageModalOpen, setImageModalOpen] = useState(false);
-  const [selectedImage, setSelectedImage] = useState<{ url: string; name: string } | null>(null);
+  const [initialSlide, setInitialSlide] = useState(0);
 
   // Helper to check if file is an image
   const isImageFile = (mimeType: string) => {
@@ -362,7 +370,9 @@ export default function AdminLeavesPage() {
   // Handle file click
   const handleFileClick = (file: Attachment) => {
     if (isImageFile(file.mimeType)) {
-      setSelectedImage({ url: file.filePath, name: file.fileName });
+      const imageAttachments = selectedLeave?.attachments.filter(a => isImageFile(a.mimeType)) || [];
+      const index = imageAttachments.findIndex(a => a.id === file.id);
+      setInitialSlide(index >= 0 ? index : 0);
       setImageModalOpen(true);
     } else {
       window.open(file.filePath, '_blank');
@@ -1126,7 +1136,7 @@ export default function AdminLeavesPage() {
               <DocumentText size={20} variant="Outline" color="#6C63FF" />
             </Avatar>
             <Box>
-              <Typography variant="h6" fontWeight={600}>
+              <Typography component="div" variant="h6" fontWeight={600}>
                 ใบลา {selectedLeave?.leaveCode || `#${selectedLeave?.id}`}
               </Typography>
               <Typography variant="caption" color="text.secondary">
@@ -1135,7 +1145,7 @@ export default function AdminLeavesPage() {
             </Box>
           </Box>
           <IconButton size="small" onClick={() => setDetailDialogOpen(false)}>
-            <CloseSquare size={18} variant="Outline" color="#9E9E9E" />
+            <CloseSquare size={32} variant="Outline" color="#9E9E9E" />
           </IconButton>
         </DialogTitle>
 
@@ -1269,116 +1279,191 @@ export default function AdminLeavesPage() {
                   </Box>
                 )}
 
-                {/* Tab 1: Approval Steps */}
+                {/* Tab 1: Approval Steps - Timeline Design */}
                 {detailTab === 1 && (
-                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  <Box sx={{ position: 'relative', pl: 0 }}>
                     {selectedLeave.approvals.map((approval, idx) => {
                       const isPending = approval.status === 'pending';
                       const isApproved = approval.status === 'approved';
                       const isRejected = approval.status === 'rejected';
                       const isCancelled = approval.status === 'cancelled';
                       const isSkipped = approval.status === 'skipped';
+                      const isLast = idx === selectedLeave.approvals.length - 1;
 
-                      // กำหนด label และ color ตาม status
+                      // Status icon and colors
+                      const getStatusIcon = () => {
+                        if (isApproved) return <TickCircle size={20} variant="Bold" color="white" />;
+                        if (isPending) return <ClockIcon size={20} variant="Bold" color="white" />;
+                        if (isRejected) return <CloseCircle size={20} variant="Bold" color="white" />;
+                        if (isCancelled) return <InfoCircle size={20} variant="Bold" color="white" />;
+                        return <InfoCircle size={20} variant="Bold" color="white" />;
+                      };
+
                       const getStatusLabel = () => {
                         if (isPending) return 'รออนุมัติ';
-                        if (isApproved) return 'อนุมัติ';
-                        if (isCancelled) return 'ผู้ขอยกเลิก';
+                        if (isApproved) return 'อนุมัติแล้ว';
+                        if (isCancelled) return 'ยกเลิก';
                         if (isSkipped) return 'ข้าม';
                         return 'ไม่อนุมัติ';
                       };
 
-                      const getStatusColor = (): 'warning' | 'success' | 'default' | 'error' => {
-                        if (isPending) return 'warning';
-                        if (isApproved) return 'success';
-                        if (isCancelled) return 'default';
-                        if (isSkipped) return 'default';
-                        return 'error';
+                      const getIconBgColor = () => {
+                        if (isApproved) return theme.palette.success.main;
+                        if (isPending) return theme.palette.warning.main;
+                        if (isRejected) return theme.palette.error.main;
+                        if (isCancelled) return theme.palette.grey[400];
+                        return theme.palette.grey[400];
                       };
 
-                      const getBorderColor = () => {
-                        if (isPending) return 'warning.main';
-                        if (isApproved) return 'success.main';
-                        if (isRejected) return 'error.main';
-                        if (isCancelled) return 'grey.400';
-                        if (isSkipped) return 'grey.400';
-                        return 'divider';
+                      const getCardBgColor = () => {
+                        if (isApproved) return alpha(theme.palette.success.main, 0.06);
+                        if (isPending) return alpha(theme.palette.warning.main, 0.06);
+                        if (isRejected) return alpha(theme.palette.error.main, 0.06);
+                        return alpha(theme.palette.grey[500], 0.04);
                       };
 
-                      const getBgColor = () => {
-                        if (isPending) return alpha(theme.palette.warning.main, 0.04);
-                        if (isApproved) return alpha(theme.palette.success.main, 0.04);
-                        if (isRejected) return alpha(theme.palette.error.main, 0.04);
-                        if (isCancelled) return alpha(theme.palette.grey[500], 0.04);
-                        if (isSkipped) return alpha(theme.palette.grey[500], 0.04);
-                        return 'transparent';
-                      };
-
-                      const getAvatarBgColor = () => {
-                        if (isPending) return 'warning.main';
-                        if (isApproved) return 'success.main';
-                        if (isRejected) return 'error.main';
-                        return 'grey.400';
+                      const getTimeColor = () => {
+                        if (isApproved) return theme.palette.success.main;
+                        if (isPending) return theme.palette.warning.main;
+                        if (isRejected) return theme.palette.error.main;
+                        return theme.palette.text.secondary;
                       };
 
                       return (
-                        <Paper
+                        <Box
                           key={approval.id}
-                          variant="outlined"
                           sx={{
-                            p: 2,
-                            borderRadius: 1,
-                            borderColor: getBorderColor(),
-                            bgcolor: getBgColor(),
+                            display: 'flex',
+                            position: 'relative',
+                            mb: isLast ? 0 : 0,
                           }}
                         >
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                            <Avatar
+                          {/* Timeline Container (Left Side) */}
+                          <Box
+                            sx={{
+                              display: 'flex',
+                              flexDirection: 'column',
+                              alignItems: 'center',
+                              mr: 2.5,
+                              position: 'relative',
+                            }}
+                          >
+                            {/* Status Circle */}
+                            <Box
                               sx={{
-                                width: 40,
-                                height: 40,
-                                bgcolor: getAvatarBgColor(),
-                                color: 'white',
-                                fontWeight: 'bold',
+                                width: 44,
+                                height: 44,
+                                borderRadius: '50%',
+                                bgcolor: getIconBgColor(),
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                boxShadow: `0 4px 14px ${alpha(getIconBgColor(), 0.4)}`,
+                                zIndex: 1,
+                                flexShrink: 0,
                               }}
                             >
-                              {approval.level}
-                            </Avatar>
-                            <Box sx={{ flex: 1 }}>
-                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                <Typography variant="body2" fontWeight={600}>
+                              {getStatusIcon()}
+                            </Box>
+                            {/* Connecting Line */}
+                            {!isLast && (
+                              <Box
+                                sx={{
+                                  width: 2,
+                                  flexGrow: 1,
+                                  bgcolor: alpha(theme.palette.divider, 0.5),
+                                  minHeight: 24,
+                                }}
+                              />
+                            )}
+                          </Box>
+
+                          {/* Content Card (Right Side) */}
+                          <Box
+                            sx={{
+                              flex: 1,
+                              bgcolor: getCardBgColor(),
+                              borderRadius: 1,
+                              p: 2,
+                              mb: isLast ? 0 : 2,
+                              transition: 'all 0.2s ease',
+                            }}
+                          >
+                            {/* Header: Name and Role */}
+                            <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', mb: 0.5 }}>
+                              <Box>
+                                <Typography variant="subtitle2" fontWeight={700} sx={{ color: 'text.primary', lineHeight: 1.3 }}>
                                   {approval.approver.firstName} {approval.approver.lastName}
                                 </Typography>
-                                <Chip
-                                  label={roleLabels[approval.approver.role] || approval.approver.role}
-                                  size="small"
-                                  sx={{ height: 20, fontSize: '0.65rem' }}
-                                />
-                              </Box>
-                              <Typography variant="caption" color="text.secondary">
-                                {approval.approver.employeeId}
-                              </Typography>
-                            </Box>
-                            <Box sx={{ textAlign: 'right' }}>
-                              <Chip
-                                label={getStatusLabel()}
-                                size="small"
-                                color={getStatusColor()}
-                                sx={{ fontWeight: 500 }}
-                              />
-                              {approval.approvedAt && (
-                                <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 0.5 }}>
-                                  {formatDateTime(approval.approvedAt)}
+                                <Typography variant="caption" color="text.secondary">
+                                  {roleLabels[approval.approver.role] || approval.approver.role}
                                 </Typography>
-                              )}
+                              </Box>
+                              <Chip
+                                label={`ขั้นที่ ${approval.level}`}
+                                size="small"
+                                sx={{
+                                  height: 22,
+                                  fontSize: '0.7rem',
+                                  fontWeight: 600,
+                                  bgcolor: alpha(getIconBgColor(), 0.15),
+                                  color: getIconBgColor(),
+                                  border: 'none',
+                                }}
+                              />
                             </Box>
-                          </Box>
-                          {approval.comment && (
-                            <Typography variant="body2" sx={{ mt: 1.5, pl: 7 }} color="text.secondary">
-                              หมายเหตุ: {approval.comment}
+
+                            {/* Time and Status */}
+                            <Typography
+                              variant="caption"
+                              sx={{
+                                color: getTimeColor(),
+                                fontWeight: 500,
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 0.5,
+                              }}
+                            >
+                              {approval.approvedAt ? formatDateTime(approval.approvedAt) : getStatusLabel()}
+                              {isPending && (
+                                <Box
+                                  component="span"
+                                  sx={{
+                                    display: 'inline-block',
+                                    width: 6,
+                                    height: 6,
+                                    borderRadius: '50%',
+                                    bgcolor: theme.palette.warning.main,
+                                    ml: 0.5,
+                                    animation: 'pulse 1.5s infinite',
+                                    '@keyframes pulse': {
+                                      '0%': { opacity: 1 },
+                                      '50%': { opacity: 0.4 },
+                                      '100%': { opacity: 1 },
+                                    },
+                                  }}
+                                />
+                              )}
                             </Typography>
-                          )}
-                        </Paper>
+
+                            {/* Comment */}
+                            {approval.comment && (
+                              <Typography
+                                variant="body2"
+                                sx={{
+                                  mt: 1.5,
+                                  p: 1.5,
+                                  bgcolor: alpha(theme.palette.common.black, 0.03),
+                                  borderRadius: 2,
+                                  color: 'text.secondary',
+                                  fontSize: '0.8rem',
+                                }}
+                              >
+                                💬 {approval.comment}
+                              </Typography>
+                            )}
+                          </Box>
+                        </Box>
                       );
                     })}
                   </Box>
@@ -1443,81 +1528,59 @@ export default function AdminLeavesPage() {
         </DialogActions>
       </Dialog>
 
-      {/* Image Modal */}
+      {/* Image Modal (Swiper) */}
       <Dialog
+        fullScreen
         open={imageModalOpen}
         onClose={() => setImageModalOpen(false)}
-        maxWidth="lg"
-        fullWidth
         PaperProps={{
           sx: {
-            borderRadius: 1,
-            bgcolor: 'background.paper',
-            maxHeight: '90vh',
+            bgcolor: 'black',
+            backgroundImage: 'none',
           }
         }}
       >
-        <DialogTitle sx={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          borderBottom: '1px solid',
-          borderColor: 'divider',
-          py: 1.5,
-        }}>
-          <Typography variant="subtitle1" fontWeight={600} noWrap sx={{ flex: 1, mr: 2 }}>
-            {selectedImage?.name}
-          </Typography>
-          <Box sx={{ display: 'flex', gap: 1 }}>
-            <Tooltip title="ดาวน์โหลด">
-              <IconButton
-                size="small"
-                onClick={() => {
-                  if (selectedImage) {
-                    const link = document.createElement('a');
-                    link.href = selectedImage.url;
-                    link.download = selectedImage.name;
-                    link.click();
-                  }
-                }}
-              >
-                <DocumentDownload size={18} variant="Outline" color="#4CAF50" />
-              </IconButton>
-            </Tooltip>
-            <Tooltip title="เปิดในแท็บใหม่">
-              <IconButton
-                size="small"
-                onClick={() => selectedImage && window.open(selectedImage.url, '_blank')}
-              >
-                <ArrowRight2 size={18} variant="Outline" color="#6C63FF" />
-              </IconButton>
-            </Tooltip>
-            <IconButton size="small" onClick={() => setImageModalOpen(false)}>
-              <CloseSquare size={18} variant="Outline" color="#9E9E9E" />
-            </IconButton>
-          </Box>
-        </DialogTitle>
-        <DialogContent sx={{
-          p: 0,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          bgcolor: alpha(theme.palette.common.black, 0.02),
-          minHeight: 400,
-        }}>
-          {selectedImage && (
-            <Box
-              component="img"
-              src={selectedImage.url}
-              alt={selectedImage.name}
-              sx={{
-                maxWidth: '100%',
-                maxHeight: 'calc(90vh - 120px)',
-                objectFit: 'contain',
-              }}
-            />
-          )}
-        </DialogContent>
+        <Box sx={{ position: 'relative', width: '100%', height: '100%' }}>
+          {/* Close Button */}
+          <IconButton
+            onClick={() => setImageModalOpen(false)}
+            sx={{
+              position: 'absolute',
+              top: 16,
+              right: 16,
+              zIndex: 1500,
+              color: 'white',
+              bgcolor: 'rgba(0, 0, 0, 0.4)',
+              backdropFilter: 'blur(4px)',
+              '&:hover': {
+                bgcolor: 'rgba(0, 0, 0, 0.6)'
+              },
+              width: 48,
+              height: 48,
+            }}
+          >
+            <CloseSquare size={32} variant="Outline" color="white" />
+          </IconButton>
+
+          <Swiper
+            modules={[Navigation, Pagination, Zoom]}
+            navigation
+            pagination={{ clickable: true }}
+            zoom
+            initialSlide={initialSlide}
+            spaceBetween={0}
+            slidesPerView={1}
+            style={{ width: '100%', height: '100%', '--swiper-navigation-color': '#fff', '--swiper-pagination-color': '#fff' } as any}
+          >
+            {(selectedLeave?.attachments || []).filter(file => isImageFile(file.mimeType)).map((image) => (
+              <SwiperSlide key={image.id}>
+                <div className="swiper-zoom-container">
+                  <img src={image.filePath} alt={image.fileName} style={{ maxHeight: '100vh', maxWidth: '100vw' }} />
+                </div>
+              </SwiperSlide>
+            ))}
+          </Swiper>
+        </Box>
       </Dialog>
     </Box >
   );
