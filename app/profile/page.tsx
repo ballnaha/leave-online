@@ -88,7 +88,7 @@ export default function ProfilePage() {
     const { user: profile, loading: userLoading } = useUser();
     const [mounted, setMounted] = useState(false);
     const [isLoggingOut, setIsLoggingOut] = useState(false);
-    
+
     const languageOptions: Array<{ code: 'th' | 'en' | 'my'; label: string }> = [
         { code: 'th', label: localeLabel.th },
         { code: 'en', label: localeLabel.en },
@@ -129,13 +129,13 @@ export default function ProfilePage() {
                 );
             }
 
-            // 6. Unregister all Service Workers
-            if ('serviceWorker' in navigator) {
-                const registrations = await navigator.serviceWorker.getRegistrations();
-                await Promise.all(
-                    registrations.map(registration => registration.unregister())
-                );
-            }
+            // 6. Unregister all Service Workers - Commented out to prevent OneSignal error
+            // if ('serviceWorker' in navigator) {
+            //     const registrations = await navigator.serviceWorker.getRegistrations();
+            //     await Promise.all(
+            //         registrations.map(registration => registration.unregister())
+            //     );
+            // }
 
             // 7. Clear IndexedDB databases
             if ('indexedDB' in window) {
@@ -168,7 +168,7 @@ export default function ProfilePage() {
         // Set theme-color for status bar to match header gradient
         const metaThemeColor = document.querySelector('meta[name="theme-color"]');
         const originalColor = metaThemeColor?.getAttribute('content') || '#EAF2F8';
-        
+
         if (metaThemeColor) {
             metaThemeColor.setAttribute('content', '#667eea');
         } else {
@@ -186,7 +186,7 @@ export default function ProfilePage() {
             }
         };
     }, []);
-    
+
     // Get initials for avatar
     const getInitials = () => {
         if (profile) {
@@ -234,36 +234,36 @@ export default function ProfilePage() {
     // Calculate work duration from start date until now
     const calculateWorkDuration = (startDateString: string | null) => {
         if (!startDateString) return null;
-        
+
         const startDate = new Date(startDateString);
         const now = new Date();
-        
+
         let years = now.getFullYear() - startDate.getFullYear();
         let months = now.getMonth() - startDate.getMonth();
         let days = now.getDate() - startDate.getDate();
-        
+
         // Adjust for negative days
         if (days < 0) {
             months--;
             const lastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
             days += lastMonth.getDate();
         }
-        
+
         // Adjust for negative months
         if (months < 0) {
             years--;
             months += 12;
         }
-        
+
         // Build duration string
         const parts = [];
         if (years > 0) parts.push(`${years} ${t('year', 'ปี')}`);
         if (months > 0) parts.push(`${months} ${t('month', 'เดือน')}`);
         if (days > 0) parts.push(`${days} ${t('day', 'วัน')}`);
-        
+
         return parts.length > 0 ? parts.join(' ') : `0 ${t('day', 'วัน')}`;
     };
-    
+
     // Prevent hydration mismatch by always showing loading state until mounted
     // But if we already have profile data from cache, show it immediately
     const showLoading = !mounted && !profile;
@@ -306,29 +306,29 @@ export default function ProfilePage() {
             title: t('account', 'บัญชี'),
             items: [
                 { icon: Profile2User, label: t('edit_profile', 'แก้ไขโปรไฟล์'), color: '#667eea', link: '/profile/edit' },
-                
+
             ],
         },
         {
             title: t('notifications', 'การแจ้งเตือน'),
             items: [
-                { 
+                {
                     id: 'notifications',
-                    icon: Notification, 
-                    label: t('notifications', 'การแจ้งเตือน'), 
-                    color: '#FFD93D', 
-                    toggle: true, 
-                    value: pushSubscribed, 
+                    icon: Notification,
+                    label: t('notifications', 'การแจ้งเตือน'),
+                    color: '#FFD93D',
+                    toggle: true,
+                    value: pushSubscribed,
                     onChange: handlePushToggle,
                     subtitle: getPushSubtitle(),
                 } as SettingsItemWithToggle,
-                
+
             ],
         },
         {
             title: t('general_settings', 'การตั้งค่าทั่วไป'),
             items: [
-                
+
                 { id: 'language', icon: Global, label: t('common_language', 'ภาษา'), color: '#1976D2', subtitle: localeLabel[locale], link: '#' },
             ],
         },
@@ -336,12 +336,12 @@ export default function ProfilePage() {
             title: t('help_info', 'ช่วยเหลือและข้อมูล'),
             items: [
                 { icon: MessageQuestion, label: t('help_center', 'ศูนย์ช่วยเหลือ'), color: '#00ACC1', link: '#' },
-                ...(!isStandalone ? [{ 
-                    icon: Mobile, 
-                    label: t('install_app', 'ติดตั้งแอปพลิเคชัน'), 
+                ...(!isStandalone ? [{
+                    icon: Mobile,
+                    label: t('install_app', 'ติดตั้งแอปพลิเคชัน'),
                     subtitle: isIOS ? t('for_ios', 'สำหรับ iOS') : t('for_android', 'สำหรับ Android'),
-                    color: '#4CAF50', 
-                    link: '#install' 
+                    color: '#4CAF50',
+                    link: '#install'
                 }] : []),
             ],
         },
@@ -384,12 +384,12 @@ export default function ProfilePage() {
                     <Typography variant="h5" sx={{ color: 'white', fontWeight: 700 }}>
                         {t('common_profile', 'โปรไฟล์')}
                     </Typography>
-                    <IconButton 
+                    <IconButton
                         onClick={handleLogout}
                         disabled={isLoggingOut}
-                        sx={{ 
-                            bgcolor: 'rgba(255, 255, 255, 0.2)', 
-                            color: 'white', 
+                        sx={{
+                            bgcolor: 'rgba(255, 255, 255, 0.2)',
+                            color: 'white',
                             '&:hover': { bgcolor: 'rgba(255, 255, 255, 0.3)' },
                             '&.Mui-disabled': {
                                 bgcolor: 'rgba(255, 255, 255, 0.2)',
@@ -427,7 +427,7 @@ export default function ProfilePage() {
                                 </Box>
                             </Box>
                             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-                                {[1,2,3,4].map((i) => (
+                                {[1, 2, 3, 4].map((i) => (
                                     <Box key={i} sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
                                         <Skeleton variant="rounded" width={36} height={36} sx={{ borderRadius: 1.5 }} />
                                         <Box sx={{ flex: 1 }}>
@@ -439,254 +439,254 @@ export default function ProfilePage() {
                             </Box>
                         </>
                     ) : (
-                    <>
-                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
-                        <Box sx={{ position: 'relative' }}>
-                            <Avatar
-                                src={profile?.avatar || undefined}
-                                sx={{
-                                    width: 80,
-                                    height: 80,
-                                    background: profile?.avatar ? 'transparent' : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                                    fontSize: '2rem',
-                                    fontWeight: 700,
-                                    boxShadow: '0 8px 24px rgba(102, 126, 234, 0.4)',
-                                }}
-                            >
-                                {!profile?.avatar && getInitials()}
-                            </Avatar>
-                            <IconButton
-                                onClick={() => router.push('/profile/edit')}
-                                sx={{
-                                    position: 'absolute',
-                                    bottom: -5,
-                                    right: -5,
-                                    width: 32,
-                                    height: 32,
-                                    bgcolor: 'white',
-                                    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
-                                    '&:hover': { bgcolor: '#f5f5f5' },
-                                }}
-                            >
-                                <Edit2 size={14} variant="Bold" color="#667eea" />
-                            </IconButton>
-                        </Box>
-                        <Box sx={{ ml: 2, flex: 1 }}>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
-                                <Typography variant="h6" sx={{ fontWeight: 700 }}>
-                                    {profile ? `${profile.firstName} ${profile.lastName}` : '-'}
-                                </Typography>
-                                {profile?.gender && (
-                                    <Typography 
-                                        component="span" 
-                                        sx={{ 
-                                            fontSize: '1.7rem', 
-                                            color: getGenderColor(profile.gender),
+                        <>
+                            <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
+                                <Box sx={{ position: 'relative' }}>
+                                    <Avatar
+                                        src={profile?.avatar || undefined}
+                                        sx={{
+                                            width: 80,
+                                            height: 80,
+                                            background: profile?.avatar ? 'transparent' : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                                            fontSize: '2rem',
                                             fontWeight: 700,
+                                            boxShadow: '0 8px 24px rgba(102, 126, 234, 0.4)',
                                         }}
                                     >
-                                        {getGenderSymbol(profile.gender)}
-                                    </Typography>
+                                        {!profile?.avatar && getInitials()}
+                                    </Avatar>
+                                    <IconButton
+                                        onClick={() => router.push('/profile/edit')}
+                                        sx={{
+                                            position: 'absolute',
+                                            bottom: -5,
+                                            right: -5,
+                                            width: 32,
+                                            height: 32,
+                                            bgcolor: 'white',
+                                            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+                                            '&:hover': { bgcolor: '#f5f5f5' },
+                                        }}
+                                    >
+                                        <Edit2 size={14} variant="Bold" color="#667eea" />
+                                    </IconButton>
+                                </Box>
+                                <Box sx={{ ml: 2, flex: 1 }}>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
+                                        <Typography variant="h6" sx={{ fontWeight: 700 }}>
+                                            {profile ? `${profile.firstName} ${profile.lastName}` : '-'}
+                                        </Typography>
+                                        {profile?.gender && (
+                                            <Typography
+                                                component="span"
+                                                sx={{
+                                                    fontSize: '1.7rem',
+                                                    color: getGenderColor(profile.gender),
+                                                    fontWeight: 700,
+                                                }}
+                                            >
+                                                {getGenderSymbol(profile.gender)}
+                                            </Typography>
+                                        )}
+                                    </Box>
+                                    <Chip
+                                        label={profile ? getEmployeeTypeLabel(profile.employeeType) : t('role_fulltime', 'พนักงานประจำ')}
+                                        size="small"
+                                        sx={{
+                                            bgcolor: '#E8F5E9',
+                                            color: '#2E7D32',
+                                            fontWeight: 600,
+                                            fontSize: '0.75rem',
+                                            height: 24,
+                                        }}
+                                    />
+                                </Box>
+                            </Box>
+
+                            {/* Contact Info */}
+                            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                                    <Box
+                                        sx={{
+                                            width: 36,
+                                            height: 36,
+                                            borderRadius: 1.5,
+                                            bgcolor: '#EDE7F6',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                        }}
+                                    >
+                                        <HashtagSquare size={18} variant="Bold" color="#673AB7" />
+                                    </Box>
+                                    <Box>
+                                        <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.7rem' }}>
+                                            {t('employee_id', 'รหัสพนักงาน')}
+                                        </Typography>
+                                        <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                            {profile?.employeeId || '-'}
+                                        </Typography>
+                                    </Box>
+                                </Box>
+
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                                    <Box
+                                        sx={{
+                                            width: 36,
+                                            height: 36,
+                                            borderRadius: 1.5,
+                                            bgcolor: '#E3F2FD',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                        }}
+                                    >
+                                        <Building size={18} variant="Bold" color="#1976D2" />
+                                    </Box>
+                                    <Box>
+                                        <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.7rem' }}>
+                                            {t('company', 'บริษัท')}
+                                        </Typography>
+                                        <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                            {profile?.companyName || '-'}
+                                        </Typography>
+                                    </Box>
+                                </Box>
+
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                                    <Box
+                                        sx={{
+                                            width: 36,
+                                            height: 36,
+                                            borderRadius: 1.5,
+                                            bgcolor: '#FFF3E0',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                        }}
+                                    >
+                                        <Briefcase size={18} variant="Bold" color="#F57C00" />
+                                    </Box>
+                                    <Box>
+                                        <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.7rem' }}>
+                                            {t('department', 'ฝ่าย')}
+                                        </Typography>
+                                        <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                            {profile?.departmentName || '-'}
+                                        </Typography>
+                                    </Box>
+
+                                </Box>
+
+                                {profile?.sectionName && (
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                                        <Box
+                                            sx={{
+                                                width: 36,
+                                                height: 36,
+                                                borderRadius: 1.5,
+                                                bgcolor: '#FCE4EC',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                            }}
+                                        >
+                                            <Location size={18} variant="Bold" color="#E91E63" />
+                                        </Box>
+                                        <Box>
+                                            <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.7rem' }}>
+                                                {t('section', 'แผนก')}
+                                            </Typography>
+                                            <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                                {profile.sectionName}
+                                            </Typography>
+                                        </Box>
+                                    </Box>
+                                )}
+
+
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                                    <Box
+                                        sx={{
+                                            width: 36,
+                                            height: 36,
+                                            borderRadius: 1.5,
+                                            bgcolor: '#FFF3E0',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                        }}
+                                    >
+                                        <Briefcase size={18} variant="Bold" color="#F57C00" />
+                                    </Box>
+                                    <Box>
+                                        <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.7rem' }}>
+                                            {t('position', 'ตำแหน่ง')}
+                                        </Typography>
+                                        <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                            {profile?.position || '-'}
+                                        </Typography>
+                                    </Box>
+
+                                </Box>
+
+
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                                    <Box
+                                        sx={{
+                                            width: 36,
+                                            height: 36,
+                                            borderRadius: 1.5,
+                                            bgcolor: '#E8F5E9',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                        }}
+                                    >
+                                        <Calendar size={18} variant="Bold" color="#388E3C" />
+                                    </Box>
+                                    <Box>
+                                        <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.7rem' }}>
+                                            {t('profile_started', 'วันที่เริ่มงาน')}
+                                        </Typography>
+                                        <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                            {profile ? formatDate(profile.startDate) : '-'}
+                                        </Typography>
+                                        {profile?.startDate && (
+                                            <Typography variant="caption" sx={{ color: '#388E3C', fontSize: '0.7rem', fontWeight: 500 }}>
+                                                ({calculateWorkDuration(profile.startDate)})
+                                            </Typography>
+                                        )}
+                                    </Box>
+                                </Box>
+
+                                {profile?.email && (
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                                        <Box
+                                            sx={{
+                                                width: 36,
+                                                height: 36,
+                                                borderRadius: 1.5,
+                                                bgcolor: '#F3E5F5',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                            }}
+                                        >
+                                            <Sms size={18} variant="Bold" color="#9C27B0" />
+                                        </Box>
+                                        <Box>
+                                            <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.7rem' }}>
+                                                {t('profile_email', 'อีเมล')}
+                                            </Typography>
+                                            <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                                {profile.email}
+                                            </Typography>
+                                        </Box>
+                                    </Box>
                                 )}
                             </Box>
-                            <Chip
-                                label={profile ? getEmployeeTypeLabel(profile.employeeType) : t('role_fulltime', 'พนักงานประจำ')}
-                                size="small"
-                                sx={{
-                                    bgcolor: '#E8F5E9',
-                                    color: '#2E7D32',
-                                    fontWeight: 600,
-                                    fontSize: '0.75rem',
-                                    height: 24,
-                                }}
-                            />
-                        </Box>
-                    </Box>
-
-                    {/* Contact Info */}
-                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                            <Box
-                                sx={{
-                                    width: 36,
-                                    height: 36,
-                                    borderRadius: 1.5,
-                                    bgcolor: '#EDE7F6',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                }}
-                            >
-                                <HashtagSquare size={18} variant="Bold" color="#673AB7" />
-                            </Box>
-                            <Box>
-                                <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.7rem' }}>
-                                    {t('employee_id', 'รหัสพนักงาน')}
-                                </Typography>
-                                <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                                    {profile?.employeeId || '-'}
-                                </Typography>
-                            </Box>
-                        </Box>
-
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                            <Box
-                                sx={{
-                                    width: 36,
-                                    height: 36,
-                                    borderRadius: 1.5,
-                                    bgcolor: '#E3F2FD',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                }}
-                            >
-                                <Building size={18} variant="Bold" color="#1976D2" />
-                            </Box>
-                            <Box>
-                                <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.7rem' }}>
-                                    {t('company', 'บริษัท')}
-                                </Typography>
-                                <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                                    {profile?.companyName || '-'}
-                                </Typography>
-                            </Box>
-                        </Box>
-
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                            <Box
-                                sx={{
-                                    width: 36,
-                                    height: 36,
-                                    borderRadius: 1.5,
-                                    bgcolor: '#FFF3E0',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                }}
-                            >
-                                <Briefcase size={18} variant="Bold" color="#F57C00" />
-                            </Box>
-                            <Box>
-                                <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.7rem' }}>
-                                    {t('department', 'ฝ่าย')}
-                                </Typography>
-                                <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                                    {profile?.departmentName || '-'}
-                                </Typography>
-                            </Box>
-                            
-                        </Box>
-
-                        {profile?.sectionName && (
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                                <Box
-                                    sx={{
-                                        width: 36,
-                                        height: 36,
-                                        borderRadius: 1.5,
-                                        bgcolor: '#FCE4EC',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                    }}
-                                >
-                                    <Location size={18} variant="Bold" color="#E91E63" />
-                                </Box>
-                                <Box>
-                                    <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.7rem' }}>
-                                        {t('section', 'แผนก')}
-                                    </Typography>
-                                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                                        {profile.sectionName}
-                                    </Typography>
-                                </Box>
-                            </Box>
-                        )}
-
-                        
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                            <Box
-                                sx={{
-                                    width: 36,
-                                    height: 36,
-                                    borderRadius: 1.5,
-                                    bgcolor: '#FFF3E0',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                }}
-                            >
-                                <Briefcase size={18} variant="Bold" color="#F57C00" />
-                            </Box>
-                            <Box>
-                                <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.7rem' }}>
-                                    {t('position', 'ตำแหน่ง')}
-                                </Typography>
-                                <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                                    {profile?.position || '-'}
-                                </Typography>
-                            </Box>
-                            
-                        </Box>
-
-
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                            <Box
-                                sx={{
-                                    width: 36,
-                                    height: 36,
-                                    borderRadius: 1.5,
-                                    bgcolor: '#E8F5E9',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                }}
-                            >
-                                <Calendar size={18} variant="Bold" color="#388E3C" />
-                            </Box>
-                            <Box>
-                                <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.7rem' }}>
-                                    {t('profile_started', 'วันที่เริ่มงาน')}
-                                </Typography>
-                                <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                                    {profile ? formatDate(profile.startDate) : '-'}
-                                </Typography>
-                                {profile?.startDate && (
-                                    <Typography variant="caption" sx={{ color: '#388E3C', fontSize: '0.7rem', fontWeight: 500 }}>
-                                        ({calculateWorkDuration(profile.startDate)})
-                                    </Typography>
-                                )}
-                            </Box>
-                        </Box>
-
-                        {profile?.email && (
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                                <Box
-                                    sx={{
-                                        width: 36,
-                                        height: 36,
-                                        borderRadius: 1.5,
-                                        bgcolor: '#F3E5F5',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                    }}
-                                >
-                                    <Sms size={18} variant="Bold" color="#9C27B0" />
-                                </Box>
-                                <Box>
-                                    <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.7rem' }}>
-                                        {t('profile_email', 'อีเมล')}
-                                    </Typography>
-                                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                                        {profile.email}
-                                    </Typography>
-                                </Box>
-                            </Box>
-                        )}
-                    </Box>
-                    </>
+                        </>
                     )}
                 </Paper>
 
@@ -725,7 +725,7 @@ export default function ProfilePage() {
                             >
                                 {showLoading ? (
                                     <Box sx={{ p: 2 }}>
-                                        {[1,2,3].map((i) => (
+                                        {[1, 2, 3].map((i) => (
                                             <Box key={i}>
                                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, py: 1 }}>
                                                     <Skeleton variant="rounded" width={40} height={40} sx={{ borderRadius: 1.5 }} />
@@ -804,11 +804,11 @@ export default function ProfilePage() {
                                                         ) : (
                                                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                                                                 {item.id === 'notifications' && !pushSubscribed && pushSupported && (
-                                                                    <Chip 
+                                                                    <Chip
                                                                         label={t('status_disconnected', 'ไม่ได้เชื่อมต่อ')}
-                                                                        size="small" 
-                                                                        color="error" 
-                                                                        variant="outlined" 
+                                                                        size="small"
+                                                                        color="error"
+                                                                        variant="outlined"
                                                                         sx={{ height: 20, fontSize: '0.6rem' }}
                                                                     />
                                                                 )}
@@ -907,7 +907,7 @@ export default function ProfilePage() {
                     )}
                 </Box>
             </Box>
-            
+
             {/* Language Selector Dialog */}
             <Dialog open={openLanguage} onClose={() => setOpenLanguage(false)} fullWidth maxWidth="xs">
                 <DialogTitle>{t('select_language', 'เลือกภาษา')}</DialogTitle>
@@ -928,8 +928,8 @@ export default function ProfilePage() {
             </Dialog>
 
             {/* iOS Instructions Dialog */}
-            <Dialog 
-                open={openIOSInstructions} 
+            <Dialog
+                open={openIOSInstructions}
                 onClose={() => setOpenIOSInstructions(false)}
                 PaperProps={{
                     sx: { borderRadius: 1, maxWidth: 340, mx: 2 }
@@ -941,9 +941,9 @@ export default function ProfilePage() {
                 <DialogContent>
                     <Stack spacing={2.5}>
                         <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2 }}>
-                            <Box sx={{ 
-                                p: 1.5, 
-                                bgcolor: '#007AFF15', 
+                            <Box sx={{
+                                p: 1.5,
+                                bgcolor: '#007AFF15',
                                 borderRadius: 1,
                                 display: 'flex',
                                 alignItems: 'center',
@@ -962,9 +962,9 @@ export default function ProfilePage() {
                             </Box>
                         </Box>
                         <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2 }}>
-                            <Box sx={{ 
-                                p: 1.5, 
-                                bgcolor: '#34C75915', 
+                            <Box sx={{
+                                p: 1.5,
+                                bgcolor: '#34C75915',
                                 borderRadius: 2,
                                 display: 'flex',
                                 alignItems: 'center',
@@ -983,9 +983,9 @@ export default function ProfilePage() {
                             </Box>
                         </Box>
                         <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2 }}>
-                            <Box sx={{ 
-                                p: 1.5, 
-                                bgcolor: '#FF950015', 
+                            <Box sx={{
+                                p: 1.5,
+                                bgcolor: '#FF950015',
                                 borderRadius: 2,
                                 display: 'flex',
                                 alignItems: 'center',
@@ -1009,9 +1009,9 @@ export default function ProfilePage() {
                     </Typography>
                 </DialogContent>
                 <Box sx={{ p: 2, pt: 0 }}>
-                    <Button 
-                        fullWidth 
-                        variant="contained" 
+                    <Button
+                        fullWidth
+                        variant="contained"
                         onClick={() => setOpenIOSInstructions(false)}
                         sx={{ borderRadius: 2, bgcolor: '#007AFF', py: 1.2 }}
                     >

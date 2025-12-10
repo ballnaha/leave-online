@@ -623,6 +623,13 @@ export default function ApprovalDetailPage() {
             </Box>
 
             <Box sx={{ bgcolor: '#F8FAFC', p: 2, borderRadius: 1, mb: 2 }}>
+              <Box sx={{ mb: 1.5 }}>
+                <Typography variant="caption" color="text.secondary">วันที่ส่งใบลา</Typography>
+                <Typography variant="body2" fontWeight={600}>
+                  {formatDate(leaveDetail.createdAt)} {new Date(leaveDetail.createdAt).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })} น.
+                </Typography>
+              </Box>
+              <Divider sx={{ mb: 1.5 }} />
               <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
                 <Box>
                   <Typography variant="caption" color="text.secondary">วันที่เริ่ม</Typography>

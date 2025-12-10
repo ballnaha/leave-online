@@ -846,72 +846,7 @@ export default function ApprovalPage() {
             </Box>
           </Box>
 
-          {/* Tabs */}
-          <Tabs
-            value={tabValue}
-            onChange={(_, v) => setTabValue(v)}
-            variant="fullWidth"
-            sx={{
-              minHeight: 48,
-              '& .MuiTabs-indicator': {
-                height: 3,
-                borderRadius: '3px 3px 0 0',
-                bgcolor: PRIMARY_COLOR
-              },
-            }}
-          >
-            <Tab
-              label={
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                  <Clock size={18} variant={tabValue === 0 ? "Bold" : "Linear"} color={tabValue === 0 ? PRIMARY_COLOR : "#64748B"} />
-                  <span style={{ fontWeight: tabValue === 0 ? 600 : 400 }}>รออนุมัติ</span>
-                  {counts.pending > 0 && (
-                    <Chip
-                      label={counts.pending}
-                      size="small"
-                      sx={{
-                        height: 20,
-                        minWidth: 20,
-                        bgcolor: tabValue === 0 ? PRIMARY_COLOR : '#f5f5f5',
-                        color: tabValue === 0 ? 'white' : '#666',
-                        fontSize: '0.7rem',
-                        fontWeight: 600,
-                        '& .MuiChip-label': { px: 0.5 }
-                      }}
-                    />
-                  )}
-                </Box>
-              }
-              sx={{ textTransform: 'none', color: '#64748B', '&.Mui-selected': { color: PRIMARY_COLOR } }}
-            />
-            <Tab
-              label={
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                  <TickCircle size={18} variant={tabValue === 1 ? "Bold" : "Linear"} color={tabValue === 1 ? PRIMARY_COLOR : "#64748B"} />
-                  <span style={{ fontWeight: tabValue === 1 ? 600 : 400 }}>อนุมัติ</span>
-                </Box>
-              }
-              sx={{ textTransform: 'none', color: '#64748B', '&.Mui-selected': { color: PRIMARY_COLOR } }}
-            />
-            <Tab
-              label={
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                  <CloseCircle size={18} variant={tabValue === 2 ? "Bold" : "Linear"} color={tabValue === 2 ? PRIMARY_COLOR : "#64748B"} />
-                  <span style={{ fontWeight: tabValue === 2 ? 600 : 400 }}>ปฏิเสธ</span>
-                </Box>
-              }
-              sx={{ textTransform: 'none', color: '#64748B', '&.Mui-selected': { color: PRIMARY_COLOR } }}
-            />
-            <Tab
-              label={
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                  <Forbidden2 size={18} variant={tabValue === 3 ? "Bold" : "Linear"} color={tabValue === 3 ? PRIMARY_COLOR : "#64748B"} />
-                  <span style={{ fontWeight: tabValue === 3 ? 600 : 400 }}>ยกเลิก</span>
-                </Box>
-              }
-              sx={{ textTransform: 'none', color: '#64748B', '&.Mui-selected': { color: PRIMARY_COLOR } }}
-            />
-          </Tabs>
+
         </Container>
       </Box>
 
@@ -1481,246 +1416,218 @@ export default function ApprovalPage() {
           </Box>
         )}
 
-        {/* Status Count Cards - Redesigned */}
+        {/* Status Tabs - Sliding Style */}
         {!loading && (
-          <Box sx={{
-            display: 'grid',
-            gridTemplateColumns: { xs: 'repeat(2, 1fr)', sm: 'repeat(4, 1fr)' },
-            gap: 2,
-            mb: 3
-          }}>
-            {/* Pending Card */}
-            <Paper
-              elevation={0}
+          <Box sx={{ mb: 4 }}>
+            <Box
               sx={{
-                p: 2,
-                borderRadius: 1,
-                background: tabValue === 0
-                  ? `linear-gradient(135deg, ${PRIMARY_COLOR} 0%, #8B7CF7 100%)`
-                  : 'linear-gradient(135deg, #F8F9FA 0%, #FFFFFF 100%)',
-                border: tabValue === 0 ? 'none' : '1px solid #E2E8F0',
-                cursor: 'pointer',
-                transition: 'all 0.3s ease',
+                bgcolor: '#F1F5F9',
+                p: 0.5,
+                borderRadius: 3,
+                display: 'grid',
+                gridTemplateColumns: 'repeat(4, 1fr)',
                 position: 'relative',
-                overflow: 'hidden',
-                '&:hover': {
-                  transform: 'translateY(-2px)',
-                  boxShadow: tabValue === 0
-                    ? '0 8px 25px rgba(108, 99, 255, 0.35)'
-                    : '0 8px 25px rgba(0,0,0,0.08)',
-                }
+                isolation: 'isolate',
+                border: '1px solid #E2E8F0'
               }}
-              onClick={() => setTabValue(0)}
             >
-              <Box sx={{ position: 'relative', zIndex: 1 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
-                  <Box sx={{
-                    p: 1,
-                    borderRadius: 1,
-                    bgcolor: tabValue === 0 ? 'rgba(255,255,255,0.2)' : '#EDE7F6',
-                  }}>
-                    <Clock size={20} color={tabValue === 0 ? 'white' : PRIMARY_COLOR} variant="Bold" />
-                  </Box>
-                </Box>
-                <Typography
-                  variant="h4"
-                  fontWeight={800}
-                  sx={{ color: tabValue === 0 ? 'white' : PRIMARY_COLOR, mb: 0.5 }}
-                >
-                  {counts.pending}
-                </Typography>
-                <Typography
-                  variant="body2"
-                  sx={{ color: tabValue === 0 ? 'rgba(255,255,255,0.9)' : '#64748B', fontWeight: 500 }}
-                >
-                  รออนุมัติ
-                </Typography>
-              </Box>
-              {/* Decorative circle */}
-              <Box sx={{
-                position: 'absolute',
-                top: -20,
-                right: -20,
-                width: 80,
-                height: 80,
-                borderRadius: '50%',
-                bgcolor: tabValue === 0 ? 'rgba(255,255,255,0.1)' : 'rgba(108,99,255,0.05)',
-              }} />
-            </Paper>
+              {/* Sliding Background */}
+              <Box
+                sx={{
+                  position: 'absolute',
+                  top: 4,
+                  bottom: 4,
+                  left: 4,
+                  width: 'calc(25% - 6px)',
+                  bgcolor: 'white',
+                  borderRadius: 2.5,
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04)',
+                  transition: 'transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)',
+                  transform: `translateX(${tabValue * 100}%)`,
+                  zIndex: 0
+                }}
+              />
 
-            {/* Approved Card */}
-            <Paper
-              elevation={0}
-              sx={{
-                p: 2,
-                borderRadius: 1,
-                background: tabValue === 1
-                  ? 'linear-gradient(135deg, #2E7D32 0%, #4CAF50 100%)'
-                  : 'linear-gradient(135deg, #F8F9FA 0%, #FFFFFF 100%)',
-                border: tabValue === 1 ? 'none' : '1px solid #E2E8F0',
-                cursor: 'pointer',
-                transition: 'all 0.3s ease',
-                position: 'relative',
-                overflow: 'hidden',
-                '&:hover': {
-                  transform: 'translateY(-2px)',
-                  boxShadow: tabValue === 1
-                    ? '0 8px 25px rgba(46, 125, 50, 0.35)'
-                    : '0 8px 25px rgba(0,0,0,0.08)',
-                }
-              }}
-              onClick={() => setTabValue(1)}
-            >
-              <Box sx={{ position: 'relative', zIndex: 1 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
-                  <Box sx={{
-                    p: 1,
-                    borderRadius: 1,
-                    bgcolor: tabValue === 1 ? 'rgba(255,255,255,0.2)' : '#E8F5E9',
-                  }}>
-                    <TickCircle size={20} color={tabValue === 1 ? 'white' : '#2E7D32'} variant="Bold" />
-                  </Box>
+              {/* Tab 0: Pending */}
+              <Box
+                onClick={() => setTabValue(0)}
+                sx={{
+                  py: 1.5,
+                  borderRadius: 2.5,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: { xs: 0.5, sm: 1 },
+                  flexDirection: { xs: 'column', sm: 'row' },
+                  position: 'relative',
+                  zIndex: 1,
+                  transition: 'all 0.2s',
+                  color: tabValue === 0 ? '#E65100' : '#64748B',
+                }}
+              >
+                <Clock
+                  size={20}
+                  variant={tabValue === 0 ? 'Bold' : 'Linear'}
+                  color={tabValue === 0 ? '#E65100' : '#64748B'}
+                  style={{ transition: 'all 0.2s' }}
+                />
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexDirection: { xs: 'column', sm: 'row' } }}>
+                  <Typography fontWeight={tabValue === 0 ? 700 : 500} fontSize={{ xs: '0.75rem', sm: '0.9rem' }}>
+                    รออนุมัติ
+                  </Typography>
+                  <Chip
+                    label={counts.pending}
+                    size="small"
+                    sx={{
+                      height: 20,
+                      minWidth: 20,
+                      fontSize: '0.7rem',
+                      fontWeight: 700,
+                      bgcolor: tabValue === 0 ? '#FFF3E0' : '#E2E8F0',
+                      color: tabValue === 0 ? '#E65100' : '#64748B',
+                      transition: 'all 0.2s',
+                      '& .MuiChip-label': { px: 0.8 }
+                    }}
+                  />
                 </Box>
-                <Typography
-                  variant="h4"
-                  fontWeight={800}
-                  sx={{ color: tabValue === 1 ? 'white' : '#2E7D32', mb: 0.5 }}
-                >
-                  {counts.approved}
-                </Typography>
-                <Typography
-                  variant="body2"
-                  sx={{ color: tabValue === 1 ? 'rgba(255,255,255,0.9)' : '#64748B', fontWeight: 500 }}
-                >
-                  อนุมัติแล้ว
-                </Typography>
               </Box>
-              <Box sx={{
-                position: 'absolute',
-                top: -20,
-                right: -20,
-                width: 80,
-                height: 80,
-                borderRadius: '50%',
-                bgcolor: tabValue === 1 ? 'rgba(255,255,255,0.1)' : 'rgba(46, 125, 50, 0.05)',
-              }} />
-            </Paper>
 
-            {/* Rejected Card */}
-            <Paper
-              elevation={0}
-              sx={{
-                p: 2,
-                borderRadius: 1,
-                background: tabValue === 2
-                  ? 'linear-gradient(135deg, #D32F2F 0%, #EF5350 100%)'
-                  : 'linear-gradient(135deg, #F8F9FA 0%, #FFFFFF 100%)',
-                border: tabValue === 2 ? 'none' : '1px solid #E2E8F0',
-                cursor: 'pointer',
-                transition: 'all 0.3s ease',
-                position: 'relative',
-                overflow: 'hidden',
-                '&:hover': {
-                  transform: 'translateY(-2px)',
-                  boxShadow: tabValue === 2
-                    ? '0 8px 25px rgba(211, 47, 47, 0.35)'
-                    : '0 8px 25px rgba(0,0,0,0.08)',
-                }
-              }}
-              onClick={() => setTabValue(2)}
-            >
-              <Box sx={{ position: 'relative', zIndex: 1 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
-                  <Box sx={{
-                    p: 1,
-                    borderRadius: 1,
-                    bgcolor: tabValue === 2 ? 'rgba(255,255,255,0.2)' : '#FFEBEE',
-                  }}>
-                    <CloseCircle size={20} color={tabValue === 2 ? 'white' : '#D32F2F'} variant="Bold" />
-                  </Box>
+              {/* Tab 1: Approved */}
+              <Box
+                onClick={() => setTabValue(1)}
+                sx={{
+                  py: 1.5,
+                  borderRadius: 2.5,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: { xs: 0.5, sm: 1 },
+                  flexDirection: { xs: 'column', sm: 'row' },
+                  position: 'relative',
+                  zIndex: 1,
+                  transition: 'all 0.2s',
+                  color: tabValue === 1 ? '#2E7D32' : '#64748B',
+                }}
+              >
+                <TickCircle
+                  size={20}
+                  variant={tabValue === 1 ? 'Bold' : 'Linear'}
+                  color={tabValue === 1 ? '#2E7D32' : '#64748B'}
+                  style={{ transition: 'all 0.2s' }}
+                />
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexDirection: { xs: 'column', sm: 'row' } }}>
+                  <Typography fontWeight={tabValue === 1 ? 700 : 500} fontSize={{ xs: '0.75rem', sm: '0.9rem' }}>
+                    อนุมัติ
+                  </Typography>
+                  <Chip
+                    label={counts.approved}
+                    size="small"
+                    sx={{
+                      height: 20,
+                      minWidth: 20,
+                      fontSize: '0.7rem',
+                      fontWeight: 700,
+                      bgcolor: tabValue === 1 ? '#E8F5E9' : '#E2E8F0',
+                      color: tabValue === 1 ? '#2E7D32' : '#64748B',
+                      transition: 'all 0.2s',
+                      '& .MuiChip-label': { px: 0.8 }
+                    }}
+                  />
                 </Box>
-                <Typography
-                  variant="h4"
-                  fontWeight={800}
-                  sx={{ color: tabValue === 2 ? 'white' : '#D32F2F', mb: 0.5 }}
-                >
-                  {counts.rejected}
-                </Typography>
-                <Typography
-                  variant="body2"
-                  sx={{ color: tabValue === 2 ? 'rgba(255,255,255,0.9)' : '#64748B', fontWeight: 500 }}
-                >
-                  ปฏิเสธ
-                </Typography>
               </Box>
-              <Box sx={{
-                position: 'absolute',
-                top: -20,
-                right: -20,
-                width: 80,
-                height: 80,
-                borderRadius: '50%',
-                bgcolor: tabValue === 2 ? 'rgba(255,255,255,0.1)' : 'rgba(211, 47, 47, 0.05)',
-              }} />
-            </Paper>
 
-            {/* Cancelled Card */}
-            <Paper
-              elevation={0}
-              sx={{
-                p: 2,
-                borderRadius: 1,
-                background: tabValue === 3
-                  ? 'linear-gradient(135deg, #616161 0%, #9E9E9E 100%)'
-                  : 'linear-gradient(135deg, #F8F9FA 0%, #FFFFFF 100%)',
-                border: tabValue === 3 ? 'none' : '1px solid #E2E8F0',
-                cursor: 'pointer',
-                transition: 'all 0.3s ease',
-                position: 'relative',
-                overflow: 'hidden',
-                '&:hover': {
-                  transform: 'translateY(-2px)',
-                  boxShadow: tabValue === 3
-                    ? '0 8px 25px rgba(97, 97, 97, 0.35)'
-                    : '0 8px 25px rgba(0,0,0,0.08)',
-                }
-              }}
-              onClick={() => setTabValue(3)}
-            >
-              <Box sx={{ position: 'relative', zIndex: 1 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
-                  <Box sx={{
-                    p: 1,
-                    borderRadius: 1,
-                    bgcolor: tabValue === 3 ? 'rgba(255,255,255,0.2)' : '#F5F5F5',
-                  }}>
-                    <Forbidden2 size={20} color={tabValue === 3 ? 'white' : '#757575'} variant="Bold" />
-                  </Box>
+              {/* Tab 2: Rejected */}
+              <Box
+                onClick={() => setTabValue(2)}
+                sx={{
+                  py: 1.5,
+                  borderRadius: 2.5,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: { xs: 0.5, sm: 1 },
+                  flexDirection: { xs: 'column', sm: 'row' },
+                  position: 'relative',
+                  zIndex: 1,
+                  transition: 'all 0.2s',
+                  color: tabValue === 2 ? '#D32F2F' : '#64748B',
+                }}
+              >
+                <CloseCircle
+                  size={20}
+                  variant={tabValue === 2 ? 'Bold' : 'Linear'}
+                  color={tabValue === 2 ? '#D32F2F' : '#64748B'}
+                  style={{ transition: 'all 0.2s' }}
+                />
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexDirection: { xs: 'column', sm: 'row' } }}>
+                  <Typography fontWeight={tabValue === 2 ? 700 : 500} fontSize={{ xs: '0.75rem', sm: '0.9rem' }}>
+                    ปฏิเสธ
+                  </Typography>
+                  <Chip
+                    label={counts.rejected}
+                    size="small"
+                    sx={{
+                      height: 20,
+                      minWidth: 20,
+                      fontSize: '0.7rem',
+                      fontWeight: 700,
+                      bgcolor: tabValue === 2 ? '#FFEBEE' : '#E2E8F0',
+                      color: tabValue === 2 ? '#D32F2F' : '#64748B',
+                      transition: 'all 0.2s',
+                      '& .MuiChip-label': { px: 0.8 }
+                    }}
+                  />
                 </Box>
-                <Typography
-                  variant="h4"
-                  fontWeight={800}
-                  sx={{ color: tabValue === 3 ? 'white' : '#757575', mb: 0.5 }}
-                >
-                  {counts.cancelled}
-                </Typography>
-                <Typography
-                  variant="body2"
-                  sx={{ color: tabValue === 3 ? 'rgba(255,255,255,0.9)' : '#64748B', fontWeight: 500 }}
-                >
-                  ยกเลิก
-                </Typography>
               </Box>
-              <Box sx={{
-                position: 'absolute',
-                top: -20,
-                right: -20,
-                width: 80,
-                height: 80,
-                borderRadius: '50%',
-                bgcolor: tabValue === 3 ? 'rgba(255,255,255,0.1)' : 'rgba(117, 117, 117, 0.05)',
-              }} />
-            </Paper>
+
+              {/* Tab 3: Cancelled */}
+              <Box
+                onClick={() => setTabValue(3)}
+                sx={{
+                  py: 1.5,
+                  borderRadius: 2.5,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: { xs: 0.5, sm: 1 },
+                  flexDirection: { xs: 'column', sm: 'row' },
+                  position: 'relative',
+                  zIndex: 1,
+                  transition: 'all 0.2s',
+                  color: tabValue === 3 ? '#757575' : '#64748B',
+                }}
+              >
+                <Forbidden2
+                  size={20}
+                  variant={tabValue === 3 ? 'Bold' : 'Linear'}
+                  color={tabValue === 3 ? '#757575' : '#64748B'}
+                  style={{ transition: 'all 0.2s' }}
+                />
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexDirection: { xs: 'column', sm: 'row' } }}>
+                  <Typography fontWeight={tabValue === 3 ? 700 : 500} fontSize={{ xs: '0.75rem', sm: '0.9rem' }}>
+                    ยกเลิก
+                  </Typography>
+                  <Chip
+                    label={counts.cancelled}
+                    size="small"
+                    sx={{
+                      height: 20,
+                      minWidth: 20,
+                      fontSize: '0.7rem',
+                      fontWeight: 700,
+                      bgcolor: tabValue === 3 ? '#F5F5F5' : '#E2E8F0',
+                      color: tabValue === 3 ? '#757575' : '#64748B',
+                      transition: 'all 0.2s',
+                      '& .MuiChip-label': { px: 0.8 }
+                    }}
+                  />
+                </Box>
+              </Box>
+            </Box>
           </Box>
         )}
 
@@ -2117,9 +2024,10 @@ export default function ApprovalPage() {
                 <TableHead>
                   <TableRow sx={{ bgcolor: '#F8FAFC' }}>
                     <TableCell sx={{ fontWeight: 700, color: '#475569', fontSize: '0.9rem', width: '20%' }}>พนักงาน</TableCell>
-                    <TableCell sx={{ fontWeight: 700, color: '#475569', fontSize: '0.9rem', width: '16%' }}>การลา</TableCell>
-                    <TableCell sx={{ fontWeight: 700, color: '#475569', fontSize: '0.9rem', width: '14%' }}>วันที่</TableCell>
-                    <TableCell sx={{ fontWeight: 700, color: '#475569', fontSize: '0.9rem', width: '25%' }}>เหตุผล</TableCell>
+                    <TableCell sx={{ fontWeight: 700, color: '#475569', fontSize: '0.9rem', width: '12%' }}>การลา</TableCell>
+                    <TableCell sx={{ fontWeight: 700, color: '#475569', fontSize: '0.9rem', width: '12%' }}>วันที่ส่ง</TableCell>
+                    <TableCell sx={{ fontWeight: 700, color: '#475569', fontSize: '0.9rem', width: '14%' }}>วันที่ลา</TableCell>
+                    <TableCell sx={{ fontWeight: 700, color: '#475569', fontSize: '0.9rem', width: '20%' }}>เหตุผล</TableCell>
                     <TableCell sx={{ fontWeight: 700, color: '#475569', fontSize: '0.9rem', width: '8%' }} align="center">แนบ</TableCell>
                     <TableCell sx={{ fontWeight: 700, color: '#475569', fontSize: '0.9rem', width: '9%' }}>สถานะ</TableCell>
                     <TableCell sx={{ fontWeight: 700, color: '#475569', fontSize: '0.9rem', width: '13%' }} align="center">ดำเนินการ</TableCell>
@@ -2166,9 +2074,19 @@ export default function ApprovalPage() {
                                   {approval.leaveRequest.user.firstName} {approval.leaveRequest.user.lastName}
                                 </Typography>
                                 {approval.leaveRequest.isEscalated && (
-                                  <Tooltip title="ส่งต่อจากผู้อนุมัติอื่น">
-                                    <InfoCircle size={16} color="#E65100" variant="Bold" />
-                                  </Tooltip>
+                                  <Chip
+                                    label="ส่งต่อ (Escalated)"
+                                    size="small"
+                                    icon={<InfoCircle size={14} color="#E65100" variant="Bold" />}
+                                    sx={{
+                                      height: 20,
+                                      fontSize: '0.7rem',
+                                      bgcolor: '#FFF3E0',
+                                      color: '#E65100',
+                                      border: '1px solid #FFCC80',
+                                      '& .MuiChip-icon': { color: '#E65100', ml: 0.5 }
+                                    }}
+                                  />
                                 )}
                               </Box>
                               <Typography sx={{ fontSize: '0.8rem', color: '#64748B', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
@@ -2197,6 +2115,18 @@ export default function ApprovalPage() {
                             />
                             <Typography sx={{ fontSize: '0.85rem', color: '#475569', fontWeight: 600 }}>
                               {approval.leaveRequest.totalDays} วัน
+                            </Typography>
+                          </Box>
+                        </TableCell>
+
+                        {/* Submission Date */}
+                        <TableCell>
+                          <Box>
+                            <Typography sx={{ fontSize: '0.875rem', color: '#334155', fontWeight: 500 }}>
+                              {new Date(approval.leaveRequest.createdAt).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' })}
+                            </Typography>
+                            <Typography sx={{ fontSize: '0.8rem', color: '#64748B' }}>
+                              {new Date(approval.leaveRequest.createdAt).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })} น.
                             </Typography>
                           </Box>
                         </TableCell>
@@ -2427,9 +2357,26 @@ export default function ApprovalPage() {
                               {approval.leaveRequest.user.firstName[0]}
                             </Avatar>
                             <Box>
-                              <Typography variant="h6" fontWeight={700}>
-                                {approval.leaveRequest.user.firstName} {approval.leaveRequest.user.lastName}
-                              </Typography>
+                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                <Typography variant="h6" fontWeight={700}>
+                                  {approval.leaveRequest.user.firstName} {approval.leaveRequest.user.lastName}
+                                </Typography>
+                                {approval.leaveRequest.isEscalated && (
+                                  <Chip
+                                    label="ส่งต่อ (Escalated)"
+                                    size="small"
+                                    icon={<InfoCircle size={14} color="#E65100" variant="Bold" />}
+                                    sx={{
+                                      height: 22,
+                                      fontSize: '0.7rem',
+                                      bgcolor: '#FFF3E0',
+                                      color: '#E65100',
+                                      border: '1px solid #FFCC80',
+                                      '& .MuiChip-icon': { color: '#E65100', ml: 0.5 }
+                                    }}
+                                  />
+                                )}
+                              </Box>
                               <Typography variant="body2" color="text.secondary">
                                 {approval.leaveRequest.user.position || '-'} • {approval.leaveRequest.user.department || '-'}
                               </Typography>
@@ -2920,6 +2867,14 @@ export default function ApprovalPage() {
                   <Collapse in={isExpanded}>
                     <Divider sx={{ borderStyle: 'dashed' }} />
                     <Box sx={{ p: 2, bgcolor: '#FAFAFA' }}>
+                      {/* Submission Date - Mobile */}
+                      <Box sx={{ mb: 2, p: 1.5, bgcolor: '#F1F5F9', borderRadius: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <Typography sx={{ fontSize: '0.8rem', color: '#64748B', fontWeight: 600 }}>วันที่ส่งใบลา</Typography>
+                        <Typography sx={{ fontSize: '0.85rem', color: '#334155', fontWeight: 600 }}>
+                          {formatDateFull(approval.leaveRequest.createdAt, new Date(approval.leaveRequest.createdAt).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }))}
+                        </Typography>
+                      </Box>
+
                       {/* Employee Info Grid */}
                       <Box sx={{ mb: 2, p: 2, bgcolor: 'white', borderRadius: 1, border: '1px solid', borderColor: 'grey.100' }}>
                         <Typography sx={{ fontSize: '0.8rem', color: '#64748B', mb: 1.5, display: 'flex', alignItems: 'center', gap: 1, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5 }}>
@@ -3267,6 +3222,101 @@ export default function ApprovalPage() {
           <CloseCircle size={28} color="#9CA3AF" />
         </IconButton>
         <DialogTitle sx={{ textAlign: 'center', pt: 4, pb: 2 }}>
+          {/* Action Toggle Switch */}
+          <Box sx={{ mb: 3 }}>
+            <Box
+              sx={{
+                bgcolor: '#F1F5F9',
+                p: 0.5,
+                borderRadius: 3,
+                display: 'flex',
+                position: 'relative',
+                isolation: 'isolate',
+                width: '100%',
+                maxWidth: 300,
+                mx: 'auto'
+              }}
+            >
+              <Box
+                sx={{
+                  position: 'absolute',
+                  top: 4,
+                  bottom: 4,
+                  left: 4,
+                  width: 'calc(50% - 4px)',
+                  bgcolor: 'white',
+                  borderRadius: 2.5,
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.06)',
+                  transition: 'transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)',
+                  transform: actionType === 'approve' ? 'translateX(0)' : 'translateX(100%)',
+                  zIndex: 0
+                }}
+              />
+
+              <Box
+                onClick={() => {
+                  setActionType('approve');
+                  setError('');
+                }}
+                sx={{
+                  flex: 1,
+                  py: 1.25,
+                  borderRadius: 2.5,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 1,
+                  position: 'relative',
+                  zIndex: 1,
+                  transition: 'color 0.2s',
+                  color: actionType === 'approve' ? '#2E7D32' : '#64748B',
+                }}
+              >
+                <TickCircle
+                  size={20}
+                  variant={actionType === 'approve' ? 'Bold' : 'Linear'}
+                  color={actionType === 'approve' ? '#2E7D32' : '#64748B'}
+                  style={{ transition: 'all 0.2s' }}
+                />
+                <Typography fontWeight={actionType === 'approve' ? 700 : 500} fontSize="0.95rem" sx={{ transition: 'font-weight 0.2s' }}>
+                  อนุมัติ
+                </Typography>
+              </Box>
+
+              <Box
+                onClick={() => {
+                  setActionType('reject');
+                  setError('');
+                }}
+                sx={{
+                  flex: 1,
+                  py: 1.25,
+                  borderRadius: 2.5,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 1,
+                  position: 'relative',
+                  zIndex: 1,
+                  transition: 'color 0.2s',
+                  color: actionType === 'reject' ? '#D32F2F' : '#64748B',
+                }}
+              >
+                <CloseCircle
+                  size={20}
+                  variant={actionType === 'reject' ? 'Bold' : 'Linear'}
+                  color={actionType === 'reject' ? '#D32F2F' : '#64748B'}
+                  style={{ transition: 'all 0.2s' }}
+                />
+                <Typography fontWeight={actionType === 'reject' ? 700 : 500} fontSize="0.95rem" sx={{ transition: 'font-weight 0.2s' }}>
+                  ปฏิเสธ
+                </Typography>
+              </Box>
+            </Box>
+          </Box>
+
           <Box sx={{
             width: 60,
             height: 60,
@@ -3298,6 +3348,12 @@ export default function ApprovalPage() {
               <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1.5 }}>
                 <Typography variant="body2" color="text.secondary">พนักงาน</Typography>
                 <Typography variant="body2" fontWeight={600}>{selectedApproval.leaveRequest.user.firstName} {selectedApproval.leaveRequest.user.lastName}</Typography>
+              </Box>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1.5 }}>
+                <Typography variant="body2" color="text.secondary">วันที่ส่งใบลา</Typography>
+                <Typography variant="body2" fontWeight={600}>
+                  {new Date(selectedApproval.leaveRequest.createdAt).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                </Typography>
               </Box>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1.5 }}>
                 <Typography variant="body2" color="text.secondary">ประเภท</Typography>

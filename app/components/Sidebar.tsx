@@ -121,13 +121,13 @@ const Sidebar = ({ open, onClose }: SidebarProps) => {
                                         {user?.firstName} {user?.lastName}
                                     </Typography>
                                     <Typography variant="caption" color="text.secondary">
-                                        {user?.role === 'admin' ? 'ผู้ดูแลระบบ' : 
-                                         user?.role === 'hr' ? 'HR' : 
-                                         user?.role === 'hr_manager' ? 'HR Manager' : 
-                                         user?.role === 'shift_supervisor' ? 'หัวหน้ากะ' :
-                                         user?.role === 'dept_manager' ? 'ผู้จัดการฝ่าย/ส่วน' : 
-                                         user?.role === 'section_head' ? 'หัวหน้าแผนก' :
-                                         'พนักงาน'}
+                                        {user?.role === 'admin' ? 'ผู้ดูแลระบบ' :
+                                            user?.role === 'hr' ? 'HR' :
+                                                user?.role === 'hr_manager' ? 'HR Manager' :
+                                                    user?.role === 'shift_supervisor' ? 'หัวหน้ากะ' :
+                                                        user?.role === 'dept_manager' ? 'ผู้จัดการฝ่าย/ส่วน' :
+                                                            user?.role === 'section_head' ? 'หัวหน้าแผนก' :
+                                                                'พนักงาน'}
                                     </Typography>
                                 </>
                             )}
@@ -175,7 +175,7 @@ const Sidebar = ({ open, onClose }: SidebarProps) => {
                 {/* Bottom Section - Admin & Logout */}
                 <Box sx={{ p: 2, display: 'flex', flexDirection: 'column', gap: 1.5 }}>
                     <Divider sx={{ mb: 1, opacity: 0.5 }} />
-                    
+
                     {/* Admin Button */}
                     {isAdmin && (
                         <ListItemButton
@@ -209,7 +209,7 @@ const Sidebar = ({ open, onClose }: SidebarProps) => {
                         sx={{
                             borderRadius: 3,
                             color: 'text.secondary',
-                            '&:hover': { 
+                            '&:hover': {
                                 bgcolor: 'grey.100',
                                 color: 'error.main',
                             },
@@ -221,12 +221,12 @@ const Sidebar = ({ open, onClose }: SidebarProps) => {
                         <ListItemIcon sx={{ minWidth: 40 }}>
                             {isLoggingOut ? <CircularProgress size={20} color="inherit" /> : <Logout size={20} variant="Outline" color="#9E9E9E" />}
                         </ListItemIcon>
-                        <ListItemText 
-                            primary={isLoggingOut ? 'กำลังออกจากระบบ...' : 'ออกจากระบบ'} 
-                            primaryTypographyProps={{ 
+                        <ListItemText
+                            primary={isLoggingOut ? 'กำลังออกจากระบบ...' : 'ออกจากระบบ'}
+                            primaryTypographyProps={{
                                 fontSize: '0.95rem',
-                                fontWeight: 400 
-                            }} 
+                                fontWeight: 400
+                            }}
                         />
                     </ListItemButton>
                 </Box>

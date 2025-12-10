@@ -24,9 +24,9 @@ export async function logout() {
     }
 
     // Sign out from NextAuth
-    await signOut({ 
+    await signOut({
         callbackUrl: '/login',
-        redirect: true 
+        redirect: true
     });
 }
 
