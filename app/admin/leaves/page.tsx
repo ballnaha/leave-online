@@ -801,6 +801,9 @@ export default function AdminLeavesPage() {
                     size="small"
                     sx={{ borderRadius: 1, bgcolor: alpha(theme.palette.primary.main, 0.1), color: 'primary.main', fontWeight: 600, fontSize: '0.7rem' }}
                   />
+                  <Typography variant="caption" color="text.secondary" sx={{ ml: 1 }}>
+                    ส่งเมื่อ {formatThaiDate(leave.createdAt)}
+                  </Typography>
                 </Box>
 
                 <Divider sx={{ borderStyle: 'dashed' }} />
@@ -941,18 +944,23 @@ export default function AdminLeavesPage() {
                       </Typography>
                     </TableCell>
                     <TableCell sx={{ py: 2 }}>
-                      <Chip
-                        label={leave.leaveCode || `#${leave.id}`}
-                        size="small"
-                        sx={{
-                          borderRadius: 1,
-                          bgcolor: alpha(theme.palette.primary.main, 0.08),
-                          color: 'primary.main',
-                          fontWeight: 700,
-                          fontSize: '0.75rem',
-                          height: 24
-                        }}
-                      />
+                      <Box>
+                        <Chip
+                          label={leave.leaveCode || `#${leave.id}`}
+                          size="small"
+                          sx={{
+                            borderRadius: 1,
+                            bgcolor: alpha(theme.palette.primary.main, 0.08),
+                            color: 'primary.main',
+                            fontWeight: 700,
+                            fontSize: '0.75rem',
+                            height: 24
+                          }}
+                        />
+                        <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 0.5 }}>
+                          {formatThaiDate(leave.createdAt)}
+                        </Typography>
+                      </Box>
                     </TableCell>
                     <TableCell sx={{ py: 2 }}>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
@@ -1269,12 +1277,14 @@ export default function AdminLeavesPage() {
                       const isApproved = approval.status === 'approved';
                       const isRejected = approval.status === 'rejected';
                       const isCancelled = approval.status === 'cancelled';
+                      const isSkipped = approval.status === 'skipped';
 
                       // กำหนด label และ color ตาม status
                       const getStatusLabel = () => {
                         if (isPending) return 'รออนุมัติ';
                         if (isApproved) return 'อนุมัติ';
                         if (isCancelled) return 'ผู้ขอยกเลิก';
+                        if (isSkipped) return 'ข้าม';
                         return 'ไม่อนุมัติ';
                       };
 
@@ -1282,6 +1292,7 @@ export default function AdminLeavesPage() {
                         if (isPending) return 'warning';
                         if (isApproved) return 'success';
                         if (isCancelled) return 'default';
+                        if (isSkipped) return 'default';
                         return 'error';
                       };
 
@@ -1290,6 +1301,7 @@ export default function AdminLeavesPage() {
                         if (isApproved) return 'success.main';
                         if (isRejected) return 'error.main';
                         if (isCancelled) return 'grey.400';
+                        if (isSkipped) return 'grey.400';
                         return 'divider';
                       };
 
@@ -1298,6 +1310,7 @@ export default function AdminLeavesPage() {
                         if (isApproved) return alpha(theme.palette.success.main, 0.04);
                         if (isRejected) return alpha(theme.palette.error.main, 0.04);
                         if (isCancelled) return alpha(theme.palette.grey[500], 0.04);
+                        if (isSkipped) return alpha(theme.palette.grey[500], 0.04);
                         return 'transparent';
                       };
 

@@ -7,10 +7,10 @@ import ImageSlider from './components/ImageSlider';
 import LeaveTypeCard from './components/LeaveTypeCard';
 import RecentActivityCard from './components/RecentActivityCard';
 import BottomNav from './components/BottomNav';
-import { 
+import {
   Calendar2, Activity, Briefcase, Heart, Sun1, Lovely,
   Building4, Shield, People, Car, Clock, MessageQuestion, Health,
-  Profile2User, Danger,MoneySend,
+  Profile2User, Danger, MoneySend,
   Money
 } from 'iconsax-react';
 import { Swiper, SwiperSlide } from 'swiper/react';
@@ -38,11 +38,11 @@ interface LeaveType {
 const leaveTypeConfig: Record<string, { icon: any; color: string; gradient: string; image?: string }> = {
   sick: { icon: Health, color: '#5E72E4', gradient: 'linear-gradient(135deg, #5E72E4 0%, #825EE4 100%)', image: '/images/icon-stechoscope.png' },
   personal: { icon: Briefcase, color: '#8965E0', gradient: 'linear-gradient(135deg, #8965E0 0%, #BC65E0 100%)', image: '/images/icon-business.png' },
-  vacation: { icon: Sun1, color: '#11CDEF', gradient: 'linear-gradient(135deg, #11CDEF 0%, #1171EF 100%)' , image: '/images/icon-vacation.png'},
+  vacation: { icon: Sun1, color: '#11CDEF', gradient: 'linear-gradient(135deg, #11CDEF 0%, #1171EF 100%)', image: '/images/icon-vacation.png' },
   annual: { icon: Sun1, color: '#2DCECC', gradient: 'linear-gradient(135deg, #2DCECC 0%, #2D8BCC 100%)' },
   maternity: { icon: Lovely, color: '#F5365C', gradient: 'linear-gradient(135deg, #F5365C 0%, #F56036 100%)', image: '/images/icon-pregnant.png' },
-  ordination: { icon: Building4, color: '#FB6340', gradient: 'linear-gradient(135deg, #FB6340 0%, #FBB140 100%)', image: '/images/icon-monk.png'  },
-  work_outside: { icon: Car, color: '#2DCECC', gradient: 'linear-gradient(135deg, #2DCECC 0%, #2D8BCC 100%)', image: '/images/icon-workoutside.png'  },
+  ordination: { icon: Building4, color: '#FB6340', gradient: 'linear-gradient(135deg, #FB6340 0%, #FBB140 100%)', image: '/images/icon-monk.png' },
+  work_outside: { icon: Car, color: '#2DCECC', gradient: 'linear-gradient(135deg, #2DCECC 0%, #2D8BCC 100%)', image: '/images/icon-workoutside.png' },
   absent: { icon: MessageQuestion, color: '#F5365C', gradient: 'linear-gradient(135deg, #F5365C 0%, #F56036 100%)' },
   military: { icon: Shield, color: '#5E72E4', gradient: 'linear-gradient(135deg, #5E72E4 0%, #5E9BE4 100%)' },
   marriage: { icon: Heart, color: '#F3A4B5', gradient: 'linear-gradient(135deg, #F3A4B5 0%, #D66086 100%)' },
@@ -50,8 +50,8 @@ const leaveTypeConfig: Record<string, { icon: any; color: string; gradient: stri
   paternity: { icon: Profile2User, color: '#11CDEF', gradient: 'linear-gradient(135deg, #11CDEF 0%, #1171EF 100%)' },
   sterilization: { icon: Health, color: '#2DCECC', gradient: 'linear-gradient(135deg, #2DCECC 0%, #2D8BCC 100%)' },
   business: { icon: Car, color: '#8965E0', gradient: 'linear-gradient(135deg, #8965E0 0%, #BC65E0 100%)' },
-  unpaid: { icon: MoneySend, color: '#8898AA', gradient: 'linear-gradient(135deg, #8898AA 0%, #6A7A8A 100%)' , image: '/images/icon-unpaid1.png'},
-  other: { icon: HelpCircle, color: '#5E72E4', gradient: 'linear-gradient(135deg, #8898AA 0%, #6A7A8A 100%)' , image: '/images/icon-other.png' },
+  unpaid: { icon: MoneySend, color: '#8898AA', gradient: 'linear-gradient(135deg, #8898AA 0%, #6A7A8A 100%)', image: '/images/icon-unpaid1.png' },
+  other: { icon: HelpCircle, color: '#5E72E4', gradient: 'linear-gradient(135deg, #8898AA 0%, #6A7A8A 100%)', image: '/images/icon-other.png' },
   default: { icon: Calendar2, color: '#5E72E4', gradient: 'linear-gradient(135deg, #5E72E4 0%, #825EE4 100%)' },
 };
 
@@ -60,7 +60,7 @@ export default function Home() {
   const { status } = useSession();
   const { user } = useUser();
   const router = useRouter();
-  
+
   useEffect(() => {
     if (status === 'unauthenticated') {
       router.replace('/login');
@@ -71,7 +71,7 @@ export default function Home() {
   const [dataLoading, setDataLoading] = useState(true);
   const [mounted, setMounted] = useState(false);
   const [leaveTypes, setLeaveTypes] = useState<LeaveType[]>([]);
-  
+
   // Filter leave types based on gender
   const filteredLeaveTypes = useMemo(() => {
     return leaveTypes.filter(leave => {
@@ -98,7 +98,7 @@ export default function Home() {
 
   useEffect(() => {
     setMounted(true);
-    
+
     const loadData = async () => {
       try {
         await fetchLeaveTypes(year);
@@ -109,11 +109,11 @@ export default function Home() {
         setDataLoading(false);
       }
     };
-    
+
     loadData();
 
     const hasLoaded = sessionStorage.getItem('home_loaded') === 'true';
-    
+
     if (hasLoaded) {
       // Already loaded before, skip loading animation
       setLoading(false);
@@ -162,7 +162,7 @@ export default function Home() {
     const start = new Date(startDate);
     const end = new Date(endDate);
     const options: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'short', year: 'numeric' };
-    
+
     if (start.getTime() === end.getTime()) {
       return start.toLocaleDateString('th-TH', options);
     }
@@ -198,7 +198,7 @@ export default function Home() {
         return `${t('status_waiting_for', 'รอการอนุมัติจาก')} ${pendingApproval.approver?.firstName || t('supervisor', 'หัวหน้างาน')}`;
       }
     }
-    
+
     return t('status_pending', 'รอการอนุมัติ');
   };
 
@@ -210,7 +210,7 @@ export default function Home() {
   const getLeaveTypeConfig = (code: string) => {
     return leaveTypeConfig[code] || leaveTypeConfig.default;
   };
-  
+
   const handleLeaveClick = (leave: LeaveRequest) => {
     setSelectedLeave(leave);
     setDrawerOpen(true);
@@ -223,7 +223,7 @@ export default function Home() {
 
   const handleCancelLeave = async () => {
     if (!selectedLeave) return;
-    
+
     if (!cancelReason.trim()) {
       alert(t('cancel_reason_required', 'กรุณาระบุเหตุผลการยกเลิก'));
       return;
@@ -244,18 +244,18 @@ export default function Home() {
         alert(error.error || t('cancel_failed', 'ยกเลิกไม่สำเร็จ'));
         return;
       }
-      
+
       // อัพเดท state
       setLeaveRequests((prev) =>
         prev.map((leave) =>
-          leave.id === selectedLeave.id 
-            ? { ...leave, status: 'cancelled', cancelReason: cancelReason.trim(), cancelledAt: new Date().toISOString() } 
+          leave.id === selectedLeave.id
+            ? { ...leave, status: 'cancelled', cancelReason: cancelReason.trim(), cancelledAt: new Date().toISOString() }
             : leave
         )
       );
-      setSelectedLeave({ 
-        ...selectedLeave, 
-        status: 'cancelled', 
+      setSelectedLeave({
+        ...selectedLeave,
+        status: 'cancelled',
         cancelReason: cancelReason.trim(),
         cancelledAt: new Date().toISOString()
       });
@@ -275,7 +275,7 @@ export default function Home() {
   if (status === 'loading' || status === 'unauthenticated') {
     return (
       <Box sx={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: '#F8F9FA' }}>
-        <Skeleton variant="circular" width={80} height={80} />
+        Loading...
       </Box>
     );
   }
@@ -288,9 +288,9 @@ export default function Home() {
 
       {/* DashboardCard - Full Width on Mobile */}
       <Box sx={{ px: { xs: 0, sm: 3, md: 4 } }}>
-        <DashboardCard 
-          leaveTypes={filteredLeaveTypes} 
-          leaveRequests={leaveRequests} 
+        <DashboardCard
+          leaveTypes={filteredLeaveTypes}
+          leaveRequests={leaveRequests}
           year={year}
           onYearChange={setYear}
         />
@@ -303,15 +303,15 @@ export default function Home() {
             <Typography variant="h6" sx={{ fontWeight: 'bold', color: 'text.primary' }}>
               {t('home_categories', 'ประเภทการลา')}
             </Typography>
-            <Button 
-                    size="small" 
-                    sx={{ fontWeight: 'medium' }}
-                    onClick={() => router.push(`/leave-types`)} // No action for now or link to all banners
-                  >
-                    {t('home_see_all', 'ดูทั้งหมด')}
+            <Button
+              size="small"
+              sx={{ fontWeight: 'medium' }}
+              onClick={() => router.push(`/leave-types`)} // No action for now or link to all banners
+            >
+              {t('home_see_all', 'ดูทั้งหมด')}
             </Button>
           </Box>
-          
+
           {showLoading ? (
             <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 2, px: 1 }}>
               {[1, 2, 3, 4, 5].map((i) => (
@@ -326,15 +326,15 @@ export default function Home() {
               {filteredLeaveTypes.map((type) => {
                 const config = getLeaveTypeConfig(type.code);
                 const IconComponent = config.icon;
-                
+
                 return (
-                  <Box 
-                    key={type.id} 
+                  <Box
+                    key={type.id}
                     onClick={() => router.push(`/leave/${type.code}`)}
-                    sx={{ 
-                      display: 'flex', 
-                      flexDirection: 'column', 
-                      alignItems: 'center', 
+                    sx={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
                       gap: 1,
                       cursor: 'pointer'
                     }}
@@ -357,13 +357,13 @@ export default function Home() {
                       }}
                     >
                       {config.image ? (
-                        <Image 
-                          src={config.image} 
+                        <Image
+                          src={config.image}
                           alt={type.name}
                           width={40}
                           height={40}
                           priority
-                          style={{ objectFit: 'contain' }} 
+                          style={{ objectFit: 'contain' }}
                         />
                       ) : (
                         <IconComponent size={28} color="white" />
@@ -399,10 +399,10 @@ export default function Home() {
                   <Typography variant="h6" sx={{ fontWeight: 'bold', color: 'text.primary' }}>
                     {t('home_information', 'ประชาสัมพันธ์')}
                   </Typography>
-                  <Button 
-                    size="small" 
+                  <Button
+                    size="small"
                     sx={{ fontWeight: 'medium' }}
-                    onClick={() => {}} // No action for now or link to all banners
+                    onClick={() => { }} // No action for now or link to all banners
                   >
                     {t('home_see_all', 'ดูทั้งหมด')}
                   </Button>
@@ -420,7 +420,7 @@ export default function Home() {
             <>
               <Skeleton variant="text" width={160} height={28} sx={{ mb: 1 }} />
               <Skeleton variant="rounded" height={48} sx={{ borderRadius: 2, mb: 2 }} />
-              {[1,2,3].map(i => (
+              {[1, 2, 3].map(i => (
                 <Skeleton key={i} variant="rounded" height={82} sx={{ borderRadius: 2, mb: 1.5 }} />
               ))}
             </>
@@ -431,31 +431,31 @@ export default function Home() {
                   <Typography variant="h6" sx={{ fontWeight: 'bold', color: 'text.primary' }}>
                     {t('home_recent_requests', 'การลาล่าสุด')}
                   </Typography>
-                  
+
                 </Box>
-                <Button 
-                  size="small" 
+                <Button
+                  size="small"
                   sx={{ fontWeight: 'medium' }}
                   onClick={() => router.push('/leave')}
                 >
                   {t('home_see_all', 'ดูทั้งหมด')}
                 </Button>
               </Box>
-              
+
               {recentLeaveRequests.length > 0 ? (
                 recentLeaveRequests.map((leave) => {
                   const config = getLeaveTypeConfig(leave.leaveType || leave.leaveCode || 'default');
                   const IconComponent = config.icon;
-                  
+
                   // คำนวณ progress จาก approvals
                   const totalLevels = leave.approvals?.length || 0;
                   const approvedCount = leave.approvals?.filter(a => a.status === 'approved').length || 0;
-                  
+
                   // ตรวจสอบว่า attachment แรกเป็นรูปภาพหรือไม่
                   const firstAttachment = leave.attachments?.[0];
                   const isImageAttachment = firstAttachment?.mimeType?.startsWith('image/');
                   const imageUrl = isImageAttachment ? firstAttachment.filePath : undefined;
-                  
+
                   return (
                     <Box key={leave.id} onClick={() => handleLeaveClick(leave)}>
                       <RecentActivityCard
@@ -485,10 +485,10 @@ export default function Home() {
       </Container>
 
       <BottomNav activePage="home" />
-      
-      <LeaveDetailDrawer 
-        open={drawerOpen && !cancelDialogOpen} 
-        onClose={handleCloseDrawer} 
+
+      <LeaveDetailDrawer
+        open={drawerOpen && !cancelDialogOpen}
+        onClose={handleCloseDrawer}
         leave={selectedLeave}
         onCancel={() => setCancelDialogOpen(true)}
       />

@@ -4,8 +4,8 @@
   "description": "ระบบลางานออนไลน์",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#FFFFFF",
-  "theme_color": "#FFFFFF",
+  "background_color": "#1b194b",
+  "theme_color": "#1b194b",
   "orientation": "portrait",
   "id": "/",
   "scope": "/",
@@ -17,7 +17,7 @@
       "purpose": "any"
     },
     {
-      "src": "/images/psc_logo.png",
+      "src": "/images/psc_logo.jpg",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"

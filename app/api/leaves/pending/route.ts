@@ -139,8 +139,17 @@ export async function GET(request: NextRequest) {
     const deptMap = new Map(departments.map(d => [d.code, d.name]));
     const sectMap = new Map(sections.map(s => [s.code, s.name]));
 
+    // ดึง leaveRequestIds ที่ยังมีอยู่ก่อน
+    const validLeaveRequestIds = await prisma.leaveRequest.findMany({
+      select: { id: true },
+    });
+    const validIds = new Set(validLeaveRequestIds.map(lr => lr.id));
+
     const pendingApprovals = await prisma.leaveApproval.findMany({
-      where: whereClause,
+      where: {
+        ...whereClause,
+        leaveRequestId: { in: Array.from(validIds) },
+      },
       include: {
         leaveRequest: {
           include: {
@@ -180,8 +189,10 @@ export async function GET(request: NextRequest) {
       ],
     });
 
-    // Filter เฉพาะใบลาที่ถึงคิวตัวเองแล้ว
+    // Filter เฉพาะใบลาที่ถึงคิวตัวเองแล้ว และ leaveRequest ยังมีอยู่
     const filteredApprovals = pendingApprovals.filter(approval => {
+      // ข้าม approval ที่ไม่มี leaveRequest
+      if (!approval.leaveRequest) return false;
       if (approval.status !== 'pending') return true; // ถ้าทำไปแล้วก็ให้เห็น
       // ถ้ายัง pending ต้องเช็คว่าเป็นคิวตัวเองไหม
       return approval.leaveRequest.currentLevel === approval.level;
@@ -226,6 +237,7 @@ export async function GET(request: NextRequest) {
       approved: result.filter((r) => r.status === 'approved').length,
       rejected: result.filter((r) => r.status === 'rejected').length,
       cancelled: result.filter((r) => r.status === 'cancelled').length,
+      skipped: result.filter((r) => r.status === 'skipped').length,
       total: result.length,
     };
 

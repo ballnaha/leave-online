@@ -202,12 +202,12 @@ export default function AdminDashboardPage() {
                 </Box>
                 <Box sx={{ display: 'flex', gap: 1.5 }}>
                     <Tooltip title="รีเฟรชข้อมูล">
-                        <IconButton 
-                            onClick={fetchData} 
-                            size="small" 
-                            sx={{ 
-                                bgcolor: 'background.paper', 
-                                border: '1px solid', 
+                        <IconButton
+                            onClick={fetchData}
+                            size="small"
+                            sx={{
+                                bgcolor: 'background.paper',
+                                border: '1px solid',
                                 borderColor: 'divider',
                                 borderRadius: 1,
                                 width: 40,
@@ -221,10 +221,10 @@ export default function AdminDashboardPage() {
                         variant="contained"
                         startIcon={<DocumentText size={18} color={theme.palette.common.white} />}
                         onClick={() => router.push('/admin/leaves')}
-                        sx={{ 
-                            borderRadius: 1, 
-                            textTransform: 'none', 
-                            fontWeight: 600, 
+                        sx={{
+                            borderRadius: 1,
+                            textTransform: 'none',
+                            fontWeight: 600,
                             px: 3,
                             boxShadow: theme.shadows[2]
                         }}
@@ -235,11 +235,11 @@ export default function AdminDashboardPage() {
             </Box>
 
             {/* Stats Grid */}
-            <Box sx={{ 
-                display: 'grid', 
-                gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', lg: '1fr 1fr 1fr 1fr' }, 
-                gap: 2.5, 
-                mb: 4 
+            <Box sx={{
+                display: 'grid',
+                gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', lg: '1fr 1fr 1fr 1fr' },
+                gap: 2.5,
+                mb: 4
             }}>
                 {statsConfig.map((stat) => (
                     <Paper
@@ -269,7 +269,7 @@ export default function AdminDashboardPage() {
                                 '& .stat-glow': {
                                     opacity: 1,
                                 },
-                                
+
                             },
                             '&::before': {
                                 content: '""',
@@ -294,7 +294,7 @@ export default function AdminDashboardPage() {
                         }}
                     >
                         {/* Glow effect on hover */}
-                        <Box 
+                        <Box
                             className="stat-glow"
                             sx={{
                                 position: 'absolute',
@@ -310,21 +310,21 @@ export default function AdminDashboardPage() {
                             }}
                         />
                         {/* Background Icon */}
-                        <Box 
+                        <Box
                             className="stat-bg-icon"
                             sx={{
                                 position: 'absolute',
                                 bottom: -15,
                                 right: -15,
                                 opacity: 0.07,
-                                
+
                                 pointerEvents: 'none',
                             }}
                         >
                             <stat.icon size={120} color={stat.color} variant="Bold" />
                         </Box>
                         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', position: 'relative', zIndex: 1 }}>
-                            <Box 
+                            <Box
                                 className="stat-icon-box"
                                 sx={{
                                     width: 56,
@@ -343,7 +343,7 @@ export default function AdminDashboardPage() {
                             </Box>
                             {stat.description && (
                                 <Tooltip title={stat.description} arrow>
-                                    <Box sx={{ 
+                                    <Box sx={{
                                         cursor: 'help',
                                         width: 26,
                                         height: 26,
@@ -369,10 +369,10 @@ export default function AdminDashboardPage() {
                             {loading ? (
                                 <Skeleton variant="rectangular" width={80} height={20} sx={{ borderRadius: 0.5 }} />
                             ) : (
-                                <Typography 
-                                    variant="h3" 
-                                    fontWeight={800} 
-                                    sx={{ 
+                                <Typography
+                                    variant="h3"
+                                    fontWeight={800}
+                                    sx={{
                                         background: `linear-gradient(135deg, ${stat.color} 0%, ${alpha(stat.color, 0.7)} 100%)`,
                                         backgroundClip: 'text',
                                         WebkitBackgroundClip: 'text',
@@ -393,16 +393,16 @@ export default function AdminDashboardPage() {
             </Box>
 
             {/* Main Layout Grid */}
-            <Box sx={{ 
-                display: 'grid', 
-                gridTemplateColumns: { xs: '1fr', lg: '2.5fr 1fr' }, 
-                gap: 3 
+            <Box sx={{
+                display: 'grid',
+                gridTemplateColumns: { xs: '1fr', lg: '2.5fr 1fr' },
+                gap: 3
             }}>
                 {/* Left Column */}
                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                    
+
                     {/* Alert Section */}
-                    {!loading && data?.stats.pending && data.stats.pending > 0 && (
+                    {!loading && data?.stats.pending != null && data.stats.pending > 0 && (
                         <Paper
                             elevation={0}
                             onClick={() => router.push('/admin/leaves?status=pending')}
@@ -444,19 +444,19 @@ export default function AdminDashboardPage() {
                     )}
 
                     {/* Row 1: Pending & Activity */}
-                    <Box sx={{ 
-                        display: 'grid', 
-                        gridTemplateColumns: { xs: '1fr', xl: '1.5fr 1fr' }, 
-                        gap: 3 
+                    <Box sx={{
+                        display: 'grid',
+                        gridTemplateColumns: { xs: '1fr', xl: '1.5fr 1fr' },
+                        gap: 3
                     }}>
                         {/* Pending Requests */}
-                        <Paper elevation={0} sx={{ 
-                            height: '100%', 
-                            borderRadius: 1, 
-                            border: '1px solid', 
-                            borderColor: 'divider', 
-                            overflow: 'hidden', 
-                            display: 'flex', 
+                        <Paper elevation={0} sx={{
+                            height: '100%',
+                            borderRadius: 1,
+                            border: '1px solid',
+                            borderColor: 'divider',
+                            overflow: 'hidden',
+                            display: 'flex',
                             flexDirection: 'column',
                             transition: 'all 0.3s ease',
                             '&:hover': {
@@ -464,14 +464,14 @@ export default function AdminDashboardPage() {
                                 borderColor: 'transparent',
                             }
                         }}>
-                            <Box sx={{ 
-                                p: 2.5, 
+                            <Box sx={{
+                                p: 2.5,
                                 background: `linear-gradient(135deg, ${alpha('#6366F1', 0.05)} 0%, ${alpha('#6366F1', 0.1)} 100%)`,
-                                borderBottom: '1px solid', 
-                                borderColor: alpha('#6366F1', 0.1), 
-                                display: 'flex', 
-                                justifyContent: 'space-between', 
-                                alignItems: 'center' 
+                                borderBottom: '1px solid',
+                                borderColor: alpha('#6366F1', 0.1),
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                alignItems: 'center'
                             }}>
                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
                                     <Box sx={{
@@ -487,11 +487,11 @@ export default function AdminDashboardPage() {
                                     </Box>
                                     <Typography variant="h6" fontWeight={700}>คำขอล่าสุด</Typography>
                                 </Box>
-                                <Button 
-                                    size="small" 
-                                    onClick={() => router.push('/admin/leaves')} 
+                                <Button
+                                    size="small"
+                                    onClick={() => router.push('/admin/leaves')}
                                     endIcon={<ArrowRight2 size={16} color="#6366F1" />}
-                                    sx={{ 
+                                    sx={{
                                         borderRadius: 1,
                                         textTransform: 'none',
                                         fontWeight: 600,
@@ -504,7 +504,7 @@ export default function AdminDashboardPage() {
                                 {loading ? (
                                     <Box sx={{ p: 2.5 }}>
                                         <Stack spacing={2.5}>
-                                            {[1,2,3].map(i => (
+                                            {[1, 2, 3].map(i => (
                                                 <Box key={i} sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
                                                     <Skeleton variant="circular" width={40} height={40} sx={{ flexShrink: 0 }} />
                                                     <Box sx={{ flex: 1 }}>
@@ -520,9 +520,20 @@ export default function AdminDashboardPage() {
                                         </Stack>
                                     </Box>
                                 ) : pendingLeaves.length === 0 ? (
-                                    <Box sx={{ py: 8, textAlign: 'center' }}>
-                                        <TickCircle size={48} color={theme.palette.success.main} variant="Bold" style={{ opacity: 0.2 }} />
-                                        <Typography variant="body1" fontWeight={600} sx={{ mt: 2 }}>ไม่มีรายการรออนุมัติ</Typography>
+                                    <Box sx={{ py: 8, textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                                        <Box sx={{
+                                            width: 64,
+                                            height: 64,
+                                            borderRadius: '50%',
+                                            bgcolor: alpha('#10B981', 0.1),
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            mb: 2,
+                                        }}>
+                                            <TickCircle size={32} color="#10B981" variant="Bold" />
+                                        </Box>
+                                        <Typography variant="body1" fontWeight={600}>ไม่มีรายการรออนุมัติ</Typography>
                                         <Typography variant="body2" color="text.secondary">จัดการครบถ้วนแล้ว</Typography>
                                     </Box>
                                 ) : (
@@ -546,13 +557,13 @@ export default function AdminDashboardPage() {
                         </Paper>
 
                         {/* Recent Activity */}
-                        <Paper elevation={0} sx={{ 
-                            height: '100%', 
-                            borderRadius: 1, 
-                            border: '1px solid', 
-                            borderColor: 'divider', 
-                            overflow: 'hidden', 
-                            display: 'flex', 
+                        <Paper elevation={0} sx={{
+                            height: '100%',
+                            borderRadius: 1,
+                            border: '1px solid',
+                            borderColor: 'divider',
+                            overflow: 'hidden',
+                            display: 'flex',
                             flexDirection: 'column',
                             transition: 'all 0.3s ease',
                             '&:hover': {
@@ -560,14 +571,14 @@ export default function AdminDashboardPage() {
                                 borderColor: 'transparent',
                             }
                         }}>
-                            <Box sx={{ 
-                                p: 2.5, 
+                            <Box sx={{
+                                p: 2.5,
                                 background: `linear-gradient(135deg, ${alpha('#10B981', 0.05)} 0%, ${alpha('#10B981', 0.1)} 100%)`,
-                                borderBottom: '1px solid', 
-                                borderColor: alpha('#10B981', 0.1), 
-                                display: 'flex', 
-                                justifyContent: 'space-between', 
-                                alignItems: 'center' 
+                                borderBottom: '1px solid',
+                                borderColor: alpha('#10B981', 0.1),
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                alignItems: 'center'
                             }}>
                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
                                     <Box sx={{
@@ -583,11 +594,11 @@ export default function AdminDashboardPage() {
                                     </Box>
                                     <Typography variant="h6" fontWeight={700}>ความเคลื่อนไหว</Typography>
                                 </Box>
-                                <Button 
-                                    size="small" 
-                                    onClick={() => router.push('/admin/notifications')} 
+                                <Button
+                                    size="small"
+                                    onClick={() => router.push('/admin/notifications')}
                                     endIcon={<ArrowRight2 size={16} color="#6366F1" />}
-                                    sx={{ 
+                                    sx={{
                                         borderRadius: 1,
                                         textTransform: 'none',
                                         fontWeight: 600,
@@ -599,7 +610,7 @@ export default function AdminDashboardPage() {
                             <Box sx={{ p: 2.5, flex: 1 }}>
                                 {loading ? (
                                     <Stack spacing={2.5}>
-                                        {[1,2,3].map(i => (
+                                        {[1, 2, 3].map(i => (
                                             <Box key={i} sx={{ display: 'flex', gap: 1.5 }}>
                                                 <Skeleton variant="circular" width={8} height={8} sx={{ mt: 0.8, flexShrink: 0 }} />
                                                 <Box sx={{ flex: 1 }}>
@@ -611,7 +622,23 @@ export default function AdminDashboardPage() {
                                         ))}
                                     </Stack>
                                 ) : activityFeed.length === 0 ? (
-                                    <Typography color="text.secondary" align="center" sx={{ py: 4 }}>ไม่มีกิจกรรมล่าสุด</Typography>
+                                    <Box sx={{ py: 5, textAlign: 'center' }}>
+                                        <Box sx={{
+                                            width: 56,
+                                            height: 56,
+                                            borderRadius: '50%',
+                                            bgcolor: alpha('#10B981', 0.1),
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            mx: 'auto',
+                                            mb: 2,
+                                        }}>
+                                            <StatusUp size={28} color="#10B981" variant="Outline" />
+                                        </Box>
+                                        <Typography variant="body1" fontWeight={600} color="text.primary">ไม่มีกิจกรรมล่าสุด</Typography>
+                                        <Typography variant="caption" color="text.secondary">ความเคลื่อนไหวจะปรากฏเมื่อมีการดำเนินการ</Typography>
+                                    </Box>
                                 ) : (
                                     <Stack spacing={2}>
                                         {activityFeed.map((activity) => (
@@ -631,17 +658,17 @@ export default function AdminDashboardPage() {
                     </Box>
 
                     {/* Row 2: Stats Charts */}
-                    <Box sx={{ 
-                        display: 'grid', 
-                        gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, 
-                        gap: 3 
+                    <Box sx={{
+                        display: 'grid',
+                        gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' },
+                        gap: 3
                     }}>
                         {/* Leave Types */}
-                        <Paper elevation={0} sx={{ 
-                            height: '100%', 
-                            borderRadius: 1, 
-                            border: '1px solid', 
-                            borderColor: 'divider', 
+                        <Paper elevation={0} sx={{
+                            height: '100%',
+                            borderRadius: 1,
+                            border: '1px solid',
+                            borderColor: 'divider',
                             p: 3,
                             transition: 'all 0.3s ease',
                             '&:hover': {
@@ -663,9 +690,9 @@ export default function AdminDashboardPage() {
                                 </Box>
                                 <Typography variant="h6" fontWeight={700}>สถิติการลา</Typography>
                             </Box>
-                             {loading ? (
+                            {loading ? (
                                 <Stack spacing={2}>
-                                    {[1,2,3,4].map(i => (
+                                    {[1, 2, 3, 4].map(i => (
                                         <Box key={i}>
                                             <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.75 }}>
                                                 <Skeleton variant="rectangular" width="35%" height={14} sx={{ borderRadius: 0.5 }} />
@@ -675,6 +702,24 @@ export default function AdminDashboardPage() {
                                         </Box>
                                     ))}
                                 </Stack>
+                            ) : leaveTypeData.length === 0 ? (
+                                <Box sx={{ py: 5, textAlign: 'center' }}>
+                                    <Box sx={{
+                                        width: 56,
+                                        height: 56,
+                                        borderRadius: '50%',
+                                        bgcolor: alpha('#8B5CF6', 0.1),
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        mx: 'auto',
+                                        mb: 2,
+                                    }}>
+                                        <Calendar size={28} color="#8B5CF6" variant="Outline" />
+                                    </Box>
+                                    <Typography variant="body1" fontWeight={600} color="text.primary">ยังไม่มีข้อมูลสถิติการลา</Typography>
+                                    <Typography variant="caption" color="text.secondary">ข้อมูลจะปรากฏเมื่อมีการลาในระบบ</Typography>
+                                </Box>
                             ) : (
                                 <Stack spacing={2.5}>
                                     {leaveTypeData.map((item) => (
@@ -691,11 +736,11 @@ export default function AdminDashboardPage() {
                         </Paper>
 
                         {/* Departments */}
-                        <Paper elevation={0} sx={{ 
-                            height: '100%', 
-                            borderRadius: 1, 
-                            border: '1px solid', 
-                            borderColor: 'divider', 
+                        <Paper elevation={0} sx={{
+                            height: '100%',
+                            borderRadius: 1,
+                            border: '1px solid',
+                            borderColor: 'divider',
                             p: 3,
                             transition: 'all 0.3s ease',
                             '&:hover': {
@@ -719,7 +764,7 @@ export default function AdminDashboardPage() {
                             </Box>
                             {loading ? (
                                 <Stack spacing={2}>
-                                    {[1,2,3,4].map(i => (
+                                    {[1, 2, 3, 4].map(i => (
                                         <Box key={i}>
                                             <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.75 }}>
                                                 <Skeleton variant="rectangular" width="45%" height={14} sx={{ borderRadius: 0.5 }} />
@@ -729,6 +774,24 @@ export default function AdminDashboardPage() {
                                         </Box>
                                     ))}
                                 </Stack>
+                            ) : departmentData.length === 0 ? (
+                                <Box sx={{ py: 5, textAlign: 'center' }}>
+                                    <Box sx={{
+                                        width: 56,
+                                        height: 56,
+                                        borderRadius: '50%',
+                                        bgcolor: alpha('#0EA5E9', 0.1),
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        mx: 'auto',
+                                        mb: 2,
+                                    }}>
+                                        <Building size={28} color="#0EA5E9" variant="Outline" />
+                                    </Box>
+                                    <Typography variant="body1" fontWeight={600} color="text.primary">ยังไม่มีข้อมูลการลาตามฝ่าย</Typography>
+                                    <Typography variant="caption" color="text.secondary">ข้อมูลจะปรากฏเมื่อมีการลาในระบบ</Typography>
+                                </Box>
                             ) : (
                                 <Stack spacing={2.5}>
                                     {departmentData.map((dept) => (
@@ -749,10 +812,10 @@ export default function AdminDashboardPage() {
                 {/* Right Column */}
                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
                     {/* Who's Out */}
-                    <Paper elevation={0} sx={{ 
-                        borderRadius: 1, 
-                        border: '1px solid', 
-                        borderColor: 'divider', 
+                    <Paper elevation={0} sx={{
+                        borderRadius: 1,
+                        border: '1px solid',
+                        borderColor: 'divider',
                         overflow: 'hidden',
                         transition: 'all 0.3s ease',
                         '&:hover': {
@@ -760,14 +823,14 @@ export default function AdminDashboardPage() {
                             borderColor: 'transparent',
                         }
                     }}>
-                        <Box sx={{ 
-                            p: 2.5, 
+                        <Box sx={{
+                            p: 2.5,
                             background: `linear-gradient(135deg, ${alpha('#EC4899', 0.08)} 0%, ${alpha('#EC4899', 0.15)} 100%)`,
-                            borderBottom: '1px solid', 
-                            borderColor: alpha('#EC4899', 0.15), 
-                            display: 'flex', 
-                            justifyContent: 'space-between', 
-                            alignItems: 'center' 
+                            borderBottom: '1px solid',
+                            borderColor: alpha('#EC4899', 0.15),
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center'
                         }}>
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
                                 <Box sx={{
@@ -784,30 +847,30 @@ export default function AdminDashboardPage() {
                                 </Box>
                                 <Typography variant="subtitle1" fontWeight={700} color="#BE185D">คำขอลาวันนี้</Typography>
                             </Box>
-                            <Chip 
-                                label={`${data?.stats.activeLeavesToday || 0} รายการ`} 
-                                size="small" 
-                                sx={{ 
-                                    bgcolor: '#EC4899', 
-                                    color: 'white', 
-                                    fontWeight: 700, 
+                            <Chip
+                                label={`${data?.stats.activeLeavesToday || 0} รายการ`}
+                                size="small"
+                                sx={{
+                                    bgcolor: '#EC4899',
+                                    color: 'white',
+                                    fontWeight: 700,
                                     height: 28,
                                     px: 1,
                                     borderRadius: 1,
                                     boxShadow: `0 2px 8px ${alpha('#EC4899', 0.4)}`,
-                                }} 
+                                }}
                             />
                         </Box>
                         <Box sx={{ p: 2 }}>
                             {loading ? (
                                 <Stack spacing={1.5}>
-                                    {[1,2,3].map(i => (
-                                        <Box key={i} sx={{ 
-                                            display: 'flex', 
-                                            alignItems: 'center', 
-                                            gap: 2, 
-                                            p: 1.5, 
-                                            borderRadius: 0.5, 
+                                    {[1, 2, 3].map(i => (
+                                        <Box key={i} sx={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: 2,
+                                            p: 1.5,
+                                            borderRadius: 0.5,
                                             border: '1px solid',
                                             borderColor: 'divider',
                                         }}>
@@ -841,14 +904,14 @@ export default function AdminDashboardPage() {
                             ) : (
                                 <Stack spacing={1.5}>
                                     {whoIsOutList.slice(0, 5).map((person, index) => (
-                                        <Box key={index} sx={{ 
-                                            display: 'flex', 
-                                            alignItems: 'center', 
-                                            gap: 2, 
-                                            p: 1.5, 
-                                            borderRadius: 1, 
+                                        <Box key={index} sx={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: 2,
+                                            p: 1.5,
+                                            borderRadius: 1,
                                             bgcolor: alpha('#EC4899', 0.04),
-                                            border: '1px solid', 
+                                            border: '1px solid',
                                             borderColor: alpha('#EC4899', 0.1),
                                             transition: 'all 0.2s ease',
                                             '&:hover': {
@@ -856,10 +919,10 @@ export default function AdminDashboardPage() {
                                                 borderColor: alpha('#EC4899', 0.2),
                                             }
                                         }}>
-                                            <Avatar 
-                                                src={person.avatar} 
-                                                sx={{ 
-                                                    width: 40, 
+                                            <Avatar
+                                                src={person.avatar}
+                                                sx={{
+                                                    width: 40,
                                                     height: 40,
                                                     bgcolor: alpha('#EC4899', 0.15),
                                                     color: '#EC4899',
@@ -872,17 +935,17 @@ export default function AdminDashboardPage() {
                                                 <Typography variant="body2" fontWeight={600}>{person.name}</Typography>
                                                 <Typography variant="caption" color="text.secondary">{person.dept}</Typography>
                                             </Box>
-                                            <Chip 
-                                                label={person.status} 
-                                                size="small" 
-                                                sx={{ 
+                                            <Chip
+                                                label={person.status}
+                                                size="small"
+                                                sx={{
                                                     height: 22,
                                                     fontSize: '0.7rem',
                                                     bgcolor: alpha(typeColors[person.status] || typeColors.default, 0.1),
                                                     color: typeColors[person.status] || typeColors.default,
                                                     fontWeight: 600,
                                                     borderRadius: 1.5,
-                                                }} 
+                                                }}
                                             />
                                         </Box>
                                     ))}
@@ -892,10 +955,10 @@ export default function AdminDashboardPage() {
                     </Paper>
 
                     {/* Top Leave Takers */}
-                    <Paper elevation={0} sx={{ 
-                        borderRadius: 1, 
-                        border: '1px solid', 
-                        borderColor: 'divider', 
+                    <Paper elevation={0} sx={{
+                        borderRadius: 1,
+                        border: '1px solid',
+                        borderColor: 'divider',
                         p: 2.5,
                         transition: 'all 0.3s ease',
                         '&:hover': {
@@ -922,10 +985,10 @@ export default function AdminDashboardPage() {
                         <Stack spacing={2}>
                             {loading ? (
                                 <Stack spacing={1.5}>
-                                    {[1,2,3].map(i => (
-                                        <Box key={i} sx={{ 
-                                            p: 2, 
-                                            borderRadius: 0.5, 
+                                    {[1, 2, 3].map(i => (
+                                        <Box key={i} sx={{
+                                            p: 2,
+                                            borderRadius: 0.5,
                                             border: '1px solid',
                                             borderColor: 'divider',
                                         }}>
@@ -961,19 +1024,19 @@ export default function AdminDashboardPage() {
                                 </Box>
                             ) : (
                                 topLeaveTakersList.map((person, index) => (
-                                    <Box key={person.id} sx={{ 
-                                        p: 2, 
-                                        borderRadius: 1, 
-                                        background: index === 0 
+                                    <Box key={person.id} sx={{
+                                        p: 2,
+                                        borderRadius: 1,
+                                        background: index === 0
                                             ? `linear-gradient(135deg, ${alpha('#F59E0B', 0.08)} 0%, ${alpha('#F59E0B', 0.15)} 100%)`
                                             : 'transparent',
                                         border: '1px solid',
                                         borderColor: index === 0 ? alpha('#F59E0B', 0.2) : 'divider',
                                     }}>
                                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1.5 }}>
-                                            <Typography 
-                                                variant="caption" 
-                                                sx={{ 
+                                            <Typography
+                                                variant="caption"
+                                                sx={{
                                                     width: 24,
                                                     height: 24,
                                                     borderRadius: '50%',
@@ -987,10 +1050,10 @@ export default function AdminDashboardPage() {
                                             >
                                                 {index + 1}
                                             </Typography>
-                                            <Avatar 
-                                                src={person.avatar} 
-                                                sx={{ 
-                                                    width: 32, 
+                                            <Avatar
+                                                src={person.avatar}
+                                                sx={{
+                                                    width: 32,
                                                     height: 32,
                                                     bgcolor: alpha('#F59E0B', 0.15),
                                                     color: '#F59E0B',
@@ -1007,18 +1070,18 @@ export default function AdminDashboardPage() {
                                                 {person.totalDays} วัน
                                             </Typography>
                                         </Box>
-                                        <LinearProgress 
-                                            variant="determinate" 
-                                            value={(person.totalDays / maxLeaveTakerDays) * 100} 
-                                            sx={{ 
-                                                height: 6, 
-                                                borderRadius: 3, 
-                                                bgcolor: alpha('#F59E0B', 0.1), 
-                                                '& .MuiLinearProgress-bar': { 
-                                                    bgcolor: '#F59E0B', 
-                                                    borderRadius: 3 
-                                                } 
-                                            }} 
+                                        <LinearProgress
+                                            variant="determinate"
+                                            value={(person.totalDays / maxLeaveTakerDays) * 100}
+                                            sx={{
+                                                height: 6,
+                                                borderRadius: 3,
+                                                bgcolor: alpha('#F59E0B', 0.1),
+                                                '& .MuiLinearProgress-bar': {
+                                                    bgcolor: '#F59E0B',
+                                                    borderRadius: 3
+                                                }
+                                            }}
                                         />
                                     </Box>
                                 ))

@@ -47,7 +47,7 @@ import {
     SecuritySafe,
     ShieldSearch,
 } from 'iconsax-react';
-import { ChevronDown, ChevronUp, Bell, History, Users, Send } from 'lucide-react';
+import { ChevronDown, ChevronUp, Bell, History, Users, Send, Timer, FileText } from 'lucide-react';
 import { signOut } from 'next-auth/react';
 import { useUser } from '@/app/providers/UserProvider';
 import { useToastr } from '@/app/components/Toastr';
@@ -95,9 +95,21 @@ const menuGroups: MenuGroup[] = [
                 text: 'ใบลาทั้งหมด',
                 icon: DocumentText,
                 iconColor: '#6C63FF',
-                path: '/admin/leaves',
+                children: [
+                    {
+                        text: 'รายการใบลา',
+                        icon: FileText,
+                        iconColor: '#6C63FF',
+                        path: '/admin/leaves',
+                    },
+                    {
+                        text: 'ส่งต่อใบลา',
+                        icon: Timer,
+                        iconColor: '#FF9800',
+                        path: '/admin/leaves/escalation',
+                    },
+                ],
             },
-
         ],
     },
     {
