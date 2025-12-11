@@ -90,6 +90,8 @@ export default function ProfilePage() {
     const [isLoggingOut, setIsLoggingOut] = useState(false);
     const [resetDialogOpen, setResetDialogOpen] = useState(false);
     const [resetLoading, setResetLoading] = useState(false);
+    const [clearDataDialogOpen, setClearDataDialogOpen] = useState(false);
+    const [clearDataLoading, setClearDataLoading] = useState(false);
 
     const languageOptions: Array<{ code: 'th' | 'en' | 'my'; label: string }> = [
         { code: 'th', label: localeLabel.th },
@@ -361,7 +363,14 @@ export default function ProfilePage() {
                     subtitle: isIOS ? t('for_ios', 'สำหรับ iOS') : t('for_android', 'สำหรับ Android'),
                     color: '#4CAF50',
                     link: '#install'
-                }] : []),
+                }] : [{
+                    id: 'clear_app_data',
+                    icon: Mobile,
+                    label: t('clear_app_data', 'ล้างข้อมูลแอป'),
+                    subtitle: t('clear_app_data_subtitle', 'แก้ปัญหาแจ้งเตือนบน Mobile'),
+                    color: '#FF9800',
+                    link: '#'
+                }]),
             ],
         },
     ];
@@ -805,6 +814,10 @@ export default function ProfilePage() {
                                                             setResetDialogOpen(true);
                                                             return;
                                                         }
+                                                        if (item.id === 'clear_app_data') {
+                                                            setClearDataDialogOpen(true);
+                                                            return;
+                                                        }
                                                         if (item.link && item.link !== '#') {
                                                             router.push(item.link);
                                                         }
@@ -1121,6 +1134,119 @@ export default function ProfilePage() {
                         sx={{ borderRadius: 1, minWidth: 100 }}
                     >
                         {resetLoading ? <CircularProgress size={20} color="inherit" /> : t('btn_confirm', 'ยืนยัน')}
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
+            {/* Clear App Data Dialog */}
+            <Dialog
+                open={clearDataDialogOpen}
+                onClose={() => !clearDataLoading && setClearDataDialogOpen(false)}
+                PaperProps={{
+                    sx: {
+                        borderRadius: 1,
+                        maxWidth: 360,
+                        width: '90%',
+                    },
+                }}
+            >
+                <DialogTitle sx={{ pb: 1 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                        <Box
+                            sx={{
+                                width: 40,
+                                height: 40,
+                                borderRadius: 1,
+                                bgcolor: '#FFF3E0',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                            }}
+                        >
+                            <Mobile size={22} color="#FF9800" variant="Bold" />
+                        </Box>
+                        <Typography sx={{ fontWeight: 700, color: '#1E293B' }}>
+                            {t('clear_app_data_title', 'ล้างข้อมูลแอป')}
+                        </Typography>
+                    </Box>
+                </DialogTitle>
+                <DialogContent>
+                    <Typography sx={{ color: '#64748B', fontSize: '0.95rem' }}>
+                        {t('clear_app_data_message', 'ระบบจะล้างข้อมูลแคชทั้งหมดและรีโหลดแอปใหม่ ช่วยแก้ปัญหาการแจ้งเตือนบน Mobile ได้โดยไม่ต้องลบแอป')}
+                    </Typography>
+                    <Typography sx={{ color: '#EF4444', fontSize: '0.85rem', mt: 1 }}>
+                        ⚠️ {t('clear_app_data_warning', 'คุณจะต้องลงชื่อเข้าใช้ใหม่')}
+                    </Typography>
+                </DialogContent>
+                <DialogActions sx={{ px: 3, pb: 2 }}>
+                    <Button
+                        onClick={() => setClearDataDialogOpen(false)}
+                        disabled={clearDataLoading}
+                        sx={{ color: '#64748B' }}
+                    >
+                        {t('btn_cancel', 'ยกเลิก')}
+                    </Button>
+                    <Button
+                        variant="contained"
+                        disabled={clearDataLoading}
+                        onClick={async () => {
+                            setClearDataLoading(true);
+                            try {
+                                toastr.info(t('clearing_data', 'กำลังล้างข้อมูล...'));
+
+                                // 1. Clear localStorage
+                                localStorage.clear();
+
+                                // 2. Clear sessionStorage
+                                sessionStorage.clear();
+
+                                // 3. Clear all IndexedDB databases
+                                if ('indexedDB' in window) {
+                                    const databases = await indexedDB.databases?.() || [];
+                                    for (const db of databases) {
+                                        if (db.name) {
+                                            indexedDB.deleteDatabase(db.name);
+                                        }
+                                    }
+                                }
+
+                                // 4. Clear all caches
+                                if ('caches' in window) {
+                                    const cacheNames = await caches.keys();
+                                    await Promise.all(
+                                        cacheNames.map(cacheName => caches.delete(cacheName))
+                                    );
+                                }
+
+                                // 5. Unregister all Service Workers
+                                if ('serviceWorker' in navigator) {
+                                    const registrations = await navigator.serviceWorker.getRegistrations();
+                                    await Promise.all(
+                                        registrations.map(registration => registration.unregister())
+                                    );
+                                }
+
+                                // 6. Clear cookies
+                                const cookies = document.cookie.split(';');
+                                for (const cookie of cookies) {
+                                    const eqPos = cookie.indexOf('=');
+                                    const name = eqPos > -1 ? cookie.substr(0, eqPos) : cookie;
+                                    document.cookie = `${name.trim()}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/`;
+                                }
+
+                                // 7. Wait a moment then reload
+                                await new Promise(resolve => setTimeout(resolve, 500));
+                                window.location.href = '/login';
+
+                            } catch (e) {
+                                console.error('Clear app data error:', e);
+                                toastr.error(t('clear_data_error', 'เกิดข้อผิดพลาด'));
+                                setClearDataLoading(false);
+                            }
+                        }}
+                        sx={{ borderRadius: 1, minWidth: 100, bgcolor: '#FF9800', '&:hover': { bgcolor: '#F57C00' } }}
+                    >
+                        {clearDataLoading ? <CircularProgress size={20} color="inherit" /> : t('btn_confirm', 'ยืนยัน')}
                     </Button>
                 </DialogActions>
             </Dialog>

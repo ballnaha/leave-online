@@ -326,6 +326,44 @@ export async function notifyLeaveApproved(
 }
 
 /**
+ * แจ้งเตือนเมื่อใบลาผ่านการอนุมัติขั้นหนึ่ง (ยังมีผู้อนุมัติถัดไป)
+ */
+export async function notifyLeavePartialApproved(
+  userId: number,
+  leaveRequestId: number,
+  approverName: string,
+  leaveType: string,
+  currentLevel: number,
+  totalLevels: number
+): Promise<NotificationResult> {
+  const thLeaveType = translateLeaveType(leaveType, 'th');
+  const enLeaveType = translateLeaveType(leaveType, 'en');
+  const myLeaveType = translateLeaveType(leaveType, 'my');
+
+  return notifyUser(userId, 'partial_approved', {
+    title: {
+      en: `📝 Leave In Progress (${currentLevel}/${totalLevels})`,
+      th: `📝 ใบลากำลังดำเนินการ (${currentLevel}/${totalLevels})`,
+      my: `📝 ခွင့်လုပ်ဆောင်နေဆဲ (${currentLevel}/${totalLevels})`
+    },
+    message: {
+      en: `Your ${enLeaveType} was approved by ${approverName}. Waiting for next approver.`,
+      th: `${thLeaveType}ของคุณผ่านการอนุมัติโดย ${approverName} รอผู้อนุมัติลำดับถัดไป`,
+      my: `သင်၏ ${myLeaveType} ကို ${approverName} က အတည်ပြုပြီး နောက်ထပ်အတည်ပြုသူစောင့်ဆိုင်းနေသည်`
+    },
+    url: `${APP_URL}/leave`,
+    data: {
+      type: 'partial_approved',
+      leaveRequestId,
+      leaveTypeCode: leaveType,
+      approverName,
+      currentLevel,
+      totalLevels,
+    },
+  });
+}
+
+/**
  * แจ้งเตือนเมื่อใบลาถูกปฏิเสธ
  */
 export async function notifyLeaveRejected(

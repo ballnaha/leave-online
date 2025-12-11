@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { processNextApproval } from '@/lib/escalation';
-import { notifyLeaveApproved, notifyLeaveRejected } from '@/lib/onesignal';
+import { notifyLeaveApproved, notifyLeaveRejected, notifyLeavePartialApproved } from '@/lib/onesignal';
 
 // POST /api/leaves/[id]/approve - อนุมัติหรือปฏิเสธใบลา
 export async function POST(
@@ -114,6 +114,21 @@ export async function POST(
           where: { id: leaveRequestId },
           data: { status: 'in_progress' },
         });
+
+        // แจ้งเตือนพนักงานว่าใบลาผ่านการอนุมัติขั้นนี้แล้ว
+        const totalApprovals = leaveRequest.approvals.length;
+        const completedApprovals = leaveRequest.approvals.filter(
+          a => a.status === 'approved' || a.id === pendingApproval.id
+        ).length;
+
+        await notifyLeavePartialApproved(
+          leaveRequest.userId,
+          leaveRequestId,
+          approverName,
+          leaveRequest.leaveType,
+          completedApprovals,
+          totalApprovals
+        );
 
         return NextResponse.json({
           success: true,
