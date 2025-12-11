@@ -32,6 +32,7 @@ import {
     Paper,
     Tabs,
     Tab,
+    TablePagination,
 } from '@mui/material';
 import {
     Timer,
@@ -176,6 +177,12 @@ export default function EscalationSettingsPage() {
     const [confirmTitle, setConfirmTitle] = useState('');
     const [confirmMessage, setConfirmMessage] = useState('');
     const [confirmAction, setConfirmAction] = useState<() => void>(() => { });
+
+    // Pagination State
+    const [pendingPage, setPendingPage] = useState(0);
+    const [pendingRowsPerPage, setPendingRowsPerPage] = useState(5);
+    const [logsPage, setLogsPage] = useState(0);
+    const [logsRowsPerPage, setLogsRowsPerPage] = useState(5);
 
     const showConfirm = (title: string, message: string, onConfirm: () => void) => {
         setConfirmTitle(title);
@@ -534,6 +541,7 @@ export default function EscalationSettingsPage() {
                                 <TableHead>
                                     <TableRow>
                                         <TableCell>รหัสใบลา</TableCell>
+                                        <TableCell>วันที่ส่ง</TableCell>
                                         <TableCell>พนักงาน</TableCell>
                                         <TableCell>ประเภท</TableCell>
                                         <TableCell>ผู้อนุมัติปัจจุบัน</TableCell>
@@ -543,77 +551,87 @@ export default function EscalationSettingsPage() {
                                     </TableRow>
                                 </TableHead>
                                 <TableBody>
-                                    {pendingList.map((item) => (
-                                        <TableRow key={item.id}>
-                                            <TableCell>
-                                                <Chip
-                                                    icon={<Tag size={12} />}
-                                                    label={item.leaveCode || `#${item.id}`}
-                                                    size="small"
-                                                    variant="outlined"
-                                                    sx={{ borderRadius: 1, height: 24, fontSize: '0.75rem', cursor: 'pointer' }}
-                                                    onClick={() => handleViewDetail(item.id)}
-                                                />
-                                            </TableCell>
-                                            <TableCell>
-                                                <Typography variant="body2" fontWeight={500}>
-                                                    {item.employeeName}
-                                                </Typography>
-                                            </TableCell>
-                                            <TableCell>{item.leaveType}</TableCell>
-                                            <TableCell>{item.currentApprover}</TableCell>
-                                            <TableCell align="center">
-                                                <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.5 }}>
-                                                    <Typography variant="caption" fontWeight={600}>
-                                                        {dayjs(item.deadline).format('DD MMM HH:mm')}
-                                                    </Typography>
+                                    {pendingList
+                                        .slice(pendingPage * pendingRowsPerPage, pendingPage * pendingRowsPerPage + pendingRowsPerPage)
+                                        .map((item) => (
+                                            <TableRow key={item.id}>
+                                                <TableCell>
                                                     <Chip
-                                                        label={item.hoursRemaining <= 0
-                                                            ? `เกินมา ${Math.abs(item.hoursRemaining)} ชม.`
-                                                            : `อีก ${item.hoursRemaining} ชม.`}
+                                                        icon={<Tag size={12} />}
+                                                        label={item.leaveCode || `#${item.id}`}
                                                         size="small"
-                                                        color={getStatusColor(item.hoursRemaining)}
-                                                        variant="filled"
-                                                        sx={{ height: 20, fontSize: '0.7rem' }}
+                                                        variant="outlined"
+                                                        sx={{ borderRadius: 1, height: 24, fontSize: '0.75rem', cursor: 'pointer' }}
+                                                        onClick={() => handleViewDetail(item.id)}
                                                     />
-                                                </Box>
-                                            </TableCell>
-                                            <TableCell>
-                                                {item.hoursRemaining <= 0 ? (
-                                                    <Chip label="รอ Escalate" size="small" color="error" variant="outlined" />
-                                                ) : item.hoursRemaining <= 24 ? (
-                                                    <Chip label="ใกล้หมดเวลา" size="small" color="warning" variant="outlined" />
-                                                ) : (
-                                                    <Chip label="ปกติ" size="small" color="success" variant="outlined" />
-                                                )}
-                                            </TableCell>
-                                            <TableCell align="right">
-                                                <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
-                                                    <Tooltip title="ดูละเอียด">
-                                                        <IconButton
-                                                            size="small"
-                                                            onClick={() => handleViewDetail(item.id)}
-                                                        >
-                                                            <Eye size={16} />
-                                                        </IconButton>
-                                                    </Tooltip>
-                                                    <Tooltip title="Force Escalate (ทันที)">
-                                                        <IconButton
-                                                            size="small"
-                                                            color="error"
-                                                            onClick={() => handleForceEscalateOne(item.id, item.leaveCode)}
-                                                            disabled={running}
-                                                        >
-                                                            <Rocket size={16} />
-                                                        </IconButton>
-                                                    </Tooltip>
-                                                </Box>
-                                            </TableCell>
-                                        </TableRow>
-                                    ))}
+                                                </TableCell>
+                                                <TableCell>
+                                                    <Typography variant="caption">
+                                                        {dayjs(item.createdAt).format('DD MMM YYYY')}
+                                                    </Typography>
+                                                </TableCell>
+                                                <TableCell>
+                                                    <Typography variant="body2" fontWeight={500}>
+                                                        {item.employeeName}
+                                                    </Typography>
+                                                </TableCell>
+                                                <TableCell>{item.leaveType}</TableCell>
+                                                <TableCell>{item.currentApprover}</TableCell>
+                                                <TableCell align="center">
+                                                    <Typography variant="caption" fontWeight={600}>
+                                                        {dayjs(item.deadline).format('DD MMM YYYY')}
+                                                    </Typography>
+                                                </TableCell>
+                                                <TableCell>
+                                                    {item.hoursRemaining <= 0 ? (
+                                                        <Chip label="รอ Escalate" size="small" color="error" variant="outlined" />
+                                                    ) : item.hoursRemaining <= 24 ? (
+                                                        <Chip label="ใกล้หมดเวลา" size="small" color="warning" variant="outlined" />
+                                                    ) : (
+                                                        <Chip label="ปกติ" size="small" color="success" variant="outlined" />
+                                                    )}
+                                                </TableCell>
+                                                <TableCell align="right">
+                                                    <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
+                                                        <Tooltip title="ดูละเอียด">
+                                                            <IconButton
+                                                                size="small"
+                                                                onClick={() => handleViewDetail(item.id)}
+                                                            >
+                                                                <Eye size={16} />
+                                                            </IconButton>
+                                                        </Tooltip>
+                                                        <Tooltip title="Force Escalate (ทันที)">
+                                                            <IconButton
+                                                                size="small"
+                                                                color="error"
+                                                                onClick={() => handleForceEscalateOne(item.id, item.leaveCode)}
+                                                                disabled={running}
+                                                            >
+                                                                <Rocket size={16} />
+                                                            </IconButton>
+                                                        </Tooltip>
+                                                    </Box>
+                                                </TableCell>
+                                            </TableRow>
+                                        ))}
                                 </TableBody>
                             </Table>
                         </TableContainer>
+                        <TablePagination
+                            component="div"
+                            count={pendingList.length}
+                            page={pendingPage}
+                            onPageChange={(_, newPage) => setPendingPage(newPage)}
+                            rowsPerPage={pendingRowsPerPage}
+                            onRowsPerPageChange={(e) => {
+                                setPendingRowsPerPage(parseInt(e.target.value, 10));
+                                setPendingPage(0);
+                            }}
+                            rowsPerPageOptions={[5, 10, 25]}
+                            labelRowsPerPage="แสดง:"
+                            labelDisplayedRows={({ from, to, count }) => `${from}-${to} จาก ${count}`}
+                        />
                     </CardContent>
                 </Card>
             )}
@@ -633,68 +651,85 @@ export default function EscalationSettingsPage() {
                     ) : recentLogs.length === 0 ? (
                         <Alert severity="info">ยังไม่มีประวัติการ Escalate</Alert>
                     ) : (
-                        <TableContainer>
-                            <Table size="small">
-                                <TableHead>
-                                    <TableRow>
-                                        <TableCell>รหัสใบลา</TableCell>
-                                        <TableCell>เวลา</TableCell>
-                                        <TableCell>พนักงาน</TableCell>
-                                        <TableCell>ประเภท</TableCell>
-                                        <TableCell>ส่งต่อให้</TableCell>
-                                        <TableCell align="center">สถานะ</TableCell>
-                                        <TableCell align="right">Actions</TableCell>
-                                    </TableRow>
-                                </TableHead>
-                                <TableBody>
-                                    {recentLogs.map((log) => (
-                                        <TableRow key={log.id}>
-                                            <TableCell>
-                                                <Chip
-                                                    icon={<Tag size={12} />}
-                                                    label={log.leaveCode || `#${log.leaveRequestId}`}
-                                                    size="small"
-                                                    variant="outlined"
-                                                    sx={{ borderRadius: 1, height: 24, fontSize: '0.75rem', cursor: 'pointer' }}
-                                                    onClick={() => handleViewDetail(log.leaveRequestId)}
-                                                />
-                                            </TableCell>
-                                            <TableCell>
-                                                <Typography variant="caption">
-                                                    {dayjs(log.escalatedAt).format('DD MMM YYYY HH:mm')}
-                                                </Typography>
-                                            </TableCell>
-                                            <TableCell>
-                                                <Typography variant="body2" fontWeight={500}>
-                                                    {log.employeeName}
-                                                </Typography>
-                                            </TableCell>
-                                            <TableCell>{log.leaveType}</TableCell>
-                                            <TableCell>{log.escalatedTo}</TableCell>
-                                            <TableCell align="center">
-                                                <Chip
-                                                    icon={<CheckCircle size={14} />}
-                                                    label={log.status}
-                                                    size="small"
-                                                    color="success"
-                                                />
-                                            </TableCell>
-                                            <TableCell align="right">
-                                                <Tooltip title="ดูละเอียด">
-                                                    <IconButton
-                                                        size="small"
-                                                        onClick={() => handleViewDetail(log.leaveRequestId)}
-                                                    >
-                                                        <Eye size={16} />
-                                                    </IconButton>
-                                                </Tooltip>
-                                            </TableCell>
+                        <>
+                            <TableContainer>
+                                <Table size="small">
+                                    <TableHead>
+                                        <TableRow>
+                                            <TableCell>รหัสใบลา</TableCell>
+                                            <TableCell>เวลา</TableCell>
+                                            <TableCell>พนักงาน</TableCell>
+                                            <TableCell>ประเภท</TableCell>
+                                            <TableCell>ส่งต่อให้</TableCell>
+                                            <TableCell align="center">สถานะ</TableCell>
+                                            <TableCell align="right">Actions</TableCell>
                                         </TableRow>
-                                    ))}
-                                </TableBody>
-                            </Table>
-                        </TableContainer>
-
+                                    </TableHead>
+                                    <TableBody>
+                                        {recentLogs
+                                            .slice(logsPage * logsRowsPerPage, logsPage * logsRowsPerPage + logsRowsPerPage)
+                                            .map((log) => (
+                                                <TableRow key={log.id}>
+                                                    <TableCell>
+                                                        <Chip
+                                                            icon={<Tag size={12} />}
+                                                            label={log.leaveCode || `#${log.leaveRequestId}`}
+                                                            size="small"
+                                                            variant="outlined"
+                                                            sx={{ borderRadius: 1, height: 24, fontSize: '0.75rem', cursor: 'pointer' }}
+                                                            onClick={() => handleViewDetail(log.leaveRequestId)}
+                                                        />
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        <Typography variant="caption">
+                                                            {dayjs(log.escalatedAt).format('DD MMM YYYY HH:mm')}
+                                                        </Typography>
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        <Typography variant="body2" fontWeight={500}>
+                                                            {log.employeeName}
+                                                        </Typography>
+                                                    </TableCell>
+                                                    <TableCell>{log.leaveType}</TableCell>
+                                                    <TableCell>{log.escalatedTo}</TableCell>
+                                                    <TableCell align="center">
+                                                        <Chip
+                                                            icon={<CheckCircle size={14} />}
+                                                            label={log.status}
+                                                            size="small"
+                                                            color="success"
+                                                        />
+                                                    </TableCell>
+                                                    <TableCell align="right">
+                                                        <Tooltip title="ดูละเอียด">
+                                                            <IconButton
+                                                                size="small"
+                                                                onClick={() => handleViewDetail(log.leaveRequestId)}
+                                                            >
+                                                                <Eye size={16} />
+                                                            </IconButton>
+                                                        </Tooltip>
+                                                    </TableCell>
+                                                </TableRow>
+                                            ))}
+                                    </TableBody>
+                                </Table>
+                            </TableContainer>
+                            <TablePagination
+                                component="div"
+                                count={recentLogs.length}
+                                page={logsPage}
+                                onPageChange={(_, newPage) => setLogsPage(newPage)}
+                                rowsPerPage={logsRowsPerPage}
+                                onRowsPerPageChange={(e) => {
+                                    setLogsRowsPerPage(parseInt(e.target.value, 10));
+                                    setLogsPage(0);
+                                }}
+                                rowsPerPageOptions={[5, 10, 25]}
+                                labelRowsPerPage="แสดง:"
+                                labelDisplayedRows={({ from, to, count }) => `${from}-${to} จาก ${count}`}
+                            />
+                        </>
                     )}
                 </CardContent>
             </Card>
@@ -970,6 +1005,6 @@ export default function EscalationSettingsPage() {
                     </Button>
                 </DialogActions>
             </Dialog>
-        </Box>
+        </Box >
     );
 }
