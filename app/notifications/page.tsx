@@ -34,23 +34,25 @@ interface NotificationItem {
     data?: any;
 }
 
-// Tab categories
-type TabType = 'all' | 'submitted' | 'results' | 'system';
+// Tab categories - redesigned according to Option 1
+type TabType = 'all' | 'action_required' | 'my_leaves';
 
 // Define which notification types belong to which category
-const getNotificationCategory = (type: string): TabType => {
+const getNotificationCategory = (type: string): 'action_required' | 'my_leaves' => {
     switch (type) {
-        case 'submitted':
-            return 'submitted';
-        case 'approved':
-        case 'rejected':
-            return 'results';
+        // For Approvers - action required
         case 'approval_pending':
         case 'reminder':
+            return 'action_required';
+        // For Employees - my leaves status
+        case 'submitted':
+        case 'partial_approved':
+        case 'approved':
+        case 'rejected':
         case 'escalated':
         case 'cancelled':
         default:
-            return 'system';
+            return 'my_leaves';
     }
 };
 
@@ -73,7 +75,7 @@ const leaveTypeTranslations: Record<string, Record<string, string>> = {
 export default function NotificationsPage() {
     const { t, locale } = useLocale();
     const router = useRouter();
-    const { status } = useSession();
+    const { data: session, status } = useSession();
     const [notifications, setNotifications] = useState<NotificationItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [unreadCount, setUnreadCount] = useState(0);
@@ -168,9 +170,8 @@ export default function NotificationsPage() {
     const unreadCounts = useMemo(() => {
         const counts = {
             all: 0,
-            submitted: 0,
-            results: 0,
-            system: 0,
+            action_required: 0,
+            my_leaves: 0,
         };
         notifications.forEach(n => {
             if (!n.isRead) {
@@ -318,6 +319,8 @@ export default function NotificationsPage() {
                 return <Clock size={20} color="#FFC107" variant="Bold" />;
             case 'reminder':
                 return <InfoCircle size={20} color="#FF9800" variant="Bold" />;
+            case 'partial_approved':
+                return <Status size={20} color="#2196F3" variant="Bold" />;
             case 'approved':
                 return <TickCircle size={20} color="#4CAF50" variant="Bold" />;
             case 'rejected':
@@ -340,6 +343,8 @@ export default function NotificationsPage() {
                 return '#FFF8E1';
             case 'reminder':
                 return '#FFF3E0';
+            case 'partial_approved':
+                return '#E3F2FD';
             case 'approved':
                 return '#E8F5E9';
             case 'rejected':
@@ -375,6 +380,7 @@ export default function NotificationsPage() {
             case 'approved':
             case 'rejected':
             case 'submitted':
+            case 'partial_approved':
             case 'escalated':
             case 'cancelled':
                 // ไปหน้าใบลาของฉัน
@@ -392,12 +398,20 @@ export default function NotificationsPage() {
         setActiveTab(newValue);
     };
 
-    // Tab config
+
+    // Check if user has approver role (can see action_required tab)
+    const userRole = session?.user?.role || '';
+    const isApprover = ['head', 'manager', 'dept_manager', 'shift_leader', 'hr_manager', 'admin'].includes(userRole);
+
+    // Tab config - action_required tab only visible for approvers
     const tabs = [
         { value: 'all' as TabType, label: t('tab_all', 'ทั้งหมด'), icon: <Notification size={18} color="#6C63FF" /> },
-        { value: 'submitted' as TabType, label: t('tab_submitted', 'ส่งใบลา'), icon: <Send2 size={18} color="#2196F3" /> },
-        { value: 'results' as TabType, label: t('tab_results', 'ผลอนุมัติ'), icon: <TickCircle size={18} color="#4CAF50" /> },
-        { value: 'system' as TabType, label: t('tab_system', 'ระบบ'), icon: <InfoCircle size={18} color="#FF9800" /> },
+        ...(isApprover ? [{
+            value: 'action_required' as TabType,
+            label: t('tab_action_required', 'รอดำเนินการ'),
+            icon: <Clock size={18} color="#FFC107" />
+        }] : []),
+        { value: 'my_leaves' as TabType, label: t('tab_my_leaves', 'ใบลาของฉัน'), icon: <DocumentText size={18} color="#4CAF50" /> },
     ];
 
     if (status === 'loading') {
@@ -565,11 +579,9 @@ export default function NotificationsPage() {
                         >
                             {activeTab === 'all'
                                 ? t('no_notifications_desc', 'เมื่อมีการแจ้งเตือนใหม่ จะแสดงที่นี่')
-                                : activeTab === 'submitted'
-                                    ? t('no_submitted_notifications', 'ไม่มีการแจ้งเตือนการส่งใบลา')
-                                    : activeTab === 'results'
-                                        ? t('no_results_notifications', 'ไม่มีการแจ้งเตือนผลอนุมัติ')
-                                        : t('no_system_notifications', 'ไม่มีการแจ้งเตือนจากระบบ')
+                                : activeTab === 'action_required'
+                                    ? t('no_action_required_notifications', 'ไม่มีใบลารอดำเนินการ')
+                                    : t('no_my_leaves_notifications', 'ไม่มีการแจ้งเตือนใบลาของคุณ')
                             }
                         </Typography>
                     </Box>

@@ -444,27 +444,57 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
   const resetConnection = useCallback(async () => {
     console.log('🔔 OneSignal: Resetting connection...');
 
+    // Helper function to delete IndexedDB with timeout
+    const deleteIndexedDB = (dbName: string, timeoutMs: number = 3000): Promise<boolean> => {
+      return new Promise((resolve) => {
+        const timeout = setTimeout(() => {
+          console.warn(`🔔 OneSignal: IndexedDB ${dbName} delete timed out`);
+          resolve(false);
+        }, timeoutMs);
+
+        try {
+          const request = indexedDB.deleteDatabase(dbName);
+          request.onsuccess = () => {
+            clearTimeout(timeout);
+            console.log(`🔔 OneSignal: Deleted IndexedDB ${dbName}`);
+            resolve(true);
+          };
+          request.onerror = () => {
+            clearTimeout(timeout);
+            console.warn(`🔔 OneSignal: Failed to delete IndexedDB ${dbName}`);
+            resolve(false);
+          };
+          request.onblocked = () => {
+            clearTimeout(timeout);
+            console.warn(`🔔 OneSignal: IndexedDB ${dbName} delete blocked`);
+            resolve(false);
+          };
+        } catch (e) {
+          clearTimeout(timeout);
+          console.warn(`🔔 OneSignal: Error deleting IndexedDB ${dbName}`, e);
+          resolve(false);
+        }
+      });
+    };
+
     try {
-      // 1. Opt out if currently subscribed
+      // 1. Opt out if currently subscribed (with timeout)
       if (window.OneSignal && isInitialized) {
         try {
-          await window.OneSignal.User.PushSubscription.optOut();
+          const optOutPromise = window.OneSignal.User.PushSubscription.optOut();
+          await Promise.race([
+            optOutPromise,
+            new Promise((_, reject) => setTimeout(() => reject(new Error('OptOut timeout')), 5000))
+          ]);
         } catch (e) {
-          console.warn('🔔 OneSignal: OptOut during reset failed', e);
+          console.warn('🔔 OneSignal: OptOut during reset failed or timed out', e);
         }
       }
 
-      // 2. Clear OneSignal IndexedDB
+      // 2. Clear OneSignal IndexedDB (with proper async handling)
       if ('indexedDB' in window) {
         const dbNames = ['ONE_SIGNAL_SDK_DB', 'onesignal-database'];
-        for (const dbName of dbNames) {
-          try {
-            indexedDB.deleteDatabase(dbName);
-            console.log(`🔔 OneSignal: Deleted IndexedDB ${dbName}`);
-          } catch (e) {
-            console.warn(`🔔 OneSignal: Failed to delete ${dbName}`, e);
-          }
-        }
+        await Promise.all(dbNames.map(dbName => deleteIndexedDB(dbName)));
       }
 
       // 3. Clear OneSignal localStorage keys
@@ -474,14 +504,26 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
       keysToRemove.forEach(k => localStorage.removeItem(k));
       console.log(`🔔 OneSignal: Cleared ${keysToRemove.length} localStorage keys`);
 
-      // 4. Unregister OneSignal Service Workers
+      // 4. Unregister OneSignal Service Workers (with timeout)
       if ('serviceWorker' in navigator) {
-        const registrations = await navigator.serviceWorker.getRegistrations();
-        for (const reg of registrations) {
-          if (reg.active?.scriptURL.includes('OneSignal')) {
-            await reg.unregister();
-            console.log('🔔 OneSignal: Unregistered OneSignal service worker');
-          }
+        try {
+          const registrations = await navigator.serviceWorker.getRegistrations();
+          const unregisterPromises = registrations
+            .filter(reg => reg.active?.scriptURL.includes('OneSignal'))
+            .map(async (reg) => {
+              try {
+                await Promise.race([
+                  reg.unregister(),
+                  new Promise((_, reject) => setTimeout(() => reject(new Error('Unregister timeout')), 3000))
+                ]);
+                console.log('🔔 OneSignal: Unregistered OneSignal service worker');
+              } catch (e) {
+                console.warn('🔔 OneSignal: Service worker unregister failed or timed out', e);
+              }
+            });
+          await Promise.all(unregisterPromises);
+        } catch (e) {
+          console.warn('🔔 OneSignal: Error getting service worker registrations', e);
         }
       }
 
@@ -490,8 +532,8 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
       setPlayerId(null);
       setIsInitialized(false);
 
-      // 6. Wait a moment for cleanup to complete
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // 6. Wait longer for cleanup to complete (especially important on production)
+      await new Promise(resolve => setTimeout(resolve, 1000));
 
       // 7. Re-initialize OneSignal (without page reload)
       console.log('🔔 OneSignal: Re-initializing...');
@@ -499,40 +541,73 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
       // Force reinitialize by calling init again (OneSignal SDK handles re-init)
       if (window.OneSignal) {
         try {
-          await window.OneSignal.init({
+          const initPromise = window.OneSignal.init({
             appId: process.env.NEXT_PUBLIC_ONESIGNAL_APP_ID || '',
             allowLocalhostAsSecureOrigin: true,
             notifyButton: { enable: false },
           });
+          await Promise.race([
+            initPromise,
+            new Promise((_, reject) => setTimeout(() => reject(new Error('Init timeout')), 10000))
+          ]);
         } catch (initError: any) {
           // Ignore "already initialized" error
-          if (!initError?.message?.includes('already initialized')) {
+          if (!initError?.message?.includes('already initialized') && !initError?.message?.includes('Init timeout')) {
             throw initError;
           }
-        }
-
-        // Check subscription status
-        const subscribed = await window.OneSignal.User.PushSubscription.optedIn;
-        const id = await window.OneSignal.User.PushSubscription.id;
-
-        setIsSubscribed(subscribed);
-        setPlayerId(id || null);
-        setIsInitialized(true);
-
-        // Auto-subscribe after reset
-        if (!subscribed) {
-          console.log('🔔 OneSignal: Auto-subscribing after reset...');
-          await window.OneSignal.Notifications.requestPermission();
-          await window.OneSignal.User.PushSubscription.optIn();
-
-          const newId = await window.OneSignal.User.PushSubscription.id;
-          if (newId) {
-            setPlayerId(newId);
-            setIsSubscribed(true);
+          if (initError?.message?.includes('Init timeout')) {
+            console.warn('🔔 OneSignal: Init timed out, but continuing...');
           }
         }
 
-        console.log('🔔 OneSignal: Reset complete, status:', { subscribed: subscribed || true, playerId: id });
+        // Check subscription status with timeout
+        try {
+          const statusPromise = (async () => {
+            const subscribed = await window.OneSignal.User.PushSubscription.optedIn;
+            const id = await window.OneSignal.User.PushSubscription.id;
+            return { subscribed, id };
+          })();
+
+          const status = await Promise.race([
+            statusPromise,
+            new Promise<{ subscribed: boolean; id: string | null }>((resolve) =>
+              setTimeout(() => resolve({ subscribed: false, id: null }), 5000)
+            )
+          ]);
+
+          setIsSubscribed(status.subscribed);
+          setPlayerId(status.id);
+          setIsInitialized(true);
+
+          // Auto-subscribe after reset
+          if (!status.subscribed) {
+            console.log('🔔 OneSignal: Auto-subscribing after reset...');
+            try {
+              await Promise.race([
+                (async () => {
+                  await window.OneSignal.Notifications.requestPermission();
+                  await window.OneSignal.User.PushSubscription.optIn();
+                  const newId = await window.OneSignal.User.PushSubscription.id;
+                  if (newId) {
+                    setPlayerId(newId);
+                    setIsSubscribed(true);
+                  }
+                })(),
+                new Promise((_, reject) => setTimeout(() => reject(new Error('Subscribe timeout')), 10000))
+              ]);
+            } catch (subError: any) {
+              console.warn('🔔 OneSignal: Auto-subscribe failed or timed out', subError);
+            }
+          }
+
+          console.log('🔔 OneSignal: Reset complete, status:', { subscribed: status.subscribed, playerId: status.id });
+        } catch (statusError) {
+          console.warn('🔔 OneSignal: Failed to get subscription status', statusError);
+          setIsInitialized(true);
+        }
+      } else {
+        // No OneSignal object, just mark as initialized
+        setIsInitialized(true);
       }
 
     } catch (error) {

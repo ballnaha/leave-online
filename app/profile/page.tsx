@@ -99,6 +99,19 @@ export default function ProfilePage() {
         { code: 'my', label: localeLabel.my },
     ];
 
+    // Get role label
+    const getRoleLabel = (role: string): string => {
+        const roleLabels: Record<string, string> = {
+            employee: t('role_employee', 'พนักงาน'),
+            section_head: t('role_section_head', 'หัวหน้าแผนก'),
+            shift_supervisor: t('role_shift_supervisor', 'หัวหน้ากะ'),
+            dept_manager: t('role_dept_manager', 'ผู้จัดการฝ่าย/ส่วน'),
+            hr_manager: t('role_hr_manager', 'ผู้จัดการ HR'),
+            admin: t('role_admin', 'ผู้ดูแลระบบ'),
+        };
+        return roleLabels[role] || role;
+    };
+
     const handleLogout = async () => {
         setIsLoggingOut(true);
 
@@ -518,7 +531,7 @@ export default function ProfilePage() {
                                         )}
                                     </Box>
                                     <Chip
-                                        label={profile ? getEmployeeTypeLabel(profile.employeeType) : t('role_fulltime', 'พนักงานประจำ')}
+                                        label={profile ? getRoleLabel(profile.role) : t('role_employee', 'พนักงาน')}
                                         size="small"
                                         sx={{
                                             bgcolor: '#E8F5E9',
