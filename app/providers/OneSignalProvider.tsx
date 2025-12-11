@@ -15,6 +15,7 @@ interface OneSignalContextValue {
   subscribe: () => Promise<void>;
   unsubscribe: () => Promise<void>;
   requestPermission: () => Promise<void>;
+  resetConnection: () => Promise<void>;
 }
 
 const OneSignalContext = createContext<OneSignalContextValue | undefined>(undefined);
@@ -71,15 +72,31 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
       setPermission(Notification.permission);
     }
 
+    // Timeout fallback: if SDK doesn't initialize in 10 seconds, mark as initialized anyway
+    const initTimeout = setTimeout(() => {
+      if (!isInitialized) {
+        console.warn('🔔 OneSignal: Initialization timeout, marking as initialized');
+        setIsInitialized(true);
+      }
+    }, 10000);
+
     // Load OneSignal SDK
     const script = document.createElement('script');
     script.src = 'https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js';
     script.defer = true;
-    script.onload = initOneSignal;
+    script.onload = () => {
+      clearTimeout(initTimeout);
+      initOneSignal();
+    };
+    script.onerror = () => {
+      console.error('🔔 OneSignal: Failed to load SDK script');
+      clearTimeout(initTimeout);
+      setIsInitialized(true); // Mark as initialized so UI isn't stuck
+    };
     document.head.appendChild(script);
 
     return () => {
-      // Cleanup if needed
+      clearTimeout(initTimeout);
     };
   }, []);
 
@@ -423,6 +440,108 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
     }
   }, [isInitialized, subscribe]);
 
+  // Reset OneSignal connection completely (without page reload)
+  const resetConnection = useCallback(async () => {
+    console.log('🔔 OneSignal: Resetting connection...');
+
+    try {
+      // 1. Opt out if currently subscribed
+      if (window.OneSignal && isInitialized) {
+        try {
+          await window.OneSignal.User.PushSubscription.optOut();
+        } catch (e) {
+          console.warn('🔔 OneSignal: OptOut during reset failed', e);
+        }
+      }
+
+      // 2. Clear OneSignal IndexedDB
+      if ('indexedDB' in window) {
+        const dbNames = ['ONE_SIGNAL_SDK_DB', 'onesignal-database'];
+        for (const dbName of dbNames) {
+          try {
+            indexedDB.deleteDatabase(dbName);
+            console.log(`🔔 OneSignal: Deleted IndexedDB ${dbName}`);
+          } catch (e) {
+            console.warn(`🔔 OneSignal: Failed to delete ${dbName}`, e);
+          }
+        }
+      }
+
+      // 3. Clear OneSignal localStorage keys
+      const keysToRemove = Object.keys(localStorage).filter(k =>
+        k.toLowerCase().includes('onesignal') || k.toLowerCase().includes('one_signal')
+      );
+      keysToRemove.forEach(k => localStorage.removeItem(k));
+      console.log(`🔔 OneSignal: Cleared ${keysToRemove.length} localStorage keys`);
+
+      // 4. Unregister OneSignal Service Workers
+      if ('serviceWorker' in navigator) {
+        const registrations = await navigator.serviceWorker.getRegistrations();
+        for (const reg of registrations) {
+          if (reg.active?.scriptURL.includes('OneSignal')) {
+            await reg.unregister();
+            console.log('🔔 OneSignal: Unregistered OneSignal service worker');
+          }
+        }
+      }
+
+      // 5. Reset state
+      setIsSubscribed(false);
+      setPlayerId(null);
+      setIsInitialized(false);
+
+      // 6. Wait a moment for cleanup to complete
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      // 7. Re-initialize OneSignal (without page reload)
+      console.log('🔔 OneSignal: Re-initializing...');
+
+      // Force reinitialize by calling init again (OneSignal SDK handles re-init)
+      if (window.OneSignal) {
+        try {
+          await window.OneSignal.init({
+            appId: process.env.NEXT_PUBLIC_ONESIGNAL_APP_ID || '',
+            allowLocalhostAsSecureOrigin: true,
+            notifyButton: { enable: false },
+          });
+        } catch (initError: any) {
+          // Ignore "already initialized" error
+          if (!initError?.message?.includes('already initialized')) {
+            throw initError;
+          }
+        }
+
+        // Check subscription status
+        const subscribed = await window.OneSignal.User.PushSubscription.optedIn;
+        const id = await window.OneSignal.User.PushSubscription.id;
+
+        setIsSubscribed(subscribed);
+        setPlayerId(id || null);
+        setIsInitialized(true);
+
+        // Auto-subscribe after reset
+        if (!subscribed) {
+          console.log('🔔 OneSignal: Auto-subscribing after reset...');
+          await window.OneSignal.Notifications.requestPermission();
+          await window.OneSignal.User.PushSubscription.optIn();
+
+          const newId = await window.OneSignal.User.PushSubscription.id;
+          if (newId) {
+            setPlayerId(newId);
+            setIsSubscribed(true);
+          }
+        }
+
+        console.log('🔔 OneSignal: Reset complete, status:', { subscribed: subscribed || true, playerId: id });
+      }
+
+    } catch (error) {
+      console.error('🔔 OneSignal: Reset failed', error);
+      setIsInitialized(true); // Ensure UI isn't stuck
+      throw error;
+    }
+  }, [isInitialized]);
+
   const value = {
     isSupported,
     isSubscribed,
@@ -432,6 +551,7 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
     subscribe,
     unsubscribe,
     requestPermission,
+    resetConnection,
   };
 
   return (

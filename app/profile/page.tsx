@@ -1,6 +1,6 @@
 'use client';
 import React, { useEffect, useState, useCallback } from 'react';
-import { Box, Typography, Avatar, Paper, IconButton, Chip, Switch, Divider, Dialog, DialogTitle, DialogContent, List, ListItemButton, ListItemText, Skeleton, CircularProgress, Button, Stack } from '@mui/material';
+import { Box, Typography, Avatar, Paper, IconButton, Chip, Switch, Divider, Dialog, DialogTitle, DialogContent, DialogActions, List, ListItemButton, ListItemText, Skeleton, CircularProgress, Button, Stack } from '@mui/material';
 import { localeLabel, useLocale } from '../providers/LocaleProvider';
 import { useRouter } from 'next/navigation';
 import type { UserRole } from '@/types/user-role';
@@ -78,7 +78,7 @@ export default function ProfilePage() {
     const { data: session } = useSession();
     const router = useRouter();
     const toastr = useToastr();
-    const { isSupported: pushSupported, isSubscribed: pushSubscribed, isInitialized: pushInitialized, permission: pushPermission, subscribe: pushSubscribe, unsubscribe: pushUnsubscribe } = useOneSignal();
+    const { isSupported: pushSupported, isSubscribed: pushSubscribed, isInitialized: pushInitialized, permission: pushPermission, subscribe: pushSubscribe, unsubscribe: pushUnsubscribe, resetConnection: pushReset } = useOneSignal();
     const { isStandalone, deferredPrompt, installPWA, isIOS } = usePWA();
     const [pushLoading, setPushLoading] = useState(false);
     const [darkMode, setDarkMode] = useState(false);
@@ -88,6 +88,8 @@ export default function ProfilePage() {
     const { user: profile, loading: userLoading } = useUser();
     const [mounted, setMounted] = useState(false);
     const [isLoggingOut, setIsLoggingOut] = useState(false);
+    const [resetDialogOpen, setResetDialogOpen] = useState(false);
+    const [resetLoading, setResetLoading] = useState(false);
 
     const languageOptions: Array<{ code: 'th' | 'en' | 'my'; label: string }> = [
         { code: 'th', label: localeLabel.th },
@@ -329,6 +331,15 @@ export default function ProfilePage() {
                     color: '#4CAF50',
                     link: '#',
                     subtitle: t('register_notification_subtitle', 'กดเมื่อไม่ได้รับการแจ้งเตือน'),
+                } as SettingsItemWithLink] : []),
+                // Always show reset option when supported (helps fix stuck states)
+                ...(pushSupported ? [{
+                    id: 'reset_notification',
+                    icon: Notification,
+                    label: t('reset_notification', 'รีเซ็ตการแจ้งเตือน'),
+                    color: '#F44336',
+                    link: '#',
+                    subtitle: t('reset_notification_subtitle', 'ล้างข้อมูลและเริ่มใหม่'),
                 } as SettingsItemWithLink] : []),
 
             ],
@@ -790,6 +801,10 @@ export default function ProfilePage() {
                                                             }
                                                             return;
                                                         }
+                                                        if (item.id === 'reset_notification') {
+                                                            setResetDialogOpen(true);
+                                                            return;
+                                                        }
                                                         if (item.link && item.link !== '#') {
                                                             router.push(item.link);
                                                         }
@@ -1039,6 +1054,75 @@ export default function ProfilePage() {
                         {t('understood', 'เข้าใจแล้ว')}
                     </Button>
                 </Box>
+            </Dialog>
+
+            {/* Reset Notification Dialog */}
+            <Dialog
+                open={resetDialogOpen}
+                onClose={() => !resetLoading && setResetDialogOpen(false)}
+                PaperProps={{
+                    sx: {
+                        borderRadius: 1,
+                        maxWidth: 360,
+                        width: '90%',
+                    },
+                }}
+            >
+                <DialogTitle sx={{ pb: 1 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                        <Box
+                            sx={{
+                                width: 40,
+                                height: 40,
+                                borderRadius: 1,
+                                bgcolor: '#FFEBEE',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                            }}
+                        >
+                            <Notification size={22} color="#F44336" variant="Bold" />
+                        </Box>
+                        <Typography sx={{ fontWeight: 700, color: '#1E293B' }}>
+                            {t('reset_notification_title', 'รีเซ็ตการแจ้งเตือน')}
+                        </Typography>
+                    </Box>
+                </DialogTitle>
+                <DialogContent>
+                    <Typography sx={{ color: '#64748B', fontSize: '0.95rem' }}>
+                        {t('reset_notification_message', 'ระบบจะล้างข้อมูลการแจ้งเตือนและเชื่อมต่อใหม่ คุณต้องการดำเนินการต่อหรือไม่?')}
+                    </Typography>
+                </DialogContent>
+                <DialogActions sx={{ px: 3, pb: 2 }}>
+                    <Button
+                        onClick={() => setResetDialogOpen(false)}
+                        disabled={resetLoading}
+                        sx={{ color: '#64748B' }}
+                    >
+                        {t('btn_cancel', 'ยกเลิก')}
+                    </Button>
+                    <Button
+                        variant="contained"
+                        color="error"
+                        disabled={resetLoading}
+                        onClick={async () => {
+                            setResetLoading(true);
+                            try {
+                                await pushReset();
+                                toastr.success(t('reset_success', 'รีเซ็ตสำเร็จ เชื่อมต่อการแจ้งเตือนใหม่แล้ว'));
+                                setResetDialogOpen(false);
+                            } catch (e) {
+                                console.error(e);
+                                toastr.error(t('reset_error', 'เกิดข้อผิดพลาด'));
+                            } finally {
+                                setResetLoading(false);
+                            }
+                        }}
+                        sx={{ borderRadius: 1, minWidth: 100 }}
+                    >
+                        {resetLoading ? <CircularProgress size={20} color="inherit" /> : t('btn_confirm', 'ยืนยัน')}
+                    </Button>
+                </DialogActions>
             </Dialog>
 
             {/* Bottom Navigation */}
