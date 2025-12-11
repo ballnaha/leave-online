@@ -6,10 +6,10 @@
 import { prisma } from './prisma';
 
 // OneSignal Configuration
-const ONESIGNAL_APP_ID = process.env.ONESIGNAL_APP_ID || '';
-const ONESIGNAL_REST_API_KEY = process.env.ONESIGNAL_REST_API_KEY || '';
+const ONESIGNAL_APP_ID = (process.env.ONESIGNAL_APP_ID || '').trim();
+const ONESIGNAL_REST_API_KEY = (process.env.ONESIGNAL_REST_API_KEY || '').trim();
 const ONESIGNAL_API_URL = 'https://onesignal.com/api/v1/notifications';
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://leave.psc.co.th';
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://leave.poonsubcan.co.th';
 
 // Leave type translations
 const leaveTypeTranslations: Record<string, { th: string; en: string; my: string }> = {
@@ -78,10 +78,10 @@ export async function sendPushNotification(
   }
 
   try {
-    const headings = typeof payload.title === 'string' 
-      ? { en: payload.title, th: payload.title } 
+    const headings = typeof payload.title === 'string'
+      ? { en: payload.title, th: payload.title }
       : payload.title;
-      
+
     const contents = typeof payload.message === 'string'
       ? { en: payload.message, th: payload.message }
       : payload.message;
@@ -137,7 +137,7 @@ export async function sendPushNotification(
           errorMessage = String(result.errors);
         }
       }
-      
+
       console.error('OneSignal API Error:', result);
       return { success: false, error: errorMessage };
     }
@@ -193,9 +193,9 @@ export async function notifyUser(
   if (!result.success && result.error && result.error.includes('All included players are not subscribed')) {
     console.warn(`OneSignal: All devices for user ${userId} are unsubscribed. Deactivating devices.`);
     await prisma.userDevice.updateMany({
-      where: { 
-        userId, 
-        playerId: { in: playerIds } 
+      where: {
+        userId,
+        playerId: { in: playerIds }
       },
       data: { isActive: false }
     });
