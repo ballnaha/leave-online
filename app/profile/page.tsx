@@ -93,6 +93,8 @@ export default function ProfilePage() {
     const [resetLoading, setResetLoading] = useState(false);
     const [clearDataDialogOpen, setClearDataDialogOpen] = useState(false);
     const [clearDataLoading, setClearDataLoading] = useState(false);
+    const [serverVersion, setServerVersion] = useState<string | null>(null);
+    const [hasNewVersion, setHasNewVersion] = useState(false);
 
     const languageOptions: Array<{ code: 'th' | 'en' | 'my'; label: string }> = [
         { code: 'th', label: localeLabel.th },
@@ -204,6 +206,34 @@ export default function ProfilePage() {
             }
         };
     }, []);
+
+    // Check for new version from server
+    useEffect(() => {
+        const checkVersion = async () => {
+            try {
+                // Add cache-busting query param to bypass service worker cache
+                const res = await fetch(`/api/version?t=${Date.now()}`, {
+                    cache: 'no-store',
+                    headers: { 'Cache-Control': 'no-cache' }
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    setServerVersion(data.version);
+                    // Compare versions
+                    if (data.version !== APP_VERSION) {
+                        setHasNewVersion(true);
+                    }
+                }
+            } catch (e) {
+                console.error('Failed to check version:', e);
+            }
+        };
+
+        // Only check when in standalone mode (PWA)
+        if (isStandalone) {
+            checkVersion();
+        }
+    }, [isStandalone]);
 
     // Get initials for avatar
     const getInitials = () => {
@@ -372,9 +402,13 @@ export default function ProfilePage() {
                 }] : [{
                     id: 'update_version',
                     icon: Refresh2,
-                    label: t('update_version', 'อัปเดตเวอร์ชัน'),
-                    subtitle: `${t('current_version', 'เวอร์ชันปัจจุบัน')}: ${APP_VERSION}`,
-                    color: '#2196F3',
+                    label: hasNewVersion
+                        ? t('new_version_available', '🎉 มีเวอร์ชันใหม่!')
+                        : t('update_version', 'อัปเดตเวอร์ชัน'),
+                    subtitle: hasNewVersion
+                        ? `${APP_VERSION} → ${serverVersion}`
+                        : `${t('current_version', 'เวอร์ชันปัจจุบัน')}: ${APP_VERSION}`,
+                    color: hasNewVersion ? '#4CAF50' : '#2196F3',
                     link: '#'
                 }]),
             ],
@@ -1150,27 +1184,33 @@ export default function ProfilePage() {
                                 width: 40,
                                 height: 40,
                                 borderRadius: 1,
-                                bgcolor: '#E3F2FD',
+                                bgcolor: hasNewVersion ? '#E8F5E9' : '#E3F2FD',
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
                             }}
                         >
-                            <Refresh2 size={22} color="#2196F3" variant="Bold" />
+                            <Refresh2 size={22} color={hasNewVersion ? '#4CAF50' : '#2196F3'} variant="Bold" />
                         </Box>
                         <Box>
                             <Typography sx={{ fontWeight: 700, color: '#1E293B' }}>
-                                {t('update_version_title', 'อัปเดตเวอร์ชัน')}
+                                {hasNewVersion
+                                    ? t('new_version_available_title', '🎉 มีเวอร์ชันใหม่!')
+                                    : t('update_version_title', 'อัปเดตเวอร์ชัน')}
                             </Typography>
                             <Typography sx={{ fontSize: '0.75rem', color: '#64748B' }}>
-                                v{APP_VERSION}
+                                {hasNewVersion
+                                    ? `v${APP_VERSION} → v${serverVersion}`
+                                    : `v${APP_VERSION}`}
                             </Typography>
                         </Box>
                     </Box>
                 </DialogTitle>
                 <DialogContent>
                     <Typography sx={{ color: '#64748B', fontSize: '0.95rem' }}>
-                        {t('update_version_message', 'ระบบจะดาวน์โหลดเวอร์ชันใหม่ล่าสุดและรีสตาร์ทแอป เพื่อให้แอปทำงานได้อย่างสมบูรณ์')}
+                        {hasNewVersion
+                            ? t('new_version_message', 'มีเวอร์ชันใหม่พร้อมให้อัปเดต! กดอัปเดตเพื่อรับฟีเจอร์และการแก้ไขล่าสุด')
+                            : t('update_version_message', 'ระบบจะดาวน์โหลดเวอร์ชันใหม่ล่าสุดและรีสตาร์ทแอป เพื่อให้แอปทำงานได้อย่างสมบูรณ์')}
                     </Typography>
                     <Typography sx={{ color: '#64748B', fontSize: '0.85rem', mt: 1 }}>
                         ℹ️ {t('update_version_note', 'คุณจะต้องลงชื่อเข้าใช้ใหม่หลังอัปเดต')}
@@ -1260,7 +1300,12 @@ export default function ProfilePage() {
                                 setClearDataLoading(false);
                             }
                         }}
-                        sx={{ borderRadius: 1, minWidth: 100, bgcolor: '#2196F3', '&:hover': { bgcolor: '#1976D2' } }}
+                        sx={{
+                            borderRadius: 1,
+                            minWidth: 100,
+                            bgcolor: hasNewVersion ? '#4CAF50' : '#2196F3',
+                            '&:hover': { bgcolor: hasNewVersion ? '#388E3C' : '#1976D2' }
+                        }}
                     >
                         {clearDataLoading ? <CircularProgress size={20} color="inherit" /> : t('btn_update_now', 'อัปเดตเลย')}
                     </Button>

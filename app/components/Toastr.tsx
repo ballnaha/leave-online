@@ -89,7 +89,7 @@ export function ToastrProvider({ children }: { children: ReactNode }) {
                     anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
                     TransitionComponent={SlideTransition}
                     sx={{
-                        top: `${24 + index * 60}px !important`,
+                        top: `calc(env(safe-area-inset-top, 0px) + ${24 + index * 60}px) !important`,
                         zIndex: 9999,
                     }}
                 >
