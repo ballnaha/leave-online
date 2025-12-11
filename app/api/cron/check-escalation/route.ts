@@ -17,6 +17,10 @@ export async function POST(request: NextRequest) {
     const isValidParam = secretParam === cronSecret;
     const isCron = cronSecret && (isValidHeader || isValidParam);
 
+    const force = searchParams.get('force') === 'true';
+    const leaveIdParam = searchParams.get('leaveId');
+    const leaveId = leaveIdParam ? parseInt(leaveIdParam) : undefined;
+
     // 2. ตรวจสอบ Admin Session (สำหรับกดปุ่ม Run Now จาก Dashboard)
     let isAdmin = false;
     if (!isCron) {
@@ -30,8 +34,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    console.log('Starting escalation check...');
-    const result = await checkAndEscalate();
+    console.log(`Starting escalation check... (Force: ${force}, LeaveId: ${leaveId || 'All'})`);
+    const result = await checkAndEscalate({ force, leaveId });
     console.log('Escalation check completed:', result);
 
     return NextResponse.json({

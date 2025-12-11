@@ -4,10 +4,10 @@
  */
 
 import { prisma } from './prisma';
-import { 
-  notifyApprovalPending, 
-  notifyEscalated, 
-  notifyApprovalReminder 
+import {
+  notifyApprovalPending,
+  notifyEscalated,
+  notifyApprovalReminder
 } from './onesignal';
 
 const ESCALATION_HOURS = 48; // 2 วัน = 48 ชั่วโมง
@@ -16,7 +16,7 @@ const REMINDER_HOURS = 24; // เตือนหลัง 24 ชั่วโม�
 /**
  * ตรวจสอบและ escalate ใบลาที่เกินเวลา
  */
-export async function checkAndEscalate(): Promise<{
+export async function checkAndEscalate(options?: { force?: boolean; leaveId?: number }): Promise<{
   escalated: number;
   reminded: number;
   errors: string[];
@@ -29,20 +29,30 @@ export async function checkAndEscalate(): Promise<{
 
   try {
     const now = new Date();
+    const isForce = options?.force || false;
+    const targetLeaveId = options?.leaveId;
 
-    // หาใบลาที่เกิน 2 วัน และยังไม่ถูก escalate
+    // Build query condition
+    const whereCondition: any = {
+      status: { in: ['pending', 'in_progress'] },
+      isEscalated: false,
+    };
+
+    if (targetLeaveId) {
+      whereCondition.id = targetLeaveId;
+    } else if (!isForce) {
+      whereCondition.escalationDeadline = { lte: now };
+    }
+
     const overdueLeaves = await prisma.leaveRequest.findMany({
-      where: {
-        status: { in: ['pending', 'in_progress'] },
-        isEscalated: false,
-        escalationDeadline: { lte: now },
-      },
+      where: whereCondition,
       include: {
         user: true,
         approvals: {
           where: { status: 'pending' },
           orderBy: { level: 'asc' },
           take: 1,
+          include: { approver: true },
         },
       },
     });
@@ -118,7 +128,7 @@ export async function checkAndEscalate(): Promise<{
 
     // ส่งเตือนใบลาที่ใกล้หมดเวลา (เหลือ 24 ชั่วโมง)
     const reminderThreshold = new Date(now.getTime() + REMINDER_HOURS * 60 * 60 * 1000);
-    
+
     const leavesNeedingReminder = await prisma.leaveRequest.findMany({
       where: {
         status: { in: ['pending', 'in_progress'] },
@@ -131,7 +141,7 @@ export async function checkAndEscalate(): Promise<{
       include: {
         user: true,
         approvals: {
-          where: { 
+          where: {
             status: 'pending',
             reminderCount: { lt: 2 }, // ส่งเตือนไม่เกิน 2 ครั้ง
           },
@@ -159,7 +169,7 @@ export async function checkAndEscalate(): Promise<{
           // อัพเดต reminder count
           await prisma.leaveApproval.update({
             where: { id: approval.id },
-            data: { 
+            data: {
               reminderCount: approval.reminderCount + 1,
               notifiedAt: now,
             },
@@ -186,7 +196,7 @@ export async function createApprovalSteps(
   userId: number
 ): Promise<void> {
   const now = new Date();
-  
+
   // ดึงข้อมูล user ก่อนเพื่อเช็ค role
   const user = await prisma.user.findUnique({ where: { id: userId } });
   if (!user) return;
@@ -194,8 +204,8 @@ export async function createApprovalSteps(
   // 0. ถ้าเป็น dept_manager ให้ส่งตรงไป HR Manager เลย
   if (user.role === 'dept_manager') {
     const hrManager = await prisma.user.findFirst({
-      where: { 
-        role: 'hr_manager', 
+      where: {
+        role: 'hr_manager',
         isActive: true,
         id: { not: userId }, // ป้องกัน self-approval
       },
@@ -243,7 +253,7 @@ export async function createApprovalSteps(
   if (approvalFlows.length > 0) {
     // กรอง approval flows ที่ไม่ใช่ตัวเอง (ป้องกัน self-approval)
     const filteredFlows = approvalFlows.filter(flow => flow.approverId !== userId);
-    
+
     if (filteredFlows.length === 0) {
       // ถ้าไม่มีผู้อนุมัติเลยหลังจากกรอง ให้ส่งตรงไป HR Manager
       const hrManager = await prisma.user.findFirst({
@@ -320,171 +330,171 @@ export async function createApprovalSteps(
   // user ถูกดึงมาแล้วด้านบน ไม่ต้องดึงซ้ำ
   let workflow = null;
 
-    // Check Section
-    if (user.section) {
-      workflow = await (prisma as any).approvalWorkflow.findFirst({
-        where: { section: user.section, isActive: true },
-        include: { steps: { orderBy: { level: 'asc' } } }
-      });
-    }
+  // Check Section
+  if (user.section) {
+    workflow = await (prisma as any).approvalWorkflow.findFirst({
+      where: { section: user.section, isActive: true },
+      include: { steps: { orderBy: { level: 'asc' } } }
+    });
+  }
 
-    // Check Department
-    if (!workflow && user.department) {
-      workflow = await (prisma as any).approvalWorkflow.findFirst({
-        where: { department: user.department, isActive: true },
-        include: { steps: { orderBy: { level: 'asc' } } }
-      });
-    }
+  // Check Department
+  if (!workflow && user.department) {
+    workflow = await (prisma as any).approvalWorkflow.findFirst({
+      where: { department: user.department, isActive: true },
+      include: { steps: { orderBy: { level: 'asc' } } }
+    });
+  }
 
-    // Check Company
-    if (!workflow && user.company) {
-      workflow = await (prisma as any).approvalWorkflow.findFirst({
-        where: { company: user.company, isActive: true },
-        include: { steps: { orderBy: { level: 'asc' } } }
-      });
-    }
+  // Check Company
+  if (!workflow && user.company) {
+    workflow = await (prisma as any).approvalWorkflow.findFirst({
+      where: { company: user.company, isActive: true },
+      include: { steps: { orderBy: { level: 'asc' } } }
+    });
+  }
 
-    if (workflow && workflow.steps.length > 0) {
-      let firstApproverId: number | null = null;
+  if (workflow && workflow.steps.length > 0) {
+    let firstApproverId: number | null = null;
 
-      for (const step of workflow.steps) {
-        let approverId = step.approverId;
+    for (const step of workflow.steps) {
+      let approverId = step.approverId;
 
-        if (!approverId && step.approverRole) {
-          // Resolve Role dynamically
-          const role = step.approverRole;
-          
-          if (role === 'hr_manager') {
-            // Special handling for HR Manager: Try same company first, then fallback to any HR (Shared Service)
-            // ต้องไม่ใช่ตัวเอง (ป้องกัน self-approval)
-            const hrInCompany = await prisma.user.findFirst({
-              where: { role, isActive: true, company: user.company, id: { not: userId } }
-            });
-            
-            if (hrInCompany) {
-              approverId = hrInCompany.id;
-            } else {
-              const anyHr = await prisma.user.findFirst({
-                where: { role, isActive: true, id: { not: userId } }
-              });
-              if (anyHr) approverId = anyHr.id;
-            }
+      if (!approverId && step.approverRole) {
+        // Resolve Role dynamically
+        const role = step.approverRole;
+
+        if (role === 'hr_manager') {
+          // Special handling for HR Manager: Try same company first, then fallback to any HR (Shared Service)
+          // ต้องไม่ใช่ตัวเอง (ป้องกัน self-approval)
+          const hrInCompany = await prisma.user.findFirst({
+            where: { role, isActive: true, company: user.company, id: { not: userId } }
+          });
+
+          if (hrInCompany) {
+            approverId = hrInCompany.id;
           } else {
-            // ค้นหาผู้อนุมัติตาม role โดยเช็คทั้ง:
-            // 1. ฝ่าย/แผนกตัวเอง
-            // 2. ฝ่าย/แผนกที่ดูแลเพิ่มเติม (managedDepartments/managedSections)
+            const anyHr = await prisma.user.findFirst({
+              where: { role, isActive: true, id: { not: userId } }
+            });
+            if (anyHr) approverId = anyHr.id;
+          }
+        } else {
+          // ค้นหาผู้อนุมัติตาม role โดยเช็คทั้ง:
+          // 1. ฝ่าย/แผนกตัวเอง
+          // 2. ฝ่าย/แผนกที่ดูแลเพิ่มเติม (managedDepartments/managedSections)
+          // ต้องไม่ใช่ตัวเอง (ป้องกัน self-approval)
+
+          let approver = null;
+
+          // หา approver ที่อยู่ฝ่าย/แผนกเดียวกัน (primary lookup)
+          if (role === 'section_head' && user.section) {
+            approver = await prisma.user.findFirst({
+              where: { role, isActive: true, section: user.section, id: { not: userId } }
+            });
+          } else if (role === 'dept_manager' && user.department) {
+            approver = await prisma.user.findFirst({
+              where: { role, isActive: true, department: user.department, id: { not: userId } }
+            });
+          } else if (role === 'shift_supervisor' && user.shift) {
+            approver = await prisma.user.findFirst({
+              where: { role, isActive: true, shift: user.shift, id: { not: userId } }
+            });
+          }
+
+          // ถ้าไม่เจอ ให้หาจาก managedDepartments / managedSections (cross-department)
+          if (!approver) {
+            // หา approver ที่มี managedDepartments หรือ managedSections ครอบคลุมพนักงานคนนี้
             // ต้องไม่ใช่ตัวเอง (ป้องกัน self-approval)
-            
-            let approver = null;
+            const potentialApprovers = await prisma.user.findMany({
+              where: {
+                role,
+                isActive: true,
+                id: { not: userId },
+                OR: [
+                  { managedDepartments: { not: null } },
+                  { managedSections: { not: null } },
+                ]
+              }
+            });
 
-            // หา approver ที่อยู่ฝ่าย/แผนกเดียวกัน (primary lookup)
-            if (role === 'section_head' && user.section) {
-              approver = await prisma.user.findFirst({
-                where: { role, isActive: true, section: user.section, id: { not: userId } }
-              });
-            } else if (role === 'dept_manager' && user.department) {
-              approver = await prisma.user.findFirst({
-                where: { role, isActive: true, department: user.department, id: { not: userId } }
-              });
-            } else if (role === 'shift_supervisor' && user.shift) {
-              approver = await prisma.user.findFirst({
-                where: { role, isActive: true, shift: user.shift, id: { not: userId } }
-              });
-            }
+            for (const potential of potentialApprovers) {
+              let manages = false;
 
-            // ถ้าไม่เจอ ให้หาจาก managedDepartments / managedSections (cross-department)
-            if (!approver) {
-              // หา approver ที่มี managedDepartments หรือ managedSections ครอบคลุมพนักงานคนนี้
-              // ต้องไม่ใช่ตัวเอง (ป้องกัน self-approval)
-              const potentialApprovers = await prisma.user.findMany({
-                where: { 
-                  role, 
-                  isActive: true,
-                  id: { not: userId },
-                  OR: [
-                    { managedDepartments: { not: null } },
-                    { managedSections: { not: null } },
-                  ]
-                }
-              });
+              // เช็ค managedDepartments
+              if (potential.managedDepartments && user.department) {
+                try {
+                  const depts: string[] = JSON.parse(potential.managedDepartments);
+                  if (depts.includes(user.department)) {
+                    manages = true;
+                  }
+                } catch (e) { }
+              }
 
-              for (const potential of potentialApprovers) {
-                let manages = false;
+              // เช็ค managedSections
+              if (!manages && potential.managedSections && user.section) {
+                try {
+                  const sects: string[] = JSON.parse(potential.managedSections);
+                  if (sects.includes(user.section)) {
+                    manages = true;
+                  }
+                } catch (e) { }
+              }
 
-                // เช็ค managedDepartments
-                if (potential.managedDepartments && user.department) {
-                  try {
-                    const depts: string[] = JSON.parse(potential.managedDepartments);
-                    if (depts.includes(user.department)) {
-                      manages = true;
-                    }
-                  } catch (e) {}
-                }
-
-                // เช็ค managedSections
-                if (!manages && potential.managedSections && user.section) {
-                  try {
-                    const sects: string[] = JSON.parse(potential.managedSections);
-                    if (sects.includes(user.section)) {
-                      manages = true;
-                    }
-                  } catch (e) {}
-                }
-
-                if (manages) {
-                  approver = potential;
-                  break;
-                }
+              if (manages) {
+                approver = potential;
+                break;
               }
             }
+          }
 
-            if (approver) {
-              approverId = approver.id;
-            }
+          if (approver) {
+            approverId = approver.id;
           }
         }
-
-        // ข้าม step ถ้า approverId เป็นคนเดียวกับผู้ขอลา (ป้องกัน self-approval)
-        if (approverId && approverId !== userId) {
-          await prisma.leaveApproval.create({
-            data: {
-              leaveRequestId,
-              level: step.level,
-              approverId,
-              status: 'pending',
-              notifiedAt: firstApproverId === null ? now : null,
-            },
-          });
-          if (firstApproverId === null) firstApproverId = approverId;
-        }
       }
 
-      if (firstApproverId) {
-         // Notify First Approver
-         const leaveRequest = await prisma.leaveRequest.findUnique({
-          where: { id: leaveRequestId },
-          include: { user: true },
-        });
-        if (leaveRequest) {
-          await notifyApprovalPending(
-            firstApproverId,
+      // ข้าม step ถ้า approverId เป็นคนเดียวกับผู้ขอลา (ป้องกัน self-approval)
+      if (approverId && approverId !== userId) {
+        await prisma.leaveApproval.create({
+          data: {
             leaveRequestId,
-            `${leaveRequest.user.firstName} ${leaveRequest.user.lastName}`,
-            leaveRequest.leaveType,
-            leaveRequest.totalDays,
-            leaveRequest.startDate?.toISOString(),
-            leaveRequest.endDate?.toISOString(),
-            leaveRequest.reason
-          );
-        }
-        return;
+            level: step.level,
+            approverId,
+            status: 'pending',
+            notifiedAt: firstApproverId === null ? now : null,
+          },
+        });
+        if (firstApproverId === null) firstApproverId = approverId;
       }
     }
+
+    if (firstApproverId) {
+      // Notify First Approver
+      const leaveRequest = await prisma.leaveRequest.findUnique({
+        where: { id: leaveRequestId },
+        include: { user: true },
+      });
+      if (leaveRequest) {
+        await notifyApprovalPending(
+          firstApproverId,
+          leaveRequestId,
+          `${leaveRequest.user.firstName} ${leaveRequest.user.lastName}`,
+          leaveRequest.leaveType,
+          leaveRequest.totalDays,
+          leaveRequest.startDate?.toISOString(),
+          leaveRequest.endDate?.toISOString(),
+          leaveRequest.reason
+        );
+      }
+      return;
+    }
+  }
 
   // 3. Fallback: ถ้าไม่มี flow กำหนดไว้เลย ให้ส่งตรงไป HR Manager (แต่ต้องไม่ใช่ตัวเอง)
   const hrManager = await prisma.user.findFirst({
-    where: { 
-      role: 'hr_manager', 
+    where: {
+      role: 'hr_manager',
       isActive: true,
       id: { not: userId }, // ป้องกัน self-approval
     },
@@ -522,8 +532,8 @@ export async function createApprovalSteps(
   } else {
     // กรณี HR Manager ลาเอง และไม่มี HR คนอื่น ให้หา Admin แทน
     const admin = await prisma.user.findFirst({
-      where: { 
-        role: 'admin', 
+      where: {
+        role: 'admin',
         isActive: true,
         id: { not: userId },
       },

@@ -182,9 +182,10 @@ export async function POST(request: Request) {
             ? attachments
             : [];
 
-        // คำนวณ escalation deadline (2 วัน = 48 ชั่วโมง)
+        // คำนวณ escalation deadline (2 วัน = 48 ชั่วโมง) -> ปัดไปเป็น 08:00 ของวันที่ครบกำหนด
         const escalationDeadline = new Date();
-        escalationDeadline.setHours(escalationDeadline.getHours() + 48);
+        escalationDeadline.setDate(escalationDeadline.getDate() + 2); // บวก 2 วัน
+        escalationDeadline.setHours(8, 0, 0, 0); // ตั้งเวลาเป็น 08:00:00
 
         // สร้างรหัสใบลา
         const leaveCode = await generateLeaveCode(leaveType, start);

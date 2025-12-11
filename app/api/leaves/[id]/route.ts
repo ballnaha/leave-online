@@ -58,6 +58,7 @@ export async function GET(
                 firstName: true,
                 lastName: true,
                 position: true,
+                role: true,
               },
             },
           },
@@ -84,6 +85,7 @@ export async function GET(
     // จัดรูปแบบข้อมูล
     const result = {
       id: leaveRequest.id,
+      leaveCode: leaveRequest.leaveCode,
       leaveType: leaveRequest.leaveType,
       startDate: leaveRequest.startDate,
       startTime: leaveRequest.startTime,
@@ -104,11 +106,11 @@ export async function GET(
         section: leaveRequest.user.section ? (sectMap.get(leaveRequest.user.section) || leaveRequest.user.section) : null,
       },
       attachments: leaveRequest.attachments,
-      approvalHistory: leaveRequest.approvals.map(a => ({
+      approvals: leaveRequest.approvals.map(a => ({
         level: a.level,
         status: a.status,
         comment: a.comment,
-        actionAt: a.actionAt,
+        approvedAt: a.actionAt,
         approver: a.approver,
       })),
     };

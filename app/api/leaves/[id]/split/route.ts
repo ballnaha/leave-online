@@ -124,7 +124,7 @@ export async function POST(
         // ตรวจสอบวันที่ของ splits ว่าครอบคลุมวันที่เดิมทั้งหมด
         const originalStart = new Date(originalLeave.startDate);
         const originalEnd = new Date(originalLeave.endDate);
-        
+
         // คำนวณผลรวมวันลาที่แยก
         const totalSplitDays = splits.reduce((sum, s) => sum + s.totalDays, 0);
         if (Math.abs(totalSplitDays - originalLeave.totalDays) > 0.01) {
@@ -151,7 +151,7 @@ export async function POST(
 
             // 2. ยกเลิก approval ทั้งหมดที่ยัง pending
             await tx.leaveApproval.updateMany({
-                where: { 
+                where: {
                     leaveRequestId: originalLeaveId,
                     status: { in: ['pending', 'in_progress'] }
                 },
@@ -165,7 +165,7 @@ export async function POST(
             // 3. สร้างใบลาใหม่ตาม splits
             // hr_manager สามารถอนุมัติทันทีสำหรับทุกประเภทใบลา เพราะเป็นผู้อนุมัติคนสุดท้าย
             const shouldAutoApprove = true; // hr_manager แยกใบลาจะอนุมัติทันทีเสมอ
-            
+
             for (let i = 0; i < splits.length; i++) {
                 const split = splits[i];
                 const splitStart = new Date(split.startDate);
@@ -174,10 +174,11 @@ export async function POST(
                 // สร้างรหัสใบลาใหม่
                 const newLeaveCode = await generateLeaveCode(split.leaveType, splitStart);
 
-                // คำนวณ escalation deadline (2 วัน)
+                // คำนวณ escalation deadline (+2 วัน เวลา 08:00 น.)
                 const escalationDeadline = new Date();
-                escalationDeadline.setHours(escalationDeadline.getHours() + 48);
-                
+                escalationDeadline.setDate(escalationDeadline.getDate() + 2);
+                escalationDeadline.setHours(8, 0, 0, 0);
+
                 // สร้างใบลาใหม่
                 const newLeave = await tx.leaveRequest.create({
                     data: {
@@ -202,7 +203,7 @@ export async function POST(
                 });
 
                 createdLeaves.push(newLeave.id);
-                
+
                 // ถ้าอนุมัติทันที สร้าง approval record ด้วย
                 if (shouldAutoApprove) {
                     await tx.leaveApproval.create({
@@ -238,7 +239,7 @@ export async function POST(
                 where: { id: leaveId },
                 include: { user: true },
             });
-            
+
             if (newLeave) {
                 // แจ้งเตือนผู้ขอลา
                 await notifyLeaveApproved(

@@ -25,6 +25,13 @@ import {
     TableRow,
     IconButton,
     Tooltip,
+    Dialog,
+    DialogTitle,
+    DialogContent,
+    DialogActions,
+    Paper,
+    Tabs,
+    Tab,
 } from '@mui/material';
 import {
     Timer,
@@ -39,8 +46,25 @@ import {
     Users,
     Calendar,
     Copy,
+    Rocket,
+    Tag,
+    Eye,
 } from 'lucide-react';
 import { useToastr } from '@/app/components/Toastr';
+import {
+    DocumentText,
+    Clock as ClockIcon,
+    TickCircle,
+    CloseCircle,
+    InfoCircle,
+    Calendar as CalendarIcon,
+    User as UserIcon,
+    Call,
+    CloseSquare,
+    Image as ImageIconsax,
+    Paperclip2,
+    ArrowRight2,
+} from 'iconsax-react';
 import dayjs from 'dayjs';
 import 'dayjs/locale/th';
 import relativeTime from 'dayjs/plugin/relativeTime';
@@ -59,6 +83,7 @@ interface EscalationConfig {
 interface EscalationLog {
     id: number;
     leaveRequestId: number;
+    leaveCode: string; // Added leaveCode
     employeeName: string;
     leaveType: string;
     escalatedTo: string;
@@ -68,6 +93,7 @@ interface EscalationLog {
 
 interface PendingEscalation {
     id: number;
+    leaveCode: string;
     employeeName: string;
     leaveType: string;
     createdAt: string;
@@ -76,11 +102,52 @@ interface PendingEscalation {
     currentApprover: string;
 }
 
+interface LeaveDetail {
+    id: number;
+    leaveCode: string;
+    leaveType: string;
+    startDate: string;
+    endDate: string;
+    totalDays: number;
+    reason: string;
+    status: string;
+    user: {
+        firstName: string;
+        lastName: string;
+        department: string;
+        position: string;
+        phone?: string;
+    };
+    attachments: any[];
+    approvals: any[];
+}
+
+const roleLabels: Record<string, string> = {
+    employee: 'พนักงาน',
+    shift_supervisor: 'หัวหน้ากะ',
+    section_head: 'หัวหน้าแผนก',
+    dept_manager: 'ผจก.ฝ่าย',
+    hr_manager: 'ผจก.HR',
+    admin: 'Admin',
+    hr: 'HR',
+};
+
+const statusConfig: Record<string, { label: string; color: 'warning' | 'success' | 'error' | 'default'; icon: React.ReactElement }> = {
+    pending: { label: 'รออนุมัติ', color: 'warning', icon: <ClockIcon size={14} variant="Bold" color="currentColor" /> },
+    approved: { label: 'อนุมัติแล้ว', color: 'success', icon: <TickCircle size={14} variant="Bold" color="currentColor" /> },
+    rejected: { label: 'ไม่อนุมัติ', color: 'error', icon: <CloseCircle size={14} variant="Bold" color="currentColor" /> },
+    cancelled: { label: 'ยกเลิก', color: 'default', icon: <InfoCircle size={14} variant="Bold" color="currentColor" /> },
+    skipped: { label: 'ข้าม', color: 'default', icon: <InfoCircle size={14} variant="Bold" color="currentColor" /> },
+};
+
+const formatDate = (dateStr: string) => dayjs(dateStr).format('DD MMM YYYY');
+const formatDateTime = (dateStr: string) => dayjs(dateStr).format('DD MMM YYYY HH:mm');
+
+
 export default function EscalationSettingsPage() {
     const theme = useTheme();
     const toastr = useToastr();
     const [loading, setLoading] = useState(true);
-    const [saving, setSaving] = useState(false);
     const [running, setRunning] = useState(false);
 
     const [config, setConfig] = useState<EscalationConfig>({
@@ -98,6 +165,49 @@ export default function EscalationSettingsPage() {
         pendingCount: 0,
         nearDeadline: 0,
     });
+
+    const [detailModalOpen, setDetailModalOpen] = useState(false);
+    const [selectedLeave, setSelectedLeave] = useState<LeaveDetail | null>(null);
+    const [loadingDetail, setLoadingDetail] = useState(false);
+    const [detailTab, setDetailTab] = useState(0);
+
+    // Confirm Dialog State
+    const [confirmOpen, setConfirmOpen] = useState(false);
+    const [confirmTitle, setConfirmTitle] = useState('');
+    const [confirmMessage, setConfirmMessage] = useState('');
+    const [confirmAction, setConfirmAction] = useState<() => void>(() => { });
+
+    const showConfirm = (title: string, message: string, onConfirm: () => void) => {
+        setConfirmTitle(title);
+        setConfirmMessage(message);
+        setConfirmAction(() => onConfirm);
+        setConfirmOpen(true);
+    };
+
+    const handleConfirmClose = () => {
+        setConfirmOpen(false);
+    };
+
+    const handleConfirmOk = () => {
+        setConfirmOpen(false);
+        confirmAction();
+    };
+
+    const handleViewDetail = async (leaveId: number) => {
+        setLoadingDetail(true);
+        setDetailModalOpen(true);
+        try {
+            const res = await fetch(`/api/leaves/${leaveId}`);
+            if (!res.ok) throw new Error('Failed to fetch detail');
+            const data = await res.json();
+            setSelectedLeave(data);
+        } catch (error) {
+            toastr.error('ไม่สามารถโหลดข้อมูลใบลาได้');
+            setDetailModalOpen(false);
+        } finally {
+            setLoadingDetail(false);
+        }
+    };
 
     const fetchData = async () => {
         try {
@@ -122,31 +232,6 @@ export default function EscalationSettingsPage() {
         fetchData();
     }, []);
 
-    const handleSave = async () => {
-        try {
-            setSaving(true);
-            const res = await fetch('/api/admin/settings/escalation', {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    escalationHours: config.escalationHours,
-                    reminderHours: config.reminderHours,
-                    enabled: config.enabled,
-                }),
-            });
-
-            if (res.ok) {
-                toastr.success('บันทึกการตั้งค่าสำเร็จ');
-            } else {
-                throw new Error('Failed to save');
-            }
-        } catch (error) {
-            toastr.error('ไม่สามารถบันทึกได้');
-        } finally {
-            setSaving(false);
-        }
-    };
-
     const handleRunNow = async () => {
         try {
             setRunning(true);
@@ -168,6 +253,66 @@ export default function EscalationSettingsPage() {
         } finally {
             setRunning(false);
         }
+    };
+
+    const handleForceRun = async () => {
+        showConfirm(
+            'ยืนยัน Force Escalate ทั้งหมด',
+            'คุณต้องการบังคับ Escalate ทุกใบลาที่ pending โดยไม่สนใจเวลาหรือไม่? (ใช้สำหรับการทดสอบเท่านั้น)',
+            async () => {
+                try {
+                    setRunning(true);
+                    const res = await fetch('/api/cron/check-escalation?force=true', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                    });
+
+                    const data = await res.json();
+
+                    if (res.ok) {
+                        toastr.success(`Force Run เสร็จสิ้น: Escalated ${data.escalated || 0}`);
+                        fetchData();
+                    } else {
+                        throw new Error(data.error || 'Failed');
+                    }
+                } catch (error) {
+                    toastr.error('Force Run ล้มเหลว');
+                } finally {
+                    setRunning(false);
+                }
+            }
+        );
+    };
+
+    const handleForceEscalateOne = (leaveId: number, leaveCode: string) => {
+        showConfirm(
+            'ยืนยัน Force Escalate',
+            `คุณต้องการ Force Escalate ใบลา ${leaveCode} ทันทีหรือไม่?`,
+            async () => {
+                try {
+                    setRunning(true);
+                    const res = await fetch(`/api/cron/check-escalation?force=true&leaveId=${leaveId}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                    });
+
+                    const data = await res.json();
+
+                    if (res.ok && (data.escalated > 0 || data.reminded > 0)) {
+                        toastr.success(`Escalated ${leaveCode} เรียบร้อยแล้ว`);
+                        fetchData();
+                    } else if (data.errors && data.errors.length > 0) {
+                        toastr.error(`เกิดข้อผิดพลาด: ${data.errors[0]}`);
+                    } else {
+                        toastr.warning('ไม่สามารถ Escalate ได้ (อาจสถานะเปลี่ยนไปแล้ว)');
+                    }
+                } catch (error) {
+                    toastr.error('ดำเนินการล้มเหลว');
+                } finally {
+                    setRunning(false);
+                }
+            }
+        );
     };
 
     const getStatusColor = (hoursRemaining: number) => {
@@ -211,15 +356,7 @@ export default function EscalationSettingsPage() {
                     >
                         รีเฟรช
                     </Button>
-                    <Button
-                        variant="contained"
-                        color="warning"
-                        startIcon={running ? <CircularProgress size={18} color="inherit" /> : <Play size={18} />}
-                        onClick={handleRunNow}
-                        disabled={running || !config.enabled}
-                    >
-                        {running ? 'กำลังรัน...' : 'รันตอนนี้'}
-                    </Button>
+
                 </Box>
             </Box>
 
@@ -286,68 +423,18 @@ export default function EscalationSettingsPage() {
                         ตั้งค่า Escalation
                     </Typography>
 
-                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                        <FormControlLabel
-                            control={
-                                <Switch
-                                    checked={config.enabled}
-                                    onChange={(e) => setConfig({ ...config, enabled: e.target.checked })}
-                                    color="warning"
-                                />
-                            }
-                            label={
-                                <Box>
-                                    <Typography variant="body1" fontWeight={600}>
-                                        เปิดใช้งาน Auto Escalation
-                                    </Typography>
-                                    <Typography variant="caption" color="text.secondary">
-                                        ใบลาที่รออนุมัตินานเกินกำหนดจะถูกส่งต่อไป HR Manager โดยอัตโนมัติ
-                                    </Typography>
-                                </Box>
-                            }
-                        />
+                    <Alert severity="success" icon={<CheckCircle size={20} />} sx={{ mb: 2 }}>
+                        <Typography variant="body2" fontWeight={600}>
+                            Auto Escalation เปิดใช้งานเสมอ
+                        </Typography>
+                    </Alert>
 
-                        <Divider />
-
-                        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 3 }}>
-                            <TextField
-                                label="เวลา Escalation (ชั่วโมง)"
-                                type="number"
-                                value={config.escalationHours}
-                                onChange={(e) => setConfig({ ...config, escalationHours: parseInt(e.target.value) || 48 })}
-                                helperText="หลังจากเวลานี้จะ Escalate ไป HR Manager (ค่าเริ่มต้น: 48 ชม. = 2 วัน)"
-                                disabled={!config.enabled}
-                                InputProps={{ inputProps: { min: 1, max: 168 } }}
-                            />
-                            <TextField
-                                label="เวลาเตือน (ชั่วโมง)"
-                                type="number"
-                                value={config.reminderHours}
-                                onChange={(e) => setConfig({ ...config, reminderHours: parseInt(e.target.value) || 24 })}
-                                helperText="ส่งเตือนผู้อนุมัติก่อนหมดเวลา (ค่าเริ่มต้น: 24 ชม.)"
-                                disabled={!config.enabled}
-                                InputProps={{ inputProps: { min: 1, max: 72 } }}
-                            />
-                        </Box>
-
-                        <Alert severity="info" icon={<Bell size={20} />}>
-                            <Typography variant="body2">
-                                <strong>การทำงาน:</strong> เมื่อใบลารออนุมัติครบ {config.escalationHours} ชั่วโมง จะถูก Escalate ไป HR Manager โดยอัตโนมัติ
-                                และจะส่งเตือนผู้อนุมัติเมื่อเหลือเวลา {config.reminderHours} ชั่วโมง
-                            </Typography>
-                        </Alert>
-
-                        <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2 }}>
-                            <Button
-                                variant="contained"
-                                onClick={handleSave}
-                                disabled={saving}
-                                startIcon={saving ? <CircularProgress size={18} color="inherit" /> : <CheckCircle size={18} />}
-                            >
-                                {saving ? 'กำลังบันทึก...' : 'บันทึกการตั้งค่า'}
-                            </Button>
-                        </Box>
-                    </Box>
+                    <Alert severity="info" icon={<Bell size={20} />}>
+                        <Typography variant="body2">
+                            <strong>เงื่อนไข:</strong> ใบลาที่รออนุมัติจะถูกส่งต่อไป HR Manager โดยอัตโนมัติ
+                            เมื่อถึงเวลา <strong>08:00 น.</strong> ของวันที่ <strong>สร้างใบลา + 2 วัน</strong>
+                        </Typography>
+                    </Alert>
                 </CardContent>
             </Card>
 
@@ -446,16 +533,28 @@ export default function EscalationSettingsPage() {
                             <Table size="small">
                                 <TableHead>
                                     <TableRow>
+                                        <TableCell>รหัสใบลา</TableCell>
                                         <TableCell>พนักงาน</TableCell>
                                         <TableCell>ประเภท</TableCell>
                                         <TableCell>ผู้อนุมัติปัจจุบัน</TableCell>
-                                        <TableCell align="center">เวลาที่เหลือ</TableCell>
+                                        <TableCell align="center">กำหนด Escalate (HR)</TableCell>
                                         <TableCell>สถานะ</TableCell>
+                                        <TableCell align="right">Actions</TableCell>
                                     </TableRow>
                                 </TableHead>
                                 <TableBody>
                                     {pendingList.map((item) => (
                                         <TableRow key={item.id}>
+                                            <TableCell>
+                                                <Chip
+                                                    icon={<Tag size={12} />}
+                                                    label={item.leaveCode || `#${item.id}`}
+                                                    size="small"
+                                                    variant="outlined"
+                                                    sx={{ borderRadius: 1, height: 24, fontSize: '0.75rem', cursor: 'pointer' }}
+                                                    onClick={() => handleViewDetail(item.id)}
+                                                />
+                                            </TableCell>
                                             <TableCell>
                                                 <Typography variant="body2" fontWeight={500}>
                                                     {item.employeeName}
@@ -464,11 +563,20 @@ export default function EscalationSettingsPage() {
                                             <TableCell>{item.leaveType}</TableCell>
                                             <TableCell>{item.currentApprover}</TableCell>
                                             <TableCell align="center">
-                                                <Chip
-                                                    label={item.hoursRemaining <= 0 ? 'หมดเวลา' : `${item.hoursRemaining} ชม.`}
-                                                    size="small"
-                                                    color={getStatusColor(item.hoursRemaining)}
-                                                />
+                                                <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.5 }}>
+                                                    <Typography variant="caption" fontWeight={600}>
+                                                        {dayjs(item.deadline).format('DD MMM HH:mm')}
+                                                    </Typography>
+                                                    <Chip
+                                                        label={item.hoursRemaining <= 0
+                                                            ? `เกินมา ${Math.abs(item.hoursRemaining)} ชม.`
+                                                            : `อีก ${item.hoursRemaining} ชม.`}
+                                                        size="small"
+                                                        color={getStatusColor(item.hoursRemaining)}
+                                                        variant="filled"
+                                                        sx={{ height: 20, fontSize: '0.7rem' }}
+                                                    />
+                                                </Box>
                                             </TableCell>
                                             <TableCell>
                                                 {item.hoursRemaining <= 0 ? (
@@ -478,6 +586,28 @@ export default function EscalationSettingsPage() {
                                                 ) : (
                                                     <Chip label="ปกติ" size="small" color="success" variant="outlined" />
                                                 )}
+                                            </TableCell>
+                                            <TableCell align="right">
+                                                <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
+                                                    <Tooltip title="ดูละเอียด">
+                                                        <IconButton
+                                                            size="small"
+                                                            onClick={() => handleViewDetail(item.id)}
+                                                        >
+                                                            <Eye size={16} />
+                                                        </IconButton>
+                                                    </Tooltip>
+                                                    <Tooltip title="Force Escalate (ทันที)">
+                                                        <IconButton
+                                                            size="small"
+                                                            color="error"
+                                                            onClick={() => handleForceEscalateOne(item.id, item.leaveCode)}
+                                                            disabled={running}
+                                                        >
+                                                            <Rocket size={16} />
+                                                        </IconButton>
+                                                    </Tooltip>
+                                                </Box>
                                             </TableCell>
                                         </TableRow>
                                     ))}
@@ -507,16 +637,28 @@ export default function EscalationSettingsPage() {
                             <Table size="small">
                                 <TableHead>
                                     <TableRow>
+                                        <TableCell>รหัสใบลา</TableCell>
                                         <TableCell>เวลา</TableCell>
                                         <TableCell>พนักงาน</TableCell>
                                         <TableCell>ประเภท</TableCell>
                                         <TableCell>ส่งต่อให้</TableCell>
                                         <TableCell align="center">สถานะ</TableCell>
+                                        <TableCell align="right">Actions</TableCell>
                                     </TableRow>
                                 </TableHead>
                                 <TableBody>
                                     {recentLogs.map((log) => (
                                         <TableRow key={log.id}>
+                                            <TableCell>
+                                                <Chip
+                                                    icon={<Tag size={12} />}
+                                                    label={log.leaveCode || `#${log.leaveRequestId}`}
+                                                    size="small"
+                                                    variant="outlined"
+                                                    sx={{ borderRadius: 1, height: 24, fontSize: '0.75rem', cursor: 'pointer' }}
+                                                    onClick={() => handleViewDetail(log.leaveRequestId)}
+                                                />
+                                            </TableCell>
                                             <TableCell>
                                                 <Typography variant="caption">
                                                     {dayjs(log.escalatedAt).format('DD MMM YYYY HH:mm')}
@@ -537,14 +679,297 @@ export default function EscalationSettingsPage() {
                                                     color="success"
                                                 />
                                             </TableCell>
+                                            <TableCell align="right">
+                                                <Tooltip title="ดูละเอียด">
+                                                    <IconButton
+                                                        size="small"
+                                                        onClick={() => handleViewDetail(log.leaveRequestId)}
+                                                    >
+                                                        <Eye size={16} />
+                                                    </IconButton>
+                                                </Tooltip>
+                                            </TableCell>
                                         </TableRow>
                                     ))}
                                 </TableBody>
                             </Table>
                         </TableContainer>
+
                     )}
                 </CardContent>
             </Card>
+            {/* Leave Detail Modal */}
+            <Dialog
+                open={detailModalOpen}
+                onClose={() => setDetailModalOpen(false)}
+                maxWidth="md"
+                fullWidth
+                PaperProps={{ sx: { borderRadius: 1 } }}
+            >
+                <DialogTitle sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    borderBottom: '1px solid',
+                    borderColor: 'divider',
+                    pb: 2
+                }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                        <Avatar sx={{ bgcolor: alpha(theme.palette.primary.main, 0.1), color: 'primary.main' }}>
+                            <DocumentText size={20} variant="Outline" color="#6C63FF" />
+                        </Avatar>
+                        <Box>
+                            <Typography component="div" variant="h6" fontWeight={600}>
+                                ใบลา {selectedLeave?.leaveCode || `#${selectedLeave?.id}`}
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary">
+                                สร้างเมื่อ {selectedLeave && formatDateTime(selectedLeave.startDate)}
+                            </Typography>
+                        </Box>
+                    </Box>
+                    <IconButton size="small" onClick={() => setDetailModalOpen(false)}>
+                        <CloseSquare size={32} variant="Outline" color="#9E9E9E" />
+                    </IconButton>
+                </DialogTitle>
+
+                <DialogContent sx={{ p: 0 }}>
+                    {loadingDetail ? (
+                        <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
+                            <CircularProgress />
+                        </Box>
+                    ) : selectedLeave ? (
+                        <>
+                            <Tabs
+                                value={detailTab}
+                                onChange={(_, v) => setDetailTab(v)}
+                                sx={{ borderBottom: 1, borderColor: 'divider', px: 3 }}
+                            >
+                                <Tab label="ข้อมูลใบลา" />
+                                <Tab label={`ขั้นตอนอนุมัติ (${selectedLeave.approvals?.length || 0})`} />
+                                {selectedLeave.attachments && selectedLeave.attachments.length > 0 && (
+                                    <Tab label={`ไฟล์แนบ (${selectedLeave.attachments.length})`} />
+                                )}
+                            </Tabs>
+
+                            <Box sx={{ p: 3 }}>
+                                {/* Tab 0: Leave Info */}
+                                {detailTab === 0 && (
+                                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                                        {/* Status */}
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                                            <Chip
+                                                icon={statusConfig[selectedLeave.status]?.icon || <InfoCircle size={14} />}
+                                                label={statusConfig[selectedLeave.status]?.label || selectedLeave.status}
+                                                color={statusConfig[selectedLeave.status]?.color || 'default'}
+                                                sx={{ fontWeight: 600 }}
+                                            />
+                                        </Box>
+
+                                        {/* Employee Info */}
+                                        <Paper variant="outlined" sx={{ p: 2, borderRadius: 1 }}>
+                                            <Typography variant="subtitle2" fontWeight={600} gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                <UserIcon size={16} variant="Outline" color="#6C63FF" /> ข้อมูลพนักงาน
+                                            </Typography>
+                                            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2, mt: 1.5 }}>
+                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                                                    <Avatar sx={{ width: 48, height: 48, bgcolor: theme.palette.primary.main }}>
+                                                        {selectedLeave.user.firstName.charAt(0)}
+                                                    </Avatar>
+                                                    <Box>
+                                                        <Typography variant="body2" fontWeight={600}>
+                                                            {selectedLeave.user.firstName} {selectedLeave.user.lastName}
+                                                        </Typography>
+                                                        <Typography variant="caption" color="text.secondary">
+                                                            {selectedLeave.user.position}
+                                                        </Typography>
+                                                    </Box>
+                                                </Box>
+                                                <Box>
+                                                    <Typography variant="caption" color="text.secondary">สังกัด</Typography>
+                                                    <Typography variant="body2">
+                                                        {selectedLeave.user.department}
+                                                    </Typography>
+                                                </Box>
+                                            </Box>
+                                        </Paper>
+
+                                        {/* Leave Details */}
+                                        <Paper variant="outlined" sx={{ p: 2, borderRadius: 1 }}>
+                                            <Typography variant="subtitle2" fontWeight={600} gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                <CalendarIcon size={16} variant="Outline" color="#2196F3" /> รายละเอียดการลา
+                                            </Typography>
+                                            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2, mt: 1.5 }}>
+                                                <Box>
+                                                    <Typography variant="caption" color="text.secondary">ประเภทการลา</Typography>
+                                                    <Typography variant="body2" fontWeight={500}>{selectedLeave.leaveType}</Typography>
+                                                </Box>
+                                                <Box>
+                                                    <Typography variant="caption" color="text.secondary">จำนวนวัน</Typography>
+                                                    <Typography variant="body2" fontWeight={500}>{selectedLeave.totalDays} วัน</Typography>
+                                                </Box>
+                                                <Box>
+                                                    <Typography variant="caption" color="text.secondary">วันที่เริ่ม</Typography>
+                                                    <Typography variant="body2">
+                                                        {formatDate(selectedLeave.startDate)}
+                                                    </Typography>
+                                                </Box>
+                                                <Box>
+                                                    <Typography variant="caption" color="text.secondary">วันที่สิ้นสุด</Typography>
+                                                    <Typography variant="body2">
+                                                        {formatDate(selectedLeave.endDate)}
+                                                    </Typography>
+                                                </Box>
+                                                <Box sx={{ gridColumn: '1 / -1' }}>
+                                                    <Typography variant="caption" color="text.secondary">เหตุผล</Typography>
+                                                    <Typography variant="body2">{selectedLeave.reason}</Typography>
+                                                </Box>
+                                            </Box>
+                                        </Paper>
+
+                                        {/* Contact Info */}
+                                        {selectedLeave.user.phone && (
+                                            <Paper variant="outlined" sx={{ p: 2, borderRadius: 1 }}>
+                                                <Typography variant="subtitle2" fontWeight={600} gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                    <Call size={16} variant="Outline" color="#4CAF50" /> ข้อมูลติดต่อ
+                                                </Typography>
+                                                <Box sx={{ mt: 1.5 }}>
+                                                    <Typography variant="caption" color="text.secondary">เบอร์โทร</Typography>
+                                                    <Typography variant="body2">{selectedLeave.user.phone}</Typography>
+                                                </Box>
+                                            </Paper>
+                                        )}
+                                    </Box>
+                                )}
+
+                                {/* Tab 1: Approval Steps */}
+                                {detailTab === 1 && selectedLeave.approvals && (
+                                    <Box sx={{ position: 'relative', pl: 0 }}>
+                                        {selectedLeave.approvals.map((approval: any, idx: number) => {
+                                            const isPending = approval.status === 'pending';
+                                            const isApproved = approval.status === 'approved';
+                                            const isRejected = approval.status === 'rejected';
+                                            const isCancelled = approval.status === 'cancelled';
+                                            const isSkipped = approval.status === 'skipped';
+                                            const isLast = idx === (selectedLeave.approvals?.length || 0) - 1;
+
+                                            const getStatusIcon = () => {
+                                                if (isApproved) return <TickCircle size={20} variant="Bold" color="white" />;
+                                                if (isPending) return <ClockIcon size={20} variant="Bold" color="white" />;
+                                                if (isRejected) return <CloseCircle size={20} variant="Bold" color="white" />;
+                                                return <InfoCircle size={20} variant="Bold" color="white" />;
+                                            };
+
+                                            const getIconBgColor = () => {
+                                                if (isApproved) return theme.palette.success.main;
+                                                if (isPending) return theme.palette.warning.main;
+                                                if (isRejected) return theme.palette.error.main;
+                                                return theme.palette.grey[400];
+                                            };
+
+                                            return (
+                                                <Box key={idx} sx={{ display: 'flex', position: 'relative', mb: isLast ? 0 : 0 }}>
+                                                    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', mr: 2.5, position: 'relative' }}>
+                                                        <Box sx={{
+                                                            width: 44, height: 44, borderRadius: '50%',
+                                                            bgcolor: getIconBgColor(),
+                                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                            boxShadow: `0 4px 14px ${alpha(getIconBgColor(), 0.4)}`,
+                                                            zIndex: 1, flexShrink: 0
+                                                        }}>
+                                                            {getStatusIcon()}
+                                                        </Box>
+                                                        {!isLast && <Box sx={{ width: 2, flexGrow: 1, bgcolor: alpha(theme.palette.divider, 0.5), minHeight: 24 }} />}
+                                                    </Box>
+                                                    <Box sx={{ flex: 1, bgcolor: alpha(theme.palette.grey[500], 0.04), borderRadius: 1, p: 2, mb: isLast ? 0 : 2 }}>
+                                                        <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', mb: 0.5 }}>
+                                                            <Box>
+                                                                <Typography variant="subtitle2" fontWeight={700}>
+                                                                    {approval.approver?.firstName} {approval.approver?.lastName}
+                                                                </Typography>
+                                                                <Typography variant="caption" color="text.secondary">
+                                                                    {roleLabels[approval.approver?.role] || approval.approver?.role}
+                                                                </Typography>
+                                                            </Box>
+                                                            <Chip label={`ขั้นที่ ${approval.level}`} size="small" sx={{ height: 22, fontSize: '0.7rem', bgcolor: alpha(getIconBgColor(), 0.15), color: getIconBgColor() }} />
+                                                        </Box>
+                                                        <Typography variant="caption" color="text.secondary">
+                                                            {approval.approvedAt ? formatDateTime(approval.approvedAt) : (statusConfig[approval.status]?.label || approval.status)}
+                                                        </Typography>
+                                                        {approval.comment && (
+                                                            <Typography variant="body2" sx={{ mt: 1.5, p: 1.5, bgcolor: alpha(theme.palette.common.black, 0.03), borderRadius: 2 }}>
+                                                                💬 {approval.comment}
+                                                            </Typography>
+                                                        )}
+                                                    </Box>
+                                                </Box>
+                                            );
+                                        })}
+                                    </Box>
+                                )}
+
+                                {/* Tab 2: Attachments */}
+                                {detailTab === 2 && selectedLeave.attachments && selectedLeave.attachments.length > 0 && (
+                                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                                        {selectedLeave.attachments.map((file: any) => (
+                                            <Paper
+                                                key={file.id}
+                                                variant="outlined"
+                                                sx={{ p: 2, borderRadius: 1, display: 'flex', alignItems: 'center', gap: 2, cursor: 'pointer', '&:hover': { bgcolor: 'action.hover' } }}
+                                                onClick={() => window.open(file.filePath, '_blank')}
+                                            >
+                                                <Avatar sx={{ bgcolor: alpha(theme.palette.primary.main, 0.1), color: 'primary.main' }}>
+                                                    <Paperclip2 size={20} variant="Outline" color="#6C63FF" />
+                                                </Avatar>
+                                                <Box sx={{ flex: 1 }}>
+                                                    <Typography variant="body2" fontWeight={500}>{file.fileName}</Typography>
+                                                </Box>
+                                                <ArrowRight2 size={18} variant="Outline" color={theme.palette.text.secondary} />
+                                            </Paper>
+                                        ))}
+                                    </Box>
+                                )}
+                            </Box>
+                        </>
+                    ) : (
+                        <Alert severity="error">ไม่พบข้อมูลใบลา</Alert>
+                    )}
+                </DialogContent>
+                <DialogActions sx={{ borderTop: '1px solid', borderColor: 'divider', pt: 2, pb: 2, px: 3 }}>
+                    <Button onClick={() => setDetailModalOpen(false)}>ปิดหน้าต่าง</Button>
+                </DialogActions>
+            </Dialog>
+
+            {/* Confirm Dialog */}
+            <Dialog
+                open={confirmOpen}
+                onClose={handleConfirmClose}
+                maxWidth="xs"
+                fullWidth
+                PaperProps={{ sx: { borderRadius: 1 } }}
+            >
+                <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <AlertTriangle size={24} color="#f57c00" />
+                    {confirmTitle}
+                </DialogTitle>
+                <DialogContent>
+                    <Typography variant="body2" color="text.secondary">
+                        {confirmMessage}
+                    </Typography>
+                </DialogContent>
+                <DialogActions sx={{ px: 3, pb: 2 }}>
+                    <Button onClick={handleConfirmClose} color="inherit">
+                        ยกเลิก
+                    </Button>
+                    <Button
+                        onClick={handleConfirmOk}
+                        variant="contained"
+                        color="warning"
+                        sx={{ borderRadius: 1 }}
+                    >
+                        ยืนยัน
+                    </Button>
+                </DialogActions>
+            </Dialog>
         </Box>
     );
 }
