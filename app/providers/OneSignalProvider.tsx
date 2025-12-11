@@ -49,14 +49,14 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
         console.warn('🔔 Service Worker not supported');
         return false;
       }
-      
+
       // For Chrome on Android, Notification API might not be available until HTTPS
       // But OneSignal handles this, so we check serviceWorker first
       if (!('Notification' in window)) {
         // On some mobile browsers, Notification might not exist but push still works
         console.warn('🔔 Notification API not available, but might still work with OneSignal');
       }
-      
+
       return true;
     };
 
@@ -97,38 +97,39 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
   const setupOneSignal = async (OneSignal: any) => {
     try {
       console.log('🔔 OneSignal: Initializing...');
-      
+
       // Check if already initialized to avoid error
       // Note: OneSignal v16 doesn't have a public initialized property we can rely on easily
       // but we can try-catch the init call
       try {
-          // Unregister old sw.js worker if exists
-          if ('serviceWorker' in navigator) {
-            const registrations = await navigator.serviceWorker.getRegistrations();
-            for (const registration of registrations) {
-              if (registration.active?.scriptURL.includes('sw.js')) {
-                await registration.unregister();
-                console.log('🔔 OneSignal: Unregistered old sw.js worker');
-              }
+        // Unregister old sw.js worker if exists
+        if ('serviceWorker' in navigator) {
+          const registrations = await navigator.serviceWorker.getRegistrations();
+          for (const registration of registrations) {
+            if (registration.active?.scriptURL.includes('sw.js')) {
+              await registration.unregister();
+              console.log('🔔 OneSignal: Unregistered old sw.js worker');
             }
           }
+        }
 
-          await OneSignal.init({
-            appId: ONESIGNAL_APP_ID,
-            safari_web_id: ONESIGNAL_SAFARI_WEB_ID || undefined,
-            allowLocalhostAsSecureOrigin: true,
-            notifyButton: {
-              enable: false, // Disabled - using custom toggle in profile page
-            },
-          });
-          console.log('🔔 OneSignal: Initialized successfully');
+        await OneSignal.init({
+          appId: ONESIGNAL_APP_ID,
+          // safarai_web_id is only required for Legacy Safari (macOS < 13), optional for modern browsers
+          safari_web_id: ONESIGNAL_SAFARI_WEB_ID || undefined,
+          allowLocalhostAsSecureOrigin: true,
+          notifyButton: {
+            enable: false, // Disabled - using custom toggle in profile page
+          },
+        });
+        console.log('🔔 OneSignal: Initialized successfully');
       } catch (initError: any) {
-          // Ignore "SDK already initialized" error
-          if (initError?.message?.includes('SDK already initialized')) {
-              console.log('🔔 OneSignal: SDK already initialized, continuing...');
-          } else {
-              throw initError;
-          }
+        // Ignore "SDK already initialized" error
+        if (initError?.message?.includes('SDK already initialized')) {
+          console.log('🔔 OneSignal: SDK already initialized, continuing...');
+        } else {
+          throw initError;
+        }
       }
 
       // setIsInitialized(true); // Moved to finally block
@@ -136,19 +137,19 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
       // Check subscription status
       const subscribed = await OneSignal.User.PushSubscription.optedIn;
       const id = await OneSignal.User.PushSubscription.id;
-      
+
       console.log('🔔 OneSignal: Subscription status:', { subscribed, playerId: id });
-      
+
       // ถ้ามี ID แต่ไม่พบในระบบ (กรณีถูกลบจาก Dashboard) ให้ลอง Login ใหม่
       if (id && subscribed) {
         // Force update subscription to ensure it exists on OneSignal
         try {
-            // Login with external ID if available (using user ID)
-            if (session?.user?.id) {
-                await OneSignal.login(session.user.id);
-            }
+          // Login with external ID if available (using user ID)
+          if (session?.user?.id) {
+            await OneSignal.login(session.user.id);
+          }
         } catch (e) {
-            console.warn('🔔 OneSignal: Login/Update failed', e);
+          console.warn('🔔 OneSignal: Login/Update failed', e);
         }
       }
 
@@ -166,7 +167,7 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
         console.log('🔔 OneSignal: Subscription changed:', event.current);
         const subscribed = event.current.optedIn;
         setIsSubscribed(subscribed);
-        
+
         if (subscribed && event.current.id) {
           setPlayerId(event.current.id);
           await registerDevice(event.current.id);
@@ -184,15 +185,15 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
     } catch (error: any) {
       // Handle specific OneSignal errors gracefully
       const errorMessage = error?.message || String(error);
-      
+
       // Ignore origin mismatch errors (common in development)
-      if (errorMessage.includes('Can only be used on') || 
-          errorMessage.includes('origin') ||
-          errorMessage.includes('not allowed')) {
+      if (errorMessage.includes('Can only be used on') ||
+        errorMessage.includes('origin') ||
+        errorMessage.includes('not allowed')) {
         console.warn('🔔 OneSignal: Origin not configured in dashboard. Push notifications disabled.');
         return;
       }
-      
+
       console.error('🔔 OneSignal initialization error:', error);
     } finally {
       setIsInitialized(true);
@@ -283,20 +284,20 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
           ...deviceInfo,
         }),
       });
-      
+
       // ถ้า unauthorized หรือ error ก็ไม่ต้อง parse response
       if (!res.ok) {
         console.warn('🔔 OneSignal: Failed to register device, status:', res.status);
         return;
       }
-      
+
       // Check if response is JSON
       const contentType = res.headers.get("content-type");
       if (!contentType || !contentType.includes("application/json")) {
         console.warn('🔔 OneSignal: Received non-JSON response:', await res.text());
         return;
       }
-      
+
       const data = await res.json();
       console.log('🔔 OneSignal: Device registered:', data);
     } catch (error) {
@@ -314,12 +315,12 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
 
   const subscribe = useCallback(async () => {
     console.log('🔔 OneSignal: Subscribe called, initialized:', isInitialized);
-    
+
     if (!window.OneSignal) {
       console.error('🔔 OneSignal: SDK not loaded');
       throw new Error('OneSignal SDK not loaded');
     }
-    
+
     if (!isInitialized) {
       console.error('🔔 OneSignal: Not initialized yet');
       throw new Error('OneSignal not initialized');
@@ -329,13 +330,13 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
       console.log('🔔 OneSignal: Requesting permission...');
       // Request permission and subscribe
       await window.OneSignal.Notifications.requestPermission();
-      
+
       console.log('🔔 OneSignal: Opting in...');
       await window.OneSignal.User.PushSubscription.optIn();
-      
+
       const id = await window.OneSignal.User.PushSubscription.id;
       console.log('🔔 OneSignal: Got player ID:', id);
-      
+
       if (id) {
         setPlayerId(id);
         setIsSubscribed(true);
@@ -351,7 +352,7 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
 
   const unsubscribe = useCallback(async () => {
     console.log('🔔 OneSignal: Unsubscribe called');
-    
+
     if (!window.OneSignal || !isInitialized) {
       console.error('🔔 OneSignal: Not initialized');
       throw new Error('OneSignal not initialized');
@@ -380,12 +381,12 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
   // Request permission only (without subscribing)
   const requestPermission = useCallback(async () => {
     console.log('🔔 OneSignal: Request permission called');
-    
+
     if (!window.OneSignal) {
       console.error('🔔 OneSignal: SDK not loaded');
       throw new Error('OneSignal SDK not loaded');
     }
-    
+
     if (!isInitialized) {
       console.error('🔔 OneSignal: Not initialized yet');
       throw new Error('OneSignal not initialized');
@@ -395,22 +396,22 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
       // Check current permission
       const currentPermission = Notification.permission;
       console.log('🔔 OneSignal: Current permission:', currentPermission);
-      
+
       if (currentPermission === 'denied') {
         // Cannot request again if denied, user must change in browser settings
         console.warn('🔔 OneSignal: Permission was denied. User must enable in browser settings.');
         throw new Error('PERMISSION_DENIED');
       }
-      
+
       // Request permission
       console.log('🔔 OneSignal: Requesting permission...');
       await window.OneSignal.Notifications.requestPermission();
-      
+
       // Update permission state
       const newPermission = Notification.permission;
       setPermission(newPermission);
       console.log('🔔 OneSignal: New permission status:', newPermission);
-      
+
       // If granted, auto-subscribe
       if (newPermission === 'granted') {
         console.log('🔔 OneSignal: Permission granted, auto-subscribing...');

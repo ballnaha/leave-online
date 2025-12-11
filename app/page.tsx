@@ -1,6 +1,6 @@
 'use client';
 import React, { useEffect, useState, useMemo } from 'react';
-import { Box, Typography, Button, Card, CardContent, Skeleton, Container, Dialog, DialogTitle, DialogContent, DialogActions, TextField } from '@mui/material';
+import { Box, Typography, Button, Card, CardContent, Skeleton, Container, Dialog, DialogTitle, DialogContent, DialogActions, TextField, CircularProgress } from '@mui/material';
 import Image from 'next/image';
 import Header from './components/Header';
 import ImageSlider from './components/ImageSlider';
@@ -272,10 +272,22 @@ export default function Home() {
   // Prevent hydration mismatch by always showing loading state until mounted
   const showLoading = !mounted || loading || dataLoading;
 
+  // FIXME: Remove 'true ||' after testing
   if (status === 'loading' || status === 'unauthenticated') {
     return (
-      <Box sx={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: '#F8F9FA' }}>
-        Loading...
+      <Box sx={{
+        height: '100vh',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        bgcolor: '#F8F9FA',
+        gap: 2
+      }}>
+        <CircularProgress size={48} thickness={4} sx={{ color: '#6C63FF' }} />
+        <Typography variant="body2" sx={{ color: '#64748B', fontWeight: 500 }}>
+          {t('status_loading', 'กำลังโหลด...')}
+        </Typography>
       </Box>
     );
   }
