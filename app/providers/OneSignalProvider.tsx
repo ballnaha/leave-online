@@ -40,6 +40,7 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
     if (typeof window === 'undefined') return;
     if (!ONESIGNAL_APP_ID) {
       console.warn('🔔 OneSignal App ID not configured');
+      setIsInitialized(true); // Mark as initialized so UI isn't stuck
       return;
     }
 
@@ -64,6 +65,7 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
     if (!checkSupport()) {
       console.warn('🔔 Push notifications not supported on this browser');
       setIsSupported(false);
+      setIsInitialized(true); // Mark as initialized so UI isn't stuck
       return;
     }
 
@@ -234,6 +236,7 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
         errorMessage.includes('origin') ||
         errorMessage.includes('not allowed')) {
         console.warn('🔔 OneSignal: Origin not configured in dashboard. Push notifications disabled.');
+        setIsInitialized(true); // IMPORTANT: Set initialized so UI isn't stuck
         return;
       }
 
@@ -589,8 +592,8 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
 
       console.log('🔔 OneSignal: Cleanup complete, reloading page...');
 
-      // 10. Force reload the page to get fresh state
-      window.location.reload();
+      // 10. Force hard reload the page to get fresh state (bypass cache)
+      window.location.href = window.location.href.split('#')[0] + '?reset=' + Date.now();
 
     } catch (error) {
       console.error('🔔 OneSignal: Reset failed', error);

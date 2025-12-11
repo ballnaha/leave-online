@@ -11,15 +11,6 @@ const ONESIGNAL_REST_API_KEY = (process.env.ONESIGNAL_REST_API_KEY || '').trim()
 const ONESIGNAL_API_URL = 'https://onesignal.com/api/v1/notifications';
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://leave.poonsubcan.co.th';
 
-// Diagnostic log on module load
-console.log('🔔 OneSignal Config Loaded:', {
-  APP_ID_SET: !!ONESIGNAL_APP_ID,
-  APP_ID_LENGTH: ONESIGNAL_APP_ID.length,
-  REST_KEY_SET: !!ONESIGNAL_REST_API_KEY,
-  REST_KEY_LENGTH: ONESIGNAL_REST_API_KEY.length,
-  APP_URL: APP_URL,
-});
-
 // Leave type translations
 const leaveTypeTranslations: Record<string, { th: string; en: string; my: string }> = {
   sick: { th: 'ลาป่วย', en: 'Sick Leave', my: 'ဆေးခွင့်' },

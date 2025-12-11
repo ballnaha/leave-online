@@ -1207,20 +1207,33 @@ export default function ProfilePage() {
                             try {
                                 toastr.info(t('clearing_data', 'กำลังล้างข้อมูล...'));
 
-                                // 1. Clear localStorage
+                                // 1. Clear localStorage (except for locale preference)
+                                const savedLocale = localStorage.getItem('locale');
                                 localStorage.clear();
+                                if (savedLocale) {
+                                    localStorage.setItem('locale', savedLocale);
+                                }
 
                                 // 2. Clear sessionStorage
                                 sessionStorage.clear();
 
-                                // 3. Clear all IndexedDB databases
+                                // 3. Clear all IndexedDB databases with proper async handling
                                 if ('indexedDB' in window) {
                                     const databases = await indexedDB.databases?.() || [];
-                                    for (const db of databases) {
+                                    const deletePromises = databases.map(db => {
                                         if (db.name) {
-                                            indexedDB.deleteDatabase(db.name);
+                                            return new Promise<void>((resolve) => {
+                                                const request = indexedDB.deleteDatabase(db.name!);
+                                                request.onsuccess = () => resolve();
+                                                request.onerror = () => resolve();
+                                                request.onblocked = () => resolve();
+                                                // Timeout fallback
+                                                setTimeout(resolve, 2000);
+                                            });
                                         }
-                                    }
+                                        return Promise.resolve();
+                                    });
+                                    await Promise.all(deletePromises);
                                 }
 
                                 // 4. Clear all caches
@@ -1247,9 +1260,14 @@ export default function ProfilePage() {
                                     document.cookie = `${name.trim()}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/`;
                                 }
 
-                                // 7. Wait a moment then reload
-                                await new Promise(resolve => setTimeout(resolve, 500));
-                                window.location.href = '/login';
+                                // 7. Set flag to auto-subscribe to notifications after login
+                                localStorage.setItem('onesignal_auto_subscribe', 'true');
+
+                                // 8. Sign out and redirect to login
+                                await signOut({
+                                    callbackUrl: '/login',
+                                    redirect: true,
+                                });
 
                             } catch (e) {
                                 console.error('Clear app data error:', e);
