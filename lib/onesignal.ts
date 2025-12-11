@@ -179,12 +179,15 @@ export async function notifyUser(
   };
 
   if (playerIds.length === 0) {
+    console.warn(`🔔 notifyUser: No active devices found for userId ${userId}`);
     // ไม่มี device ลงทะเบียน แต่ยังบันทึก log
     await prisma.notificationLog.create({
       data: { ...logData, status: 'failed' },
     });
-    return { success: false, error: 'No devices registered' };
+    return { success: false, error: `No devices registered for userId ${userId}` };
   }
+
+  console.log(`🔔 notifyUser: Found ${playerIds.length} devices for userId ${userId}. Sending push...`);
 
   const result = await sendPushNotification(playerIds, payload);
 

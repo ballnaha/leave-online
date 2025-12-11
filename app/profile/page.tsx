@@ -322,6 +322,14 @@ export default function ProfilePage() {
                     onChange: handlePushToggle,
                     subtitle: getPushSubtitle(),
                 } as SettingsItemWithToggle,
+                ...(pushSubscribed ? [{
+                    id: 'register_device',
+                    icon: Sms,
+                    label: t('register_notification_device', 'เชื่อมต่ออุปกรณ์รับแจ้งเตือน'),
+                    color: '#4CAF50',
+                    link: '#',
+                    subtitle: t('register_notification_subtitle', 'กดเมื่อไม่ได้รับการแจ้งเตือน'),
+                } as SettingsItemWithLink] : []),
 
             ],
         },
@@ -754,7 +762,7 @@ export default function ProfilePage() {
                                                         transition: 'all 0.2s',
                                                         '&:hover': item.link ? { bgcolor: '#F8F9FA' } : {},
                                                     }}
-                                                    onClick={() => {
+                                                    onClick={async () => {
                                                         if (item.id === 'language') {
                                                             setOpenLanguage(true);
                                                             return;
@@ -766,6 +774,19 @@ export default function ProfilePage() {
                                                                 installPWA();
                                                             } else {
                                                                 toastr.info(t('pwa_installed_or_unsupported', 'ติดตั้งแล้ว หรือเบราว์เซอร์ไม่รองรับ'));
+                                                            }
+                                                            return;
+                                                        }
+                                                        if (item.id === 'register_device') {
+                                                            try {
+                                                                if (pushSubscribed && pushPermission === 'granted') {
+                                                                    // Force re-subscription logic here or just triggering registration
+                                                                    await pushSubscribe();
+                                                                    toastr.success(t('register_device_success', 'เชื่อมต่ออุปกรณ์สำเร็จ'));
+                                                                }
+                                                            } catch (e) {
+                                                                console.error(e);
+                                                                toastr.error(t('register_device_error', 'เกิดข้อผิดพลาด'));
                                                             }
                                                             return;
                                                         }
