@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { checkAndEscalate } from '@/lib/escalation';
+import { getServerSession } from 'next-auth';
+import { authOptions, isAdminRole } from '@/lib/auth';
 
 // POST /api/cron/check-escalation - ตรวจสอบและ escalate ใบลาที่เกินเวลา
-// เรียกจาก Cron Job (Vercel Cron, Railway Cron, etc.)
+// เรียกจาก Cron Job (Vercel Cron, Railway Cron, etc.) หรือ Admin Dashboard
 export async function POST(request: NextRequest) {
   try {
-    // ตรวจสอบ secret key สำหรับ security (รองรับทั้ง Header และ Query Param)
+    // 1. ตรวจสอบ secret key (สำหรับ External Cron)
     const authHeader = request.headers.get('authorization');
     const { searchParams } = new URL(request.url);
     const secretParam = searchParams.get('secret');
@@ -13,8 +15,18 @@ export async function POST(request: NextRequest) {
 
     const isValidHeader = authHeader === `Bearer ${cronSecret}`;
     const isValidParam = secretParam === cronSecret;
+    const isCron = cronSecret && (isValidHeader || isValidParam);
 
-    if (cronSecret && !isValidHeader && !isValidParam) {
+    // 2. ตรวจสอบ Admin Session (สำหรับกดปุ่ม Run Now จาก Dashboard)
+    let isAdmin = false;
+    if (!isCron) {
+      const session = await getServerSession(authOptions);
+      if (session && isAdminRole(session.user.role)) {
+        isAdmin = true;
+      }
+    }
+
+    if (!isCron && !isAdmin) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
