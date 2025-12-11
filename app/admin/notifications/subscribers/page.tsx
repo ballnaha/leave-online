@@ -45,6 +45,8 @@ import {
   Users,
   CheckCircle,
   XCircle,
+  Bell,
+  Send,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useToastr } from '@/app/components/Toastr';
@@ -174,16 +176,25 @@ export default function SubscribersPage() {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(20);
   const [total, setTotal] = useState(0);
-  
+
   // Filters
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
-  
+
   // Dialog
   const [confirmDialog, setConfirmDialog] = useState<{ open: boolean; device: UserDevice | null; action: 'activate' | 'deactivate' }>({
     open: false,
     device: null,
     action: 'deactivate',
+  });
+  const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; device: UserDevice | null }>({
+    open: false,
+    device: null,
+  });
+  const [testDialog, setTestDialog] = useState<{ open: boolean; device: UserDevice | null; sending: boolean }>({
+    open: false,
+    device: null,
+    sending: false,
   });
 
   const fetchDevices = useCallback(async () => {
@@ -194,12 +205,12 @@ export default function SubscribersPage() {
         limit: rowsPerPage.toString(),
         status: statusFilter,
       });
-      
+
       if (search) params.append('search', search);
 
       const res = await fetch(`/api/admin/notifications/subscribers?${params}`);
       const data = await res.json();
-      
+
       setDevices(data.devices || []);
       setTotal(data.pagination?.total || 0);
       setStats(data.stats || null);
@@ -234,7 +245,7 @@ export default function SubscribersPage() {
 
   const handleToggleDevice = async () => {
     if (!confirmDialog.device) return;
-    
+
     try {
       const res = await fetch('/api/admin/notifications/subscribers', {
         method: 'PATCH',
@@ -255,6 +266,57 @@ export default function SubscribersPage() {
       toastr.error('เกิดข้อผิดพลาด');
     } finally {
       setConfirmDialog({ open: false, device: null, action: 'deactivate' });
+    }
+  };
+
+  const handleDeleteDevice = async () => {
+    if (!deleteDialog.device) return;
+
+    try {
+      const res = await fetch(`/api/admin/notifications/subscribers?id=${deleteDialog.device.id}`, {
+        method: 'DELETE',
+      });
+
+      if (res.ok) {
+        toastr.success('ลบอุปกรณ์เรียบร้อย');
+        fetchDevices();
+      } else {
+        const data = await res.json();
+        toastr.error(data.error || 'เกิดข้อผิดพลาด');
+      }
+    } catch (error) {
+      toastr.error('เกิดข้อผิดพลาด');
+    } finally {
+      setDeleteDialog({ open: false, device: null });
+    }
+  };
+
+  const handleTestNotification = async () => {
+    if (!testDialog.device) return;
+
+    setTestDialog(prev => ({ ...prev, sending: true }));
+
+    try {
+      const res = await fetch('/api/admin/notifications/test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          playerId: testDialog.device.playerId,
+          userId: testDialog.device.userId,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (res.ok && data.success) {
+        toastr.success('ส่งการแจ้งเตือนทดสอบแล้ว');
+      } else {
+        toastr.error(data.error || 'ส่งไม่สำเร็จ');
+      }
+    } catch (error) {
+      toastr.error('เกิดข้อผิดพลาด');
+    } finally {
+      setTestDialog({ open: false, device: null, sending: false });
     }
   };
 
@@ -285,10 +347,10 @@ export default function SubscribersPage() {
           </Box>
         </Box>
         <Tooltip title="รีเฟรช">
-          <IconButton 
-            onClick={fetchDevices} 
+          <IconButton
+            onClick={fetchDevices}
             disabled={loading}
-            sx={{ 
+            sx={{
               bgcolor: alpha(theme.palette.primary.main, 0.1),
               '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.2) }
             }}
@@ -424,7 +486,7 @@ export default function SubscribersPage() {
                         borderRadius: 1,
                         display: 'inline-block',
                         maxWidth: 180,
-                        
+
                       }}
                     >
                       {device.playerId}
@@ -460,19 +522,46 @@ export default function SubscribersPage() {
                     </Typography>
                   </TableCell>
                   <TableCell>
-                    <Tooltip title={device.isActive ? 'ปิดใช้งาน' : 'เปิดใช้งาน'}>
-                      <IconButton
-                        size="small"
-                        color={device.isActive ? 'error' : 'success'}
-                        onClick={() => setConfirmDialog({
-                          open: true,
-                          device,
-                          action: device.isActive ? 'deactivate' : 'activate',
-                        })}
-                      >
-                        {device.isActive ? <PowerOff size={18} /> : <Power size={18} />}
-                      </IconButton>
-                    </Tooltip>
+                    <Box sx={{ display: 'flex', gap: 0.5 }}>
+                      <Tooltip title="ส่งทดสอบ">
+                        <IconButton
+                          size="small"
+                          color="primary"
+                          onClick={() => setTestDialog({
+                            open: true,
+                            device,
+                            sending: false,
+                          })}
+                        >
+                          <Send size={16} />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title={device.isActive ? 'ปิดใช้งาน' : 'เปิดใช้งาน'}>
+                        <IconButton
+                          size="small"
+                          color={device.isActive ? 'warning' : 'success'}
+                          onClick={() => setConfirmDialog({
+                            open: true,
+                            device,
+                            action: device.isActive ? 'deactivate' : 'activate',
+                          })}
+                        >
+                          {device.isActive ? <PowerOff size={16} /> : <Power size={16} />}
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="ลบอุปกรณ์">
+                        <IconButton
+                          size="small"
+                          color="error"
+                          onClick={() => setDeleteDialog({
+                            open: true,
+                            device,
+                          })}
+                        >
+                          <Trash2 size={16} />
+                        </IconButton>
+                      </Tooltip>
+                    </Box>
                   </TableCell>
                 </TableRow>
               ))}
@@ -528,6 +617,82 @@ export default function SubscribersPage() {
             onClick={handleToggleDevice}
           >
             {confirmDialog.action === 'activate' ? 'เปิดใช้งาน' : 'ปิดใช้งาน'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Delete Device Dialog */}
+      <Dialog open={deleteDialog.open} onClose={() => setDeleteDialog({ open: false, device: null })}>
+        <DialogTitle sx={{ color: 'error.main' }}>
+          🗑️ ลบอุปกรณ์
+        </DialogTitle>
+        <DialogContent>
+          <Typography>
+            คุณต้องการลบอุปกรณ์ของ{' '}
+            <strong>{deleteDialog.device?.user?.firstName} {deleteDialog.device?.user?.lastName}</strong> ใช่หรือไม่?
+          </Typography>
+          <Typography variant="body2" sx={{ mt: 1, p: 1.5, bgcolor: 'error.lighter', borderRadius: 1, color: 'error.dark' }}>
+            ⚠️ การลบนี้จะไม่สามารถกู้คืนได้ ผู้ใช้จะต้อง subscribe การแจ้งเตือนใหม่
+          </Typography>
+          <Typography variant="caption" sx={{ display: 'block', mt: 1 }} color="text.secondary">
+            Player ID: {deleteDialog.device?.playerId}
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleteDialog({ open: false, device: null })}>
+            ยกเลิก
+          </Button>
+          <Button
+            variant="contained"
+            color="error"
+            onClick={handleDeleteDevice}
+            startIcon={<Trash2 size={16} />}
+          >
+            ลบอุปกรณ์
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Test Notification Dialog */}
+      <Dialog open={testDialog.open} onClose={() => !testDialog.sending && setTestDialog({ open: false, device: null, sending: false })}>
+        <DialogTitle>
+          🔔 ส่งการแจ้งเตือนทดสอบ
+        </DialogTitle>
+        <DialogContent>
+          <Typography>
+            ส่งการแจ้งเตือนทดสอบไปยังอุปกรณ์ของ{' '}
+            <strong>{testDialog.device?.user?.firstName} {testDialog.device?.user?.lastName}</strong>
+          </Typography>
+          <Box sx={{ mt: 2, p: 2, bgcolor: alpha(theme.palette.primary.main, 0.05), borderRadius: 1 }}>
+            <Typography variant="body2" fontWeight={500}>
+              ข้อมูลอุปกรณ์:
+            </Typography>
+            <Typography variant="caption" color="text.secondary" display="block">
+              Browser: {testDialog.device?.browser || '-'} {testDialog.device?.browserVersion || ''}
+            </Typography>
+            <Typography variant="caption" color="text.secondary" display="block">
+              OS: {testDialog.device?.os || '-'} {testDialog.device?.osVersion || ''}
+            </Typography>
+            <Typography variant="caption" color="text.secondary" display="block">
+              Player ID: {testDialog.device?.playerId}
+            </Typography>
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button
+            onClick={() => setTestDialog({ open: false, device: null, sending: false })}
+            disabled={testDialog.sending}
+          >
+            ยกเลิก
+          </Button>
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={handleTestNotification}
+            disabled={testDialog.sending}
+            startIcon={testDialog.sending ? <RefreshCw size={16} className="animate-spin" /> : <Send size={16} />}
+          >
+            {testDialog.sending ? 'กำลังส่ง...' : 'ส่งทดสอบ'}
           </Button>
         </DialogActions>
       </Dialog>

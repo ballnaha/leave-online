@@ -315,3 +315,13 @@ model Holiday {
   @@index([companyId])
   @@map("holidays")
 }
+
+model SystemConfig {
+  id        Int      @id @default(autoincrement())
+  key       String   @unique
+  value     String   @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("system_configs")
+}

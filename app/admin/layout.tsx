@@ -215,6 +215,12 @@ const menuGroups: MenuGroup[] = [
                         path: '/admin/notifications',
                     },
                     {
+                        text: 'Broadcast',
+                        icon: Send,
+                        iconColor: '#6C63FF',
+                        path: '/admin/broadcast',
+                    },
+                    {
                         text: 'ประวัติแจ้งเตือน',
                         icon: History,
                         iconColor: '#6C63FF',
@@ -226,13 +232,18 @@ const menuGroups: MenuGroup[] = [
                         iconColor: '#6C63FF',
                         path: '/admin/notifications/subscribers',
                     },
-                    {
-                        text: 'ทดสอบ Push',
-                        icon: Send,
-                        iconColor: '#6C63FF',
-                        path: '/admin/test-notification',
-                    },
                 ],
+            },
+        ],
+    },
+    {
+        groupLabel: 'ตั้งค่า',
+        items: [
+            {
+                text: 'Auto Escalation',
+                icon: Timer,
+                iconColor: '#F59E0B',
+                path: '/admin/settings/escalation',
             },
         ],
     },

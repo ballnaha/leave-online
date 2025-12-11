@@ -122,9 +122,6 @@ export default function AdminDashboardPage() {
         fetchData();
     }, []);
 
-    const attendanceRate = data?.stats.totalEmployees
-        ? Math.round(((data.stats.totalEmployees - data.stats.activeLeavesToday) / data.stats.totalEmployees) * 100)
-        : 100;
 
     const typeColors: { [key: string]: string } = {
         'ลาป่วย': '#EF4444',
@@ -160,11 +157,11 @@ export default function AdminDashboardPage() {
             description: 'สรุปภายใน 24 ชั่วโมง'
         },
         {
-            label: 'อัตราเข้างาน',
-            value: `${attendanceRate}%`,
-            icon: StatusUp,
+            label: 'กำลังลาวันนี้',
+            value: data?.stats.activeLeavesToday || 0,
+            icon: UserRemove,
             color: '#EC4899',
-            description: 'เทียบกับพนักงานทั้งหมด'
+            description: 'พนักงานที่ลาอยู่ในวันนี้'
         },
     ];
 

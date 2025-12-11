@@ -5,11 +5,16 @@ import { checkAndEscalate } from '@/lib/escalation';
 // เรียกจาก Cron Job (Vercel Cron, Railway Cron, etc.)
 export async function POST(request: NextRequest) {
   try {
-    // ตรวจสอบ secret key สำหรับ security
+    // ตรวจสอบ secret key สำหรับ security (รองรับทั้ง Header และ Query Param)
     const authHeader = request.headers.get('authorization');
+    const { searchParams } = new URL(request.url);
+    const secretParam = searchParams.get('secret');
     const cronSecret = process.env.CRON_SECRET;
 
-    if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+    const isValidHeader = authHeader === `Bearer ${cronSecret}`;
+    const isValidParam = secretParam === cronSecret;
+
+    if (cronSecret && !isValidHeader && !isValidParam) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -37,7 +42,7 @@ export async function POST(request: NextRequest) {
 export async function GET(request: NextRequest) {
   // แค่แสดงสถานะ ไม่ได้ทำ escalation จริง
   const cronSecret = process.env.CRON_SECRET;
-  
+
   return NextResponse.json({
     status: 'ready',
     configured: !!cronSecret,

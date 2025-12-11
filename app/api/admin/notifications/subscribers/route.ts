@@ -20,13 +20,13 @@ export async function GET(req: NextRequest) {
 
     // Build where clause
     const where: any = {};
-    
+
     if (status === 'active') {
       where.isActive = true;
     } else if (status === 'inactive') {
       where.isActive = false;
     }
-    
+
     if (search) {
       where.OR = [
         { playerId: { contains: search } },
@@ -138,7 +138,7 @@ async function updateOneSignalPlayerTags(playerId: string, tags: Record<string, 
   }
 }
 
-// Deactivate a device
+// Delete a device (permanently remove from database)
 export async function DELETE(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
@@ -153,38 +153,37 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ error: 'Device ID is required' }, { status: 400 });
     }
 
-    // Get device to get playerId
+    // Get device to get playerId before deletion
     const device = await prisma.userDevice.findUnique({
       where: { id: parseInt(deviceId) },
-      select: { playerId: true }
+      select: { playerId: true, userId: true }
     });
 
     if (!device) {
       return NextResponse.json({ error: 'Device not found' }, { status: 404 });
     }
 
-    // Update in DB
-    await prisma.userDevice.update({
-      where: { id: parseInt(deviceId) },
-      data: { isActive: false }
+    // Delete from DB permanently
+    await prisma.userDevice.delete({
+      where: { id: parseInt(deviceId) }
     });
 
-    // Update tag in OneSignal to exclude from notifications
+    // Try to update tag in OneSignal to mark as deleted
     const onesignalResult = await updateOneSignalPlayerTags(device.playerId, {
-      app_disabled: 'true',
-      disabled_at: new Date().toISOString(),
+      app_deleted: 'true',
+      deleted_at: new Date().toISOString(),
     });
 
-    return NextResponse.json({ 
-      success: true, 
-      message: 'Device deactivated',
-      onesignalSync: onesignalResult.success 
+    return NextResponse.json({
+      success: true,
+      message: 'Device deleted permanently',
+      onesignalSync: onesignalResult.success
     });
 
   } catch (error) {
-    console.error('Error deactivating device:', error);
+    console.error('Error deleting device:', error);
     return NextResponse.json(
-      { error: 'Failed to deactivate device' },
+      { error: 'Failed to delete device' },
       { status: 500 }
     );
   }
@@ -227,8 +226,8 @@ export async function PATCH(req: NextRequest) {
       disabled_at: isActive ? '' : new Date().toISOString(),
     });
 
-    return NextResponse.json({ 
-      success: true, 
+    return NextResponse.json({
+      success: true,
       message: isActive ? 'Device activated' : 'Device deactivated',
       onesignalSync: onesignalResult.success
     });
