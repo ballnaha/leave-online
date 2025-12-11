@@ -29,6 +29,7 @@ import {
     Briefcase,
     Building,
     HashtagSquare,
+    Refresh2,
     Icon as IconsaxIcon,
 } from 'iconsax-react';
 import { Share, PlusSquare } from 'lucide-react';
@@ -339,14 +340,6 @@ export default function ProfilePage() {
                     onChange: handlePushToggle,
                     subtitle: getPushSubtitle(),
                 } as SettingsItemWithToggle,
-                ...(pushSubscribed ? [{
-                    id: 'register_device',
-                    icon: Sms,
-                    label: t('register_notification_device', 'เชื่อมต่ออุปกรณ์รับแจ้งเตือน'),
-                    color: '#4CAF50',
-                    link: '#',
-                    subtitle: t('register_notification_subtitle', 'กดเมื่อไม่ได้รับการแจ้งเตือน'),
-                } as SettingsItemWithLink] : []),
                 // Always show reset option when supported (helps fix stuck states)
                 ...(pushSupported ? [{
                     id: 'reset_notification',
@@ -377,11 +370,11 @@ export default function ProfilePage() {
                     color: '#4CAF50',
                     link: '#install'
                 }] : [{
-                    id: 'clear_app_data',
-                    icon: Mobile,
-                    label: t('clear_app_data', 'ล้างข้อมูลแอป'),
-                    subtitle: t('clear_app_data_subtitle', 'แก้ปัญหาแจ้งเตือนบน Mobile'),
-                    color: '#FF9800',
+                    id: 'update_version',
+                    icon: Refresh2,
+                    label: t('update_version', 'อัปเดตเวอร์ชัน'),
+                    subtitle: `${t('current_version', 'เวอร์ชันปัจจุบัน')}: ${APP_VERSION}`,
+                    color: '#2196F3',
                     link: '#'
                 }]),
             ],
@@ -810,24 +803,11 @@ export default function ProfilePage() {
                                                             }
                                                             return;
                                                         }
-                                                        if (item.id === 'register_device') {
-                                                            try {
-                                                                if (pushSubscribed && pushPermission === 'granted') {
-                                                                    // Force re-subscription logic here or just triggering registration
-                                                                    await pushSubscribe();
-                                                                    toastr.success(t('register_device_success', 'เชื่อมต่ออุปกรณ์สำเร็จ'));
-                                                                }
-                                                            } catch (e) {
-                                                                console.error(e);
-                                                                toastr.error(t('register_device_error', 'เกิดข้อผิดพลาด'));
-                                                            }
-                                                            return;
-                                                        }
                                                         if (item.id === 'reset_notification') {
                                                             setResetDialogOpen(true);
                                                             return;
                                                         }
-                                                        if (item.id === 'clear_app_data') {
+                                                        if (item.id === 'update_version') {
                                                             setClearDataDialogOpen(true);
                                                             return;
                                                         }
@@ -1151,7 +1131,7 @@ export default function ProfilePage() {
                 </DialogActions>
             </Dialog>
 
-            {/* Clear App Data Dialog */}
+            {/* Update Version Dialog */}
             <Dialog
                 open={clearDataDialogOpen}
                 onClose={() => !clearDataLoading && setClearDataDialogOpen(false)}
@@ -1170,25 +1150,30 @@ export default function ProfilePage() {
                                 width: 40,
                                 height: 40,
                                 borderRadius: 1,
-                                bgcolor: '#FFF3E0',
+                                bgcolor: '#E3F2FD',
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
                             }}
                         >
-                            <Mobile size={22} color="#FF9800" variant="Bold" />
+                            <Refresh2 size={22} color="#2196F3" variant="Bold" />
                         </Box>
-                        <Typography sx={{ fontWeight: 700, color: '#1E293B' }}>
-                            {t('clear_app_data_title', 'ล้างข้อมูลแอป')}
-                        </Typography>
+                        <Box>
+                            <Typography sx={{ fontWeight: 700, color: '#1E293B' }}>
+                                {t('update_version_title', 'อัปเดตเวอร์ชัน')}
+                            </Typography>
+                            <Typography sx={{ fontSize: '0.75rem', color: '#64748B' }}>
+                                v{APP_VERSION}
+                            </Typography>
+                        </Box>
                     </Box>
                 </DialogTitle>
                 <DialogContent>
                     <Typography sx={{ color: '#64748B', fontSize: '0.95rem' }}>
-                        {t('clear_app_data_message', 'ระบบจะล้างข้อมูลแคชทั้งหมดและรีโหลดแอปใหม่ ช่วยแก้ปัญหาการแจ้งเตือนบน Mobile ได้โดยไม่ต้องลบแอป')}
+                        {t('update_version_message', 'ระบบจะดาวน์โหลดเวอร์ชันใหม่ล่าสุดและรีสตาร์ทแอป เพื่อให้แอปทำงานได้อย่างสมบูรณ์')}
                     </Typography>
-                    <Typography sx={{ color: '#EF4444', fontSize: '0.85rem', mt: 1 }}>
-                        ⚠️ {t('clear_app_data_warning', 'คุณจะต้องลงชื่อเข้าใช้ใหม่')}
+                    <Typography sx={{ color: '#64748B', fontSize: '0.85rem', mt: 1 }}>
+                        ℹ️ {t('update_version_note', 'คุณจะต้องลงชื่อเข้าใช้ใหม่หลังอัปเดต')}
                     </Typography>
                 </DialogContent>
                 <DialogActions sx={{ px: 3, pb: 2 }}>
@@ -1197,7 +1182,7 @@ export default function ProfilePage() {
                         disabled={clearDataLoading}
                         sx={{ color: '#64748B' }}
                     >
-                        {t('btn_cancel', 'ยกเลิก')}
+                        {t('btn_later', 'ไว้ภายหลัง')}
                     </Button>
                     <Button
                         variant="contained"
@@ -1205,7 +1190,7 @@ export default function ProfilePage() {
                         onClick={async () => {
                             setClearDataLoading(true);
                             try {
-                                toastr.info(t('clearing_data', 'กำลังล้างข้อมูล...'));
+                                toastr.info(t('updating_app', 'กำลังอัปเดต...'));
 
                                 // 1. Clear localStorage (except for locale preference)
                                 const savedLocale = localStorage.getItem('locale');
@@ -1270,14 +1255,14 @@ export default function ProfilePage() {
                                 });
 
                             } catch (e) {
-                                console.error('Clear app data error:', e);
-                                toastr.error(t('clear_data_error', 'เกิดข้อผิดพลาด'));
+                                console.error('Update app error:', e);
+                                toastr.error(t('update_error', 'เกิดข้อผิดพลาดในการอัปเดต'));
                                 setClearDataLoading(false);
                             }
                         }}
-                        sx={{ borderRadius: 1, minWidth: 100, bgcolor: '#FF9800', '&:hover': { bgcolor: '#F57C00' } }}
+                        sx={{ borderRadius: 1, minWidth: 100, bgcolor: '#2196F3', '&:hover': { bgcolor: '#1976D2' } }}
                     >
-                        {clearDataLoading ? <CircularProgress size={20} color="inherit" /> : t('btn_confirm', 'ยืนยัน')}
+                        {clearDataLoading ? <CircularProgress size={20} color="inherit" /> : t('btn_update_now', 'อัปเดตเลย')}
                     </Button>
                 </DialogActions>
             </Dialog>
