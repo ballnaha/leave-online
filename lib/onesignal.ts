@@ -121,11 +121,22 @@ export async function sendPushNotification(
       body: JSON.stringify(notificationBody),
     });
 
-    const result = await response.json();
+    const responseText = await response.text();
+    let result;
+    try {
+      result = JSON.parse(responseText);
+    } catch (e) {
+      console.error('OneSignal API Non-JSON Response:', responseText);
+      return { success: false, error: `Invalid JSON response: ${responseText.substring(0, 100)}...` };
+    }
 
     if (response.ok && result.id) {
+      console.log('OneSignal Success:', result.id);
       return { success: true, notificationId: result.id };
     } else {
+      console.error('OneSignal API Error Status:', response.status);
+      console.error('OneSignal API Error Body:', result);
+
       // Extract detailed error message
       let errorMessage = 'Unknown error';
       if (result.errors) {
@@ -138,7 +149,6 @@ export async function sendPushNotification(
         }
       }
 
-      console.error('OneSignal API Error:', result);
       return { success: false, error: errorMessage };
     }
   } catch (error) {
