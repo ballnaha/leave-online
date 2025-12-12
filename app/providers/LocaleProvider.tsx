@@ -48,6 +48,7 @@ const messages: Record<LocaleCode, Record<string, string>> = {
     leave_end_section: "ถึงวันที่",
     leave_start_time: "เวลาเริ่มลา",
     leave_end_time: "เวลาสิ้นสุดลา",
+    dashboard_quota_short: "สิทธิ์",
     // Profile & Settings
     edit_profile: "แก้ไขโปรไฟล์",
     account: "บัญชี",
@@ -60,6 +61,7 @@ const messages: Record<LocaleCode, Record<string, string>> = {
     general_settings: "การตั้งค่าทั่วไป",
     help_info: "ช่วยเหลือและข้อมูล",
     help_center: "ศูนย์ช่วยเหลือ",
+    terms_and_conditions: "ข้อกำหนดและเงื่อนไข",
     install_app: "ติดตั้งแอปพลิเคชัน",
     pwa_installed_or_unsupported: "ติดตั้งแล้ว หรือเบราว์เซอร์ไม่รองรับ",
     for_ios: "สำหรับ iOS",
@@ -96,6 +98,8 @@ const messages: Record<LocaleCode, Record<string, string>> = {
     leave_search_placeholder: "ค้นหาใบลา...",
     leave_not_found: "ไม่พบใบลาที่ตรงกับการค้นหา",
     leave_no_history: "ยังไม่มีประวัติการลาในเดือนนี้",
+    click_to_filter: "คลิกเพื่อดูใบลา",
+    filter_date: "กรองวันที่",
 
     // Days
     day_mon: "จ.",
@@ -161,6 +165,7 @@ const messages: Record<LocaleCode, Record<string, string>> = {
     not_specified: "ไม่ระบุ",
     submitted_at: "ยื่นเมื่อ",
     cancel_leave_btn: "ยกเลิกใบลา",
+    reset_notification_title: "รีเซ็ตการแจ้งเตือน",
 
     // User Info
     department: "ฝ่าย",
@@ -354,6 +359,39 @@ const messages: Record<LocaleCode, Record<string, string>> = {
 
     // Common
     more: "เพิ่มเติม",
+    all: "ทั้งหมด",
+
+    // Profile - Version & Reset
+    reset_notification_subtitle: "ล้างข้อมูลและเริ่มใหม่",
+    new_version_available: "🎉 มีเวอร์ชันใหม่!",
+    update_version: "อัปเดตเวอร์ชัน",
+    current_version: "เวอร์ชันปัจจุบัน",
+    reset_notification_message: "ระบบจะล้างข้อมูลการแจ้งเตือนและเชื่อมต่อใหม่ คุณต้องการดำเนินการต่อหรือไม่?",
+    btn_cancel: "ยกเลิก",
+    btn_confirm: "ยืนยัน",
+    reset_success: "รีเซ็ตสำเร็จ เชื่อมต่อการแจ้งเตือนใหม่แล้ว",
+    reset_error: "เกิดข้อผิดพลาด",
+    new_version_available_title: "🎉 มีเวอร์ชันใหม่!",
+    version_up_to_date_title: "✅ เป็นเวอร์ชันล่าสุดแล้ว",
+    new_version_message: "มีเวอร์ชันใหม่พร้อมให้อัปเดต! กดอัปเดตเพื่อรับฟีเจอร์และการแก้ไขล่าสุด",
+    update_version_note: "คุณจะต้องลงชื่อเข้าใช้ใหม่หลังอัปเดต",
+    version_up_to_date_message: "แอปของคุณเป็นเวอร์ชันล่าสุดแล้ว ไม่จำเป็นต้องอัปเดต",
+    force_update_hint: "หากพบปัญหาการใช้งาน สามารถกด \"รีเฟรชแอป\" เพื่อล้างข้อมูลและโหลดใหม่ได้",
+    btn_later: "ไว้ภายหลัง",
+    btn_close: "ปิด",
+    btn_update_now: "อัปเดตเลย",
+    btn_refresh_app: "รีเฟรชแอป",
+    update_clearing_storage: "กำลังล้างข้อมูลเก่า...",
+    update_clearing_session: "กำลังล้าง Session...",
+    update_clearing_database: "กำลังล้างฐานข้อมูล...",
+    update_clearing_cache: "กำลังล้าง Cache...",
+    update_clearing_sw: "กำลังรีเซ็ต Service Worker...",
+    update_clearing_cookies: "กำลังล้าง Cookies...",
+    update_preparing: "กำลังเตรียมการ...",
+    update_redirecting: "กำลัง Logout และ Redirect...",
+    update_error: "เกิดข้อผิดพลาดในการอัปเดต",
+    updating_app: "กำลังอัปเดต...",
+
     // Holiday Names
     holiday_new_year: "วันขึ้นปีใหม่ (New Year's Day)",
     holiday_chinese_new_year: "วันตรุษจีน (Chinese New Year)",
@@ -415,6 +453,8 @@ const messages: Record<LocaleCode, Record<string, string>> = {
     leave_end_section: "End Leave",
     leave_start_time: "Start Time",
     leave_end_time: "End Time",
+    dashboard_quota_short: "Quota",
+    reset_notification_title: "Reset Notification",
     // Profile & Settings
     edit_profile: "Edit Profile",
     account: "Account",
@@ -439,6 +479,7 @@ const messages: Record<LocaleCode, Record<string, string>> = {
     browser_not_supported: "Browser not supported",
     blocked_notifications: "Blocked - Check settings",
     select_language: "Select Language",
+    terms_and_conditions: "Terms & Conditions",
 
     // iOS Instructions
     ios_install_title: "Install on iPhone",
@@ -463,6 +504,8 @@ const messages: Record<LocaleCode, Record<string, string>> = {
     leave_search_placeholder: "Search leaves...",
     leave_not_found: "No leaves found",
     leave_no_history: "No leave history this month",
+    click_to_filter: "Click to view leaves",
+    filter_date: "Filter by date",
 
     // Days
     day_mon: "Mon",
@@ -723,6 +766,39 @@ const messages: Record<LocaleCode, Record<string, string>> = {
 
     // Common
     more: "more",
+    all: "All",
+
+    // Profile - Version & Reset
+    reset_notification_subtitle: "Clear data and restart",
+    new_version_available: "🎉 New version available!",
+    update_version: "Update Version",
+    current_version: "Current version",
+    reset_notification_message: "The system will clear notification data and reconnect. Do you want to continue?",
+    btn_cancel: "Cancel",
+    btn_confirm: "Confirm",
+    reset_success: "Reset successful, notifications reconnected",
+    reset_error: "An error occurred",
+    new_version_available_title: "🎉 New version available!",
+    version_up_to_date_title: "✅ You have the latest version",
+    new_version_message: "A new version is available! Update to get the latest features and fixes.",
+    update_version_note: "You will need to sign in again after updating",
+    version_up_to_date_message: "Your app is up to date. No update required.",
+    force_update_hint: "If you experience issues, you can press \"Refresh App\" to clear data and reload.",
+    btn_later: "Later",
+    btn_close: "Close",
+    btn_update_now: "Update Now",
+    btn_refresh_app: "Refresh App",
+    update_clearing_storage: "Clearing old data...",
+    update_clearing_session: "Clearing session...",
+    update_clearing_database: "Clearing database...",
+    update_clearing_cache: "Clearing cache...",
+    update_clearing_sw: "Resetting Service Worker...",
+    update_clearing_cookies: "Clearing cookies...",
+    update_preparing: "Preparing...",
+    update_redirecting: "Logging out and redirecting...",
+    update_error: "Error updating app",
+    updating_app: "Updating...",
+
     // Holiday Names
     holiday_new_year: "New Year's Day",
     holiday_chinese_new_year: "Chinese New Year",
@@ -809,6 +885,9 @@ const messages: Record<LocaleCode, Record<string, string>> = {
     browser_not_supported: "ဘရောက်ဆာ မပံ့ပိုးပါ",
     blocked_notifications: "ပိတ်ပင်ထားသည် - ဆက်တင်များတွင်စစ်ဆေးပါ",
     select_language: "ဘာသာစကားရွေးချယ်ပါ",
+    terms_and_conditions: "အချက်အလက်များ",
+    dashboard_quota_short: "ခွဲတမ်း",
+    reset_notification_title: "အကြောင်းကြားချက်ကို ပြန်လည်သတ်မှတ်ပါ။",
 
     // iOS Instructions
     ios_install_title: "iPhone တွင် ထည့်သွင်းနည်း",
@@ -833,6 +912,8 @@ const messages: Record<LocaleCode, Record<string, string>> = {
     leave_search_placeholder: "ခွင့်မှတ်တမ်းရှာရန်...",
     leave_not_found: "ရှာဖွေမှုနှင့်ကိုက်ညီသော ခွင့်မှတ်တမ်းမရှိပါ",
     leave_no_history: "ယခုလအတွက် ခွင့်မှတ်တမ်းမရှိပါ",
+    click_to_filter: "ခွင့်မှတ်တမ်းကြည့်ရန် နှိပ်ပါ",
+    filter_date: "ရက်စွဲဖြင့် စစ်ထုတ်ရန်",
 
     // Days
     day_mon: "တနင်္လာ",
@@ -1091,6 +1172,39 @@ const messages: Record<LocaleCode, Record<string, string>> = {
 
     // Common
     more: "ပိုမို",
+    all: "အားလုံး",
+
+    // Profile - Version & Reset
+    reset_notification_subtitle: "ဒေတာရှင်းပြီး ပြန်စတင်ပါ",
+    new_version_available: "🎉 ဗားရှင်းအသစ်ရှိသည်!",
+    update_version: "ဗားရှင်းအပ်ဒိတ်",
+    current_version: "လက်ရှိဗားရှင်း",
+    reset_notification_message: "စနစ်သည် အသိပေးချက်ဒေတာကို ရှင်းလင်းပြီး ပြန်ချိတ်ဆက်မည်။ ဆက်လုပ်လိုပါသလား?",
+    btn_cancel: "ပယ်ဖျက်ရန်",
+    btn_confirm: "အတည်ပြုရန်",
+    reset_success: "ပြန်သတ်မှတ်ခြင်း အောင်မြင်သည်၊ အသိပေးချက်များ ပြန်ချိတ်ဆက်ပြီး",
+    reset_error: "အမှားအယွင်းရှိပါသည်",
+    new_version_available_title: "🎉 ဗားရှင်းအသစ်ရှိသည်!",
+    version_up_to_date_title: "✅ နောက်ဆုံးဗားရှင်းဖြစ်ပြီး",
+    new_version_message: "ဗားရှင်းအသစ်ရရှိနိုင်ပြီ! နောက်ဆုံးလုပ်ဆောင်ချက်များနှင့် ပြင်ဆင်ချက်များရယူရန် အပ်ဒိတ်လုပ်ပါ။",
+    update_version_note: "အပ်ဒိတ်လုပ်ပြီးနောက် ပြန်ဝင်ရောက်ရမည်",
+    version_up_to_date_message: "သင့်အက်ပ်သည် အသစ်ဆုံးဖြစ်ပြီ။ အပ်ဒိတ်လုပ်ရန် မလိုအပ်ပါ။",
+    force_update_hint: "ပြဿနာတွေ့ပါက \"အက်ပ်ပြန်ဆန်းသစ်\" နှိပ်၍ ဒေတာရှင်းပြီး ပြန်တင်နိုင်သည်။",
+    btn_later: "နောက်မှ",
+    btn_close: "ပိတ်ရန်",
+    btn_update_now: "ယခုအပ်ဒိတ်လုပ်ပါ",
+    btn_refresh_app: "အက်ပ်ပြန်ဆန်းသစ်",
+    update_clearing_storage: "ဒေတာဟောင်းများရှင်းနေသည်...",
+    update_clearing_session: "Session ရှင်းနေသည်...",
+    update_clearing_database: "ဒေတာဘေ့စ်ရှင်းနေသည်...",
+    update_clearing_cache: "Cache ရှင်းနေသည်...",
+    update_clearing_sw: "Service Worker ပြန်သတ်မှတ်နေသည်...",
+    update_clearing_cookies: "Cookies ရှင်းနေသည်...",
+    update_preparing: "ပြင်ဆင်နေသည်...",
+    update_redirecting: "ထွက်ခွာပြီး ညွှန်းနေသည်...",
+    update_error: "အပ်ဒိတ်လုပ်ရာတွင် အမှားရှိပါသည်",
+    updating_app: "အပ်ဒိတ်လုပ်နေသည်...",
+
     // Holiday Names
     holiday_new_year: "နှစ်သစ်ကူးနေ့",
     holiday_chinese_new_year: "တရုတ်နှစ်သစ်ကူး",

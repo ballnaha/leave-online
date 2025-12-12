@@ -1,5 +1,6 @@
 'use client';
 import React, { useState, useEffect, useMemo } from 'react';
+import { motion } from 'framer-motion';
 import {
     Box,
     Typography,
@@ -22,6 +23,8 @@ import {
     DialogActions,
     TextField,
     Tooltip,
+    Tabs,
+    Tab,
 } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
 import {
@@ -114,6 +117,7 @@ export default function LeavePage() {
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedCalendarDate, setSelectedCalendarDate] = useState<string | null>(null);
     const [showAllLegends, setShowAllLegends] = useState(false);
+    const [currentTab, setCurrentTab] = useState('all');
 
     // Generate years for dropdown dynamically
     // Shows current year and all previous years from 2024 (พ.ศ. 2567)
@@ -364,7 +368,26 @@ export default function LeavePage() {
         return t('status_pending', 'รอการอนุมัติ');
     };
 
-    // Filter leaves based on search query and selected calendar date
+    // Get unique leave types from myLeaves for tabs
+    const availableLeaveTypes = useMemo(() => {
+        const types = new Set<string>();
+        myLeaves.forEach(leave => {
+            const type = leave.leaveType || leave.leaveCode;
+            if (type) types.add(type);
+        });
+        return Array.from(types).sort(); // Sort alphabetically or by some criteria
+    }, [myLeaves]);
+
+    // Calculate counts for each tab
+    const leaveCounts = useMemo(() => {
+        const counts: Record<string, number> = { all: myLeaves.length };
+        myLeaves.forEach(leave => {
+            const type = leave.leaveType || leave.leaveCode || 'default';
+            counts[type] = (counts[type] || 0) + 1;
+        });
+        return counts;
+    }, [myLeaves]);
+
     const filteredLeaves = useMemo(() => {
         let filtered = myLeaves;
 
@@ -384,12 +407,21 @@ export default function LeavePage() {
                 const typeMatch = leave.leaveTypeInfo?.name?.toLowerCase().includes(query) ||
                     leave.leaveType?.toLowerCase().includes(query);
                 const statusMatch = getStatusLabel(leave.status).label.toLowerCase().includes(query);
-                return reasonMatch || typeMatch || statusMatch;
+                const codeMatch = (leave.leaveCode || '').toLowerCase().includes(query);
+                return reasonMatch || typeMatch || statusMatch || codeMatch;
+            });
+        }
+
+        // Filter by tab
+        if (currentTab !== 'all') {
+            filtered = filtered.filter(leave => {
+                const leaveType = leave.leaveType || leave.leaveCode || 'default';
+                return leaveType === currentTab;
             });
         }
 
         return filtered;
-    }, [myLeaves, searchQuery, selectedCalendarDate]);
+    }, [myLeaves, searchQuery, selectedCalendarDate, currentTab]);
 
     const recentLeaves = filteredLeaves.slice(0, 10);
     const today = dayjs();
@@ -818,6 +850,225 @@ export default function LeavePage() {
                         />
                     )}
 
+                    {/* Tabs for Leave Types - Pill Design with Liquid Animation */}
+                    <Box sx={{ mb: 3 }}>
+                        <Tabs
+                            value={currentTab}
+                            onChange={(_, newValue) => setCurrentTab(newValue)}
+                            variant="scrollable"
+                            scrollButtons="auto"
+                            allowScrollButtonsMobile
+                            sx={{
+                                minHeight: 'auto',
+                                '& .MuiTabs-indicator': {
+                                    display: 'none',
+                                },
+                                '& .MuiTabs-flexContainer': {
+                                    gap: 1.5,
+                                    p: 0.5,
+                                    bgcolor: '#F1F5F9', // Track background
+                                    borderRadius: 99,
+                                },
+                            }}
+                        >
+                            <Tab
+                                value="all"
+                                disableRipple
+                                label={
+                                    <Box
+                                        component={motion.div}
+                                        whileTap={{ scale: 0.95 }}
+                                        sx={{
+                                            position: 'relative',
+                                            zIndex: 1,
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: 1.5,
+                                            px: 2,
+                                            py: 0.8,
+                                            borderRadius: 99,
+                                            transition: 'all 0.2s',
+                                            cursor: 'pointer',
+                                        }}
+                                    >
+                                        {currentTab === 'all' && (
+                                            <Box
+                                                component={motion.div}
+                                                layoutId="activeTab"
+                                                transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+                                                sx={{
+                                                    position: 'absolute',
+                                                    inset: 0,
+                                                    background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.9) 0%, rgba(118, 75, 162, 0.9) 100%)',
+                                                    backdropFilter: 'blur(12px)',
+                                                    borderRadius: 99,
+                                                    zIndex: -1,
+                                                    boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+                                                    border: '1px solid rgba(255,255,255,0.2)',
+                                                }}
+                                            >
+                                                {/* Glass Shine Effect */}
+                                                <Box
+                                                    sx={{
+                                                        position: 'absolute',
+                                                        top: 0,
+                                                        left: 0,
+                                                        right: 0,
+                                                        height: '50%',
+                                                        background: 'linear-gradient(to bottom, rgba(255,255,255,0.25) 0%, rgba(255,255,255,0) 100%)',
+                                                        borderTopLeftRadius: 99,
+                                                        borderTopRightRadius: 99,
+                                                    }}
+                                                />
+                                            </Box>
+                                        )}
+                                        <span style={{ position: 'relative', zIndex: 2, fontWeight: 600, color: currentTab === 'all' ? 'white' : 'inherit' }}>{t('all', 'ทั้งหมด')}</span>
+                                        <Chip
+                                            label={leaveCounts['all'] || 0}
+                                            size="small"
+                                            sx={{
+                                                height: 22,
+                                                bgcolor: currentTab === 'all' ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.04)',
+                                                color: currentTab === 'all' ? 'white' : 'text.secondary',
+                                                fontWeight: 700,
+                                                fontSize: '0.75rem',
+                                                border: currentTab === 'all' ? '1px solid rgba(255,255,255,0.3)' : 'none',
+                                                '& .MuiChip-label': { px: 1 },
+                                                backdropFilter: currentTab === 'all' ? 'blur(4px)' : 'none',
+                                                zIndex: 2,
+                                                position: 'relative',
+                                            }}
+                                        />
+                                    </Box>
+                                }
+                                sx={{
+                                    borderRadius: 99,
+                                    textTransform: 'none',
+                                    fontWeight: 600,
+                                    fontSize: '0.9rem',
+                                    minHeight: 44,
+                                    px: 0,
+                                    mx: 0.5,
+                                    color: currentTab === 'all' ? 'white' : 'text.secondary',
+                                    bgcolor: 'transparent',
+                                    transition: 'color 0.2s',
+                                    zIndex: 1,
+                                    minWidth: 0,
+                                    '&:hover': {
+                                        color: currentTab === 'all' ? 'white' : 'text.primary',
+                                        bgcolor: 'transparent',
+                                    },
+                                    '&.Mui-selected': {
+                                        color: 'white',
+                                    }
+                                }}
+                            />
+                            {availableLeaveTypes.map((type) => {
+                                const config = leaveTypeConfig[type] || leaveTypeConfig.default;
+                                const leaveSample = myLeaves.find(l => (l.leaveType || l.leaveCode) === type);
+                                const label = t(`leave_${type}`, leaveSample?.leaveTypeInfo?.name || config.label);
+                                const count = leaveCounts[type] || 0;
+                                const isSelected = currentTab === type;
+
+                                return (
+                                    <Tab
+                                        key={type}
+                                        value={type}
+                                        disableRipple
+                                        label={
+                                            <Box
+                                                component={motion.div}
+                                                whileTap={{ scale: 0.95 }}
+                                                sx={{
+                                                    position: 'relative',
+                                                    zIndex: 1,
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    gap: 1.5,
+                                                    px: 2,
+                                                    py: 0.8,
+                                                    borderRadius: 99,
+                                                    transition: 'all 0.2s',
+                                                    cursor: 'pointer',
+                                                }}
+                                            >
+                                                {isSelected && (
+                                                    <Box
+                                                        component={motion.div}
+                                                        layoutId="activeTab"
+                                                        transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+                                                        sx={{
+                                                            position: 'absolute',
+                                                            inset: 0,
+                                                            background: `linear-gradient(135deg, ${config.color}e6 0%, ${config.color}cc 100%)`,
+                                                            backdropFilter: 'blur(12px)',
+                                                            borderRadius: 99,
+                                                            zIndex: -1,
+                                                            boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+                                                            border: '1px solid rgba(255,255,255,0.2)',
+                                                        }}
+                                                    >
+                                                        {/* Glass Shine Effect */}
+                                                        <Box
+                                                            sx={{
+                                                                position: 'absolute',
+                                                                top: 0,
+                                                                left: 0,
+                                                                right: 0,
+                                                                height: '50%',
+                                                                background: 'linear-gradient(to bottom, rgba(255,255,255,0.3) 0%, rgba(255,255,255,0) 100%)',
+                                                                borderTopLeftRadius: 99,
+                                                                borderTopRightRadius: 99,
+                                                            }}
+                                                        />
+                                                    </Box>
+                                                )}
+                                                <span style={{ position: 'relative', zIndex: 2, fontWeight: 600, color: isSelected ? 'white' : 'inherit' }}>{label}</span>
+                                                <Chip
+                                                    label={count}
+                                                    size="small"
+                                                    sx={{
+                                                        height: 22,
+                                                        bgcolor: isSelected ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.04)',
+                                                        color: isSelected ? 'white' : 'text.secondary',
+                                                        fontWeight: 700,
+                                                        fontSize: '0.75rem',
+                                                        border: isSelected ? '1px solid rgba(255,255,255,0.3)' : 'none',
+                                                        '& .MuiChip-label': { px: 1 },
+                                                        backdropFilter: isSelected ? 'blur(4px)' : 'none',
+                                                        zIndex: 2,
+                                                        position: 'relative',
+                                                    }}
+                                                />
+                                            </Box>
+                                        }
+                                        sx={{
+                                            borderRadius: 99,
+                                            textTransform: 'none',
+                                            fontWeight: 600,
+                                            fontSize: '0.9rem',
+                                            minHeight: 44,
+                                            px: 0,
+                                            mx: 0.5,
+                                            color: isSelected ? 'white' : 'text.secondary',
+                                            bgcolor: 'transparent',
+                                            transition: 'color 0.2s',
+                                            zIndex: 1,
+                                            minWidth: 0,
+                                            '&:hover': {
+                                                color: isSelected ? 'white' : 'text.primary',
+                                                bgcolor: 'transparent',
+                                            },
+                                            '&.Mui-selected': {
+                                                color: 'white',
+                                            }
+                                        }}
+                                    />
+                                );
+                            })}
+                        </Tabs>
+                    </Box>
+
                     {/* Search Box */}
                     <TextField
                         fullWidth
@@ -831,6 +1082,15 @@ export default function LeavePage() {
                                     <Search size={18} color="#94A3B8" />
                                 </Box>
                             ),
+                            endAdornment: searchQuery ? (
+                                <IconButton
+                                    size="small"
+                                    onClick={() => setSearchQuery('')}
+                                    sx={{ mr: 0.5, p: 0.5 }}
+                                >
+                                    <X size={16} color="#94A3B8" />
+                                </IconButton>
+                            ) : null,
                             sx: {
                                 borderRadius: 2,
                                 bgcolor: 'white',

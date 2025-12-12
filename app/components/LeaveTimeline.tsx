@@ -251,7 +251,7 @@ const LeaveTimeline = ({ items }: LeaveTimelineProps) => {
                                         fontWeight: 500,
                                     }}
                                 >
-                                    {t('submitted', 'ยื่นเมื่อ')} {createdAtFormatted}
+                                    {t('submitted_at', 'ยื่นเมื่อ')} {createdAtFormatted}
                                 </Typography>
                             )}
 

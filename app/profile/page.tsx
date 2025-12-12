@@ -377,7 +377,7 @@ export default function ProfilePage() {
                 ...(pushSupported ? [{
                     id: 'reset_notification',
                     icon: Notification,
-                    label: t('reset_notification', 'รีเซ็ตการแจ้งเตือน'),
+                    label: t('reset_notification_title', 'รีเซ็ตการแจ้งเตือน'),
                     color: '#F44336',
                     link: '#',
                     subtitle: t('reset_notification_subtitle', 'ล้างข้อมูลและเริ่มใหม่'),
@@ -395,7 +395,7 @@ export default function ProfilePage() {
         {
             title: t('help_info', 'ช่วยเหลือและข้อมูล'),
             items: [
-                { icon: MessageQuestion, label: t('help_center', 'ศูนย์ช่วยเหลือ'), color: '#00ACC1', link: '#' },
+                { icon: MessageQuestion, label: t('terms_and_conditions', 'ข้อกำหนดและเงื่อนไข'), color: '#00ACC1', link: '#' },
                 ...(!isStandalone ? [{
                     icon: Mobile,
                     label: t('install_app', 'ติดตั้งแอปพลิเคชัน'),
