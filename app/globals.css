@@ -11,7 +11,8 @@
   --font-sans: var(--font-comfortaa), var(--font-sarabun);
 }
 
-html, body {
+html,
+body {
   /* Completely disable browser's pull-to-refresh */
   overscroll-behavior: none;
   overscroll-behavior-y: none;
@@ -30,6 +31,7 @@ body {
 
 /* Hide any loading bars or progress indicators in PWA mode */
 @media all and (display-mode: standalone) {
+
   /* Hide browser/system loading indicators */
   html::before,
   html::after,
@@ -37,7 +39,7 @@ body {
   body::after {
     display: none !important;
   }
-  
+
   /* Ensure no unwanted lines or borders */
   * {
     -webkit-tap-highlight-color: transparent;
@@ -58,7 +60,8 @@ body {
   left: 0;
   width: 100%;
   height: 4px !important;
-  display: none; /* Hide by default, show only when needed via JS if specific logic required, or remove this line to show always */
+  display: none;
+  /* Hide by default, show only when needed via JS if specific logic required, or remove this line to show always */
 }
 
 /* Hide nprogress on specific routes if needed, but generally to hide it completely: */
@@ -76,42 +79,45 @@ body {
   display: none !important;
 }
 
-/* Vaul Drawer Styles - Native-like animations */
+/* Vaul Drawer Styles - Native-like smooth animations */
 [vaul-drawer] {
   touch-action: none;
 }
 
 [vaul-drawer-overlay] {
-  animation: fadeIn 0.3s ease-out;
+  will-change: opacity;
+  transition: opacity 0.3s cubic-bezier(0.32, 0.72, 0, 1);
 }
 
 [vaul-drawer-content] {
-  animation: slideUp 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+  will-change: transform;
+  /* Vaul handles the transform via JS, we just ensure GPU acceleration */
+  transform: translate3d(0, var(--vaul-drawer-y, 0), 0);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
 }
 
 [vaul-drawer][vaul-drawer-direction="bottom"] [vaul-drawer-content] {
   transform: translate3d(0, 0, 0);
 }
 
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
+/* Smooth snap animation when releasing */
+[vaul-drawer][data-state="open"] [vaul-drawer-content],
+[vaul-drawer][data-state="closed"] [vaul-drawer-content] {
+  transition: transform 0.5s cubic-bezier(0.32, 0.72, 0, 1);
 }
 
-@keyframes slideUp {
-  from {
-    transform: translate3d(0, 100%, 0);
-  }
-  to {
-    transform: translate3d(0, 0, 0);
-  }
+/* No transition during drag for immediate response */
+[vaul-drawer][vaul-dragging="true"] [vaul-drawer-content] {
+  transition: none !important;
 }
 
 /* Prevent body scroll when drawer is open */
 [vaul-drawer-wrapper][vaul-drawer-visible="true"] {
   overflow: hidden;
+}
+
+/* Ensure drawer content doesn't block touch events when closed */
+[vaul-drawer][data-state="closed"] {
+  pointer-events: none;
 }

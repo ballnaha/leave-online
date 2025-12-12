@@ -137,15 +137,24 @@ const LeaveTimeline = ({ items }: LeaveTimelineProps) => {
                         sx={{
                             display: 'flex',
                             cursor: 'pointer',
-                            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                            '&:hover': {
-                                transform: 'translateX(4px)',
+                            touchAction: 'manipulation', // Disable double-tap-to-zoom for faster click
+                            WebkitTapHighlightColor: 'transparent',
+                            // Only apply transition on devices with hover capability
+                            '@media (hover: hover)': {
+                                transition: 'transform 0.2s ease-out',
+                                '&:hover': {
+                                    transform: 'translateX(4px)',
+                                },
+                                '&:hover .timeline-card': {
+                                    boxShadow: '0 12px 32px rgba(0,0,0,0.12)',
+                                },
+                                '&:hover .date-box': {
+                                    transform: 'scale(1.02)',
+                                }
                             },
-                            '&:hover .timeline-card': {
-                                boxShadow: '0 12px 32px rgba(0,0,0,0.12)',
-                            },
-                            '&:hover .date-box': {
-                                transform: 'scale(1.02)',
+                            // Active state for immediate touch feedback
+                            '&:active': {
+                                opacity: 0.85,
                             }
                         }}
                     >
@@ -163,8 +172,10 @@ const LeaveTimeline = ({ items }: LeaveTimelineProps) => {
                                 justifyContent: 'center',
                                 color: 'white',
                                 flexShrink: 0,
-                                transition: 'transform 0.3s ease',
                                 boxShadow: `0 4px 20px ${alpha(item.iconColor || status.color, 0.3)}`,
+                                '@media (hover: hover)': {
+                                    transition: 'transform 0.2s ease-out',
+                                },
                             }}
                         >
                             <Typography
@@ -234,7 +245,9 @@ const LeaveTimeline = ({ items }: LeaveTimelineProps) => {
                                 alignItems: 'center',
                                 gap: 1.5,
                                 boxShadow: '0 4px 20px rgba(0,0,0,0.06)',
-                                transition: 'box-shadow 0.3s ease',
+                                '@media (hover: hover)': {
+                                    transition: 'box-shadow 0.2s ease-out',
+                                },
                                 position: 'relative',
                                 overflow: 'hidden',
                             }}
@@ -407,10 +420,12 @@ const LeaveTimeline = ({ items }: LeaveTimelineProps) => {
                                     color: '#CBD5E1',
                                     display: 'flex',
                                     alignItems: 'center',
-                                    transition: 'transform 0.3s ease',
-                                    '.timeline-card:hover &': {
-                                        transform: 'translateX(4px)',
-                                        color: '#94A3B8'
+                                    '@media (hover: hover)': {
+                                        transition: 'all 0.2s ease-out',
+                                        '.timeline-card:hover &': {
+                                            transform: 'translateX(4px)',
+                                            color: '#94A3B8'
+                                        }
                                     }
                                 }}
                             >

@@ -847,7 +847,11 @@ const DashboardCard: React.FC<DashboardCardProps> = ({ leaveTypes, leaveRequests
                                         minWidth: 56,
                                         opacity: isSelected ? 1 : 0.7,
                                         transform: isSelected ? 'scale(1.05)' : 'scale(1)',
-                                        transition: 'all 0.2s'
+                                        touchAction: 'manipulation',
+                                        WebkitTapHighlightColor: 'transparent',
+                                        '@media (hover: hover)': {
+                                            transition: 'all 0.2s',
+                                        },
                                     }}
                                 >
                                     <Box sx={{
@@ -1089,13 +1093,17 @@ const DashboardCard: React.FC<DashboardCardProps> = ({ leaveTypes, leaveRequests
                                                     boxShadow: '0 2px 12px rgba(0,0,0,0.06)',
                                                     border: 'none',
                                                     cursor: 'pointer',
-                                                    transition: 'all 0.2s ease',
-                                                    '&:hover': {
-                                                        boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
-                                                        transform: 'translateY(-2px)'
+                                                    touchAction: 'manipulation',
+                                                    WebkitTapHighlightColor: 'transparent',
+                                                    '@media (hover: hover)': {
+                                                        transition: 'all 0.2s ease',
+                                                        '&:hover': {
+                                                            boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+                                                            transform: 'translateY(-2px)'
+                                                        },
                                                     },
                                                     '&:active': {
-                                                        transform: 'scale(0.98)',
+                                                        opacity: 0.85,
                                                     }
                                                 }}
                                             >
