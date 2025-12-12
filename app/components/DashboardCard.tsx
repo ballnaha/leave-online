@@ -902,10 +902,10 @@ const DashboardCard: React.FC<DashboardCardProps> = ({ leaveTypes, leaveRequests
                         style={{
                             position: 'fixed',
                             inset: 0,
-                            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                            background: 'linear-gradient(180deg, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.6) 100%)',
                             zIndex: 1300,
-                            backdropFilter: 'blur(2px)',
-                            WebkitBackdropFilter: 'blur(2px)',
+                            backdropFilter: 'blur(8px)',
+                            WebkitBackdropFilter: 'blur(8px)',
                         }}
                     />
                     <Drawer.Content
@@ -915,14 +915,15 @@ const DashboardCard: React.FC<DashboardCardProps> = ({ leaveTypes, leaveRequests
                             bottom: 0,
                             left: 0,
                             right: 0,
-                            backgroundColor: 'white',
-                            borderTopLeftRadius: 16,
-                            borderTopRightRadius: 16,
-                            maxHeight: '80vh',
+                            backgroundColor: '#FAFBFC',
+                            borderTopLeftRadius: 24,
+                            borderTopRightRadius: 24,
+                            maxHeight: '85vh',
                             zIndex: 1300,
                             display: 'flex',
                             flexDirection: 'column',
                             outline: 'none',
+                            boxShadow: '0 -10px 50px rgba(0,0,0,0.15)',
                         }}
                     >
                         {/* Hidden Title for accessibility */}
@@ -932,64 +933,131 @@ const DashboardCard: React.FC<DashboardCardProps> = ({ leaveTypes, leaveRequests
                         <Drawer.Description style={{ position: 'absolute', width: 1, height: 1, padding: 0, margin: -1, overflow: 'hidden', clip: 'rect(0, 0, 0, 0)', whiteSpace: 'nowrap', border: 0 }}>
                             {t(`leave_${selectedCode}`, currentBalance.name)}
                         </Drawer.Description>
-                        <Box sx={{ width: '100%', bgcolor: 'white', display: 'flex', flexDirection: 'column', maxHeight: '80vh' }}>
-                            {/* Drag Handle */}
-                            <Drawer.Handle
-                                style={{
-                                    width: 40,
-                                    height: 5,
-                                    borderRadius: 2.5,
-                                    backgroundColor: '#E2E8F0',
-                                    margin: '12px auto 8px',
-                                }}
-                            />
+                        <Box sx={{ width: '100%', bgcolor: '#FAFBFC', display: 'flex', flexDirection: 'column', maxHeight: '85vh', borderTopLeftRadius: 24, borderTopRightRadius: 24, overflow: 'hidden' }}>
+                            {drilldownStatus && (() => {
+                                const statusConfig = getStatusConfig(drilldownStatus);
+                                const StatusIcon = statusConfig.icon;
+                                const typeConfig = leaveTypeConfig[selectedCode] || leaveTypeConfig.default;
+                                const TypeIcon = typeConfig.icon;
+                                const gradientColor = statusConfig.color;
 
-                            {/* Header */}
-                            <Box
-                                sx={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'space-between',
-                                    px: 2.5,
-                                    py: 1.5,
-                                    borderBottom: '1px solid #F1F5F9',
-                                }}
-                            >
-                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                                    {drilldownStatus && (() => {
-                                        const statusConfig = getStatusConfig(drilldownStatus);
-                                        const StatusIcon = statusConfig.icon;
-                                        const typeConfig = leaveTypeConfig[selectedCode] || leaveTypeConfig.default;
-                                        const TypeIcon = typeConfig.icon;
-                                        return (
-                                            <>
-                                                <Box sx={{
+                                return (
+                                    <>
+                                        {/* Drag Handle - Premium glass style */}
+                                        <Box sx={{
+                                            pt: 1.5,
+                                            pb: 1,
+                                            display: 'flex',
+                                            justifyContent: 'center',
+                                            background: `linear-gradient(135deg, ${gradientColor} 0%, ${gradientColor}DD 100%)`,
+                                        }}>
+                                            <Drawer.Handle
+                                                style={{
                                                     width: 48,
-                                                    height: 48,
-                                                    borderRadius: 1,
-                                                    bgcolor: statusConfig.bgColor,
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    justifyContent: 'center'
-                                                }}>
-                                                    <StatusIcon size={24} color={statusConfig.color} variant="Bold" />
+                                                    height: 5,
+                                                    borderRadius: 3,
+                                                    backgroundColor: 'rgba(255,255,255,0.5)',
+                                                }}
+                                            />
+                                        </Box>
+
+                                        {/* Header with Gradient */}
+                                        <Box
+                                            sx={{
+                                                background: `linear-gradient(135deg, ${gradientColor} 0%, ${gradientColor}DD 100%)`,
+                                                px: 2.5,
+                                                pt: 1,
+                                                pb: 3,
+                                                position: 'relative',
+                                                overflow: 'hidden',
+                                                '&::before': {
+                                                    content: '""',
+                                                    position: 'absolute',
+                                                    top: -30,
+                                                    right: -30,
+                                                    width: 100,
+                                                    height: 100,
+                                                    borderRadius: '50%',
+                                                    background: 'rgba(255,255,255,0.1)',
+                                                },
+                                                '&::after': {
+                                                    content: '""',
+                                                    position: 'absolute',
+                                                    bottom: -20,
+                                                    left: -20,
+                                                    width: 80,
+                                                    height: 80,
+                                                    borderRadius: '50%',
+                                                    background: 'rgba(255,255,255,0.08)',
+                                                },
+                                            }}
+                                        >
+                                            <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', position: 'relative', zIndex: 1 }}>
+                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                                                    <Box
+                                                        sx={{
+                                                            width: 52,
+                                                            height: 52,
+                                                            borderRadius: 2,
+                                                            bgcolor: 'rgba(255,255,255,0.2)',
+                                                            backdropFilter: 'blur(10px)',
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'center',
+                                                            boxShadow: '0 4px 15px rgba(0,0,0,0.1)',
+                                                        }}
+                                                    >
+                                                        <StatusIcon size={26} color="white" variant="Bold" />
+                                                    </Box>
+                                                    <Box>
+                                                        <Typography sx={{ fontWeight: 700, fontSize: '1.2rem', color: 'white', mb: 0.5, textShadow: '0 1px 2px rgba(0,0,0,0.1)' }}>
+                                                            {statusConfig.label}
+                                                        </Typography>
+                                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                            <Chip
+                                                                icon={<TypeIcon size={12} color={typeConfig.color} />}
+                                                                label={t(`leave_${selectedCode}`, currentBalance.name)}
+                                                                size="small"
+                                                                sx={{
+                                                                    bgcolor: 'white',
+                                                                    color: typeConfig.color,
+                                                                    fontSize: '0.7rem',
+                                                                    height: 22,
+                                                                    fontWeight: 600,
+                                                                    '& .MuiChip-icon': { ml: 0.5 },
+                                                                }}
+                                                            />
+                                                            <Chip
+                                                                label={`${drilldownRequests.length} ${t('items', 'รายการ')}`}
+                                                                size="small"
+                                                                sx={{
+                                                                    bgcolor: 'rgba(255,255,255,0.2)',
+                                                                    color: 'white',
+                                                                    fontSize: '0.7rem',
+                                                                    height: 22,
+                                                                    fontWeight: 600,
+                                                                    backdropFilter: 'blur(5px)',
+                                                                }}
+                                                            />
+                                                        </Box>
+                                                    </Box>
                                                 </Box>
-                                                <Box>
-                                                    <Typography variant="h6" sx={{ fontWeight: 700, color: '#1E293B', fontSize: '1rem' }}>
-                                                        {statusConfig.label}
-                                                    </Typography>
-                                                    <Typography sx={{ fontSize: '0.8rem', color: '#64748B' }}>
-                                                        {t(`leave_${selectedCode}`, currentBalance.name)} • {drilldownRequests.length} {t('items', 'รายการ')}
-                                                    </Typography>
-                                                </Box>
-                                            </>
-                                        );
-                                    })()}
-                                </Box>
-                                <IconButton onClick={() => setDrilldownOpen(false)} size="small">
-                                    <CloseCircle size={32} color="#64748B" />
-                                </IconButton>
-                            </Box>
+                                                <IconButton
+                                                    onClick={() => setDrilldownOpen(false)}
+                                                    size="small"
+                                                    sx={{
+                                                        bgcolor: 'rgba(255,255,255,0.2)',
+                                                        backdropFilter: 'blur(10px)',
+                                                        '&:hover': { bgcolor: 'rgba(255,255,255,0.3)' },
+                                                    }}
+                                                >
+                                                    <CloseCircle size={24} color="white" />
+                                                </IconButton>
+                                            </Box>
+                                        </Box>
+                                    </>
+                                );
+                            })()}
 
                             {/* Content */}
                             <Box
@@ -1014,66 +1082,82 @@ const DashboardCard: React.FC<DashboardCardProps> = ({ leaveTypes, leaveRequests
                                                 onClick={() => handleLeaveItemClick(leave)}
                                                 sx={{
                                                     p: 2,
-                                                    mb: 1.5,
-                                                    bgcolor: '#F8FAFC',
+                                                    mb: 2,
+                                                    bgcolor: 'white',
                                                     borderRadius: 1,
-                                                    border: '1px solid #E2E8F0',
+                                                    boxShadow: '0 2px 12px rgba(0,0,0,0.06)',
+                                                    border: 'none',
                                                     cursor: 'pointer',
                                                     transition: 'all 0.2s ease',
                                                     '&:hover': {
-                                                        bgcolor: '#F1F5F9',
-                                                        borderColor: '#CBD5E1'
+                                                        boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+                                                        transform: 'translateY(-2px)'
                                                     },
                                                     '&:active': {
                                                         transform: 'scale(0.98)',
-                                                        bgcolor: '#E2E8F0'
                                                     }
                                                 }}
                                             >
-                                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1.5 }}>
-                                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                                                        <Box sx={{
-                                                            width: 32,
-                                                            height: 32,
-                                                            borderRadius: 1,
+                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                                                    <Box
+                                                        sx={{
+                                                            width: 48,
+                                                            height: 48,
+                                                            borderRadius: 2,
                                                             bgcolor: `${typeConfig.color}15`,
                                                             display: 'flex',
                                                             alignItems: 'center',
-                                                            justifyContent: 'center'
-                                                        }}>
-                                                            <Calendar size={16} color={typeConfig.color} />
-                                                        </Box>
-                                                        <Box>
-                                                            <Typography sx={{ fontWeight: 600, color: '#1E293B', fontSize: '0.9rem' }}>
-                                                                {formatDate(leave.startDate, leave.endDate)}
-                                                            </Typography>
+                                                            justifyContent: 'center',
+                                                        }}
+                                                    >
+                                                        <Calendar size={22} color={typeConfig.color} />
+                                                    </Box>
+                                                    <Box sx={{ flex: 1 }}>
+                                                        <Typography sx={{ fontWeight: 700, color: '#1E293B', fontSize: '0.95rem' }}>
+                                                            {formatDate(leave.startDate, leave.endDate)}
+                                                        </Typography>
+                                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
                                                             {leave.leaveCode && (
-                                                                <Typography sx={{ color: '#94A3B8', fontSize: '0.75rem' }}>
-                                                                    {leave.leaveCode}
-                                                                </Typography>
+                                                                <Chip
+                                                                    label={leave.leaveCode}
+                                                                    size="small"
+                                                                    sx={{
+                                                                        bgcolor: '#F1F5F9',
+                                                                        color: '#64748B',
+                                                                        fontSize: '0.65rem',
+                                                                        height: 20,
+                                                                        fontWeight: 600,
+                                                                    }}
+                                                                />
                                                             )}
+
                                                         </Box>
                                                     </Box>
-                                                    <Chip
-                                                        label={`${leave.totalDays} ${t('days', 'วัน')}`}
-                                                        size="small"
+                                                    <Box
                                                         sx={{
-                                                            bgcolor: statusConfig.bgColor,
-                                                            color: statusConfig.color,
-                                                            fontWeight: 600,
-                                                            fontSize: '0.75rem',
-                                                            height: 24
+                                                            px: 1.5,
+                                                            py: 0.75,
+                                                            borderRadius: 2,
+                                                            bgcolor: `${typeConfig.color}15`,
+                                                            textAlign: 'center',
                                                         }}
-                                                    />
+                                                    >
+                                                        <Typography sx={{ fontSize: '1.1rem', fontWeight: 700, color: typeConfig.color, lineHeight: 1 }}>
+                                                            {leave.totalDays}
+                                                        </Typography>
+                                                        <Typography sx={{ fontSize: '0.55rem', color: typeConfig.color, mt: 0.25 }}>
+                                                            {t('days', 'วัน')}
+                                                        </Typography>
+                                                    </Box>
                                                 </Box>
                                                 {leave.reason && (
                                                     <Box sx={{
-                                                        pl: 6,
-                                                        borderLeft: `2px solid ${typeConfig.color}30`,
-                                                        ml: 2
+                                                        mt: 1.5,
+                                                        pt: 1.5,
+                                                        borderTop: '1px solid #F1F5F9',
                                                     }}>
                                                         <Typography sx={{ color: '#64748B', fontSize: '0.85rem', lineHeight: 1.5 }}>
-                                                            {leave.reason.length > 100 ? `${leave.reason.substring(0, 100)}...` : leave.reason}
+                                                            {leave.reason.length > 80 ? `${leave.reason.substring(0, 80)}...` : leave.reason}
                                                         </Typography>
                                                     </Box>
                                                 )}
