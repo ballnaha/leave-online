@@ -465,7 +465,10 @@ const DashboardCard: React.FC<DashboardCardProps> = ({ leaveTypes, leaveRequests
                                                 strokeWidth="8"
                                                 strokeLinecap="round"
                                                 strokeDasharray={`${calculatePercentage.approved * 2.83} 283`}
-                                                style={{ transition: 'stroke-dasharray 0.8s ease-out' }}
+                                                style={{
+                                                    transition: 'stroke-dasharray 0.8s ease-out',
+                                                    filter: 'drop-shadow(0 0 8px rgba(46, 204, 113, 0.8))'
+                                                }}
                                             />
                                         </svg>
                                     </MuiTooltip>
@@ -513,7 +516,10 @@ const DashboardCard: React.FC<DashboardCardProps> = ({ leaveTypes, leaveRequests
                                                 strokeWidth="10"
                                                 strokeLinecap="round"
                                                 strokeDasharray={`${calculatePercentage.pending * 2.83} 283`}
-                                                style={{ transition: 'stroke-dasharray 0.8s ease-out' }}
+                                                style={{
+                                                    transition: 'stroke-dasharray 0.8s ease-out',
+                                                    filter: 'drop-shadow(0 0 8px rgba(243, 156, 18, 0.8))'
+                                                }}
                                             />
                                         </svg>
                                     </MuiTooltip>
@@ -561,7 +567,12 @@ const DashboardCard: React.FC<DashboardCardProps> = ({ leaveTypes, leaveRequests
                                                 strokeWidth="12"
                                                 strokeLinecap="round"
                                                 strokeDasharray={`${calculatePercentage.remaining * 2.83} 283`}
-                                                style={{ transition: 'stroke-dasharray 0.8s ease-out' }}
+                                                style={{
+                                                    transition: 'stroke-dasharray 0.8s ease-out',
+                                                    filter: isOverLimit
+                                                        ? 'drop-shadow(0 0 8px rgba(231, 76, 60, 0.8))'
+                                                        : 'drop-shadow(0 0 8px rgba(93, 173, 226, 0.8))'
+                                                }}
                                             />
                                         </svg>
                                     </MuiTooltip>
@@ -652,7 +663,9 @@ const DashboardCard: React.FC<DashboardCardProps> = ({ leaveTypes, leaveRequests
                                             : 'linear-gradient(90deg, #E74C3C 0%, #C0392B 100%)',
                                         borderRadius: 2,
                                         transition: 'width 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
-                                        boxShadow: '0 0 4px rgba(46, 204, 113, 0.3)'
+                                        boxShadow: currentBalance.remaining > 0
+                                            ? '0 0 8px rgba(46, 204, 113, 0.6)'
+                                            : '0 0 8px rgba(231, 76, 60, 0.6)'
                                     }} />
                                 </Box>
                             )}
@@ -680,6 +693,7 @@ const DashboardCard: React.FC<DashboardCardProps> = ({ leaveTypes, leaveRequests
                                     height: 10,
                                     borderRadius: '50%',
                                     bgcolor: '#2ECC71',
+                                    boxShadow: '0 0 6px rgba(46, 204, 113, 0.6)',
                                     flexShrink: 0
                                 }} />
                                 <Typography variant="body2" sx={{ fontSize: '0.8rem', flex: 1 }}>
@@ -708,6 +722,7 @@ const DashboardCard: React.FC<DashboardCardProps> = ({ leaveTypes, leaveRequests
                                     height: 10,
                                     borderRadius: '50%',
                                     bgcolor: '#F39C12',
+                                    boxShadow: '0 0 6px rgba(243, 156, 18, 0.6)',
                                     flexShrink: 0
                                 }} />
                                 <Typography variant="body2" sx={{ fontSize: '0.8rem', flex: 1 }}>
@@ -722,6 +737,9 @@ const DashboardCard: React.FC<DashboardCardProps> = ({ leaveTypes, leaveRequests
                                     height: 10,
                                     borderRadius: '50%',
                                     bgcolor: isOverLimit ? '#E74C3C' : '#5DADE2',
+                                    boxShadow: isOverLimit
+                                        ? '0 0 6px rgba(231, 76, 60, 0.6)'
+                                        : '0 0 6px rgba(93, 173, 226, 0.6)',
                                     flexShrink: 0
                                 }} />
                                 <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
@@ -752,6 +770,7 @@ const DashboardCard: React.FC<DashboardCardProps> = ({ leaveTypes, leaveRequests
                                     height: 10,
                                     borderRadius: '50%',
                                     bgcolor: '#E74C3C',
+                                    boxShadow: '0 0 6px rgba(231, 76, 60, 0.6)',
                                     flexShrink: 0
                                 }} />
                                 <Typography variant="body2" sx={{ fontSize: '0.8rem', flex: 1 }}>
@@ -780,6 +799,7 @@ const DashboardCard: React.FC<DashboardCardProps> = ({ leaveTypes, leaveRequests
                                     height: 10,
                                     borderRadius: '50%',
                                     bgcolor: '#9B59B6',
+                                    boxShadow: '0 0 6px rgba(155, 89, 182, 0.6)',
                                     flexShrink: 0
                                 }} />
                                 <Typography variant="body2" sx={{ fontSize: '0.8rem', flex: 1 }}>
