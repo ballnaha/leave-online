@@ -53,8 +53,8 @@ import { useUser } from '@/app/providers/UserProvider';
 import { useToastr } from '@/app/components/Toastr';
 import { CalendarDays } from 'lucide-react';
 
-const drawerWidth = 260;
-const collapsedDrawerWidth = 68;
+const drawerWidth = 280;
+const collapsedDrawerWidth = 72;
 
 interface MenuItem {
     text: string;
@@ -292,8 +292,7 @@ export default function AdminLayout({
     // Check access and redirect if not authorized
     useEffect(() => {
         if (!userLoading && user && !isAdminRole(user.role)) {
-            toastr.error('คุณไม่มีสิทธิ์เข้าถึงหน้านี้');
-            router.push('/');
+            router.replace('/unauthorized');
         }
     }, [user, userLoading, router]);
 
@@ -410,7 +409,7 @@ export default function AdminLayout({
             <Divider />
 
             {/* Menu Items */}
-            <List sx={{ flex: 1, px: collapsed ? 0.5 : 1.5, py: 1.5, transition: 'padding 0.35s cubic-bezier(0.4, 0, 0.2, 1)', overflowY: 'auto' }}>
+            <List sx={{ flex: 1, px: collapsed ? 0.5 : 2, py: 2, transition: 'padding 0.35s cubic-bezier(0.4, 0, 0.2, 1)', overflowY: 'auto' }}>
                 {menuGroups.map((group, groupIndex) => (
                     <React.Fragment key={group.groupLabel || `group-${groupIndex}`}>
                         {/* Group Label */}
@@ -441,7 +440,7 @@ export default function AdminLayout({
                         {group.items.map((item) => (
                             <React.Fragment key={item.text}>
                                 {/* Parent menu item */}
-                                <ListItem disablePadding sx={{ mb: 0.25, position: 'relative' }}>
+                                <ListItem disablePadding sx={{ mb: 0.75, position: 'relative' }}>
                                     <Tooltip title={collapsed ? item.text : ''} placement="right">
                                         <ListItemButton
                                             onClick={() => {
@@ -452,10 +451,10 @@ export default function AdminLayout({
                                                 }
                                             }}
                                             sx={{
-                                                borderRadius: 1,
+                                                borderRadius: 3,
                                                 justifyContent: collapsed ? 'center' : 'flex-start',
-                                                px: collapsed ? 1 : 1.5,
-                                                py: 0.75,
+                                                px: collapsed ? 1 : 2,
+                                                py: 1,
                                                 bgcolor: (item.path && isActiveRoute(item.path)) || hasActiveChild(item.children)
                                                     ? item.children ? 'action.selected' : 'primary.main'
                                                     : 'transparent',
@@ -470,7 +469,7 @@ export default function AdminLayout({
                                         >
                                             <ListItemIcon
                                                 sx={{
-                                                    minWidth: collapsed ? 'auto' : 32,
+                                                    minWidth: collapsed ? 'auto' : 40,
                                                     color: (item.path && isActiveRoute(item.path)) ? 'white' : 'text.secondary',
                                                     transition: 'all 0.25s ease',
                                                     transform: (item.path && isActiveRoute(item.path)) ? 'scale(1.1)' : 'scale(1)',
@@ -478,7 +477,7 @@ export default function AdminLayout({
                                             >
                                                 {'variant' in item.icon ? (
                                                     <item.icon
-                                                        size={18}
+                                                        size={20}
                                                         variant="Outline"
                                                         color={(item.path && isActiveRoute(item.path)) ? '#ffffff' : item.iconColor}
                                                     />
@@ -505,8 +504,8 @@ export default function AdminLayout({
                                                 <ListItemText
                                                     primary={item.text}
                                                     primaryTypographyProps={{
-                                                        fontSize: '0.825rem',
-                                                        fontWeight: (item.path && isActiveRoute(item.path)) || hasActiveChild(item.children) ? 600 : 500,
+                                                        fontSize: '0.95rem',
+                                                        fontWeight: (item.path && isActiveRoute(item.path)) || hasActiveChild(item.children) ? 600 : 400,
                                                     }}
                                                 />
                                                 {item.children && !collapsed && (
@@ -522,14 +521,14 @@ export default function AdminLayout({
                                 {/* Submenu items */}
                                 {item.children && !collapsed && (
                                     <Collapse in={expandedMenus.includes(item.text)} timeout="auto" unmountOnExit>
-                                        <List component="div" disablePadding sx={{ pl: 2 }}>
+                                        <List component="div" disablePadding sx={{ pl: 2.5 }}>
                                             {item.children.map((child) => (
-                                                <ListItem key={child.path} disablePadding sx={{ mb: 0.25 }}>
+                                                <ListItem key={child.path} disablePadding sx={{ mb: 0.5 }}>
                                                     <ListItemButton
                                                         onClick={() => handleNavigate(child.path)}
                                                         sx={{
-                                                            borderRadius: 1,
-                                                            py: 0.5,
+                                                            borderRadius: 2,
+                                                            py: 0.75,
                                                             pl: 2,
                                                             bgcolor: isActiveRoute(child.path, true) ? 'primary.main' : 'transparent',
                                                             color: isActiveRoute(child.path, true) ? 'white' : 'text.primary',
@@ -543,19 +542,19 @@ export default function AdminLayout({
                                                     >
                                                         <ListItemIcon
                                                             sx={{
-                                                                minWidth: 28,
+                                                                minWidth: 32,
                                                                 color: isActiveRoute(child.path, true) ? 'white' : 'text.secondary',
                                                             }}
                                                         >
                                                             <child.icon
-                                                                size={16}
+                                                                size={18}
                                                                 color={isActiveRoute(child.path, true) ? '#ffffff' : child.iconColor}
                                                             />
                                                         </ListItemIcon>
                                                         <ListItemText
                                                             primary={child.text}
                                                             primaryTypographyProps={{
-                                                                fontSize: '0.8rem',
+                                                                fontSize: '0.875rem',
                                                                 fontWeight: isActiveRoute(child.path, true) ? 600 : 400,
                                                             }}
                                                         />
@@ -574,14 +573,14 @@ export default function AdminLayout({
             <Divider sx={{ mx: collapsed ? 0.5 : 1.5, transition: 'margin 0.35s cubic-bezier(0.4, 0, 0.2, 1)' }} />
 
             {/* Back to Main App */}
-            <Box sx={{ p: collapsed ? 0.5 : 1.5, transition: 'padding 0.35s cubic-bezier(0.4, 0, 0.2, 1)' }}>
+            <Box sx={{ p: collapsed ? 0.5 : 2, transition: 'padding 0.35s cubic-bezier(0.4, 0, 0.2, 1)' }}>
                 <ListItemButton
                     onClick={() => router.push('/')}
                     sx={{
-                        borderRadius: 1,
+                        borderRadius: 3,
                         justifyContent: collapsed ? 'center' : 'flex-start',
-                        px: collapsed ? 1 : 1.5,
-                        py: 0.75,
+                        px: collapsed ? 1 : 2,
+                        py: 1,
                         bgcolor: 'grey.100',
                         transition: 'all 0.35s cubic-bezier(0.4, 0, 0.2, 1)',
                         '&:hover': {
@@ -590,10 +589,10 @@ export default function AdminLayout({
                     }}
                 >
                     <ListItemIcon sx={{
-                        minWidth: collapsed ? 'auto' : 32,
+                        minWidth: collapsed ? 'auto' : 40,
                         transition: 'min-width 0.35s cubic-bezier(0.4, 0, 0.2, 1)',
                     }}>
-                        <Home2 size={18} variant="Outline" color="#6C63FF" />
+                        <Home2 size={20} variant="Outline" color="#6C63FF" />
                     </ListItemIcon>
                     <Box
                         sx={{
@@ -607,7 +606,7 @@ export default function AdminLayout({
                         <ListItemText
                             primary="กลับหน้าหลัก"
                             primaryTypographyProps={{
-                                fontSize: '0.825rem',
+                                fontSize: '0.95rem',
                                 fontWeight: 500,
                             }}
                         />

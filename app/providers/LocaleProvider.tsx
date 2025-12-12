@@ -75,6 +75,14 @@ const messages: Record<LocaleCode, Record<string, string>> = {
     blocked_notifications: "ถูกบล็อก - กรุณาเปิดในการตั้งค่า",
     select_language: "เลือกภาษา",
 
+    // Unauthorized Page
+    access_denied: "ไม่มีสิทธิ์เข้าถึง",
+    access_denied_desc: "ขออภัย คุณไม่มีสิทธิ์เข้าถึงหน้านี้ กรุณาติดต่อผู้ดูแลระบบหากคุณคิดว่านี่เป็นข้อผิดพลาด",
+    admin_only: "สำหรับผู้ดูแลระบบเท่านั้น",
+    go_home: "กลับหน้าหลัก",
+    go_back: "ย้อนกลับ",
+    need_help: "หากต้องการความช่วยเหลือ กรุณาติดต่อ HR",
+
     // iOS Instructions
     ios_install_title: "วิธีติดตั้งบน iPhone",
     step_1: "ขั้นตอนที่ 1",
@@ -258,6 +266,25 @@ const messages: Record<LocaleCode, Record<string, string>> = {
     notif_msg_reminder: "{{requesterName}} รอ{{leaveType}} (เหลือเวลา {{hoursLeft}} ชม.)",
     notif_msg_escalated: "{{leaveType}}ของคุณถูกส่งไปยังผู้จัดการฝ่ายบุคคลเนื่องจากเกินเวลากำหนด",
     notif_msg_cancelled: "{{leaveType}}ของคุณถูกยกเลิกแล้ว",
+    notif_title_partial_approved: "🔄 ใบลาผ่านการอนุมัติบางส่วน",
+    notif_msg_partial_approved: "{{leaveType}}ของคุณได้รับการอนุมัติโดย {{approverName}} และกำลังรอการอนุมัติจากผู้อนุมัติถัดไป",
+    tab_action_required: "รอดำเนินการ",
+    tab_my_leaves: "สถานะอนุมัติ",
+    no_action_required_notifications: "ไม่มีใบลารอดำเนินการ",
+    no_my_leaves_notifications: "ไม่มีการแจ้งเตือนสถานะการอนุมัติ",
+    leave_date: "วันที่ลา",
+    items: "รายการ",
+    notif_status_approved: "สถานะปัจจุบัน: อนุมัติแล้ว",
+    notif_status_rejected: "สถานะปัจจุบัน: ไม่อนุมัติ",
+    notif_status_cancelled: "สถานะปัจจุบัน: ยกเลิก",
+    notif_your_action_approved: "คุณอนุมัติใบลานี้แล้ว",
+    notif_your_action_rejected: "คุณปฏิเสธใบลานี้แล้ว",
+
+    approve: "อนุมัติ",
+    reject: "ปฏิเสธ",
+    please_enter_reason: "กรุณาระบุเหตุผลในการปฏิเสธ",
+    error_occurred: "เกิดข้อผิดพลาด",
+    connection_error: "เกิดข้อผิดพลาดในการเชื่อมต่อ",
 
     // Holiday
     holiday_title: "วันหยุดประจำปี",
@@ -481,6 +508,14 @@ const messages: Record<LocaleCode, Record<string, string>> = {
     select_language: "Select Language",
     terms_and_conditions: "Terms & Conditions",
 
+    // Unauthorized Page
+    access_denied: "Access Denied",
+    access_denied_desc: "Sorry, you don't have permission to access this page. Please contact the administrator if you think this is an error.",
+    admin_only: "Admin Only",
+    go_home: "Go to Home",
+    go_back: "Go Back",
+    need_help: "Need help? Please contact HR",
+
     // iOS Instructions
     ios_install_title: "Install on iPhone",
     step_1: "Step 1",
@@ -663,6 +698,25 @@ const messages: Record<LocaleCode, Record<string, string>> = {
     notif_msg_reminder: "{{requesterName}} is waiting for {{leaveType}} approval ({{hoursLeft}} hrs left)",
     notif_msg_escalated: "Your {{leaveType}} has been escalated to HR Manager due to timeout",
     notif_msg_cancelled: "Your {{leaveType}} has been cancelled",
+    notif_title_partial_approved: "🔄 Leave Partially Approved",
+    notif_msg_partial_approved: "Your {{leaveType}} has been approved by {{approverName}} and is waiting for the next approver",
+    tab_action_required: "Action Required",
+    tab_my_leaves: "My Leaves",
+    no_action_required_notifications: "No pending leave requests",
+    no_my_leaves_notifications: "No approval status notifications",
+    leave_date: "Leave Date",
+    items: "items",
+    notif_status_approved: "Current status: Approved",
+    notif_status_rejected: "Current status: Rejected",
+    notif_status_cancelled: "Current status: Cancelled",
+    notif_your_action_approved: "You have approved this leave",
+    notif_your_action_rejected: "You have rejected this leave",
+
+    approve: "Approve",
+    reject: "Reject",
+    please_enter_reason: "Please enter a reason for rejection",
+    error_occurred: "An error occurred",
+    connection_error: "Connection error",
 
     // Holiday
     holiday_title: "Annual Holidays",
@@ -888,6 +942,14 @@ const messages: Record<LocaleCode, Record<string, string>> = {
     terms_and_conditions: "အချက်အလက်များ",
     dashboard_quota_short: "ခွဲတမ်း",
     reset_notification_title: "အကြောင်းကြားချက်ကို ပြန်လည်သတ်မှတ်ပါ။",
+
+    // Unauthorized Page
+    access_denied: "ဝင်ရောက်ခွင့်မရှိပါ",
+    access_denied_desc: "ဝမ်းနည်းပါတယ်၊ ဤစာမျက်နှာကို ဝင်ရောက်ခွင့်မရှိပါ။ အမှားဖြစ်နေသည်ဟု ယူဆပါက စီမံခန့်ခွဲသူထံ ဆက်သွယ်ပါ။",
+    admin_only: "စီမံခန့်ခွဲသူသာ",
+    go_home: "ပင်မစာမျက်နှာသို့ သွားရန်",
+    go_back: "နောက်ပြန်သွားရန်",
+    need_help: "အကူအညီလိုပါက HR ကို ဆက်သွယ်ပါ",
 
     // iOS Instructions
     ios_install_title: "iPhone တွင် ထည့်သွင်းနည်း",
@@ -1127,6 +1189,24 @@ const messages: Record<LocaleCode, Record<string, string>> = {
     notif_msg_reminder: "{{requesterName}} က {{leaveType}} အတည်ပြုရန်စောင့်ဆိုင်းနေသည် ({{hoursLeft}} နာရီကျန်)",
     notif_msg_escalated: "သင်ရဲ့ {{leaveType}} ကို အချိန်လွန်သောကြောင့် HR Manager ထံ တင်ပြလိုက်သည်",
     notif_msg_cancelled: "သင်ရဲ့ {{leaveType}} ကို ပယ်ဖျက်လိုက်ပြီး",
+    notif_title_partial_approved: "🔄 ခွင့်တစ်စိတ်တစ်ပိုင်း အတည်ပြုပြီး",
+    notif_msg_partial_approved: "သင်ရဲ့ {{leaveType}} ကို {{approverName}} က အတည်ပြုပြီး နောက်ထပ် အတည်ပြုသူ စောင့်ဆိုင်းနေသည်",
+    tab_action_required: "ဆောင်ရွက်ရန်",
+    tab_my_leaves: "ကျွန်ုပ်ခွင့်များ",
+    no_action_required_notifications: "စောင့်ဆိုင်းနေသော ခွင့်တောင်းဆိုမှု မရှိပါ",
+    no_my_leaves_notifications: "အတည်ပြုချက် အခြေအနေ အောက်ချက် မရှိပါ",
+    leave_date: "ခွင့်ရက်",
+    items: "ခု",
+    notif_status_approved: "လက်ရှိအခြေအနေ: အတည်ပြုပြီး",
+    notif_status_rejected: "လက်ရှိအခြေအနေ: ပယ်ချပြီး",
+    notif_status_cancelled: "လက်ရှိအခြေအနေ: ပယ်ဖျက်ပြီး",
+    notif_your_action_approved: "ဤခွင့်ကို သင် အတည်ပြုပြီး",
+    notif_your_action_rejected: "ဤခွင့်ကို သင် ပယ်ချပြီး",
+    approve: "အတည်ပြုရန်",
+    reject: "ပယ်ချရန်",
+    please_enter_reason: "ပယ်ချရသည့် အကြောင်းရင်းထည့်ပါ",
+    error_occurred: "အမှားတစ်ခုဖြစ်ပွားသည်",
+    connection_error: "ချိတ်ဆက်မှု အမှားဖြစ်သည်",
 
     // Holiday
     holiday_title: "နှစ်စဉ်ရုံးပိတ်ရက်များ",
