@@ -236,7 +236,8 @@ export async function notifyApprovalPending(
   totalDays?: number,
   startDate?: string,
   endDate?: string,
-  reason?: string
+  reason?: string,
+  leaveCode?: string
 ): Promise<NotificationResult> {
   const thLeaveType = translateLeaveType(leaveType, 'th');
   const enLeaveType = translateLeaveType(leaveType, 'en');
@@ -272,6 +273,7 @@ export async function notifyApprovalPending(
     data: {
       type: 'approval_pending',
       leaveRequestId,
+      leaveCode: leaveCode || null,
       leaveTypeCode: leaveType,
       requesterName,
       totalDays: totalDays || null,
@@ -289,7 +291,11 @@ export async function notifyLeaveApproved(
   userId: number,
   leaveRequestId: number,
   approverName: string,
-  leaveType: string
+  leaveType: string,
+  totalDays?: number,
+  startDate?: string,
+  endDate?: string,
+  leaveCode?: string
 ): Promise<NotificationResult> {
   const thLeaveType = translateLeaveType(leaveType, 'th');
   const enLeaveType = translateLeaveType(leaveType, 'en');
@@ -310,8 +316,12 @@ export async function notifyLeaveApproved(
     data: {
       type: 'approved',
       leaveRequestId,
+      leaveCode: leaveCode || null,
       leaveTypeCode: leaveType,
       approverName,
+      totalDays: totalDays || null,
+      startDate: startDate || null,
+      endDate: endDate || null,
     },
   });
 }
@@ -325,7 +335,11 @@ export async function notifyLeavePartialApproved(
   approverName: string,
   leaveType: string,
   currentLevel: number,
-  totalLevels: number
+  totalLevels: number,
+  totalDays?: number,
+  startDate?: string,
+  endDate?: string,
+  leaveCode?: string
 ): Promise<NotificationResult> {
   const thLeaveType = translateLeaveType(leaveType, 'th');
   const enLeaveType = translateLeaveType(leaveType, 'en');
@@ -346,10 +360,14 @@ export async function notifyLeavePartialApproved(
     data: {
       type: 'partial_approved',
       leaveRequestId,
+      leaveCode: leaveCode || null,
       leaveTypeCode: leaveType,
       approverName,
       currentLevel,
       totalLevels,
+      totalDays: totalDays || null,
+      startDate: startDate || null,
+      endDate: endDate || null,
     },
   });
 }
@@ -362,7 +380,11 @@ export async function notifyLeaveRejected(
   leaveRequestId: number,
   approverName: string,
   leaveType: string,
-  reason?: string
+  reason?: string,
+  totalDays?: number,
+  startDate?: string,
+  endDate?: string,
+  leaveCode?: string
 ): Promise<NotificationResult> {
   const thLeaveType = translateLeaveType(leaveType, 'th');
   const enLeaveType = translateLeaveType(leaveType, 'en');
@@ -383,9 +405,13 @@ export async function notifyLeaveRejected(
     data: {
       type: 'rejected',
       leaveRequestId,
+      leaveCode: leaveCode || null,
       leaveTypeCode: leaveType,
       approverName,
       reason,
+      totalDays: totalDays || null,
+      startDate: startDate || null,
+      endDate: endDate || null,
     },
   });
 }
@@ -396,7 +422,11 @@ export async function notifyLeaveRejected(
 export async function notifyEscalated(
   userId: number,
   leaveRequestId: number,
-  leaveType: string
+  leaveType: string,
+  totalDays?: number,
+  startDate?: string,
+  endDate?: string,
+  leaveCode?: string
 ): Promise<NotificationResult> {
   const thLeaveType = translateLeaveType(leaveType, 'th');
   const enLeaveType = translateLeaveType(leaveType, 'en');
@@ -417,7 +447,11 @@ export async function notifyEscalated(
     data: {
       type: 'escalated',
       leaveRequestId,
+      leaveCode: leaveCode || null,
       leaveTypeCode: leaveType,
+      totalDays: totalDays || null,
+      startDate: startDate || null,
+      endDate: endDate || null,
     },
   });
 }
@@ -476,7 +510,11 @@ export async function notifyApprovalReminder(
 export async function notifyLeaveSubmitted(
   userId: number,
   leaveRequestId: number,
-  leaveType: string
+  leaveType: string,
+  totalDays?: number,
+  startDate?: string,
+  endDate?: string,
+  leaveCode?: string
 ): Promise<NotificationResult> {
   const thLeaveType = translateLeaveType(leaveType, 'th');
   const enLeaveType = translateLeaveType(leaveType, 'en');
@@ -497,7 +535,11 @@ export async function notifyLeaveSubmitted(
     data: {
       type: 'submitted',
       leaveRequestId,
+      leaveCode: leaveCode || null,
       leaveTypeCode: leaveType,
+      totalDays: totalDays || null,
+      startDate: startDate || null,
+      endDate: endDate || null,
     },
   });
 }

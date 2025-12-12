@@ -78,6 +78,7 @@ export async function GET(request: NextRequest) {
         actionAt: leave.finalApprovedAt || leave.finalRejectedAt,
         leaveRequest: {
           id: leave.id,
+          leaveCode: leave.leaveCode,
           leaveType: leave.leaveType,
           startDate: leave.startDate,
           startTime: leave.startTime,
@@ -207,6 +208,7 @@ export async function GET(request: NextRequest) {
       actionAt: approval.actionAt,
       leaveRequest: {
         id: approval.leaveRequest.id,
+        leaveCode: approval.leaveRequest.leaveCode,
         leaveType: approval.leaveRequest.leaveType,
         startDate: approval.leaveRequest.startDate,
         startTime: approval.leaveRequest.startTime,

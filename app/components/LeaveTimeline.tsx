@@ -6,6 +6,7 @@ import { Calendar, ArrowRight2, CalendarTick, Clock } from 'iconsax-react';
 
 interface LeaveTimelineItem {
     id: number;
+    leaveCode?: string;
     title: string;
     date: string;
     startDate: string;
@@ -256,21 +257,35 @@ const LeaveTimeline = ({ items }: LeaveTimelineProps) => {
 
                             {/* Content */}
                             <Box sx={{ flex: 1, minWidth: 0, mt: createdAtFormatted ? 1.5 : 0 }}>
-                                {/* Title */}
-                                <Typography
-                                    sx={{
-                                        fontWeight: 600,
-                                        fontSize: '0.95rem',
-                                        color: '#1E293B',
-                                        lineHeight: 1.3,
-                                        mb: 0.5,
-                                        overflow: 'hidden',
-                                        textOverflow: 'ellipsis',
-                                        whiteSpace: 'nowrap',
-                                    }}
-                                >
-                                    {item.title}
-                                </Typography>
+                                {/* Title with Leave Code */}
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5, minWidth: 0 }}>
+                                    <Typography
+                                        sx={{
+                                            fontWeight: 600,
+                                            fontSize: '0.95rem',
+                                            color: '#1E293B',
+                                            lineHeight: 1.3,
+                                            overflow: 'hidden',
+                                            textOverflow: 'ellipsis',
+                                            whiteSpace: 'nowrap',
+                                        }}
+                                    >
+                                        {item.title}
+                                    </Typography>
+
+                                    {item.leaveCode && (
+                                        <Typography sx={{
+                                            fontSize: '0.75rem',
+                                            color: '#64748B',
+                                            fontFamily: 'monospace',
+                                            bgcolor: '#F1F5F9',
+                                            px: 0.5,
+                                            borderRadius: 0.5
+                                        }}>
+                                            #{item.leaveCode}
+                                        </Typography>
+                                    )}
+                                </Box>
 
                                 {/* Date Range */}
                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.5 }}>
@@ -290,8 +305,8 @@ const LeaveTimeline = ({ items }: LeaveTimelineProps) => {
                                 {item.reason && (
                                     <Typography
                                         sx={{
-                                            fontSize: '0.75rem',
-                                            color: '#94A3B8',
+                                            fontSize: '0.8rem',
+                                            color: '#000',
                                             fontWeight: 400,
                                             mb: 0.75,
                                             overflow: 'hidden',
@@ -320,11 +335,11 @@ const LeaveTimeline = ({ items }: LeaveTimelineProps) => {
                                             />
                                         }
                                         label={t(`status_${item.status.toLowerCase()}`, status.label)}
-                                        size="small"
+                                        size="medium"
                                         sx={{
                                             height: 22,
-                                            fontSize: '0.65rem',
-                                            fontWeight: 600,
+                                            fontSize: '0.75rem',
+                                            fontWeight: 500,
                                             bgcolor: status.bgColor,
                                             color: status.color,
                                             border: 'none',
@@ -352,7 +367,7 @@ const LeaveTimeline = ({ items }: LeaveTimelineProps) => {
                                             <Clock size={12} color="#F59E0B" />
                                             <Typography
                                                 sx={{
-                                                    fontSize: '0.65rem',
+                                                    fontSize: '0.75rem',
                                                     color: '#D97706',
                                                     fontWeight: 500,
                                                     maxWidth: 100,

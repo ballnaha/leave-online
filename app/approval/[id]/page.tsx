@@ -88,6 +88,7 @@ const statusConfig: Record<string, { label: string; color: string; bgcolor: stri
 
 interface LeaveDetail {
   id: number;
+  leaveCode?: string;
   leaveType: string;
   startDate: string;
   startTime?: string;
@@ -145,6 +146,7 @@ export default function ApprovalDetailPage() {
   const [actionType, setActionType] = useState<'approve' | 'reject'>(actionParam || 'approve');
   const [canApprove, setCanApprove] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState(false);
+  const [accessDenied, setAccessDenied] = useState(false);
 
   // Image modal state
   const [imageModalOpen, setImageModalOpen] = useState(false);
@@ -166,8 +168,17 @@ export default function ApprovalDetailPage() {
 
   const fetchLeaveDetail = async () => {
     setLoading(true);
+    setAccessDenied(false);
     try {
       const response = await fetch(`/api/leaves/${leaveId}`);
+
+      // Check for access denied
+      if (response.status === 403) {
+        setAccessDenied(true);
+        setLoading(false);
+        return;
+      }
+
       if (!response.ok) {
         throw new Error('Failed to fetch leave detail');
       }
@@ -178,13 +189,33 @@ export default function ApprovalDetailPage() {
       const userId = parseInt(session?.user?.id || '0');
       const userRole = session?.user?.role;
 
-      // Admin/HR Manager can approve all, or user is in approval list
-      const isPending = ['pending', 'in_progress'].includes(data.status);
+      // Admin/HR Manager/HR can view and approve all
+      const isAdminOrHR = ['admin', 'hr_manager', 'hr'].includes(userRole || '');
+
+      // Check if leave status is pending or in_progress
+      const isPendingOrInProgress = ['pending', 'in_progress'].includes(data.status);
+
+      // Find if user is in approval list and their approval is still pending
       const isInApprovalList = data.approvalHistory?.some(
         (h: any) => h.approver?.id === userId && h.status === 'pending'
       );
 
-      setCanApprove(isPending && (userRole === 'admin' || userRole === 'hr_manager' || isInApprovalList));
+      // Debug logging
+      console.log('=== Approval Check ===', {
+        leaveStatus: data.status,
+        userId,
+        userRole,
+        isAdminOrHR,
+        isPendingOrInProgress,
+        isInApprovalList,
+        approvalHistory: data.approvalHistory?.map((h: any) => ({
+          approverId: h.approver?.id,
+          status: h.status,
+          level: h.level
+        }))
+      });
+
+      setCanApprove(isPendingOrInProgress && (isAdminOrHR || isInApprovalList));
     } catch (error) {
       console.error('Error fetching leave detail:', error);
       setError('ไม่สามารถโหลดข้อมูลใบลาได้');
@@ -363,6 +394,50 @@ export default function ApprovalDetailPage() {
             </Box>
           </Box>
         </Container>
+      </Box>
+    );
+  }
+
+  // Access Denied Screen
+  if (accessDenied) {
+    return (
+      <Box sx={{ minHeight: '100vh', bgcolor: '#F8FAFC', pb: 10 }}>
+        <Container maxWidth="sm" sx={{ pt: 8 }}>
+          <Paper sx={{ p: 4, textAlign: 'center', borderRadius: 1 }}>
+            <Box sx={{
+              width: 80,
+              height: 80,
+              borderRadius: '50%',
+              bgcolor: '#FFEBEE',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              mx: 'auto',
+              mb: 3
+            }}>
+              <Forbidden2 size={40} color="#D32F2F" variant="Bold" />
+            </Box>
+            <Typography variant="h5" fontWeight={700} gutterBottom>
+              {t('access_denied', 'ไม่มีสิทธิ์เข้าถึง')}
+            </Typography>
+            <Typography color="text.secondary" sx={{ mb: 3 }}>
+              {t('no_view_permission', 'คุณไม่มีสิทธิ์ดูข้อมูลใบลานี้ เฉพาะเจ้าของใบลา, ผู้อนุมัติที่เกี่ยวข้อง และ HR/Admin เท่านั้นที่สามารถเข้าถึงได้')}
+            </Typography>
+            <Button
+              variant="contained"
+              onClick={() => router.push('/approval')}
+              sx={{
+                bgcolor: PRIMARY_COLOR,
+                '&:hover': { bgcolor: '#5B52E0' },
+                borderRadius: 1,
+                px: 4
+              }}
+            >
+              {t('back_to_approval', 'กลับหน้ารายการ')}
+            </Button>
+          </Paper>
+        </Container>
+        <BottomNav />
       </Box>
     );
   }
@@ -619,6 +694,11 @@ export default function ApprovalDetailPage() {
               <Box>
                 <Typography variant="body2" color="text.secondary">ประเภทการลา</Typography>
                 <Typography fontWeight={600}>{t(`leave_${leaveDetail.leaveType}`, leaveDetail.leaveType)}</Typography>
+                {leaveDetail.leaveCode && (
+                  <Typography variant="body2" sx={{ color: '#64748B', fontFamily: 'monospace', fontSize: '0.8rem' }}>
+                    #{leaveDetail.leaveCode}
+                  </Typography>
+                )}
               </Box>
             </Box>
 

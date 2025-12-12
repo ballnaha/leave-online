@@ -5,7 +5,56 @@ import { prisma } from '@/lib/prisma';
 import { processNextApproval } from '@/lib/escalation';
 import { notifyLeaveApproved, notifyLeaveRejected, notifyLeavePartialApproved } from '@/lib/onesignal';
 
-// POST /api/leaves/[id]/approve - อนุมัติหรือปฏิเสธใบลา
+// Leave type to code mapping
+const leaveTypeCodeMap: Record<string, string> = {
+  sick: 'SK',
+  personal: 'PS',
+  vacation: 'VC',
+  annual: 'AN',
+  maternity: 'MT',
+  ordination: 'OR',
+  work_outside: 'WO',
+  military: 'ML',
+  marriage: 'MR',
+  funeral: 'FN',
+  paternity: 'PT',
+  sterilization: 'ST',
+  business: 'BS',
+  unpaid: 'UP',
+  other: 'OT',
+};
+
+// Generate leave code: SK2511001 (type + year + month + running)
+async function generateLeaveCode(leaveType: string, date: Date): Promise<string> {
+  const typeCode = leaveTypeCodeMap[leaveType] || 'OT';
+  const year = String(date.getFullYear()).slice(-2);
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const prefix = `${typeCode}${year}${month}`;
+
+  const lastLeave = await prisma.leaveRequest.findFirst({
+    where: {
+      leaveCode: {
+        startsWith: prefix,
+      },
+    },
+    orderBy: {
+      leaveCode: 'desc',
+    },
+    select: {
+      leaveCode: true,
+    },
+  });
+
+  let runningNumber = 1;
+  if (lastLeave?.leaveCode) {
+    const lastNumber = parseInt(lastLeave.leaveCode.slice(-3), 10);
+    if (!isNaN(lastNumber)) {
+      runningNumber = lastNumber + 1;
+    }
+  }
+
+  return `${prefix}${String(runningNumber).padStart(3, '0')}`;
+}
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -67,6 +116,16 @@ export async function POST(
     const now = new Date();
     const approverName = `${session.user.firstName} ${session.user.lastName}`;
 
+    // Generate leaveCode for old leave requests that don't have one
+    let leaveCode = leaveRequest.leaveCode;
+    if (!leaveCode) {
+      leaveCode = await generateLeaveCode(leaveRequest.leaveType, leaveRequest.startDate);
+      await prisma.leaveRequest.update({
+        where: { id: leaveRequestId },
+        data: { leaveCode },
+      });
+    }
+
     if (action === 'approve') {
       // อัพเดต approval step
       await prisma.leaveApproval.update({
@@ -100,7 +159,11 @@ export async function POST(
           leaveRequest.userId,
           leaveRequestId,
           approverName,
-          leaveRequest.leaveType
+          leaveRequest.leaveType,
+          leaveRequest.totalDays,
+          leaveRequest.startDate?.toISOString(),
+          leaveRequest.endDate?.toISOString(),
+          leaveCode || undefined
         );
 
         return NextResponse.json({
@@ -127,7 +190,11 @@ export async function POST(
           approverName,
           leaveRequest.leaveType,
           completedApprovals,
-          totalApprovals
+          totalApprovals,
+          leaveRequest.totalDays,
+          leaveRequest.startDate?.toISOString(),
+          leaveRequest.endDate?.toISOString(),
+          leaveCode || undefined
         );
 
         return NextResponse.json({
@@ -165,7 +232,11 @@ export async function POST(
         leaveRequestId,
         approverName,
         leaveRequest.leaveType,
-        comment
+        comment,
+        leaveRequest.totalDays,
+        leaveRequest.startDate?.toISOString(),
+        leaveRequest.endDate?.toISOString(),
+        leaveCode || undefined
       );
 
       return NextResponse.json({

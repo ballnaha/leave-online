@@ -228,7 +228,15 @@ export async function POST(request: Request) {
         await createApprovalSteps(leaveRequest.id, Number(session.user.id));
 
         // แจ้งเตือนผู้ขอว่าส่งใบลาสำเร็จ
-        await notifyLeaveSubmitted(Number(session.user.id), leaveRequest.id, leaveType);
+        await notifyLeaveSubmitted(
+            Number(session.user.id),
+            leaveRequest.id,
+            leaveType,
+            Number(totalDays),
+            startDate,
+            endDate,
+            leaveRequest.leaveCode || undefined
+        );
 
         return NextResponse.json({ success: true, data: leaveRequest }, { status: 201 });
     } catch (error) {

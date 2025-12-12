@@ -67,6 +67,7 @@ import 'dayjs/locale/my';
 import { LeaveRequest, LeaveApproval, LeaveAttachment } from '@/types/leave';
 import LeaveDetailDrawer from '@/app/components/LeaveDetailDrawer';
 import HolidayDrawer, { Holiday } from '@/app/components/HolidayDrawer';
+import LeaveTimeline from '@/app/components/LeaveTimeline';
 import { useLocale } from '@/app/providers/LocaleProvider';
 
 // กำหนด icon และสีสำหรับแต่ละประเภทการลา (สีแบบ balloon)
@@ -279,7 +280,7 @@ export default function LeavePage() {
 
     const handleCancelLeave = async () => {
         if (!selectedLeave) return;
-        
+
         if (!cancelReason.trim()) {
             alert(t('cancel_reason_required'));
             return;
@@ -300,23 +301,23 @@ export default function LeavePage() {
                 alert(error.error || t('cancel_failed'));
                 return;
             }
-            
+
             // อัพเดท state
             setMyLeaves((prev) =>
                 prev.map((leave) =>
-                    leave.id === selectedLeave.id 
-                        ? { ...leave, status: 'cancelled', cancelReason: cancelReason.trim(), cancelledAt: new Date().toISOString() } 
+                    leave.id === selectedLeave.id
+                        ? { ...leave, status: 'cancelled', cancelReason: cancelReason.trim(), cancelledAt: new Date().toISOString() }
                         : leave
                 )
             );
-            setSelectedLeave({ 
-                ...selectedLeave, 
-                    status: 'cancelled', 
-                    cancelReason: cancelReason.trim(),
-                    cancelledAt: new Date().toISOString()
-                });
-                setCancelDialogOpen(false);
-                setCancelReason('');
+            setSelectedLeave({
+                ...selectedLeave,
+                status: 'cancelled',
+                cancelReason: cancelReason.trim(),
+                cancelledAt: new Date().toISOString()
+            });
+            setCancelDialogOpen(false);
+            setCancelReason('');
         } catch (error) {
             console.error('Error cancelling leave:', error);
             alert(t('cancel_error'));
@@ -325,10 +326,48 @@ export default function LeavePage() {
         }
     };
 
+    // Helper functions for LeaveTimeline
+    const formatDate = (startDate: string, endDate: string) => {
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+        const options: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'short', year: 'numeric' };
+
+        if (start.getTime() === end.getTime()) {
+            return start.toLocaleDateString(locale === 'th' ? 'th-TH' : 'en-US', options);
+        }
+        return `${start.toLocaleDateString(locale === 'th' ? 'th-TH' : 'en-US', { day: 'numeric', month: 'short' })} - ${end.toLocaleDateString(locale === 'th' ? 'th-TH' : 'en-US', options)}`;
+    };
+
+    const mapStatus = (status: string): 'Approved' | 'Pending' | 'Rejected' | 'Cancelled' => {
+        const statusLower = status.toLowerCase();
+        switch (statusLower) {
+            case 'approved': return 'Approved';
+            case 'rejected': return 'Rejected';
+            case 'cancelled': return 'Cancelled';
+            default: return 'Pending';
+        }
+    };
+
+    const getApprovalStatusText = (leave: LeaveRequest) => {
+        const status = leave.status.toLowerCase();
+        if (status === 'approved') return t('status_approved', 'อนุมัติแล้ว');
+        if (status === 'rejected') return t('status_rejected', 'ถูกปฏิเสธ');
+        if (status === 'cancelled') return t('status_cancelled', 'ยกเลิกแล้ว');
+
+        if (leave.approvals && leave.approvals.length > 0) {
+            const pendingApproval = leave.approvals.find(a => a.status === 'pending');
+            if (pendingApproval) {
+                return `${t('status_waiting_for', 'รอการอนุมัติจาก')} ${pendingApproval.approver?.firstName || t('supervisor', 'หัวหน้างาน')}`;
+            }
+        }
+
+        return t('status_pending', 'รอการอนุมัติ');
+    };
+
     // Filter leaves based on search query and selected calendar date
     const filteredLeaves = useMemo(() => {
         let filtered = myLeaves;
-        
+
         // Filter by selected calendar date - show leaves that START on this date
         if (selectedCalendarDate) {
             filtered = filtered.filter(leave => {
@@ -336,19 +375,19 @@ export default function LeavePage() {
                 return startDate === selectedCalendarDate;
             });
         }
-        
+
         // Filter by search query
         if (searchQuery.trim()) {
             const query = searchQuery.toLowerCase();
             filtered = filtered.filter(leave => {
                 const reasonMatch = leave.reason?.toLowerCase().includes(query);
-                const typeMatch = leave.leaveTypeInfo?.name?.toLowerCase().includes(query) || 
-                                 leave.leaveType?.toLowerCase().includes(query);
+                const typeMatch = leave.leaveTypeInfo?.name?.toLowerCase().includes(query) ||
+                    leave.leaveType?.toLowerCase().includes(query);
                 const statusMatch = getStatusLabel(leave.status).label.toLowerCase().includes(query);
                 return reasonMatch || typeMatch || statusMatch;
             });
         }
-        
+
         return filtered;
     }, [myLeaves, searchQuery, selectedCalendarDate]);
 
@@ -390,15 +429,15 @@ export default function LeavePage() {
             >
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3, position: 'relative', zIndex: 1 }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        
+
                         <Typography variant="h5" sx={{ color: 'white', fontWeight: 700 }}>
                             {t('leave_history_title', 'ประวัติการลา')}
                         </Typography>
                     </Box>
                     <Tooltip title={t('holiday_title', 'วันหยุดประจำปี')}>
-                        <IconButton 
+                        <IconButton
                             onClick={() => setHolidayDrawerOpen(true)}
-                            sx={{ 
+                            sx={{
                                 color: 'white',
                                 bgcolor: 'rgba(255,255,255,0.15)',
                                 '&:hover': { bgcolor: 'rgba(255,255,255,0.25)' },
@@ -424,18 +463,18 @@ export default function LeavePage() {
                 >
                     {/* Month & Year Navigation */}
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2.5 }}>
-                        <IconButton 
-                            onClick={handlePrevMonth} 
+                        <IconButton
+                            onClick={handlePrevMonth}
                             size="small"
                             sx={{ color: '#94A3B8' }}
                         >
                             <ChevronLeft size={22} />
                         </IconButton>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <Typography 
-                                variant="h6" 
-                                sx={{ 
-                                    fontWeight: 600, 
+                            <Typography
+                                variant="h6"
+                                sx={{
+                                    fontWeight: 600,
                                     color: '#1E293B',
                                     fontSize: '1.1rem',
                                 }}
@@ -485,8 +524,8 @@ export default function LeavePage() {
                                 ))}
                             </Menu>
                         </Box>
-                        <IconButton 
-                            onClick={handleNextMonth} 
+                        <IconButton
+                            onClick={handleNextMonth}
                             size="small"
                             sx={{ color: '#94A3B8' }}
                         >
@@ -535,14 +574,14 @@ export default function LeavePage() {
                         {calendarDays.map((day, idx) => {
                             if (!day) {
                                 return (
-                                    <Box 
-                                        key={`empty-${idx}`} 
-                                        sx={{ 
+                                    <Box
+                                        key={`empty-${idx}`}
+                                        sx={{
                                             aspectRatio: '1',
                                             display: 'flex',
                                             alignItems: 'center',
                                             justifyContent: 'center',
-                                        }} 
+                                        }}
                                     >
                                         <Typography sx={{ color: '#E2E8F0', fontSize: '0.85rem' }}>
                                             {startOfMonth.subtract(startDayOfWeek - idx, 'day').date()}
@@ -564,89 +603,89 @@ export default function LeavePage() {
                             const primaryColor = hasLeave ? leaveColors[0] : isHoliday ? '#DC2626' : null;
 
                             return (
-                                <Tooltip 
+                                <Tooltip
                                     key={dateKey}
-                                    title={isHoliday ? holiday.name : hasLeave ? t('click_to_filter', 'คลิกเพื่อดูใบลา') : ''} 
-                                    arrow 
+                                    title={isHoliday ? holiday.name : hasLeave ? t('click_to_filter', 'คลิกเพื่อดูใบลา') : ''}
+                                    arrow
                                     placement="top"
                                     disableHoverListener={!isHoliday && !hasLeave}
                                 >
-                                <Box
-                                    onClick={() => handleCalendarDateClick(dateKey, hasLeave)}
-                                    sx={{
-                                        aspectRatio: '1',
-                                        display: 'flex',
-                                        flexDirection: 'column',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        borderRadius: 2.5,
-                                        position: 'relative',
-                                        bgcolor: isSelected
-                                            ? primaryColor
-                                            : isToday 
-                                                ? '#667eea' 
-                                                : hasLeave 
-                                                    ? 'white' 
-                                                    : 'transparent',
-                                        border: isSelected
-                                            ? `2px solid ${primaryColor}`
-                                            : hasLeave && !isToday 
-                                                ? `2px solid ${primaryColor}` 
-                                                : 'none',
-                                        cursor: hasLeave ? 'pointer' : 'default',
-                                        transition: 'all 0.15s ease',
-                                        boxShadow: isSelected ? `0 4px 12px ${primaryColor}60` : 'none',
-                                        '&:hover': hasLeave || isToday || isHoliday
-                                            ? { transform: 'scale(1.08)', boxShadow: `0 4px 12px ${hasLeave ? `${primaryColor}40` : isHoliday ? 'rgba(220,38,38,0.2)' : 'rgba(102,126,234,0.3)'}` }
-                                            : {},
-                                    }}
-                                >
-                                    <Typography
+                                    <Box
+                                        onClick={() => handleCalendarDateClick(dateKey, hasLeave)}
                                         sx={{
-                                            fontWeight: isToday || hasLeave || isSelected ? 600 : 400,
-                                            color: isSelected ? 'white' : isToday ? 'white' : hasLeave ? primaryColor : '#475569',
-                                            fontSize: { xs: '0.8rem', sm: '0.9rem' },
+                                            aspectRatio: '1',
+                                            display: 'flex',
+                                            flexDirection: 'column',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            borderRadius: 2.5,
+                                            position: 'relative',
+                                            bgcolor: isSelected
+                                                ? primaryColor
+                                                : isToday
+                                                    ? '#667eea'
+                                                    : hasLeave
+                                                        ? 'white'
+                                                        : 'transparent',
+                                            border: isSelected
+                                                ? `2px solid ${primaryColor}`
+                                                : hasLeave && !isToday
+                                                    ? `2px solid ${primaryColor}`
+                                                    : 'none',
+                                            cursor: hasLeave ? 'pointer' : 'default',
+                                            transition: 'all 0.15s ease',
+                                            boxShadow: isSelected ? `0 4px 12px ${primaryColor}60` : 'none',
+                                            '&:hover': hasLeave || isToday || isHoliday
+                                                ? { transform: 'scale(1.08)', boxShadow: `0 4px 12px ${hasLeave ? `${primaryColor}40` : isHoliday ? 'rgba(220,38,38,0.2)' : 'rgba(102,126,234,0.3)'}` }
+                                                : {},
                                         }}
                                     >
-                                        {day.date()}
-                                    </Typography>
-                                    {/* Holiday indicator */}
-                                    {isHoliday && !hasLeave && !isToday && (
-                                        <Box
+                                        <Typography
                                             sx={{
-                                                position: 'absolute',
-                                                bottom: 2,
-                                                width: 4,
-                                                height: 4,
-                                                borderRadius: '50%',
-                                                bgcolor: '#DC2626',
-                                            }}
-                                        />
-                                    )}
-                                    {/* Badge for multiple leaves */}
-                                    {leavesOnDay.length > 1 && (
-                                        <Box
-                                            sx={{
-                                                position: 'absolute',
-                                                top: -8,
-                                                right: 0,
-                                                width: 20,
-                                                height: 20,
-                                                borderRadius: '50%',
-                                                bgcolor: '#FF6B6B',
-                                                color: 'white',
-                                                fontSize: '0.6rem',
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                justifyContent: 'center',
-                                                fontWeight: 600,
-                                                border: '2px solid white',
+                                                fontWeight: isToday || hasLeave || isSelected ? 600 : 400,
+                                                color: isSelected ? 'white' : isToday ? 'white' : hasLeave ? primaryColor : '#475569',
+                                                fontSize: { xs: '0.8rem', sm: '0.9rem' },
                                             }}
                                         >
-                                            +{leavesOnDay.length - 1}
-                                        </Box>
-                                    )}
-                                </Box>
+                                            {day.date()}
+                                        </Typography>
+                                        {/* Holiday indicator */}
+                                        {isHoliday && !hasLeave && !isToday && (
+                                            <Box
+                                                sx={{
+                                                    position: 'absolute',
+                                                    bottom: 2,
+                                                    width: 4,
+                                                    height: 4,
+                                                    borderRadius: '50%',
+                                                    bgcolor: '#DC2626',
+                                                }}
+                                            />
+                                        )}
+                                        {/* Badge for multiple leaves */}
+                                        {leavesOnDay.length > 1 && (
+                                            <Box
+                                                sx={{
+                                                    position: 'absolute',
+                                                    top: -8,
+                                                    right: 0,
+                                                    width: 20,
+                                                    height: 20,
+                                                    borderRadius: '50%',
+                                                    bgcolor: '#FF6B6B',
+                                                    color: 'white',
+                                                    fontSize: '0.6rem',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    fontWeight: 600,
+                                                    border: '2px solid white',
+                                                }}
+                                            >
+                                                +{leavesOnDay.length - 1}
+                                            </Box>
+                                        )}
+                                    </Box>
                                 </Tooltip>
                             );
                         })}
@@ -654,22 +693,22 @@ export default function LeavePage() {
 
                     {/* Legend - Color meanings */}
                     <Box sx={{ mt: 2.5, pt: 2, borderTop: '1px solid #F1F5F9' }}>
-                        <Box 
-                            sx={{ 
-                                display: 'flex', 
-                                alignItems: 'center', 
+                        <Box
+                            sx={{
+                                display: 'flex',
+                                alignItems: 'center',
                                 justifyContent: 'space-between',
                                 cursor: 'pointer',
-                                mb: showAllLegends ? 1 : 0 
+                                mb: showAllLegends ? 1 : 0
                             }}
                             onClick={() => setShowAllLegends(!showAllLegends)}
                         >
                             <Typography variant="caption" sx={{ color: '#94A3B8', fontWeight: 500 }}>
                                 {t('leave_legend', 'คำอธิบายสี')}
                             </Typography>
-                            <Box sx={{ 
-                                display: 'flex', 
-                                alignItems: 'center', 
+                            <Box sx={{
+                                display: 'flex',
+                                alignItems: 'center',
                                 color: '#94A3B8',
                                 transition: 'transform 0.2s',
                                 transform: showAllLegends ? 'rotate(180deg)' : 'rotate(0deg)'
@@ -677,7 +716,7 @@ export default function LeavePage() {
                                 <ChevronDown size={16} />
                             </Box>
                         </Box>
-                        
+
                         {/* First row - always visible */}
                         <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5, mt: 1 }}>
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
@@ -694,10 +733,10 @@ export default function LeavePage() {
                                     </Box>
                                 ))}
                             {!showAllLegends && (
-                                <Typography 
-                                    variant="caption" 
-                                    sx={{ 
-                                        color: '#667eea', 
+                                <Typography
+                                    variant="caption"
+                                    sx={{
+                                        color: '#667eea',
                                         cursor: 'pointer',
                                         fontWeight: 500,
                                         '&:hover': { textDecoration: 'underline' }
@@ -733,10 +772,10 @@ export default function LeavePage() {
                 {/* Upcoming Leaves - Like reference */}
                 <Box sx={{ mb: 3 }}>
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                        <Typography 
-                            variant="subtitle1" 
-                            sx={{ 
-                                fontWeight: 600, 
+                        <Typography
+                            variant="subtitle1"
+                            sx={{
+                                fontWeight: 600,
                                 color: '#1E293B',
                                 fontSize: '1rem',
                             }}
@@ -771,9 +810,9 @@ export default function LeavePage() {
                                 color: 'white',
                                 fontWeight: 500,
                                 '& .MuiChip-icon': { color: 'white' },
-                                '& .MuiChip-deleteIcon': { 
-                                    color: 'white', 
-                                    '&:hover': { color: 'rgba(255,255,255,0.7)' } 
+                                '& .MuiChip-deleteIcon': {
+                                    color: 'white',
+                                    '&:hover': { color: 'rgba(255,255,255,0.7)' }
                                 },
                             }}
                         />
@@ -823,126 +862,43 @@ export default function LeavePage() {
                             </Typography>
                         </Card>
                     ) : (
-                        <Fade in>
-                            <Stack spacing={1}>
-                                {recentLeaves.map((leave) => {
-                                    const config = getLeaveConfig(leave.leaveType || leave.leaveCode || 'default');
-                                    const startDate = dayjs(leave.startDate);
-                                    const statusInfo = getStatusLabel(leave.status);
-                                    const StatusIcon = statusInfo.icon;
+                        <LeaveTimeline
+                            items={recentLeaves.map((leave) => {
+                                const config = getLeaveConfig(leave.leaveType || leave.leaveCode || 'default');
+                                const IconComponent = config.icon;
+                                const totalLevels = leave.approvals?.length || 0;
+                                const approvedCount = leave.approvals?.filter(a => a.status === 'approved').length || 0;
 
-                                    return (
-                                        <Card
-                                            key={leave.id}
-                                            onClick={() => handleOpenDetail(leave)}
-                                            sx={{
-                                                borderRadius: 1,
-                                                p: 2.5,
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                gap: 2,
-                                                transition: 'all 0.15s ease',
-                                                border: '1px solid #F1F5F9',
-                                                boxShadow: 'none',
-                                                cursor: 'pointer',
-                                                '&:hover': {
-                                                    boxShadow: '0 4px 12px rgba(0,0,0,0.06)',
-                                                    borderColor: '#E2E8F0',
-                                                },
-                                            }}
-                                        >
-                                            {/* Date Badge - Like reference */}
-                                            <Box
-                                                sx={{
-                                                    minWidth: 50,
-                                                    textAlign: 'center',
-                                                    py: 1,
-                                                    px: 1.5,
-                                                    borderRadius: 1,
-                                                    bgcolor: config.lightColor,
-                                                    borderLeft: `3px solid ${config.color}`,
-                                                }}
-                                            >
-                                                <Typography
-                                                    sx={{ 
-                                                        fontSize: '1.25rem',
-                                                        fontWeight: 700,
-                                                        color: config.color, 
-                                                        lineHeight: 1,
-                                                    }}
-                                                >
-                                                    {startDate.date()}
-                                                </Typography>
-                                                <Typography
-                                                    sx={{ 
-                                                        color: config.color, 
-                                                        fontWeight: 500,
-                                                        fontSize: '0.7rem',
-                                                        textTransform: 'uppercase',
-                                                    }}
-                                                >
-                                                    {startDate.format('MMM')}
-                                                </Typography>
-                                            </Box>
+                                // หา approver ที่กำลังรออนุมัติ
+                                const pendingApproval = leave.approvals?.find(a => a.status === 'pending');
+                                const waitingForApprover = pendingApproval?.approver?.firstName || undefined;
 
-                                            {/* Content */}
-                                            <Box sx={{ flex: 1, minWidth: 0 }}>
-                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.3 }}>
-                                                    <Typography 
-                                                        sx={{ 
-                                                            fontWeight: 600, 
-                                                            color: '#1E293B',
-                                                            fontSize: '0.95rem',
-                                                        }} 
-                                                        noWrap
-                                                    >
-                                                        {t(`leave_${leave.leaveType || leave.leaveCode}`, config.label)}
-                                                    </Typography>
-                                                    {/* Status Badge */}
-                                                    <Box
-                                                        sx={{
-                                                            display: 'flex',
-                                                            alignItems: 'center',
-                                                            gap: 0.5,
-                                                            px: 1,
-                                                            py: 0.25,
-                                                            borderRadius: 1,
-                                                            bgcolor: statusInfo.bgColor,
-                                                        }}
-                                                    >
-                                                        <StatusIcon size={12} color={statusInfo.textColor} />
-                                                        <Typography
-                                                            sx={{
-                                                                fontSize: '0.7rem',
-                                                                fontWeight: 600,
-                                                                color: statusInfo.textColor,
-                                                            }}
-                                                        >
-                                                            {statusInfo.label}
-                                                        </Typography>
-                                                    </Box>
-                                                </Box>
-                                                <Typography 
-                                                    sx={{ 
-                                                        color: '#94A3B8',
-                                                        fontSize: '0.8rem',
-                                                    }} 
-                                                    noWrap
-                                                >
-                                                    {leave.totalDays} วัน • {leave.reason}
-                                                </Typography>
-                                            </Box>
+                                return {
+                                    id: leave.id,
+                                    leaveCode: leave.leaveCode || undefined,
+                                    title: t(`leave_${leave.leaveType || leave.leaveCode}`, leave.leaveTypeInfo?.name || config.label),
+                                    date: formatDate(leave.startDate, leave.endDate),
+                                    startDate: leave.startDate,
+                                    endDate: leave.endDate,
+                                    totalDays: leave.totalDays || 1,
+                                    reason: leave.reason || undefined,
+                                    createdAt: leave.createdAt || undefined,
+                                    status: mapStatus(leave.status),
+                                    icon: <IconComponent size={22} color={config.color} />,
+                                    iconColor: config.color,
+                                    approvalStatus: getApprovalStatusText(leave),
+                                    waitingForApprover: waitingForApprover,
+                                    currentLevel: approvedCount,
+                                    totalLevels: totalLevels,
+                                    onClick: () => handleOpenDetail(leave),
+                                };
+                            })}
+                        />
 
-                                            {/* Arrow indicator */}
-                                            <ChevronRight size={18} color="#94A3B8" />
-                                        </Card>
-                                    );
-                                })}
-                            </Stack>
-                        </Fade>
-                    )}
-                </Box>
-            </Box>
+                    )
+                    }
+                </Box >
+            </Box >
 
             <BottomNav activePage="leave" />
 
@@ -1054,6 +1010,6 @@ export default function LeavePage() {
                 onClose={() => setHolidayDrawerOpen(false)}
                 initialYear={currentDate.year()}
             />
-        </Box>
+        </Box >
     );
 }

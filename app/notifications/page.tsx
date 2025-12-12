@@ -34,25 +34,44 @@ interface NotificationItem {
     data?: any;
 }
 
-// Tab categories - redesigned according to Option 1
-type TabType = 'all' | 'action_required' | 'my_leaves';
+// Tab categories - redesigned with 3 categories
+type TabType = 'all' | 'action_required' | 'my_leaves' | 'system';
 
 // Define which notification types belong to which category
-const getNotificationCategory = (type: string): 'action_required' | 'my_leaves' => {
+// realTimeStatus is the actual current status of the leave request (pending, approved, rejected, cancelled)
+// hasUserActed indicates whether the current user has already acted on this notification (approved/rejected)
+const getNotificationCategory = (
+    type: string,
+    realTimeStatus?: string,
+    hasUserActed?: boolean
+): 'action_required' | 'my_leaves' | 'system' => {
+    // สำหรับ notification ประเภท action_required (approval_pending, reminder)
+    if (type === 'approval_pending' || type === 'reminder') {
+        // 1. ถ้า user ได้ทำ action (approve/reject) ไปแล้ว ให้ย้ายไป system tab
+        if (hasUserActed) {
+            return 'system'; // ย้ายไป tab "ข้อความระบบ" เพราะไม่ต้องดำเนินการแล้ว
+        }
+
+        // 2. ถ้าใบลาถูก approve, reject, หรือ cancelled โดยคนอื่น ก็ย้ายไป system tab
+        if (realTimeStatus && ['approved', 'rejected', 'cancelled'].includes(realTimeStatus)) {
+            return 'system'; // ย้ายไป tab "ข้อความระบบ"
+        }
+
+        return 'action_required'; // ยังต้องดำเนินการ
+    }
+
     switch (type) {
-        // For Approvers - action required
-        case 'approval_pending':
-        case 'reminder':
-            return 'action_required';
-        // For Employees - my leaves status
-        case 'submitted':
-        case 'partial_approved':
-        case 'approved':
-        case 'rejected':
-        case 'escalated':
-        case 'cancelled':
-        default:
+        // For Employees - my leaves status updates (สถานะการอนุมัติ)
+        case 'partial_approved':  // อนุมัติบางส่วน (ผ่านขั้นตอนแรก รอขั้นตอนถัดไป)
+        case 'approved':          // อนุมัติแล้ว
+        case 'rejected':          // ถูกปฏิเสธ
             return 'my_leaves';
+        // System messages (ข้อความจากระบบ)
+        case 'submitted':         // ส่งใบลาแล้ว
+        case 'escalated':         // ถูก escalate
+        case 'cancelled':         // ยกเลิกแล้ว
+        default:
+            return 'system';
     }
 };
 
@@ -163,7 +182,9 @@ export default function NotificationsPage() {
     // Filter notifications based on active tab
     const filteredNotifications = useMemo(() => {
         if (activeTab === 'all') return notifications;
-        return notifications.filter(n => getNotificationCategory(n.type) === activeTab);
+        return notifications.filter(n =>
+            getNotificationCategory(n.type, n.data?.realTimeStatus, n.data?.hasUserActed) === activeTab
+        );
     }, [notifications, activeTab]);
 
     // Count unread per category
@@ -172,11 +193,12 @@ export default function NotificationsPage() {
             all: 0,
             action_required: 0,
             my_leaves: 0,
+            system: 0,
         };
         notifications.forEach(n => {
             if (!n.isRead) {
                 counts.all++;
-                counts[getNotificationCategory(n.type)]++;
+                counts[getNotificationCategory(n.type, n.data?.realTimeStatus, n.data?.hasUserActed)]++;
             }
         });
         return counts;
@@ -411,7 +433,8 @@ export default function NotificationsPage() {
             label: t('tab_action_required', 'รอดำเนินการ'),
             icon: <Clock size={18} color="#FFC107" />
         }] : []),
-        { value: 'my_leaves' as TabType, label: t('tab_my_leaves', 'ใบลาของฉัน'), icon: <DocumentText size={18} color="#4CAF50" /> },
+        { value: 'my_leaves' as TabType, label: t('tab_my_leaves', 'สถานะอนุมัติ'), icon: <TickCircle size={18} color="#4CAF50" /> },
+        { value: 'system' as TabType, label: t('tab_system', 'ข้อความระบบ'), icon: <InfoCircle size={18} color="#2196F3" /> },
     ];
 
     if (status === 'loading') {
@@ -581,7 +604,9 @@ export default function NotificationsPage() {
                                 ? t('no_notifications_desc', 'เมื่อมีการแจ้งเตือนใหม่ จะแสดงที่นี่')
                                 : activeTab === 'action_required'
                                     ? t('no_action_required_notifications', 'ไม่มีใบลารอดำเนินการ')
-                                    : t('no_my_leaves_notifications', 'ไม่มีการแจ้งเตือนใบลาของคุณ')
+                                    : activeTab === 'my_leaves'
+                                        ? t('no_my_leaves_notifications', 'ไม่มีการแจ้งเตือนสถานะการอนุมัติ')
+                                        : t('no_system_notifications', 'ไม่มีข้อความจากระบบ')
                             }
                         </Typography>
                     </Box>
@@ -655,7 +680,7 @@ export default function NotificationsPage() {
                                         </Typography>
 
                                         {/* Show leave details if available */}
-                                        {(notification.data?.totalDays || notification.data?.startDate) && (
+                                        {(notification.data?.leaveRequestId || notification.data?.startDate) && (
                                             <Box sx={{
                                                 mt: 1,
                                                 p: 1.5,
@@ -663,6 +688,63 @@ export default function NotificationsPage() {
                                                 borderRadius: 1,
                                                 border: '1px solid #E2E8F0'
                                             }}>
+                                                {/* Leave Request ID and Type */}
+                                                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: notification.data?.startDate ? 0.75 : 0 }}>
+                                                    {/* Leave Request ID / Code */}
+                                                    {(notification.data?.leaveCode || notification.data?.leaveRequestId) && (
+                                                        <Box sx={{
+                                                            display: 'inline-flex',
+                                                            alignItems: 'center',
+                                                            gap: 0.5,
+                                                            bgcolor: '#EEF2FF',
+                                                            color: '#4F46E5',
+                                                            px: 1,
+                                                            py: 0.25,
+                                                            borderRadius: '6px',
+                                                            fontSize: '0.75rem',
+                                                            fontWeight: 600,
+                                                        }}>
+                                                            📋 {notification.data.leaveCode || `#${notification.data.leaveRequestId}`}
+                                                        </Box>
+                                                    )}
+
+                                                    {/* Leave Type */}
+                                                    {(notification.data?.leaveTypeCode || notification.data?.leaveTypeName) && (
+                                                        <Box sx={{
+                                                            display: 'inline-flex',
+                                                            alignItems: 'center',
+                                                            gap: 0.5,
+                                                            bgcolor: '#FEF3C7',
+                                                            color: '#D97706',
+                                                            px: 1,
+                                                            py: 0.25,
+                                                            borderRadius: '6px',
+                                                            fontSize: '0.75rem',
+                                                            fontWeight: 600,
+                                                        }}>
+                                                            🏷️ {translateLeaveType(notification.data.leaveTypeCode, notification.data.leaveTypeName)}
+                                                        </Box>
+                                                    )}
+
+                                                    {/* Total Days */}
+                                                    {notification.data?.totalDays && (
+                                                        <Box sx={{
+                                                            display: 'inline-flex',
+                                                            alignItems: 'center',
+                                                            gap: 0.5,
+                                                            bgcolor: '#E0F2FE',
+                                                            color: '#0284C7',
+                                                            px: 1,
+                                                            py: 0.25,
+                                                            borderRadius: '6px',
+                                                            fontSize: '0.75rem',
+                                                            fontWeight: 600,
+                                                        }}>
+                                                            ⏱️ {notification.data.totalDays} {t('days', 'วัน')}
+                                                        </Box>
+                                                    )}
+                                                </Box>
+
                                                 {/* Date range */}
                                                 {notification.data?.startDate && (
                                                     <Typography
@@ -675,14 +757,9 @@ export default function NotificationsPage() {
                                                             mb: notification.data?.reason ? 0.75 : 0,
                                                         }}
                                                     >
-                                                        📅 {new Date(notification.data.startDate).toLocaleDateString(dateLocale, { day: 'numeric', month: 'short' })}
+                                                        📅 {t('leave_date', 'วันที่ลา')}: {new Date(notification.data.startDate).toLocaleDateString(dateLocale, { day: 'numeric', month: 'short', year: 'numeric' })}
                                                         {notification.data?.endDate && notification.data.startDate !== notification.data.endDate && (
-                                                            <> - {new Date(notification.data.endDate).toLocaleDateString(dateLocale, { day: 'numeric', month: 'short' })}</>
-                                                        )}
-                                                        {notification.data?.totalDays && (
-                                                            <Box component="span" sx={{ color: '#6C63FF', fontWeight: 600, ml: 0.5 }}>
-                                                                ({notification.data.totalDays} {t('days', 'วัน')})
-                                                            </Box>
+                                                            <> - {new Date(notification.data.endDate).toLocaleDateString(dateLocale, { day: 'numeric', month: 'short', year: 'numeric' })}</>
                                                         )}
                                                     </Typography>
                                                 )}
@@ -710,10 +787,16 @@ export default function NotificationsPage() {
                                             const isActionableType = (notification.type === 'approval_pending' || notification.type === 'reminder') && notification.data?.leaveRequestId;
                                             if (!isActionableType) return null;
 
-                                            const realTimeStatus = notification.data?.realTimeStatus; // 'pending', 'approved', 'rejected', 'cancelled'
+                                            const realTimeStatus = notification.data?.realTimeStatus; // 'pending', 'in_progress', 'approved', 'rejected', 'cancelled'
+                                            const isWaitingForCurrentUser = notification.data?.isWaitingForCurrentUser; // true if current user is next approver
+                                            const hasUserActed = notification.data?.hasUserActed; // true if user already approved/rejected
+                                            const userActionStatus = notification.data?.userActionStatus; // 'approved', 'rejected', 'skipped'
 
-                                            // Show Buttons if status is pending, OR if status is unknown and it's an unread notification (legacy behavior)
-                                            const showButtons = realTimeStatus === 'pending' || (!realTimeStatus && !notification.isRead);
+                                            // Show Buttons if:
+                                            // 1. isWaitingForCurrentUser is true (user is the current approver in queue)
+                                            // 2. OR status is pending/in_progress and no isWaitingForCurrentUser info (legacy/fallback)
+                                            const showButtons = isWaitingForCurrentUser === true ||
+                                                (isWaitingForCurrentUser === undefined && (realTimeStatus === 'pending' || realTimeStatus === 'in_progress') && !hasUserActed);
 
                                             if (showButtons) {
                                                 return (
@@ -775,13 +858,36 @@ export default function NotificationsPage() {
                                                 );
                                             }
 
-                                            // If not pending (Approved/Rejected/Cancelled) or unknown read
-                                            if (realTimeStatus && realTimeStatus !== 'pending') {
-                                                let statusColor = '#64748B';
-                                                let statusText = realTimeStatus;
-                                                let Icon = InfoCircle;
+                                            // Show status if user has already acted OR leave is completed
+                                            let statusColor = '#64748B';
+                                            let statusText = '';
+                                            let Icon = InfoCircle;
 
-                                                if (realTimeStatus === 'approved') {
+                                            // Priority 1: Show what the user did (if they acted)
+                                            if (hasUserActed && userActionStatus) {
+                                                if (userActionStatus === 'approved') {
+                                                    statusColor = '#4CAF50';
+                                                    statusText = t('you_approved', 'คุณอนุมัติแล้ว');
+                                                    Icon = TickCircle;
+                                                } else if (userActionStatus === 'rejected') {
+                                                    statusColor = '#F44336';
+                                                    statusText = t('you_rejected', 'คุณปฏิเสธแล้ว');
+                                                    Icon = CloseCircle;
+                                                } else if (userActionStatus === 'skipped') {
+                                                    statusColor = '#9E9E9E';
+                                                    statusText = t('skipped', 'ถูกข้าม');
+                                                    Icon = InfoCircle;
+                                                }
+                                            }
+                                            // Priority 2: Show overall leave status if user hasn't acted
+                                            else if (realTimeStatus && realTimeStatus !== 'pending') {
+                                                if (realTimeStatus === 'in_progress') {
+                                                    statusColor = '#2196F3';
+                                                    statusText = notification.data?.waitingFor
+                                                        ? t('waiting_for', 'รอ {{name}}').replace('{{name}}', notification.data.waitingFor)
+                                                        : t('in_progress', 'กำลังดำเนินการ');
+                                                    Icon = Status;
+                                                } else if (realTimeStatus === 'approved') {
                                                     statusColor = '#4CAF50';
                                                     statusText = t('approved', 'อนุมัติแล้ว');
                                                     Icon = TickCircle;
@@ -794,7 +900,9 @@ export default function NotificationsPage() {
                                                     statusText = t('cancelled', 'ยกเลิกแล้ว');
                                                     Icon = CloseCircle;
                                                 }
+                                            }
 
+                                            if (statusText) {
                                                 return (
                                                     <Box sx={{ mt: 1.5, display: 'flex', alignItems: 'center', gap: 0.5 }}>
                                                         <Icon size={16} color={statusColor} variant="Bold" />

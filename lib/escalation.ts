@@ -113,11 +113,20 @@ export async function checkAndEscalate(options?: { force?: boolean; leaveId?: nu
             leave.totalDays,
             leave.startDate?.toISOString(),
             leave.endDate?.toISOString(),
-            leave.reason
+            leave.reason,
+            leave.leaveCode || undefined
           );
 
           // แจ้งพนักงานว่าใบลาถูก escalate
-          await notifyEscalated(leave.userId, leave.id, leave.leaveType);
+          await notifyEscalated(
+            leave.userId,
+            leave.id,
+            leave.leaveType,
+            leave.totalDays,
+            leave.startDate?.toISOString(),
+            leave.endDate?.toISOString(),
+            leave.leaveCode || undefined
+          );
 
           result.escalated++;
         }
@@ -236,7 +245,8 @@ export async function createApprovalSteps(
           leaveRequest.totalDays,
           leaveRequest.startDate?.toISOString(),
           leaveRequest.endDate?.toISOString(),
-          leaveRequest.reason
+          leaveRequest.reason,
+          leaveRequest.leaveCode || undefined
         );
       }
     }
@@ -282,7 +292,8 @@ export async function createApprovalSteps(
             leaveRequest.totalDays,
             leaveRequest.startDate?.toISOString(),
             leaveRequest.endDate?.toISOString(),
-            leaveRequest.reason
+            leaveRequest.reason,
+            leaveRequest.leaveCode || undefined
           );
         }
       }
@@ -320,7 +331,8 @@ export async function createApprovalSteps(
         leaveRequest.totalDays,
         leaveRequest.startDate?.toISOString(),
         leaveRequest.endDate?.toISOString(),
-        leaveRequest.reason
+        leaveRequest.reason,
+        leaveRequest.leaveCode || undefined
       );
     }
     return;
@@ -484,7 +496,8 @@ export async function createApprovalSteps(
           leaveRequest.totalDays,
           leaveRequest.startDate?.toISOString(),
           leaveRequest.endDate?.toISOString(),
-          leaveRequest.reason
+          leaveRequest.reason,
+          leaveRequest.leaveCode || undefined
         );
       }
       return;
@@ -526,7 +539,8 @@ export async function createApprovalSteps(
         leaveRequest.totalDays,
         leaveRequest.startDate?.toISOString(),
         leaveRequest.endDate?.toISOString(),
-        leaveRequest.reason
+        leaveRequest.reason,
+        leaveRequest.leaveCode || undefined
       );
     }
   } else {
@@ -564,7 +578,8 @@ export async function createApprovalSteps(
           leaveRequest.totalDays,
           leaveRequest.startDate?.toISOString(),
           leaveRequest.endDate?.toISOString(),
-          leaveRequest.reason
+          leaveRequest.reason,
+          leaveRequest.leaveCode || undefined
         );
       }
     }
@@ -621,7 +636,8 @@ export async function processNextApproval(
       leaveRequest.totalDays,
       leaveRequest.startDate?.toISOString(),
       leaveRequest.endDate?.toISOString(),
-      leaveRequest.reason
+      leaveRequest.reason,
+      leaveRequest.leaveCode || undefined
     );
   }
 

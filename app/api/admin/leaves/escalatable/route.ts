@@ -253,11 +253,20 @@ export async function POST(request: NextRequest) {
                     leave.totalDays,
                     leave.startDate?.toISOString(),
                     leave.endDate?.toISOString(),
-                    leave.reason
+                    leave.reason,
+                    leave.leaveCode || undefined
                 );
 
                 // แจ้งพนักงานว่าใบลาถูก escalate
-                await notifyEscalated(leave.userId, leave.id, leave.leaveType);
+                await notifyEscalated(
+                    leave.userId,
+                    leave.id,
+                    leave.leaveType,
+                    leave.totalDays,
+                    leave.startDate?.toISOString(),
+                    leave.endDate?.toISOString(),
+                    leave.leaveCode || undefined
+                );
 
                 results.success++;
             } catch (error) {

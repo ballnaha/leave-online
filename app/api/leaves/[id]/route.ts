@@ -106,11 +106,11 @@ export async function GET(
         section: leaveRequest.user.section ? (sectMap.get(leaveRequest.user.section) || leaveRequest.user.section) : null,
       },
       attachments: leaveRequest.attachments,
-      approvals: leaveRequest.approvals.map(a => ({
+      approvalHistory: leaveRequest.approvals.map(a => ({
         level: a.level,
         status: a.status,
         comment: a.comment,
-        approvedAt: a.actionAt,
+        actionAt: a.actionAt,
         approver: a.approver,
       })),
     };

@@ -133,6 +133,7 @@ interface ApprovalItem {
   status: string;
   leaveRequest: {
     id: number;
+    leaveCode?: string;
     leaveType: string;
     startDate: string;
     startTime?: string;
@@ -184,9 +185,15 @@ const statusConfig: Record<string, { label: string; color: string; bgcolor: stri
 
 export default function ApprovalPage() {
   const { t } = useLocale();
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
   const theme = useTheme();
   const isMobileDevice = useMediaQuery(theme.breakpoints.down('md'));
+  const router = require('next/navigation').useRouter();
+
+  // Roles that can access approval page
+  const allowedRoles = ['admin', 'hr_manager', 'hr', 'dept_manager', 'shift_supervisor', 'section_head'];
+  const userRole = session?.user?.role;
+  const hasApprovalAccess = userRole && allowedRoles.includes(userRole);
 
   // Check if user is hr_manager
   const isHrManager = session?.user?.role === 'hr_manager';
@@ -783,6 +790,63 @@ export default function ApprovalPage() {
     (page - 1) * itemsPerPage,
     page * itemsPerPage
   );
+
+  // Access Check - Redirect if user doesn't have approval access
+  if (status === 'loading') {
+    return (
+      <Box sx={{ minHeight: '100vh', bgcolor: '#EAF2F8', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <Typography>กำลังโหลด...</Typography>
+      </Box>
+    );
+  }
+
+  if (status === 'unauthenticated') {
+    router.push('/login');
+    return null;
+  }
+
+  if (!hasApprovalAccess) {
+    return (
+      <Box sx={{ minHeight: '100vh', bgcolor: '#EAF2F8', pb: 10 }}>
+        <Container maxWidth="sm" sx={{ pt: 8 }}>
+          <Paper sx={{ p: 4, textAlign: 'center', borderRadius: 1 }}>
+            <Box sx={{
+              width: 80,
+              height: 80,
+              borderRadius: '50%',
+              bgcolor: '#FFEBEE',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              mx: 'auto',
+              mb: 3
+            }}>
+              <Forbidden2 size={40} color="#D32F2F" variant="Bold" />
+            </Box>
+            <Typography variant="h5" fontWeight={700} gutterBottom>
+              {t('access_denied', 'ไม่มีสิทธิ์เข้าถึง')}
+            </Typography>
+            <Typography color="text.secondary" sx={{ mb: 3 }}>
+              {t('no_approval_permission', 'คุณไม่มีสิทธิ์ในการอนุมัติใบลา เฉพาะหัวหน้างาน, HR และผู้ดูแลระบบเท่านั้นที่สามารถเข้าถึงหน้านี้ได้')}
+            </Typography>
+            <Button
+              variant="contained"
+              onClick={() => router.push('/')}
+              sx={{
+                bgcolor: PRIMARY_COLOR,
+                '&:hover': { bgcolor: '#5B52E0' },
+                borderRadius: 1,
+                px: 4
+              }}
+            >
+              {t('back_to_home', 'กลับหน้าหลัก')}
+            </Button>
+          </Paper>
+        </Container>
+        <BottomNav />
+      </Box>
+    );
+  }
 
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: '#EAF2F8', pb: 10 }}>
@@ -1840,12 +1904,19 @@ export default function ApprovalPage() {
                                   </Typography>
                                 </TableCell>
                                 <TableCell>
-                                  <Chip
-                                    label={`${t(`leave_${approval.leaveRequest.leaveType}`, approval.leaveRequest.leaveType)} (${approval.leaveRequest.totalDays} วัน)`}
-                                    size="small"
-                                    icon={<LeaveIcon size={12} color={config.color} variant="Bold" />}
-                                    sx={{ bgcolor: config.lightColor, color: config.color, fontWeight: 600, fontSize: '0.75rem', height: 24 }}
-                                  />
+                                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                                    <Chip
+                                      label={`${t(`leave_${approval.leaveRequest.leaveType}`, approval.leaveRequest.leaveType)} (${approval.leaveRequest.totalDays} วัน)`}
+                                      size="small"
+                                      icon={<LeaveIcon size={12} color={config.color} variant="Bold" />}
+                                      sx={{ bgcolor: config.lightColor, color: config.color, fontWeight: 600, fontSize: '0.75rem', height: 24, width: 'fit-content' }}
+                                    />
+                                    {approval.leaveRequest.leaveCode && (
+                                      <Typography sx={{ fontSize: '0.7rem', color: '#64748B', fontFamily: 'monospace' }}>
+                                        {approval.leaveRequest.leaveCode}
+                                      </Typography>
+                                    )}
+                                  </Box>
                                 </TableCell>
                                 <TableCell>
                                   <Typography sx={{ fontSize: '0.85rem' }}>
@@ -1921,6 +1992,11 @@ export default function ApprovalPage() {
                                   icon={<LeaveIcon size={12} color={config.color} variant="Bold" />}
                                   sx={{ bgcolor: config.lightColor, color: config.color, fontWeight: 600, fontSize: '0.7rem', height: 20 }}
                                 />
+                                {approval.leaveRequest.leaveCode && (
+                                  <Typography sx={{ fontSize: '0.75rem', color: '#64748B', bgcolor: '#F1F5F9', px: 0.5, borderRadius: 0.5, fontFamily: 'monospace' }}>
+                                    {approval.leaveRequest.leaveCode}
+                                  </Typography>
+                                )}
                                 <Typography sx={{ fontSize: '0.75rem', color: '#64748B' }}>
                                   {approval.leaveRequest.totalDays} วัน • {new Date(approval.leaveRequest.startDate).toLocaleDateString('th-TH', { day: 'numeric', month: 'short' })}
                                 </Typography>
@@ -2059,6 +2135,11 @@ export default function ApprovalPage() {
                                 '& .MuiChip-icon': { ml: 0.3 }
                               }}
                             />
+                            {approval.leaveRequest.leaveCode && (
+                              <Typography sx={{ fontSize: '0.75rem', color: '#64748B', fontFamily: 'monospace' }}>
+                                {approval.leaveRequest.leaveCode}
+                              </Typography>
+                            )}
                             <Typography sx={{ fontSize: '0.85rem', color: '#475569', fontWeight: 600 }}>
                               {approval.leaveRequest.totalDays} วัน
                             </Typography>
@@ -2269,8 +2350,13 @@ export default function ApprovalPage() {
                 onClose={() => setExpandedCards(new Set())}
                 maxWidth="md"
                 fullWidth
+                fullScreen={isMobileDevice}
                 PaperProps={{
-                  sx: { borderRadius: 1 }
+                  sx: {
+                    borderRadius: isMobileDevice ? 0 : 1,
+                    maxHeight: isMobileDevice ? '100%' : 'calc(100% - 64px)',
+                    m: isMobileDevice ? 0 : 2
+                  }
                 }}
               >
                 {(() => {
@@ -2286,7 +2372,20 @@ export default function ApprovalPage() {
 
                   return (
                     <>
-                      <DialogTitle sx={{ pb: 1 }}>
+                      <IconButton
+                        onClick={() => setExpandedCards(new Set())}
+                        sx={{
+                          position: 'absolute',
+                          top: 8,
+                          right: 8,
+                          zIndex: 1,
+                          bgcolor: 'rgba(255,255,255,0.8)', // ensure visibility over content if scrolled
+                          '&:hover': { bgcolor: 'rgba(255,255,255,0.9)' }
+                        }}
+                      >
+                        <CloseCircle size={24} color="#64748B" />
+                      </IconButton>
+                      <DialogTitle sx={{ pb: 1, pr: 6 }}>
                         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                             <Avatar
@@ -2353,12 +2452,19 @@ export default function ApprovalPage() {
                               <Box sx={{ display: 'grid', gap: 2 }}>
                                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                   <Typography sx={{ fontSize: '0.9rem', color: 'text.secondary' }}>ประเภทการลา</Typography>
-                                  <Chip
-                                    label={t(`leave_${approval.leaveRequest.leaveType}`, approval.leaveRequest.leaveType)}
-                                    size="small"
-                                    icon={<LeaveIcon size={14} color={config.color} variant="Bold" />}
-                                    sx={{ bgcolor: config.lightColor, color: config.color, fontWeight: 600 }}
-                                  />
+                                  <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 0.5 }}>
+                                    <Chip
+                                      label={t(`leave_${approval.leaveRequest.leaveType}`, approval.leaveRequest.leaveType)}
+                                      size="small"
+                                      icon={<LeaveIcon size={14} color={config.color} variant="Bold" />}
+                                      sx={{ bgcolor: config.lightColor, color: config.color, fontWeight: 600 }}
+                                    />
+                                    {approval.leaveRequest.leaveCode && (
+                                      <Typography sx={{ fontSize: '0.75rem', color: '#64748B', fontFamily: 'monospace' }}>
+                                        #{approval.leaveRequest.leaveCode}
+                                      </Typography>
+                                    )}
+                                  </Box>
                                 </Box>
                                 <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                                   <Typography sx={{ fontSize: '0.9rem', color: 'text.secondary' }}>วันที่เริ่ม</Typography>
@@ -3155,13 +3261,13 @@ export default function ApprovalPage() {
         onClose={() => setDialogOpen(false)}
         maxWidth="sm"
         fullWidth
-        fullScreen={viewMode === 'mobile'}
+        fullScreen={isMobileDevice}
         PaperProps={{
           sx: {
-            borderRadius: viewMode === 'desktop' ? 1 : 0,
+            borderRadius: isMobileDevice ? 0 : 1, // Consistent 2 for desktop as per other dialogs
             display: 'flex',
             flexDirection: 'column',
-            minHeight: viewMode === 'desktop' ? 'auto' : '100vh',
+            minHeight: isMobileDevice ? '100vh' : 'auto',
           }
         }}
       >
@@ -3306,9 +3412,18 @@ export default function ApprovalPage() {
                   {new Date(selectedApproval.leaveRequest.createdAt).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                 </Typography>
               </Box>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1.5 }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1.5, alignItems: 'flex-start' }}>
                 <Typography variant="body2" color="text.secondary">ประเภท</Typography>
-                <Typography variant="body2" fontWeight={600}>{t(`leave_${selectedApproval.leaveRequest.leaveType}`, selectedApproval.leaveRequest.leaveType)}</Typography>
+                <Box sx={{ textAlign: 'right' }}>
+                  <Typography variant="body2" fontWeight={600}>
+                    {t(`leave_${selectedApproval.leaveRequest.leaveType}`, selectedApproval.leaveRequest.leaveType)}
+                  </Typography>
+                  {selectedApproval.leaveRequest.leaveCode && (
+                    <Typography variant="caption" sx={{ color: '#64748B', fontFamily: 'monospace', display: 'block' }}>
+                      #{selectedApproval.leaveRequest.leaveCode}
+                    </Typography>
+                  )}
+                </Box>
               </Box>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1.5 }}>
                 <Typography variant="body2" color="text.secondary">ตั้งแต่วันที่</Typography>
@@ -3450,6 +3565,11 @@ export default function ApprovalPage() {
                   <Typography variant="body2" fontWeight={600}>
                     {t(`leave_${selectedApproval.leaveRequest.leaveType}`, selectedApproval.leaveRequest.leaveType)}
                   </Typography>
+                  {selectedApproval.leaveRequest.leaveCode && (
+                    <Typography variant="caption" sx={{ color: '#64748B', fontFamily: 'monospace' }}>
+                      #{selectedApproval.leaveRequest.leaveCode}
+                    </Typography>
+                  )}
                 </Box>
                 <Box sx={{ textAlign: 'right' }}>
                   <Typography variant="caption" color="text.secondary">ระยะเวลา</Typography>
@@ -3634,7 +3754,21 @@ export default function ApprovalPage() {
                           onChange={(_, val) => val && handleUpdateSplitPart(index, 'startPeriod', val)}
                           size="small"
                           fullWidth
-                          sx={{ mt: 1, '& .MuiToggleButton-root': { flex: 1, py: 0.5, fontSize: '0.75rem' } }}
+                          sx={{
+                            mt: 1,
+                            '& .MuiToggleButton-root': {
+                              flex: 1,
+                              py: 0.5,
+                              fontSize: '0.75rem',
+                              '&.Mui-selected': {
+                                bgcolor: PRIMARY_COLOR,
+                                color: 'white',
+                                '&:hover': {
+                                  bgcolor: '#5B52E0',
+                                },
+                              },
+                            }
+                          }}
                         >
                           <ToggleButton value="full">เต็มวัน</ToggleButton>
                           <ToggleButton value="half">ครึ่งวัน</ToggleButton>
@@ -3666,7 +3800,21 @@ export default function ApprovalPage() {
                           onChange={(_, val) => val && handleUpdateSplitPart(index, 'endPeriod', val)}
                           size="small"
                           fullWidth
-                          sx={{ mt: 1, '& .MuiToggleButton-root': { flex: 1, py: 0.5, fontSize: '0.75rem' } }}
+                          sx={{
+                            mt: 1,
+                            '& .MuiToggleButton-root': {
+                              flex: 1,
+                              py: 0.5,
+                              fontSize: '0.75rem',
+                              '&.Mui-selected': {
+                                bgcolor: PRIMARY_COLOR,
+                                color: 'white',
+                                '&:hover': {
+                                  bgcolor: '#5B52E0',
+                                },
+                              },
+                            }
+                          }}
                         >
                           <ToggleButton value="full">เต็มวัน</ToggleButton>
                           <ToggleButton value="half">ครึ่งวัน</ToggleButton>

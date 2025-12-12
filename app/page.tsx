@@ -468,6 +468,7 @@ export default function Home() {
 
                   return {
                     id: leave.id,
+                    leaveCode: leave.leaveCode || undefined,
                     title: t(`leave_${leave.leaveType || leave.leaveCode}`, leave.leaveTypeInfo?.name || 'การลา'),
                     date: formatDate(leave.startDate, leave.endDate),
                     startDate: leave.startDate,

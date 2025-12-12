@@ -28,8 +28,14 @@ export async function GET(request: NextRequest) {
       .map(n => (n.data as any)?.leaveRequestId)
       .filter((id): id is number => typeof id === 'number');
 
-    // Fetch current status
-    let statusMap = new Map<number, { status: string; waitingFor: string }>();
+    // Fetch current status and user's action status
+    let statusMap = new Map<number, {
+      status: string;
+      waitingFor: string;
+      hasUserActed: boolean;
+      userActionStatus?: string;
+      isWaitingForCurrentUser: boolean;
+    }>();
 
     if (leaveRequestIds.length > 0) {
       const leaveRequests = await prisma.leaveRequest.findMany({
@@ -38,23 +44,39 @@ export async function GET(request: NextRequest) {
           id: true,
           status: true,
           approvals: {
-            where: { status: 'pending' },
-            include: { approver: { select: { firstName: true, lastName: true } } },
+            include: { approver: { select: { id: true, firstName: true, lastName: true } } },
             orderBy: { level: 'asc' },
-            take: 1,
           },
         },
       });
 
       leaveRequests.forEach((lr) => {
         let waitingFor = '';
-        if (lr.status === 'pending' && lr.approvals.length > 0) {
-          const approver = lr.approvals[0].approver;
-          waitingFor = `${approver.firstName} ${approver.lastName}`;
+        let hasUserActed = false;
+        let userActionStatus: string | undefined;
+        let isWaitingForCurrentUser = false;
+
+        // หา pending approval ปัจจุบัน
+        const pendingApproval = lr.approvals.find(a => a.status === 'pending');
+        if (pendingApproval) {
+          waitingFor = `${pendingApproval.approver.firstName} ${pendingApproval.approver.lastName}`;
+          // ตรวจสอบว่าผู้อนุมัติในคิวปัจจุบันเป็น user นี้หรือไม่
+          isWaitingForCurrentUser = pendingApproval.approverId === userId;
         }
+
+        // ตรวจสอบว่า user นี้ได้ทำ action กับใบลานี้ไปแล้วหรือยัง
+        const userApproval = lr.approvals.find(a => a.approverId === userId);
+        if (userApproval && userApproval.status !== 'pending') {
+          hasUserActed = true;
+          userActionStatus = userApproval.status; // 'approved', 'rejected', 'skipped'
+        }
+
         statusMap.set(lr.id, {
           status: lr.status,
           waitingFor,
+          hasUserActed,
+          userActionStatus,
+          isWaitingForCurrentUser,
         });
       });
     }
@@ -70,6 +92,9 @@ export async function GET(request: NextRequest) {
             ...(n.data as object),
             realTimeStatus: info.status,
             waitingFor: info.waitingFor,
+            hasUserActed: info.hasUserActed,
+            userActionStatus: info.userActionStatus,
+            isWaitingForCurrentUser: info.isWaitingForCurrentUser,
           },
         };
       }
