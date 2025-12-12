@@ -35,6 +35,7 @@ import {
   Divider,
   Tabs,
   Tab,
+  useMediaQuery,
 } from '@mui/material';
 
 // Swiper
@@ -296,6 +297,7 @@ function TableSkeleton() {
 
 export default function AdminLeavesPage() {
   const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const toastr = useToastr();
   const [loading, setLoading] = useState(true);
   const [leaves, setLeaves] = useState<LeaveRequest[]>([]);
@@ -1121,7 +1123,8 @@ export default function AdminLeavesPage() {
         onClose={() => setDetailDialogOpen(false)}
         maxWidth="md"
         fullWidth
-        PaperProps={{ sx: { borderRadius: 1 } }}
+        fullScreen={isMobile}
+        PaperProps={{ sx: { borderRadius: isMobile ? 0 : 1 } }}
       >
         <DialogTitle sx={{
           display: 'flex',
@@ -1155,10 +1158,12 @@ export default function AdminLeavesPage() {
               <Tabs
                 value={detailTab}
                 onChange={(_, v) => setDetailTab(v)}
+                variant="scrollable"
+                scrollButtons="auto"
                 sx={{
                   borderBottom: 1,
                   borderColor: 'divider',
-                  px: 3,
+                  px: isMobile ? 2 : 3,
                 }}
               >
                 <Tab label="ข้อมูลใบลา" />
@@ -1168,7 +1173,7 @@ export default function AdminLeavesPage() {
                 )}
               </Tabs>
 
-              <Box sx={{ p: 3 }}>
+              <Box sx={{ p: isMobile ? 2 : 3 }}>
                 {/* Tab 0: Leave Info */}
                 {detailTab === 0 && (
                   <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
@@ -1344,15 +1349,15 @@ export default function AdminLeavesPage() {
                               display: 'flex',
                               flexDirection: 'column',
                               alignItems: 'center',
-                              mr: 2.5,
+                              mr: isMobile ? 1.5 : 2.5,
                               position: 'relative',
                             }}
                           >
                             {/* Status Circle */}
                             <Box
                               sx={{
-                                width: 44,
-                                height: 44,
+                                width: isMobile ? 36 : 44,
+                                height: isMobile ? 36 : 44,
                                 borderRadius: '50%',
                                 bgcolor: getIconBgColor(),
                                 display: 'flex',
@@ -1521,7 +1526,7 @@ export default function AdminLeavesPage() {
           )}
         </DialogContent>
 
-        <DialogActions sx={{ px: 3, py: 2, borderTop: '1px solid', borderColor: 'divider' }}>
+        <DialogActions sx={{ px: isMobile ? 2 : 3, py: 2, borderTop: '1px solid', borderColor: 'divider' }}>
           <Button onClick={() => setDetailDialogOpen(false)} sx={{ borderRadius: 1 }}>
             ปิด
           </Button>
