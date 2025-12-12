@@ -1284,7 +1284,7 @@ export default function LeaveFormPage() {
                                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                                                 <Sun1 size={14} color='#E65100' variant='Bold' />
                                                 <Typography variant="body2" sx={{ fontWeight: shiftType === 'day' ? 600 : 400 }}>
-                                                    {t('shift_day', 'กะเช้า')} (08:00 - 17:00)
+                                                    {t('leave_shift_day', 'กะเช้า')} (08:00 - 17:00)
                                                 </Typography>
                                             </Box>
                                         }
@@ -1315,7 +1315,7 @@ export default function LeaveFormPage() {
                                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                                                 <Moon size={14} variant='Bold' color="black" />
                                                 <Typography variant="body2" sx={{ fontWeight: shiftType === 'night' ? 600 : 400 }}>
-                                                    {t('shift_night', 'กะดึก')} (20:00 - 05:00)
+                                                    {t('leave_shift_night', 'กะดึก')} (20:00 - 05:00)
                                                 </Typography>
                                             </Box>
                                         }

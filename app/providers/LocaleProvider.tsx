@@ -212,6 +212,29 @@ const messages: Record<LocaleCode, Record<string, string>> = {
     status_waiting_for: "รอการอนุมัติจาก",
     supervisor: "หัวหน้างาน",
 
+    // Leave Form Page
+    leave_shift_day: "กะเช้า",
+    leave_shift_night: "กะดึก",
+    works_on_sunday: "ทำงานวันอาทิตย์",
+    works_sunday_yes: "ทำงานวันอาทิตย์",
+    works_sunday_no: "หยุดวันอาทิตย์",
+    sunday_not_counted: "วันอาทิตย์จะไม่ถูกนับเป็นวันลา",
+    leave_contact_phone: "เบอร์โทรศัพท์ติดต่อ",
+    leave_contact_address: "ที่อยู่ติดต่อ",
+    leave_confirm_message: "คุณต้องการส่งใบลานี้หรือไม่?",
+    leave_success: "ส่งใบลาสำเร็จ",
+    leave_error: "เกิดข้อผิดพลาด กรุณาลองใหม่",
+    backdate_warning: "การลาย้อนหลัง",
+    backdate_overdue: "ลาย้อนหลังเกินกำหนด",
+    backdate_deadline: "กำหนดส่งภายใน",
+    max_files: "สามารถแนบไฟล์ได้สูงสุด {{max}} ไฟล์",
+    file_too_large: "ไฟล์มีขนาดเกิน {{size}}",
+    processing_files: "กำลังประมวลผลไฟล์...",
+    upload_file: "อัปโหลดไฟล์",
+    or_drag_drop: "หรือลากไฟล์มาวาง",
+    half_day: "ครึ่งวัน",
+    full_day: "เต็มวัน",
+
     // Leave Types Page
     leave_types: "ประเภทการลา",
     select_leave_type: "เลือกประเภทการลาที่ต้องการ",
@@ -573,7 +596,7 @@ const messages: Record<LocaleCode, Record<string, string>> = {
     leave_reason: "Reason",
     leave_reason_placeholder: "Specify reason...",
     leave_attachments: "Attachments",
-    leave_attachments_hint: "Supports .pdf, .jpg, .jpeg, .png (Max 5 files, 15MB each)",
+    leave_attachments_hint: "Supports .pdf, .jpg, .jpeg, .png (Max 3 files, 15MB each)",
     leave_sick_attachment_required: "Sick leave of 3 days or more requires a medical certificate",
     leave_personal_attachment_required: "Personal leave requires supporting documents",
     leave_upload_btn: "Upload Attachments",
@@ -590,6 +613,19 @@ const messages: Record<LocaleCode, Record<string, string>> = {
     leave_days_per_year: "days/year",
     leave_days_unit: "Days",
     leave_adjust_hint: "Press +/- to adjust by 0.5 days",
+
+    // Leave Form - Shift & Sunday
+    leave_shift_day: "Day Shift",
+    leave_shift_night: "Night Shift",
+    works_on_sunday: "Works on Sunday",
+    works_sunday_yes: "Works on Sunday",
+    works_sunday_no: "Sunday Off",
+    sunday_not_counted: "Sundays will not be counted as leave days",
+    backdate_warning: "Backdated Leave",
+    backdate_overdue: "Backdate deadline exceeded",
+    backdate_deadline: "Deadline",
+    half_day: "Half Day",
+    full_day: "Full Day",
 
     // Leave Detail Drawer
     preview_error: "Cannot preview this file",
@@ -1013,6 +1049,19 @@ const messages: Record<LocaleCode, Record<string, string>> = {
     leave_personal_attachment_required: "ကိုယ်ရေးကိုယ်တာခွင့် အထောက်အထားလိုအပ်သည်",
     leave_upload_btn: "ပူးတွဲဖိုင်တင်ရန်",
     status_cancelled: "ပယ်ဖျက်ပြီး",
+
+    // Leave Form - Shift & Sunday
+    leave_shift_day: "နေ့ဆိုင်း",
+    leave_shift_night: "ညဆိုင်း",
+    works_on_sunday: "တနင်္ဂနွေတွင် အလုပ်လုပ်သည်",
+    works_sunday_yes: "တနင်္ဂနွေတွင် အလုပ်လုပ်သည်",
+    works_sunday_no: "တနင်္ဂနွေ အနားယူ",
+    sunday_not_counted: "တနင်္ဂနွေနေ့များကို ခွင့်ရက်အဖြစ် မရေတွက်ပါ",
+    backdate_warning: "ခွင့်ပြန်ကြည့်ခြင်း",
+    backdate_overdue: "ခွင့်ပြန်ကြည့်ရက်ကျော်လွန်သွားပြီ",
+    backdate_deadline: "သတ်မှတ်ရက်",
+    half_day: "တစ်ဝက်ရက်",
+    full_day: "တစ်ရက်လုံး",
 
     // Edit Profile
     edit_profile_title: "ပရိုဖိုင်ပြင်ဆင်ရန်",
