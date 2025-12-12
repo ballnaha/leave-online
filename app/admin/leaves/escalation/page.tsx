@@ -31,6 +31,7 @@ import {
     DialogActions,
     Divider,
     CircularProgress,
+    useMediaQuery,
 } from '@mui/material';
 import {
     SearchNormal1,
@@ -246,6 +247,7 @@ function TableSkeleton() {
 
 export default function EscalationPage() {
     const theme = useTheme();
+    const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
     const toastr = useToastr();
     const [loading, setLoading] = useState(true);
     const [leaves, setLeaves] = useState<LeaveRequest[]>([]);
@@ -862,7 +864,8 @@ export default function EscalationPage() {
                 onClose={() => !isEscalating && setConfirmDialogOpen(false)}
                 maxWidth="sm"
                 fullWidth
-                PaperProps={{ sx: { borderRadius: 1 } }}
+                fullScreen={isMobile}
+                PaperProps={{ sx: { borderRadius: isMobile ? 0 : 1 } }}
             >
                 <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                     <Box
@@ -915,7 +918,8 @@ export default function EscalationPage() {
                 onClose={() => setDetailDialogOpen(false)}
                 maxWidth="sm"
                 fullWidth
-                PaperProps={{ sx: { borderRadius: 1 } }}
+                fullScreen={isMobile}
+                PaperProps={{ sx: { borderRadius: isMobile ? 0 : 1 } }}
             >
                 {selectedLeave && (
                     <>

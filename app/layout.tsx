@@ -37,6 +37,9 @@ export const metadata: Metadata = {
     capable: true,
     statusBarStyle: "black-translucent",
     title: "Leave Online",
+    startupImage: [
+      '/images/psc-logo.png',
+    ],
   },
   formatDetection: {
     telephone: false,
