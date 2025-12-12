@@ -613,6 +613,7 @@ const DashboardCard: React.FC<DashboardCardProps> = ({ leaveTypes, leaveRequests
                         <Box sx={{
                             display: 'flex',
                             alignItems: 'center',
+                            flexWrap: 'wrap',
                             gap: 0.5,
                             mb: 1,
                             py: 0.625,
@@ -622,7 +623,7 @@ const DashboardCard: React.FC<DashboardCardProps> = ({ leaveTypes, leaveRequests
                             border: '1px solid rgba(255,255,255,0.12)',
                             boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.1)',
                         }}>
-                            <Typography sx={{ fontSize: '0.7rem', fontWeight: 500, opacity: 0.9, whiteSpace: 'nowrap' }}>
+                            <Typography sx={{ fontSize: '0.7rem', fontWeight: 500, opacity: 0.9 }}>
                                 {t('dashboard_quota_short', 'สิทธิ์:')}
                             </Typography>
                             <Typography sx={{
@@ -643,14 +644,14 @@ const DashboardCard: React.FC<DashboardCardProps> = ({ leaveTypes, leaveRequests
                             </Typography>
                             {!isUnlimited && (
                                 <Box sx={{
-                                    ml: 'auto',
-                                    width: 48,
+                                    width: '100%',
                                     height: 4,
                                     borderRadius: 2,
                                     bgcolor: 'rgba(255,255,255,0.15)',
                                     overflow: 'hidden',
                                     position: 'relative',
-                                    boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.1)'
+                                    boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.1)',
+                                    mt: 0.5,
                                 }}>
                                     <Box sx={{
                                         position: 'absolute',
