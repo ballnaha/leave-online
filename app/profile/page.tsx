@@ -30,6 +30,7 @@ import {
     Building,
     HashtagSquare,
     Refresh2,
+    TickCircle,
     Icon as IconsaxIcon,
 } from 'iconsax-react';
 import { Share, PlusSquare } from 'lucide-react';
@@ -95,6 +96,8 @@ export default function ProfilePage() {
     const [clearDataLoading, setClearDataLoading] = useState(false);
     const [serverVersion, setServerVersion] = useState<string | null>(null);
     const [hasNewVersion, setHasNewVersion] = useState(false);
+    const [updateProgress, setUpdateProgress] = useState(0);
+    const [updateStatus, setUpdateStatus] = useState<string>('');
 
     const languageOptions: Array<{ code: 'th' | 'en' | 'my'; label: string }> = [
         { code: 'th', label: localeLabel.th },
@@ -1177,139 +1180,296 @@ export default function ProfilePage() {
                     },
                 }}
             >
-                <DialogTitle sx={{ pb: 1 }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                        <Box
+                {!clearDataLoading ? (
+                    <>
+                        <DialogTitle sx={{ pb: 1 }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                                <Box
+                                    sx={{
+                                        width: 40,
+                                        height: 40,
+                                        borderRadius: 1,
+                                        bgcolor: hasNewVersion ? '#E8F5E9' : '#E8F5E9',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                    }}
+                                >
+                                    {hasNewVersion ? (
+                                        <Refresh2 size={22} color="#4CAF50" variant="Bold" />
+                                    ) : (
+                                        <TickCircle size={22} color="#4CAF50" variant="Bold" />
+                                    )}
+                                </Box>
+                                <Box>
+                                    <Typography sx={{ fontWeight: 700, color: '#1E293B' }}>
+                                        {hasNewVersion
+                                            ? t('new_version_available_title', '🎉 มีเวอร์ชันใหม่!')
+                                            : t('version_up_to_date_title', '✅ เป็นเวอร์ชันล่าสุดแล้ว')}
+                                    </Typography>
+                                    <Typography sx={{ fontSize: '0.75rem', color: '#64748B' }}>
+                                        {hasNewVersion
+                                            ? `v${APP_VERSION} → v${serverVersion}`
+                                            : `v${APP_VERSION}`}
+                                    </Typography>
+                                </Box>
+                            </Box>
+                        </DialogTitle>
+                        <DialogContent>
+                            {hasNewVersion ? (
+                                <>
+                                    <Typography sx={{ color: '#64748B', fontSize: '0.95rem' }}>
+                                        {t('new_version_message', 'มีเวอร์ชันใหม่พร้อมให้อัปเดต! กดอัปเดตเพื่อรับฟีเจอร์และการแก้ไขล่าสุด')}
+                                    </Typography>
+                                    <Typography sx={{ color: '#64748B', fontSize: '0.85rem', mt: 1 }}>
+                                        ℹ️ {t('update_version_note', 'คุณจะต้องลงชื่อเข้าใช้ใหม่หลังอัปเดต')}
+                                    </Typography>
+                                </>
+                            ) : (
+                                <>
+                                    <Typography sx={{ color: '#4CAF50', fontSize: '0.95rem', fontWeight: 500 }}>
+                                        {t('version_up_to_date_message', 'แอปของคุณเป็นเวอร์ชันล่าสุดแล้ว ไม่จำเป็นต้องอัปเดต')}
+                                    </Typography>
+                                    <Typography sx={{ color: '#64748B', fontSize: '0.85rem', mt: 1.5 }}>
+                                        {t('force_update_hint', 'หากพบปัญหาการใช้งาน สามารถกด "รีเฟรชแอป" เพื่อล้างข้อมูลและโหลดใหม่ได้')}
+                                    </Typography>
+                                </>
+                            )}
+                        </DialogContent>
+                        <DialogActions sx={{ px: 3, pb: 2 }}>
+                            <Button
+                                onClick={() => setClearDataDialogOpen(false)}
+                                sx={{ color: '#64748B' }}
+                            >
+                                {hasNewVersion ? t('btn_later', 'ไว้ภายหลัง') : t('btn_close', 'ปิด')}
+                            </Button>
+                            <Button
+                                variant="contained"
+                                onClick={async () => {
+                                    setClearDataLoading(true);
+                                    setUpdateProgress(0);
+                                    setUpdateStatus(t('update_clearing_storage', 'กำลังล้างข้อมูลเก่า...'));
+
+                                    try {
+                                        // Step 1: Clear localStorage (20%)
+                                        await new Promise(resolve => setTimeout(resolve, 500));
+                                        const savedLocale = localStorage.getItem('locale');
+                                        localStorage.clear();
+                                        if (savedLocale) {
+                                            localStorage.setItem('locale', savedLocale);
+                                        }
+                                        setUpdateProgress(20);
+                                        setUpdateStatus(t('update_clearing_session', 'กำลังล้าง Session...'));
+
+                                        // Step 2: Clear sessionStorage (30%)
+                                        await new Promise(resolve => setTimeout(resolve, 500));
+                                        sessionStorage.clear();
+                                        setUpdateProgress(30);
+                                        setUpdateStatus(t('update_clearing_database', 'กำลังล้างฐานข้อมูล...'));
+
+                                        // Step 3: Clear IndexedDB (50%)
+                                        await new Promise(resolve => setTimeout(resolve, 500));
+                                        if ('indexedDB' in window) {
+                                            const databases = await indexedDB.databases?.() || [];
+                                            const deletePromises = databases.map(db => {
+                                                if (db.name) {
+                                                    return new Promise<void>((resolve) => {
+                                                        const request = indexedDB.deleteDatabase(db.name!);
+                                                        request.onsuccess = () => resolve();
+                                                        request.onerror = () => resolve();
+                                                        request.onblocked = () => resolve();
+                                                        setTimeout(resolve, 1000);
+                                                    });
+                                                }
+                                                return Promise.resolve();
+                                            });
+                                            await Promise.all(deletePromises);
+                                        }
+                                        setUpdateProgress(50);
+                                        setUpdateStatus(t('update_clearing_cache', 'กำลังล้าง Cache...'));
+
+                                        // Step 4: Clear caches (65%)
+                                        await new Promise(resolve => setTimeout(resolve, 500));
+                                        if ('caches' in window) {
+                                            const cacheNames = await caches.keys();
+                                            await Promise.all(
+                                                cacheNames.map(cacheName => caches.delete(cacheName))
+                                            );
+                                        }
+                                        setUpdateProgress(65);
+                                        setUpdateStatus(t('update_clearing_sw', 'กำลังรีเซ็ต Service Worker...'));
+
+                                        // Step 5: Unregister Service Workers (80%)
+                                        await new Promise(resolve => setTimeout(resolve, 500));
+                                        if ('serviceWorker' in navigator) {
+                                            const registrations = await navigator.serviceWorker.getRegistrations();
+                                            await Promise.all(
+                                                registrations.map(registration => registration.unregister())
+                                            );
+                                        }
+                                        setUpdateProgress(80);
+                                        setUpdateStatus(t('update_clearing_cookies', 'กำลังล้าง Cookies...'));
+
+                                        // Step 6: Clear cookies (90%)
+                                        await new Promise(resolve => setTimeout(resolve, 500));
+                                        const cookies = document.cookie.split(';');
+                                        for (const cookie of cookies) {
+                                            const eqPos = cookie.indexOf('=');
+                                            const name = eqPos > -1 ? cookie.substr(0, eqPos) : cookie;
+                                            document.cookie = `${name.trim()}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/`;
+                                        }
+                                        setUpdateProgress(90);
+                                        setUpdateStatus(t('update_preparing', 'กำลังเตรียมการ...'));
+
+                                        // Step 7: Set auto-subscribe flag
+                                        localStorage.setItem('onesignal_auto_subscribe', 'true');
+                                        setUpdateProgress(100);
+                                        setUpdateStatus(t('update_redirecting', 'กำลัง Logout และ Redirect...'));
+
+                                        // Wait 1 more second before logout
+                                        await new Promise(resolve => setTimeout(resolve, 1000));
+
+                                        // Sign out and redirect
+                                        await signOut({
+                                            callbackUrl: '/login',
+                                            redirect: true,
+                                        });
+
+                                    } catch (e) {
+                                        console.error('Update app error:', e);
+                                        toastr.error(t('update_error', 'เกิดข้อผิดพลาดในการอัปเดต'));
+                                        setClearDataLoading(false);
+                                        setUpdateProgress(0);
+                                        setUpdateStatus('');
+                                    }
+                                }}
+                                sx={{
+                                    borderRadius: 1,
+                                    minWidth: 100,
+                                    bgcolor: hasNewVersion ? '#4CAF50' : '#FF9800',
+                                    '&:hover': { bgcolor: hasNewVersion ? '#388E3C' : '#F57C00' }
+                                }}
+                            >
+                                {hasNewVersion ? t('btn_update_now', 'อัปเดตเลย') : t('btn_refresh_app', 'รีเฟรชแอป')}
+                            </Button>
+                        </DialogActions>
+                    </>
+                ) : (
+                    <Box sx={{ p: 4, textAlign: 'center' }}>
+                        {/* Animated Progress Circle */}
+                        <Box sx={{ position: 'relative', display: 'inline-flex', mb: 3 }}>
+                            <CircularProgress
+                                variant="determinate"
+                                value={100}
+                                size={100}
+                                thickness={4}
+                                sx={{ color: '#E0E0E0' }}
+                            />
+                            <CircularProgress
+                                variant="determinate"
+                                value={updateProgress}
+                                size={100}
+                                thickness={4}
+                                sx={{
+                                    color: hasNewVersion ? '#4CAF50' : '#2196F3',
+                                    position: 'absolute',
+                                    left: 0,
+                                    transition: 'all 0.5s ease-out',
+                                    '& .MuiCircularProgress-circle': {
+                                        strokeLinecap: 'round',
+                                    },
+                                }}
+                            />
+                            <Box
+                                sx={{
+                                    top: 0,
+                                    left: 0,
+                                    bottom: 0,
+                                    right: 0,
+                                    position: 'absolute',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    flexDirection: 'column',
+                                }}
+                            >
+                                <Typography
+                                    variant="h5"
+                                    component="div"
+                                    sx={{
+                                        fontWeight: 700,
+                                        color: hasNewVersion ? '#4CAF50' : '#2196F3',
+                                    }}
+                                >
+                                    {updateProgress}%
+                                </Typography>
+                            </Box>
+                        </Box>
+
+                        {/* Status Text */}
+                        <Typography
+                            variant="h6"
                             sx={{
-                                width: 40,
-                                height: 40,
-                                borderRadius: 1,
-                                bgcolor: hasNewVersion ? '#E8F5E9' : '#E3F2FD',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
+                                fontWeight: 600,
+                                color: '#1E293B',
+                                mb: 1,
                             }}
                         >
-                            <Refresh2 size={22} color={hasNewVersion ? '#4CAF50' : '#2196F3'} variant="Bold" />
+                            {t('updating_app', 'กำลังอัปเดต...')}
+                        </Typography>
+                        <Typography
+                            variant="body2"
+                            sx={{
+                                color: '#64748B',
+                                minHeight: 24,
+                                transition: 'all 0.3s ease',
+                            }}
+                        >
+                            {updateStatus}
+                        </Typography>
+
+                        {/* Animated Dots */}
+                        <Box sx={{ mt: 2, display: 'flex', justifyContent: 'center', gap: 0.5 }}>
+                            {[0, 1, 2].map((i) => (
+                                <Box
+                                    key={i}
+                                    sx={{
+                                        width: 8,
+                                        height: 8,
+                                        borderRadius: '50%',
+                                        bgcolor: hasNewVersion ? '#4CAF50' : '#2196F3',
+                                        animation: 'pulse 1.4s ease-in-out infinite',
+                                        animationDelay: `${i * 0.2}s`,
+                                        '@keyframes pulse': {
+                                            '0%, 80%, 100%': {
+                                                transform: 'scale(0.6)',
+                                                opacity: 0.5,
+                                            },
+                                            '40%': {
+                                                transform: 'scale(1)',
+                                                opacity: 1,
+                                            },
+                                        },
+                                    }}
+                                />
+                            ))}
                         </Box>
-                        <Box>
-                            <Typography sx={{ fontWeight: 700, color: '#1E293B' }}>
-                                {hasNewVersion
-                                    ? t('new_version_available_title', '🎉 มีเวอร์ชันใหม่!')
-                                    : t('update_version_title', 'อัปเดตเวอร์ชัน')}
+
+                        {/* Version Info */}
+                        {hasNewVersion && (
+                            <Typography
+                                variant="caption"
+                                sx={{
+                                    display: 'block',
+                                    mt: 2,
+                                    color: '#94A3B8',
+                                }}
+                            >
+                                v{APP_VERSION} → v{serverVersion}
                             </Typography>
-                            <Typography sx={{ fontSize: '0.75rem', color: '#64748B' }}>
-                                {hasNewVersion
-                                    ? `v${APP_VERSION} → v${serverVersion}`
-                                    : `v${APP_VERSION}`}
-                            </Typography>
-                        </Box>
+                        )}
                     </Box>
-                </DialogTitle>
-                <DialogContent>
-                    <Typography sx={{ color: '#64748B', fontSize: '0.95rem' }}>
-                        {hasNewVersion
-                            ? t('new_version_message', 'มีเวอร์ชันใหม่พร้อมให้อัปเดต! กดอัปเดตเพื่อรับฟีเจอร์และการแก้ไขล่าสุด')
-                            : t('update_version_message', 'ระบบจะดาวน์โหลดเวอร์ชันใหม่ล่าสุดและรีสตาร์ทแอป เพื่อให้แอปทำงานได้อย่างสมบูรณ์')}
-                    </Typography>
-                    <Typography sx={{ color: '#64748B', fontSize: '0.85rem', mt: 1 }}>
-                        ℹ️ {t('update_version_note', 'คุณจะต้องลงชื่อเข้าใช้ใหม่หลังอัปเดต')}
-                    </Typography>
-                </DialogContent>
-                <DialogActions sx={{ px: 3, pb: 2 }}>
-                    <Button
-                        onClick={() => setClearDataDialogOpen(false)}
-                        disabled={clearDataLoading}
-                        sx={{ color: '#64748B' }}
-                    >
-                        {t('btn_later', 'ไว้ภายหลัง')}
-                    </Button>
-                    <Button
-                        variant="contained"
-                        disabled={clearDataLoading}
-                        onClick={async () => {
-                            setClearDataLoading(true);
-                            try {
-                                toastr.info(t('updating_app', 'กำลังอัปเดต...'));
-
-                                // 1. Clear localStorage (except for locale preference)
-                                const savedLocale = localStorage.getItem('locale');
-                                localStorage.clear();
-                                if (savedLocale) {
-                                    localStorage.setItem('locale', savedLocale);
-                                }
-
-                                // 2. Clear sessionStorage
-                                sessionStorage.clear();
-
-                                // 3. Clear all IndexedDB databases with proper async handling
-                                if ('indexedDB' in window) {
-                                    const databases = await indexedDB.databases?.() || [];
-                                    const deletePromises = databases.map(db => {
-                                        if (db.name) {
-                                            return new Promise<void>((resolve) => {
-                                                const request = indexedDB.deleteDatabase(db.name!);
-                                                request.onsuccess = () => resolve();
-                                                request.onerror = () => resolve();
-                                                request.onblocked = () => resolve();
-                                                // Timeout fallback
-                                                setTimeout(resolve, 2000);
-                                            });
-                                        }
-                                        return Promise.resolve();
-                                    });
-                                    await Promise.all(deletePromises);
-                                }
-
-                                // 4. Clear all caches
-                                if ('caches' in window) {
-                                    const cacheNames = await caches.keys();
-                                    await Promise.all(
-                                        cacheNames.map(cacheName => caches.delete(cacheName))
-                                    );
-                                }
-
-                                // 5. Unregister all Service Workers
-                                if ('serviceWorker' in navigator) {
-                                    const registrations = await navigator.serviceWorker.getRegistrations();
-                                    await Promise.all(
-                                        registrations.map(registration => registration.unregister())
-                                    );
-                                }
-
-                                // 6. Clear cookies
-                                const cookies = document.cookie.split(';');
-                                for (const cookie of cookies) {
-                                    const eqPos = cookie.indexOf('=');
-                                    const name = eqPos > -1 ? cookie.substr(0, eqPos) : cookie;
-                                    document.cookie = `${name.trim()}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/`;
-                                }
-
-                                // 7. Set flag to auto-subscribe to notifications after login
-                                localStorage.setItem('onesignal_auto_subscribe', 'true');
-
-                                // 8. Sign out and redirect to login
-                                await signOut({
-                                    callbackUrl: '/login',
-                                    redirect: true,
-                                });
-
-                            } catch (e) {
-                                console.error('Update app error:', e);
-                                toastr.error(t('update_error', 'เกิดข้อผิดพลาดในการอัปเดต'));
-                                setClearDataLoading(false);
-                            }
-                        }}
-                        sx={{
-                            borderRadius: 1,
-                            minWidth: 100,
-                            bgcolor: hasNewVersion ? '#4CAF50' : '#2196F3',
-                            '&:hover': { bgcolor: hasNewVersion ? '#388E3C' : '#1976D2' }
-                        }}
-                    >
-                        {clearDataLoading ? <CircularProgress size={20} color="inherit" /> : t('btn_update_now', 'อัปเดตเลย')}
-                    </Button>
-                </DialogActions>
+                )}
             </Dialog>
 
             {/* Bottom Navigation */}

@@ -6,6 +6,7 @@ import Header from './components/Header';
 import ImageSlider from './components/ImageSlider';
 import LeaveTypeCard from './components/LeaveTypeCard';
 import RecentActivityCard from './components/RecentActivityCard';
+import LeaveTimeline from './components/LeaveTimeline';
 import BottomNav from './components/BottomNav';
 import {
   Calendar2, Activity, Briefcase, Heart, Sun1, Lovely,
@@ -454,43 +455,37 @@ export default function Home() {
                 </Button>
               </Box>
 
-              {recentLeaveRequests.length > 0 ? (
-                recentLeaveRequests.map((leave) => {
+              <LeaveTimeline
+                items={recentLeaveRequests.map((leave) => {
                   const config = getLeaveTypeConfig(leave.leaveType || leave.leaveCode || 'default');
                   const IconComponent = config.icon;
-
-                  // คำนวณ progress จาก approvals
                   const totalLevels = leave.approvals?.length || 0;
                   const approvedCount = leave.approvals?.filter(a => a.status === 'approved').length || 0;
 
-                  // ตรวจสอบว่า attachment แรกเป็นรูปภาพหรือไม่
-                  const firstAttachment = leave.attachments?.[0];
-                  const isImageAttachment = firstAttachment?.mimeType?.startsWith('image/');
-                  const imageUrl = isImageAttachment ? firstAttachment.filePath : undefined;
+                  // หา approver ที่กำลังรออนุมัติ
+                  const pendingApproval = leave.approvals?.find(a => a.status === 'pending');
+                  const waitingForApprover = pendingApproval?.approver?.firstName || undefined;
 
-                  return (
-                    <Box key={leave.id} onClick={() => handleLeaveClick(leave)}>
-                      <RecentActivityCard
-                        title={t(`leave_${leave.leaveType || leave.leaveCode}`, leave.leaveTypeInfo?.name || 'การลา')}
-                        date={formatDate(leave.startDate, leave.endDate)}
-                        status={mapStatus(leave.status)}
-                        image={imageUrl}
-                        icon={<IconComponent size={24} color={config.color} />}
-                        iconColor={config.color}
-                        approvalStatus={getApprovalStatusText(leave)}
-                        currentLevel={approvedCount}
-                        totalLevels={totalLevels}
-                      />
-                    </Box>
-                  );
-                })
-              ) : (
-                <Box sx={{ textAlign: 'center', py: 4, color: 'text.secondary' }}>
-                  <Typography variant="body2">
-                    {t('home_no_leave_requests', 'ยังไม่มีคำขอลา')}
-                  </Typography>
-                </Box>
-              )}
+                  return {
+                    id: leave.id,
+                    title: t(`leave_${leave.leaveType || leave.leaveCode}`, leave.leaveTypeInfo?.name || 'การลา'),
+                    date: formatDate(leave.startDate, leave.endDate),
+                    startDate: leave.startDate,
+                    endDate: leave.endDate,
+                    totalDays: leave.totalDays || 1,
+                    reason: leave.reason || undefined,
+                    createdAt: leave.createdAt || undefined,
+                    status: mapStatus(leave.status),
+                    icon: <IconComponent size={22} color={config.color} />,
+                    iconColor: config.color,
+                    approvalStatus: getApprovalStatusText(leave),
+                    waitingForApprover: waitingForApprover,
+                    currentLevel: approvedCount,
+                    totalLevels: totalLevels,
+                    onClick: () => handleLeaveClick(leave),
+                  };
+                })}
+              />
             </>
           )}
         </Box>
