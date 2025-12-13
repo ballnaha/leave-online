@@ -157,6 +157,7 @@ interface ApprovalItem {
       firstName: string;
       lastName: string;
       position?: string;
+      company: string;
       department: string;
       section?: string;
       shift?: string;
