@@ -655,7 +655,7 @@ export default function ApprovalDetailPage() {
             <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
               {actionType === 'approve'
                 ? t('confirm_approve_desc', 'คุณต้องการอนุมัติคำขอลาของพนักงานใช่หรือไม่?')
-                : t('confirm_reject_desc', 'คุณต้องการปฏิเสธคำขอลาของพนักงานใช่หรือไม่?')}}
+                : t('confirm_reject_desc', 'คุณต้องการปฏิเสธคำขอลาของพนักงานใช่หรือไม่?')}
             </Typography>
           </Box>
         )}
