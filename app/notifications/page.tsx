@@ -122,8 +122,16 @@ export default function NotificationsPage() {
     // Get translated notification title based on type
     const getTranslatedTitle = useCallback((notification: NotificationItem): string => {
         const titleKey = `notif_title_${notification.type}`;
-        const translated = t(titleKey, '');
-        return translated || notification.title;
+        let translated = t(titleKey, '');
+        if (!translated) {
+            return notification.title;
+        }
+
+        translated = translated
+            .replace('{{currentLevel}}', String(notification.data?.currentLevel ?? ''))
+            .replace('{{totalLevels}}', String(notification.data?.totalLevels ?? ''));
+
+        return translated;
     }, [t]);
 
     // Get translated notification message based on type and data
@@ -144,7 +152,9 @@ export default function NotificationsPage() {
             .replace('{{leaveType}}', leaveTypeName)
             .replace('{{approverName}}', notification.data?.approverName || '')
             .replace('{{requesterName}}', notification.data?.requesterName || '')
-            .replace('{{hoursLeft}}', notification.data?.hoursLeft || '');
+            .replace('{{hoursLeft}}', notification.data?.hoursLeft || '')
+            .replace('{{currentLevel}}', String(notification.data?.currentLevel ?? ''))
+            .replace('{{totalLevels}}', String(notification.data?.totalLevels ?? ''));
 
         return translated;
     }, [t, translateLeaveType]);

@@ -347,14 +347,14 @@ export async function notifyLeavePartialApproved(
 
   return notifyUser(userId, 'partial_approved', {
     title: {
-      en: `📝 Leave In Progress (${currentLevel}/${totalLevels})`,
-      th: `📝 ใบลากำลังดำเนินการ (${currentLevel}/${totalLevels})`,
-      my: `📝 ခွင့်လုပ်ဆောင်နေဆဲ (${currentLevel}/${totalLevels})`
+      en: `📝 Leave Approved ${currentLevel}/${totalLevels} Steps`,
+      th: `📝 ใบลาผ่านการอนุมัติ ${currentLevel}/${totalLevels} ขั้นตอน`,
+      my: `📝 ခွင့်အတည်ပြုမှု ${currentLevel}/${totalLevels} အဆင့်`
     },
     message: {
-      en: `Your ${enLeaveType} was approved by ${approverName}. Waiting for next approver.`,
-      th: `${thLeaveType}ของคุณผ่านการอนุมัติโดย ${approverName} รอผู้อนุมัติลำดับถัดไป`,
-      my: `သင်၏ ${myLeaveType} ကို ${approverName} က အတည်ပြုပြီး နောက်ထပ်အတည်ပြုသူစောင့်ဆိုင်းနေသည်`
+      en: `Your ${enLeaveType} was approved by ${approverName} (Step ${currentLevel} of ${totalLevels}). Waiting for the next approver.`,
+      th: `${thLeaveType}ของคุณผ่านการอนุมัติโดย ${approverName} (อนุมัติขั้นตอนที่ ${currentLevel} จากทั้งหมด ${totalLevels} ขั้นตอน) รอผู้อนุมัติลำดับถัดไป`,
+      my: `သင်၏ ${myLeaveType} ကို ${approverName} က အတည်ပြုပြီး (အဆင့် ${currentLevel} / ${totalLevels}) နောက်ထပ်အတည်ပြုသူစောင့်ဆိုင်းနေသည်`
     },
     url: `${APP_URL}/leave`,
     data: {

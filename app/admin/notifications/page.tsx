@@ -11,7 +11,6 @@ import {
   alpha,
   useTheme,
   Skeleton,
-  Grid,
   Chip,
   List,
   ListItem,
@@ -291,13 +290,20 @@ export default function NotificationsPage() {
     return (
       <Box sx={{ p: 3 }}>
         <Skeleton variant="text" width={200} height={40} />
-        <Grid container spacing={3} sx={{ mt: 2 }}>
+        <Box
+          sx={{
+            mt: 2,
+            display: 'grid',
+            gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(4, 1fr)' },
+            gap: 3,
+          }}
+        >
           {[1, 2, 3, 4].map((i) => (
-            <Grid key={i} size={{ xs: 12, sm: 6, md: 3 }}>
+            <Box key={i}>
               <Skeleton variant="rectangular" height={140} sx={{ borderRadius: 2 }} />
-            </Grid>
+            </Box>
           ))}
-        </Grid>
+        </Box>
       </Box>
     );
   }
@@ -332,8 +338,15 @@ export default function NotificationsPage() {
       </Box>
 
       {/* Summary Stats */}
-      <Grid container spacing={3} sx={{ mb: 4 }}>
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+      <Box
+        sx={{
+          mb: 4,
+          display: 'grid',
+          gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(4, 1fr)' },
+          gap: 3,
+        }}
+      >
+        <Box>
           <StatCard
             title="การแจ้งเตือนทั้งหมด"
             value={stats?.summary?.totalNotifications || 0}
@@ -341,8 +354,8 @@ export default function NotificationsPage() {
             color="primary"
             subtitle={`${days} วันที่ผ่านมา`}
           />
-        </Grid>
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+        </Box>
+        <Box>
           <StatCard
             title="ส่งสำเร็จ"
             value={`${stats?.summary?.deliveryRate || 0}%`}
@@ -350,8 +363,8 @@ export default function NotificationsPage() {
             color="success"
             subtitle="Delivery Rate"
           />
-        </Grid>
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+        </Box>
+        <Box>
           <StatCard
             title="เปิดอ่าน"
             value={`${stats?.summary?.openRate || 0}%`}
@@ -359,8 +372,8 @@ export default function NotificationsPage() {
             color="info"
             subtitle="Open Rate"
           />
-        </Grid>
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+        </Box>
+        <Box>
           <StatCard
             title="Subscribers"
             value={stats?.subscribers?.active || 0}
@@ -368,8 +381,8 @@ export default function NotificationsPage() {
             color="warning"
             subtitle={`จาก ${stats?.subscribers?.total || 0} ทั้งหมด`}
           />
-        </Grid>
-      </Grid>
+        </Box>
+      </Box>
 
       {/* OneSignal Stats Section */}
       <Card sx={{ mb: 4, borderRadius: 1, border: '1px solid', borderColor: 'divider' }}>
@@ -468,9 +481,15 @@ export default function NotificationsPage() {
               </Typography>
             </Box>
           ) : (
-            <Grid container spacing={3}>
+            <Box
+              sx={{
+                display: 'grid',
+                gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)' },
+                gap: 3,
+              }}
+            >
               {/* OneSignal Players */}
-              <Grid size={{ xs: 12, sm: 4 }}>
+              <Box>
                 <Box
                   sx={{
                     p: 2,
@@ -514,10 +533,10 @@ export default function NotificationsPage() {
                     </>
                   )}
                 </Box>
-              </Grid>
+              </Box>
 
               {/* Database Devices */}
-              <Grid size={{ xs: 12, sm: 4 }}>
+              <Box>
                 <Box
                   sx={{
                     p: 2,
@@ -549,10 +568,10 @@ export default function NotificationsPage() {
                     </Typography>
                   </Box>
                 </Box>
-              </Grid>
+              </Box>
 
               {/* Sync Status */}
-              <Grid size={{ xs: 12, sm: 4 }}>
+              <Box>
                 <Box
                   sx={{
                     p: 2,
@@ -605,16 +624,23 @@ export default function NotificationsPage() {
                     รายการ
                   </Typography>
                 </Box>
-              </Grid>
-            </Grid>
+              </Box>
+            </Box>
           )}
         </CardContent>
       </Card>
 
       {/* Charts & Details Row */}
-      <Grid container spacing={3}>
+      <Box
+        sx={{
+          display: 'grid',
+          gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' },
+          gap: 3,
+          alignItems: 'stretch',
+        }}
+      >
         {/* Status Breakdown */}
-        <Grid size={{ xs: 12, md: 4 }}>
+        <Box>
           <Card sx={{ borderRadius: 1, border: '1px solid', borderColor: 'divider', height: '100%' }}>
             <CardContent>
               <Typography variant="h6" fontWeight={600} gutterBottom>
@@ -655,10 +681,10 @@ export default function NotificationsPage() {
               </Box>
             </CardContent>
           </Card>
-        </Grid>
+        </Box>
 
         {/* Type Breakdown */}
-        <Grid size={{ xs: 12, md: 4 }}>
+        <Box>
           <Card sx={{ borderRadius: 1, border: '1px solid', borderColor: 'divider', height: '100%' }}>
             <CardContent>
               <Typography variant="h6" fontWeight={600} gutterBottom>
@@ -686,10 +712,10 @@ export default function NotificationsPage() {
               </List>
             </CardContent>
           </Card>
-        </Grid>
+        </Box>
 
         {/* Subscribers Stats */}
-        <Grid size={{ xs: 12, md: 4 }}>
+        <Box>
           <Card sx={{ borderRadius: 1, border: '1px solid', borderColor: 'divider', height: '100%' }}>
             <CardContent>
               <Typography variant="h6" fontWeight={600} gutterBottom>
@@ -741,8 +767,8 @@ export default function NotificationsPage() {
               </Button>
             </CardContent>
           </Card>
-        </Grid>
-      </Grid>
+        </Box>
+      </Box>
 
       {/* Recent Notifications */}
       <Card sx={{ mt: 3, borderRadius: 1, border: '1px solid', borderColor: 'divider' }}>
