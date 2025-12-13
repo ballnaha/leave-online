@@ -2572,6 +2572,10 @@ export default function ApprovalPage() {
                                   <Typography sx={{ fontSize: '0.9rem', fontWeight: 600 }}>{approval.leaveRequest.user.position || '-'}</Typography>
                                 </Box>
                                 <Box>
+                                  <Typography sx={{ fontSize: '0.8rem', color: 'text.secondary' }}>บริษัท</Typography>
+                                  <Typography sx={{ fontSize: '0.9rem', fontWeight: 600 }}>{approval.leaveRequest.user.company || '-'}</Typography>
+                                </Box>
+                                <Box>
                                   <Typography sx={{ fontSize: '0.8rem', color: 'text.secondary' }}>ฝ่าย</Typography>
                                   <Typography sx={{ fontSize: '0.9rem', fontWeight: 600 }}>{approval.leaveRequest.user.department || '-'}</Typography>
                                 </Box>
@@ -2843,11 +2847,11 @@ export default function ApprovalPage() {
                       </Box>
                     </Box>
 
-                    {/* Row 2: Department / Section - Full width, left aligned */}
+                    {/* Row 2: Company / Department / Section - Full width, left aligned */}
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 1 }}>
                       <Building size={14} color="#94A3B8" variant="Bold" />
                       <Typography sx={{ fontSize: '0.75rem', color: '#64748B' }}>
-                        {approval.leaveRequest.user.department || '-'} {approval.leaveRequest.user.section ? `/ ${approval.leaveRequest.user.section}` : ''}
+                        {approval.leaveRequest.user.company || '-'} / {approval.leaveRequest.user.department || '-'} {approval.leaveRequest.user.section ? `/ ${approval.leaveRequest.user.section}` : ''}
                       </Typography>
                     </Box>
 
@@ -2954,6 +2958,12 @@ export default function ApprovalPage() {
                           <User size={16} variant="Bold" color={PRIMARY_COLOR} /> ข้อมูลพนักงาน
                         </Typography>
                         <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
+                          <Box>
+                            <Typography sx={{ fontSize: '0.75rem', color: '#94A3B8' }}>บริษัท</Typography>
+                            <Typography sx={{ fontSize: '0.9rem', color: '#334155', fontWeight: 500 }}>
+                              {approval.leaveRequest.user.company || '-'}
+                            </Typography>
+                          </Box>
                           <Box>
                             <Typography sx={{ fontSize: '0.75rem', color: '#94A3B8' }}>ฝ่าย</Typography>
                             <Typography sx={{ fontSize: '0.9rem', color: '#334155', fontWeight: 500 }}>

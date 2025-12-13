@@ -24,13 +24,15 @@ export async function GET(request: NextRequest) {
         whereClause.status = { in: ['pending', 'in_progress'] };
       }
 
-      // Fetch departments and sections for name lookup
-      const [departments, sections] = await Promise.all([
+      // Fetch departments, sections and companies for name lookup
+      const [departments, sections, companies] = await Promise.all([
         prisma.department.findMany({ select: { code: true, name: true } }),
         prisma.section.findMany({ select: { code: true, name: true } }),
+        prisma.company.findMany({ select: { code: true, name: true } }),
       ]);
       const deptMap = new Map(departments.map(d => [d.code, d.name]));
       const sectMap = new Map(sections.map(s => [s.code, s.name]));
+      const companyMap = new Map(companies.map(c => [c.code, c.name]));
 
       const leaveRequests = await prisma.leaveRequest.findMany({
         where: whereClause,
@@ -42,6 +44,7 @@ export async function GET(request: NextRequest) {
               firstName: true,
               lastName: true,
               position: true,
+              company: true,
               department: true,
               section: true,
               shift: true,
@@ -104,6 +107,7 @@ export async function GET(request: NextRequest) {
           cancelledAt: leave.cancelledAt,
           user: {
             ...leave.user,
+            company: companyMap.get(leave.user.company) || leave.user.company,
             department: deptMap.get(leave.user.department) || leave.user.department,
             section: leave.user.section ? (sectMap.get(leave.user.section) || leave.user.section) : null,
           },
@@ -141,13 +145,15 @@ export async function GET(request: NextRequest) {
       // ดังนั้นต้องเช็คว่า leaveRequest.currentLevel == approval.level
     }
 
-    // Fetch departments and sections for name lookup
-    const [departments, sections] = await Promise.all([
+    // Fetch departments, sections and companies for name lookup
+    const [departments, sections, companies] = await Promise.all([
       prisma.department.findMany({ select: { code: true, name: true } }),
       prisma.section.findMany({ select: { code: true, name: true } }),
+      prisma.company.findMany({ select: { code: true, name: true } }),
     ]);
     const deptMap = new Map(departments.map(d => [d.code, d.name]));
     const sectMap = new Map(sections.map(s => [s.code, s.name]));
+    const companyMap = new Map(companies.map(c => [c.code, c.name]));
 
     // ดึง leaveRequestIds ที่ยังมีอยู่ก่อน
     const validLeaveRequestIds = await prisma.leaveRequest.findMany({
@@ -170,6 +176,7 @@ export async function GET(request: NextRequest) {
                 firstName: true,
                 lastName: true,
                 position: true,
+                company: true,
                 department: true,
                 section: true,
                 shift: true,
@@ -243,6 +250,7 @@ export async function GET(request: NextRequest) {
         cancelledAt: approval.leaveRequest.cancelledAt,
         user: {
           ...approval.leaveRequest.user,
+          company: companyMap.get(approval.leaveRequest.user.company) || approval.leaveRequest.user.company,
           department: deptMap.get(approval.leaveRequest.user.department) || approval.leaveRequest.user.department,
           section: approval.leaveRequest.user.section ? (sectMap.get(approval.leaveRequest.user.section) || approval.leaveRequest.user.section) : null,
         },

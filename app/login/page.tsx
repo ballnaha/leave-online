@@ -15,7 +15,7 @@ import {
 import { Lock, Eye, EyeOff, ArrowRight, User } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { signIn, useSession } from 'next-auth/react';
+import { getSession, signIn, useSession } from 'next-auth/react';
 import { useToastr } from '@/app/components/Toastr';
 import { APP_VERSION } from '@/lib/version';
 
@@ -42,11 +42,23 @@ function LoginPageContent() {
 
     // Redirect to home if already logged in
     useEffect(() => {
-        if (status === 'authenticated') {
-            router.push('/');
+        if (status !== 'authenticated') return;
+
+        let cancelled = false;
+        (async () => {
+            const callbackUrl = searchParams.get('callbackUrl');
+            const role = session?.user?.role ?? (await getSession())?.user?.role;
+            const destination = role === 'admin' ? '/admin' : (callbackUrl || '/');
+
+            if (cancelled) return;
+            router.replace(destination);
             router.refresh();
-        }
-    }, [status, router]);
+        })();
+
+        return () => {
+            cancelled = true;
+        };
+    }, [status, router, session?.user?.role, searchParams]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -75,9 +87,13 @@ function LoginPageContent() {
                 toastr.error('รหัสพนักงานหรือรหัสผ่านไม่ถูกต้อง');
             } else if (result?.ok) {
                 toastr.success('เข้าสู่ระบบสำเร็จ');
-                // Redirect to home page after successful login
+
+                const callbackUrl = searchParams.get('callbackUrl');
+                const updatedSession = await getSession();
+                const destination = updatedSession?.user?.role === 'admin' ? '/admin' : (callbackUrl || '/');
+
                 setTimeout(() => {
-                    router.push('/');
+                    router.replace(destination);
                     router.refresh();
                 }, 500);
             }

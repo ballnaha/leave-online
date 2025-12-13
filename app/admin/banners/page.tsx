@@ -630,6 +630,7 @@ export default function BannersPage() {
                           height: 80,
                           bgcolor: alpha(theme.palette.text.secondary, 0.1),
                           color: 'text.secondary',
+
                         }}
                       >
                         <Image size={40} variant="Bold" color={theme.palette.text.secondary} />
@@ -682,7 +683,7 @@ export default function BannersPage() {
                             width: 80,
                             height: 45,
                             objectFit: 'cover',
-                            borderRadius: 1,
+                            borderRadius: 0.25,
                             border: '1px solid',
                             borderColor: 'divider',
                           }}

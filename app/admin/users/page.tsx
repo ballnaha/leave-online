@@ -427,7 +427,7 @@ export default function UsersPage() {
       </Box>
 
       {/* Stats Cards */}
-      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: 'repeat(4, 1fr)' }, gap: 3, mb: 4 }}>
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'repeat(2, 1fr)', sm: 'repeat(2, 1fr)', md: 'repeat(4, 1fr)' }, gap: 1.5, mb: 3 }}>
         <StatCard
           title="พนักงานทั้งหมด"
           value={totalUsers}
@@ -521,7 +521,7 @@ export default function UsersPage() {
       {/* Search & Filters */}
       <Paper
         sx={{
-          p: 2.5,
+          p: 2,
           mb: 3,
           borderRadius: 1,
           border: '1px solid',
@@ -529,15 +529,19 @@ export default function UsersPage() {
           boxShadow: 'none',
         }}
       >
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
+        <Box sx={{ 
+          display: 'grid', 
+          gridTemplateColumns: { xs: '1fr 1fr', sm: 'repeat(2, 1fr)', md: '2fr 1fr 1fr 1fr auto auto' }, 
+          gap: 1.5, 
+          alignItems: 'center' 
+        }}>
           <TextField
             placeholder="ค้นหาชื่อ, รหัสพนักงาน..."
             size="small"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             sx={{
-              flex: 1,
-              minWidth: 200,
+              gridColumn: { xs: '1 / -1', md: 'auto' },
               '& .MuiOutlinedInput-root': {
                 borderRadius: 1,
                 bgcolor: 'background.default',
@@ -559,7 +563,7 @@ export default function UsersPage() {
           />
 
           {/* Company Filter */}
-          <FormControl size="small" sx={{ minWidth: 140 }}>
+          <FormControl size="small" fullWidth>
             <InputLabel>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                 <Building size={16} color={theme.palette.text.secondary} />
@@ -570,6 +574,7 @@ export default function UsersPage() {
               value={companyFilter}
               onChange={(e) => setCompanyFilter(e.target.value)}
               label="บริษัท"
+              sx={{ borderRadius: 1 }}
             >
               <MenuItem value="all">ทั้งหมด</MenuItem>
               {uniqueCompanies.map((company) => (
@@ -581,7 +586,7 @@ export default function UsersPage() {
           </FormControl>
 
           {/* Department Filter */}
-          <FormControl size="small" sx={{ minWidth: 140 }}>
+          <FormControl size="small" fullWidth>
             <InputLabel>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                 <Layer size={16} color={theme.palette.text.secondary} />
@@ -592,6 +597,7 @@ export default function UsersPage() {
               value={departmentFilter}
               onChange={(e) => setDepartmentFilter(e.target.value)}
               label="ฝ่าย"
+              sx={{ borderRadius: 1 }}
             >
               <MenuItem value="all">ทั้งหมด</MenuItem>
               {uniqueDepartments.map((dept) => (
@@ -603,7 +609,7 @@ export default function UsersPage() {
           </FormControl>
 
           {/* Status Filter */}
-          <FormControl size="small" sx={{ minWidth: 140 }}>
+          <FormControl size="small" fullWidth>
             <InputLabel>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                 <Filter size={16} color={theme.palette.text.secondary} />
@@ -614,6 +620,7 @@ export default function UsersPage() {
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
               label="สถานะ"
+              sx={{ borderRadius: 1 }}
             >
               <MenuItem value="all">ทั้งหมด</MenuItem>
               <MenuItem value="active">เปิดใช้งาน</MenuItem>
@@ -621,34 +628,43 @@ export default function UsersPage() {
             </Select>
           </FormControl>
 
-          <Chip
-            label={`${filteredUsers.length} รายการ`}
-            size="small"
-            sx={{
-              bgcolor: alpha(theme.palette.primary.main, 0.1),
-              color: 'primary.main',
-              fontWeight: 600,
-            }}
-          />
-          <Tooltip title="รีเฟรชข้อมูล">
-            <IconButton
-              onClick={fetchUsers}
-              disabled={loading}
+          <Box sx={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: 1, 
+            gridColumn: { xs: '1 / -1', md: 'auto' },
+            justifyContent: { xs: 'flex-end', md: 'flex-start' }
+          }}>
+            <Chip
+              label={`${filteredUsers.length} รายการ`}
+              size="small"
               sx={{
-                bgcolor: 'background.default',
-                '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.1) },
+                bgcolor: alpha(theme.palette.primary.main, 0.1),
+                color: 'primary.main',
+                fontWeight: 600,
               }}
-            >
-              <Refresh2
-                size={20}
-                color={theme.palette.text.secondary}
-                style={{
-                  transition: 'transform 0.3s ease',
-                  transform: loading ? 'rotate(360deg)' : 'rotate(0deg)',
+            />
+            <Tooltip title="รีเฟรชข้อมูล">
+              <IconButton
+                onClick={fetchUsers}
+                disabled={loading}
+                size="small"
+                sx={{
+                  bgcolor: 'background.default',
+                  '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.1) },
                 }}
-              />
-            </IconButton>
-          </Tooltip>
+              >
+                <Refresh2
+                  size={20}
+                  color={theme.palette.text.secondary}
+                  style={{
+                    transition: 'transform 0.3s ease',
+                    transform: loading ? 'rotate(360deg)' : 'rotate(0deg)',
+                  }}
+                />
+              </IconButton>
+            </Tooltip>
+          </Box>
         </Box>
       </Paper>
 

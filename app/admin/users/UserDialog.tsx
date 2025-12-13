@@ -21,6 +21,7 @@ import {
   Chip,
   alpha,
   useTheme,
+  useMediaQuery,
   Autocomplete,
   Checkbox,
 } from '@mui/material';
@@ -86,6 +87,7 @@ export default function UserDialog({
   user,
 }: UserDialogProps) {
   const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const toastr = useToastr();
   const [loading, setLoading] = useState(false);
   const [companies, setCompanies] = useState<Company[]>([]);
@@ -348,10 +350,11 @@ export default function UserDialog({
         onClose={onClose} 
         maxWidth="md" 
         fullWidth
+        fullScreen={isMobile}
         PaperProps={{
           sx: {
-            borderRadius: 1,
-            maxHeight: '90vh',
+            borderRadius: isMobile ? 0 : 1,
+            maxHeight: isMobile ? '100vh' : '90vh',
           }
         }}
       >

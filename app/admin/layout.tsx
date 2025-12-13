@@ -470,6 +470,7 @@ export default function AdminLayout({
                                             <ListItemIcon
                                                 sx={{
                                                     minWidth: collapsed ? 'auto' : 40,
+                                                    justifyContent: 'center',
                                                     color: (item.path && isActiveRoute(item.path)) ? 'white' : 'text.secondary',
                                                     transition: 'all 0.25s ease',
                                                     transform: (item.path && isActiveRoute(item.path)) ? 'scale(1.1)' : 'scale(1)',
@@ -495,8 +496,8 @@ export default function AdminLayout({
                                                     overflow: 'hidden',
                                                     whiteSpace: 'nowrap',
                                                     transition: 'opacity 0.25s ease, width 0.35s ease',
-                                                    flex: 1,
-                                                    display: 'flex',
+                                                    flex: collapsed ? 'none' : 1,
+                                                    display: collapsed ? 'none' : 'flex',
                                                     alignItems: 'center',
                                                     justifyContent: 'space-between',
                                                 }}
@@ -590,6 +591,7 @@ export default function AdminLayout({
                 >
                     <ListItemIcon sx={{
                         minWidth: collapsed ? 'auto' : 40,
+                        justifyContent: 'center',
                         transition: 'min-width 0.35s cubic-bezier(0.4, 0, 0.2, 1)',
                     }}>
                         <Home2 size={20} variant="Outline" color="#6C63FF" />

@@ -13,6 +13,7 @@ import {
   Divider,
   alpha,
   useTheme,
+  useMediaQuery,
   IconButton,
 } from '@mui/material';
 import {
@@ -112,6 +113,7 @@ export default function UserViewDialog({
   sections,
 }: UserViewDialogProps) {
   const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
   if (!user) return null;
 
@@ -160,9 +162,10 @@ export default function UserViewDialog({
       onClose={onClose} 
       maxWidth="md" 
       fullWidth
+      fullScreen={isMobile}
       PaperProps={{
         sx: {
-          borderRadius:1,
+          borderRadius: isMobile ? 0 : 1,
           overflow: 'hidden',
         },
       }}
