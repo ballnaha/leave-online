@@ -875,7 +875,9 @@ export default function LeavePage() {
                                     bgcolor: currentTab === 'all'
                                         ? '#667eea'
                                         : (leaveTypeConfig[currentTab]?.color || '#667eea'),
-                                    transition: 'background-color 0.3s ease',
+                                    // NOTE: overriding `transition` replaces MUI's default left/width animations.
+                                    // Keep the underline movement smooth when switching tabs.
+                                    transition: 'left 0.25s ease, width 0.25s ease, background-color 0.3s ease',
                                 },
                                 '& .MuiTabs-scroller': {
                                     scrollBehavior: 'smooth',

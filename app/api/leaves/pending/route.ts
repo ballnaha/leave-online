@@ -60,6 +60,15 @@ export async function GET(request: NextRequest) {
                   position: true,
                 },
               },
+              actedBy: {
+                select: {
+                  id: true,
+                  firstName: true,
+                  lastName: true,
+                  position: true,
+                  role: true,
+                },
+              },
             },
           },
         },
@@ -177,6 +186,15 @@ export async function GET(request: NextRequest) {
                     firstName: true,
                     lastName: true,
                     position: true,
+                  },
+                },
+                actedBy: {
+                  select: {
+                    id: true,
+                    firstName: true,
+                    lastName: true,
+                    position: true,
+                    role: true,
                   },
                 },
               },

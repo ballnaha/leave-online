@@ -719,7 +719,7 @@ const LeaveDetailDrawer: React.FC<LeaveDetailDrawerProps> = ({ open, onClose, le
                                                     }
                                                 </Typography>
                                                 <Typography sx={{ fontSize: '0.8rem', color: '#64748B' }}>
-                                                    {t('total_days_label', 'รวม')} {leave.totalDays} {t('leave_days_unit', 'วัน')}
+                                                    
                                                     {leave.startTime && leave.endTime &&
                                                         ` • ${leave.startTime} - ${leave.endTime}`
                                                     }
@@ -1032,10 +1032,17 @@ const LeaveDetailDrawer: React.FC<LeaveDetailDrawerProps> = ({ open, onClose, le
                                                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
 
                                                                     <Typography sx={{ color: '#475569', fontSize: '0.85rem' }}>
-                                                                        {approval.approver ? `${approval.approver.firstName} ${approval.approver.lastName}` : t('not_specified', 'ไม่ระบุ')}
-                                                                        {approval.approver?.position && (
+                                                                        {approval.actedBy
+                                                                            ? `${approval.actedBy.firstName} ${approval.actedBy.lastName}`
+                                                                            : (approval.approver ? `${approval.approver.firstName} ${approval.approver.lastName}` : t('not_specified', 'ไม่ระบุ'))}
+                                                                        {(approval.actedBy?.position || approval.approver?.position) && (
                                                                             <Typography component="span" sx={{ color: '#94A3B8', fontSize: '0.8rem' }}>
-                                                                                {' '}• {approval.approver.position}
+                                                                                {' '}• {approval.actedBy?.position || approval.approver?.position}
+                                                                            </Typography>
+                                                                        )}
+                                                                        {approval.actedBy && approval.approver && (
+                                                                            <Typography component="span" sx={{ color: '#94A3B8', fontSize: '0.8rem', ml: 0.75 }}>
+                                                                                ({t('approved_on_behalf', 'อนุมัติแทน')} {approval.approver.firstName} {approval.approver.lastName})
                                                                             </Typography>
                                                                         )}
                                                                     </Typography>

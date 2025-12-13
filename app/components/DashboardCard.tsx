@@ -617,7 +617,7 @@ const DashboardCard: React.FC<DashboardCardProps> = ({ leaveTypes, leaveRequests
                             gap: 0.5,
                             mb: 1,
                             py: 0.625,
-                            px: 1,
+                            px: 2,
                             background: 'linear-gradient(135deg, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0.08) 100%)',
                             borderRadius: 1,
                             border: '1px solid rgba(255,255,255,0.12)',
@@ -651,7 +651,7 @@ const DashboardCard: React.FC<DashboardCardProps> = ({ leaveTypes, leaveRequests
                                     overflow: 'hidden',
                                     position: 'relative',
                                     boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.1)',
-                                    mt: 0.5,
+                                    
                                 }}>
                                     <Box sx={{
                                         position: 'absolute',

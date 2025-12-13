@@ -2605,10 +2605,17 @@ export default function ApprovalPage() {
                                         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                                           <Box>
                                             <Typography sx={{ fontSize: '0.9rem', fontWeight: 600, lineHeight: 1.2 }}>
-                                              {hist.approver.firstName} {hist.approver.lastName}
+                                              {hist.actedBy
+                                                ? `${hist.actedBy.firstName} ${hist.actedBy.lastName}`
+                                                : `${hist.approver.firstName} ${hist.approver.lastName}`}
+                                              {hist.actedBy && (
+                                                <Typography component="span" sx={{ ml: 1, fontSize: '0.8rem', color: 'text.secondary', fontWeight: 500 }}>
+                                                  ({t('approved_on_behalf', 'อนุมัติแทน')} {hist.approver.firstName} {hist.approver.lastName})
+                                                </Typography>
+                                              )}
                                             </Typography>
                                             <Typography sx={{ fontSize: '0.75rem', color: '#64748B' }}>
-                                              {hist.approver.position || '-'}
+                                              {(hist.actedBy?.position || hist.approver.position) || '-'}
                                             </Typography>
                                           </Box>
                                           <Chip

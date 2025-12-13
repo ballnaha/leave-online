@@ -29,7 +29,8 @@ model User {
   position           String?
   managedDepartments String?            @db.Text
   managedSections    String?            @db.Text
-  leaveApprovals     LeaveApproval[]
+  leaveApprovals     LeaveApproval[]    @relation("LeaveApprovalApprover")
+  actedLeaveApprovals LeaveApproval[]   @relation("LeaveApprovalActedBy")
   leaveRequests      LeaveRequest[]
   notifications      NotificationLog[]
   sessions           Session[]
@@ -191,6 +192,7 @@ model LeaveApproval {
   leaveRequestId Int
   level          Int
   approverId     Int
+  actedById      Int?
   status         String       @default("pending")
   comment        String?      @db.Text
   actionAt       DateTime?
@@ -198,11 +200,13 @@ model LeaveApproval {
   reminderCount  Int          @default(0)
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
-  approver       User         @relation(fields: [approverId], references: [id])
+  approver       User         @relation("LeaveApprovalApprover", fields: [approverId], references: [id])
+  actedBy        User?        @relation("LeaveApprovalActedBy", fields: [actedById], references: [id], onDelete: SetNull)
   leaveRequest   LeaveRequest @relation(fields: [leaveRequestId], references: [id], onDelete: Cascade)
 
   @@unique([leaveRequestId, level])
   @@index([approverId], map: "leave_approvals_approverId_fkey")
+  @@index([actedById], map: "leave_approvals_actedById_fkey")
   @@map("leave_approvals")
 }
 

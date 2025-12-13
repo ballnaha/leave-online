@@ -108,6 +108,15 @@ export async function GET(request: NextRequest) {
                 role: true,
               },
             },
+            actedBy: {
+              select: {
+                id: true,
+                employeeId: true,
+                firstName: true,
+                lastName: true,
+                role: true,
+              },
+            },
           },
         },
         attachments: true,

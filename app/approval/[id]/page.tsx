@@ -124,6 +124,13 @@ interface LeaveDetail {
       lastName: string;
       position?: string;
     };
+    actedBy?: {
+      id: number;
+      firstName: string;
+      lastName: string;
+      position?: string;
+      role?: string;
+    } | null;
   }>;
 }
 
@@ -189,8 +196,8 @@ export default function ApprovalDetailPage() {
       const userId = parseInt(session?.user?.id || '0');
       const userRole = session?.user?.role;
 
-      // Admin/HR Manager/HR can view and approve all
-      const isAdminOrHR = ['admin', 'hr_manager', 'hr'].includes(userRole || '');
+      // Admin can view and approve all
+      const isAdmin = (userRole || '') === 'admin';
 
       // Check if leave status is pending or in_progress
       const isPendingOrInProgress = ['pending', 'in_progress'].includes(data.status);
@@ -205,7 +212,7 @@ export default function ApprovalDetailPage() {
         leaveStatus: data.status,
         userId,
         userRole,
-        isAdminOrHR,
+        isAdmin,
         isPendingOrInProgress,
         isInApprovalList,
         approvalHistory: data.approvalHistory?.map((h: any) => ({
@@ -215,7 +222,7 @@ export default function ApprovalDetailPage() {
         }))
       });
 
-      setCanApprove(isPendingOrInProgress && (isAdminOrHR || isInApprovalList));
+      setCanApprove(isPendingOrInProgress && (isAdmin || isInApprovalList));
     } catch (error) {
       console.error('Error fetching leave detail:', error);
       setError('ไม่สามารถโหลดข้อมูลใบลาได้');
@@ -859,7 +866,14 @@ export default function ApprovalDetailPage() {
                       <Box sx={{ flex: 1 }}>
                         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
                           <Typography variant="body2" fontWeight={600}>
-                            {hist.approver.firstName} {hist.approver.lastName}
+                            {hist.actedBy
+                              ? `${hist.actedBy.firstName} ${hist.actedBy.lastName}`
+                              : `${hist.approver.firstName} ${hist.approver.lastName}`}
+                            {hist.actedBy && (
+                              <Typography component="span" sx={{ ml: 1, color: 'text.secondary', fontSize: '0.85rem' }}>
+                                ({t('approved_on_behalf', 'อนุมัติแทน')} {hist.approver.firstName} {hist.approver.lastName})
+                              </Typography>
+                            )}
                           </Typography>
                           <Chip
                             label={statusConfig[hist.status]?.label || hist.status}

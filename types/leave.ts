@@ -10,6 +10,13 @@ export interface LeaveApproval {
         lastName: string;
         position: string | null;
     } | null;
+    actedBy?: {
+        id: number;
+        firstName: string;
+        lastName: string;
+        position: string | null;
+        role?: string;
+    } | null;
 }
 
 export interface LeaveAttachment {

@@ -68,6 +68,7 @@ export async function POST(
     const { id } = await params;
     const leaveRequestId = parseInt(id);
     const approverId = parseInt(session.user.id);
+    const isAdmin = session.user.role === 'admin';
     const body = await request.json();
     const { action, comment } = body; // action: 'approve' | 'reject'
 
@@ -101,10 +102,19 @@ export async function POST(
       );
     }
 
-    // หา approval step ที่รอการอนุมัติจาก user นี้
-    const pendingApproval = leaveRequest.approvals.find(
-      (a) => a.approverId === approverId && a.status === 'pending'
-    );
+    // หา approval step ที่ "ถึงคิว" แล้วเท่านั้น
+    // - ปกติ: ต้องเป็น approver คนนี้ และเป็น level ปัจจุบัน
+    // - Admin: สามารถทำแทนได้ทุกคน โดยทำกับ level ปัจจุบัน
+    const pendingApproval = isAdmin
+      ? leaveRequest.approvals.find(
+          (a) => a.level === leaveRequest.currentLevel && a.status === 'pending'
+        )
+      : leaveRequest.approvals.find(
+          (a) =>
+            a.approverId === approverId &&
+            a.level === leaveRequest.currentLevel &&
+            a.status === 'pending'
+        );
 
     if (!pendingApproval) {
       return NextResponse.json(
@@ -134,6 +144,7 @@ export async function POST(
           status: 'approved',
           comment,
           actionAt: now,
+          ...(isAdmin ? { actedById: approverId } : {}),
         },
       });
 
@@ -212,6 +223,7 @@ export async function POST(
           status: 'rejected',
           comment,
           actionAt: now,
+          ...(isAdmin ? { actedById: approverId } : {}),
         },
       });
 

@@ -61,6 +61,15 @@ export async function GET(
                 role: true,
               },
             },
+            actedBy: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                position: true,
+                role: true,
+              },
+            },
           },
         },
       },
@@ -112,6 +121,7 @@ export async function GET(
         comment: a.comment,
         actionAt: a.actionAt,
         approver: a.approver,
+        actedBy: (a as any).actedBy || null,
       })),
     };
 

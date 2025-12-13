@@ -48,6 +48,15 @@ export async function GET(request: NextRequest) {
                                     position: true,
                                 },
                             },
+                            actedBy: {
+                                select: {
+                                    id: true,
+                                    firstName: true,
+                                    lastName: true,
+                                    position: true,
+                                    role: true,
+                                },
+                            },
                         },
                         orderBy: { level: 'asc' },
                     },

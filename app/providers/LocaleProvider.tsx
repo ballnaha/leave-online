@@ -169,6 +169,7 @@ const messages: Record<LocaleCode, Record<string, string>> = {
     cancel_reason_label: "เหตุผล",
     cancelled_at: "ยกเลิกเมื่อ",
     approval_status: "สถานะการอนุมัติ",
+    approved_on_behalf: "อนุมัติแทน",
     order_no: "ลำดับที่",
     not_specified: "ไม่ระบุ",
     submitted_at: "ยื่นเมื่อ",

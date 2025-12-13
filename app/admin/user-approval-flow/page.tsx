@@ -24,6 +24,7 @@ import {
   Avatar,
   alpha,
   useTheme,
+  useMediaQuery,
   Skeleton,
   Dialog,
   DialogTitle,
@@ -143,15 +144,29 @@ function StatCard({ title, value, icon, color, subtitle }: StatCardProps) {
           transform: 'translateY(-4px)',
           boxShadow: '0 8px 30px rgba(0,0,0,0.08)',
         },
+        '@media (hover: none)': {
+          '&:hover': {
+            transform: 'none',
+            boxShadow: '0 4px 20px rgba(0,0,0,0.04)',
+          },
+        },
       }}
     >
-      <CardContent sx={{ p: 3 }}>
+      <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
         <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
           <Box>
             <Typography variant="body2" color="text.secondary" fontWeight={500} gutterBottom>
               {title}
             </Typography>
-            <Typography variant="h3" fontWeight={700} sx={{ color: colorMap[color].main }}>
+            <Typography
+              variant="h3"
+              fontWeight={700}
+              sx={{
+                color: colorMap[color].main,
+                fontSize: { xs: '1.6rem', sm: '2.125rem', md: '3rem' },
+                lineHeight: 1.15,
+              }}
+            >
               {value}
             </Typography>
             {subtitle && (
@@ -162,8 +177,8 @@ function StatCard({ title, value, icon, color, subtitle }: StatCardProps) {
           </Box>
           <Avatar
             sx={{
-              width: 56,
-              height: 56,
+              width: { xs: 48, sm: 56 },
+              height: { xs: 48, sm: 56 },
               bgcolor: colorMap[color].light,
               color: colorMap[color].main,
             }}
@@ -200,6 +215,7 @@ function TableSkeleton() {
 
 export default function UserApprovalFlowPage() {
   const theme = useTheme();
+  const fullScreenDialog = useMediaQuery(theme.breakpoints.down('md'));
   const toastr = useToastr();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -566,6 +582,8 @@ export default function UserApprovalFlowPage() {
               border: '1px solid',
               borderColor: 'divider',
               '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.1) },
+              width: { xs: 44, sm: 'auto' },
+              height: { xs: 44, sm: 'auto' },
             }}
           >
             <Refresh2 size={20} color="#6C63FF" />
@@ -577,9 +595,9 @@ export default function UserApprovalFlowPage() {
       <Box
         sx={{
           display: 'grid',
-          gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: 'repeat(3, 1fr)' },
-          gap: 3,
-          mb: 4,
+          gridTemplateColumns: { xs: 'repeat(2, 1fr)', sm: 'repeat(2, 1fr)', md: 'repeat(3, 1fr)' },
+          gap: { xs: 2, sm: 3 },
+          mb: { xs: 3, sm: 4 },
         }}
       >
         <StatCard
@@ -672,15 +690,15 @@ export default function UserApprovalFlowPage() {
       {/* Search and Filters */}
       <Paper
         sx={{
-          p: 2,
+          p: { xs: 2, sm: 2 },
           mb: 3,
           borderRadius: 1,
           border: '1px solid',
           borderColor: 'divider',
           boxShadow: 'none',
-          display: 'flex',
+          display: 'grid',
+          gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: '2fr 1fr 1fr 1fr auto' },
           gap: 2,
-          flexWrap: 'wrap',
           alignItems: 'center',
         }}
       >
@@ -689,7 +707,10 @@ export default function UserApprovalFlowPage() {
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           size="small"
-          sx={{ minWidth: 250, flex: 1 }}
+          fullWidth
+          sx={{
+            gridColumn: { xs: '1 / -1', sm: '1 / -1', md: 'auto' },
+          }}
           InputProps={{
             startAdornment: (
               <InputAdornment position="start">
@@ -699,7 +720,7 @@ export default function UserApprovalFlowPage() {
           }}
         />
 
-        <FormControl size="small" sx={{ minWidth: 150 }}>
+        <FormControl size="small" fullWidth>
           <InputLabel>บริษัท</InputLabel>
           <Select
             value={companyFilter}
@@ -713,7 +734,7 @@ export default function UserApprovalFlowPage() {
           </Select>
         </FormControl>
 
-        <FormControl size="small" sx={{ minWidth: 150 }}>
+        <FormControl size="small" fullWidth>
           <InputLabel>ฝ่าย</InputLabel>
           <Select
             value={departmentFilter}
@@ -727,7 +748,13 @@ export default function UserApprovalFlowPage() {
           </Select>
         </FormControl>
 
-        <FormControl size="small" sx={{ minWidth: 150 }}>
+        <FormControl
+          size="small"
+          fullWidth
+          sx={{
+            gridColumn: { xs: '1 / -1', sm: '1 / -1', md: 'auto' },
+          }}
+        >
           <InputLabel>แผนก</InputLabel>
           <Select
             value={sectionFilter}
@@ -748,6 +775,8 @@ export default function UserApprovalFlowPage() {
             bgcolor: alpha(theme.palette.primary.main, 0.1),
             color: 'primary.main',
             fontWeight: 600,
+            gridColumn: { xs: '1 / -1', sm: '1 / -1', md: 'auto' },
+            justifySelf: { md: 'end' },
           }}
         />
       </Paper>
@@ -766,8 +795,8 @@ export default function UserApprovalFlowPage() {
         </Typography>
       </Alert>
 
-      {/* Mobile Card View (Visible on xs, sm) */}
-      <Box sx={{ display: { xs: 'flex', md: 'none' }, flexDirection: 'column', gap: 2 }}>
+      {/* Mobile/Tablet Card View (Visible on xs, sm, md) */}
+      <Box sx={{ display: { xs: 'flex', lg: 'none' }, flexDirection: 'column', gap: 2 }}>
         {loading ? (
           Array.from({ length: 3 }).map((_, i) => (
             <Skeleton key={i} variant="rounded" height={150} sx={{ borderRadius: 1 }} />
@@ -879,11 +908,11 @@ export default function UserApprovalFlowPage() {
         )}
       </Box>
 
-      {/* Desktop Table View (Hidden on xs, sm) */}
+      {/* Desktop Table View (Hidden on mobile/tablet) */}
       <TableContainer
         component={Paper}
         sx={{
-          display: { xs: 'none', md: 'block' },
+          display: { xs: 'none', lg: 'block' },
           borderRadius: 1,
           border: '1px solid',
           borderColor: 'divider',
@@ -1088,17 +1117,26 @@ export default function UserApprovalFlowPage() {
         onClose={handleCloseDialog}
         maxWidth="sm"
         fullWidth
+        fullScreen={fullScreenDialog}
+        scroll="paper"
         PaperProps={{
-          sx: { borderRadius: 1 }
+          sx: {
+            borderRadius: fullScreenDialog ? 0 : 1,
+            maxHeight: fullScreenDialog ? '100%' : '90vh',
+          }
         }}
       >
-        <DialogTitle sx={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          borderBottom: '1px solid',
-          borderColor: 'divider',
-        }}>
+        <DialogTitle
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            borderBottom: '1px solid',
+            borderColor: 'divider',
+            px: { xs: 2, sm: 3 },
+            py: { xs: 2, sm: 2 },
+          }}
+        >
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <UserEdit size={20} color="#6C63FF" />
             <Typography variant="h6" fontWeight={600}>
@@ -1110,7 +1148,7 @@ export default function UserApprovalFlowPage() {
           </IconButton>
         </DialogTitle>
 
-        <DialogContent sx={{ pt: 3, mt: 2 }}>
+        <DialogContent sx={{ p: { xs: 2, sm: 3 } }}>
           {/* Selected User Info */}
           {selectedUser && (
             <Paper
@@ -1122,7 +1160,7 @@ export default function UserApprovalFlowPage() {
                 bgcolor: alpha(theme.palette.primary.main, 0.04),
               }}
             >
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <Box sx={{ display: 'flex', alignItems: { xs: 'flex-start', sm: 'center' }, gap: 2, flexWrap: 'wrap' }}>
                 <Avatar
                   src={selectedUser.avatar}
                   sx={{ width: 48, height: 48, bgcolor: theme.palette.primary.main }}
@@ -1148,7 +1186,16 @@ export default function UserApprovalFlowPage() {
           )}
 
           {/* Approval Flow List */}
-          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+          <Box
+            sx={{
+              display: 'flex',
+              alignItems: { xs: 'stretch', sm: 'center' },
+              justifyContent: 'space-between',
+              flexDirection: { xs: 'column', sm: 'row' },
+              gap: { xs: 1.5, sm: 2 },
+              mb: 2,
+            }}
+          >
             <Typography variant="subtitle2" fontWeight={600}>
               ลำดับผู้อนุมัติ
             </Typography>
@@ -1157,7 +1204,8 @@ export default function UserApprovalFlowPage() {
               size="small"
               startIcon={<Add size={16} color="#6C63FF" />}
               onClick={() => setAddApproverDialogOpen(true)}
-              sx={{ borderRadius: 1 }}
+              fullWidth={fullScreenDialog}
+              sx={{ borderRadius: 1, alignSelf: { xs: 'stretch', sm: 'auto' } }}
             >
               เพิ่มผู้อนุมัติ
             </Button>
@@ -1195,6 +1243,7 @@ export default function UserApprovalFlowPage() {
                       borderRadius: 1.5,
                       display: 'flex',
                       alignItems: 'center',
+                      flexWrap: 'wrap',
                       gap: 1.5,
                     }}
                   >
@@ -1217,7 +1266,7 @@ export default function UserApprovalFlowPage() {
                     <Avatar src={flow.approver.avatar} sx={{ width: 36, height: 36 }}>
                       {flow.approver.firstName[0]}
                     </Avatar>
-                    <Box sx={{ flex: 1 }}>
+                    <Box sx={{ flex: 1, minWidth: 0 }}>
                       <Typography variant="body2" fontWeight={500}>
                         {flow.approver.firstName} {flow.approver.lastName}
                       </Typography>
@@ -1228,12 +1277,13 @@ export default function UserApprovalFlowPage() {
                     <Chip
                       label={roleLabels[flow.approver.role]}
                       size="small"
-                      sx={{ height: 22, fontSize: '0.7rem' }}
+                      sx={{ height: 22, fontSize: '0.7rem', flexShrink: 0 }}
                     />
                     <IconButton
                       size="small"
                       color="error"
                       onClick={() => handleRemoveApprover(flow.level)}
+                      sx={{ flexShrink: 0 }}
                     >
                       <Trash size={16} color="#EF4444" />
                     </IconButton>
@@ -1265,6 +1315,7 @@ export default function UserApprovalFlowPage() {
                 bgcolor: alpha(theme.palette.warning.main, 0.04),
                 display: 'flex',
                 alignItems: 'center',
+                flexWrap: 'wrap',
                 gap: 1.5,
               }}
             >
@@ -1295,8 +1346,18 @@ export default function UserApprovalFlowPage() {
           </Box>
         </DialogContent>
 
-        <DialogActions sx={{ px: 3, py: 2, borderTop: '1px solid', borderColor: 'divider' }}>
-          <Button onClick={handleCloseDialog} sx={{ borderRadius: 1 }}>
+        <DialogActions
+          sx={{
+            px: { xs: 2, sm: 3 },
+            py: 2,
+            borderTop: '1px solid',
+            borderColor: 'divider',
+            flexDirection: { xs: 'column', sm: 'row' },
+            gap: { xs: 1, sm: 1.5 },
+            alignItems: { xs: 'stretch', sm: 'center' },
+          }}
+        >
+          <Button onClick={handleCloseDialog} fullWidth={fullScreenDialog} sx={{ borderRadius: 1 }}>
             ยกเลิก
           </Button>
           <Button
@@ -1304,6 +1365,7 @@ export default function UserApprovalFlowPage() {
             onClick={handleSaveFlow}
             disabled={saving}
             startIcon={<TickSquare size={16} color="#fff" />}
+            fullWidth={fullScreenDialog}
             sx={{ borderRadius: 1 }}
           >
             {saving ? 'กำลังบันทึก...' : 'บันทึก'}
@@ -1317,17 +1379,29 @@ export default function UserApprovalFlowPage() {
         onClose={() => setAddApproverDialogOpen(false)}
         maxWidth="sm"
         fullWidth
+        fullScreen={fullScreenDialog}
+        scroll="paper"
         PaperProps={{
-          sx: { borderRadius: 1 }
+          sx: {
+            borderRadius: fullScreenDialog ? 0 : 1,
+            maxHeight: fullScreenDialog ? '100%' : '90vh',
+          }
         }}
       >
-        <DialogTitle sx={{ borderBottom: '1px solid', borderColor: 'divider' }}>
+        <DialogTitle
+          sx={{
+            borderBottom: '1px solid',
+            borderColor: 'divider',
+            px: { xs: 2, sm: 3 },
+            py: { xs: 2, sm: 2 },
+          }}
+        >
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <Add size={20} color="#6C63FF" />
             เพิ่มผู้อนุมัติ
           </Box>
         </DialogTitle>
-        <DialogContent sx={{ pt: 3, mt: 2 }}>
+        <DialogContent sx={{ p: { xs: 2, sm: 3 } }}>
           <Autocomplete
             options={allApprovers.filter(a => !approvalFlows.some(f => f.approverId === a.id))}
             getOptionLabel={(option) => `${option.firstName} ${option.lastName}`}
@@ -1362,14 +1436,25 @@ export default function UserApprovalFlowPage() {
             )}
           />
         </DialogContent>
-        <DialogActions sx={{ px: 3, py: 2, borderTop: '1px solid', borderColor: 'divider' }}>
-          <Button onClick={() => setAddApproverDialogOpen(false)} sx={{ borderRadius: 1 }}>
+        <DialogActions
+          sx={{
+            px: { xs: 2, sm: 3 },
+            py: 2,
+            borderTop: '1px solid',
+            borderColor: 'divider',
+            flexDirection: { xs: 'column', sm: 'row' },
+            gap: { xs: 1, sm: 1.5 },
+            alignItems: { xs: 'stretch', sm: 'center' },
+          }}
+        >
+          <Button onClick={() => setAddApproverDialogOpen(false)} fullWidth={fullScreenDialog} sx={{ borderRadius: 1 }}>
             ยกเลิก
           </Button>
           <Button
             variant="contained"
             onClick={handleAddApprover}
             disabled={!selectedApprover}
+            fullWidth={fullScreenDialog}
             sx={{ borderRadius: 1 }}
           >
             เพิ่ม
