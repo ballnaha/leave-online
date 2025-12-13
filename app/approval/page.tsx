@@ -185,17 +185,19 @@ interface ApprovalItem {
   };
 }
 
-const statusConfig: Record<string, { label: string; color: string; bgcolor: string; icon: IconComponent }> = {
-  pending: { label: 'รออนุมัติ', color: '#ED6C02', bgcolor: '#FFF3E0', icon: Clock },
-  approved: { label: 'อนุมัติแล้ว', color: '#2E7D32', bgcolor: '#E8F5E9', icon: TickCircle },
-  rejected: { label: 'ปฏิเสธ', color: '#D32F2F', bgcolor: '#FFEBEE', icon: CloseCircle },
-  cancelled: { label: 'ยกเลิกแล้ว', color: '#757575', bgcolor: '#F5F5F5', icon: Forbidden2 },
-  skipped: { label: 'ข้ามขั้น', color: '#757575', bgcolor: '#F5F5F5', icon: Clock },
-};
+const getStatusConfig = (t: (key: string, fallback?: string) => string): Record<string, { label: string; color: string; bgcolor: string; icon: IconComponent }> => ({
+  pending: { label: t('status_pending', 'รออนุมัติ'), color: '#ED6C02', bgcolor: '#FFF3E0', icon: Clock },
+  approved: { label: t('status_approved', 'อนุมัติแล้ว'), color: '#2E7D32', bgcolor: '#E8F5E9', icon: TickCircle },
+  rejected: { label: t('status_rejected', 'ปฏิเสธ'), color: '#D32F2F', bgcolor: '#FFEBEE', icon: CloseCircle },
+  cancelled: { label: t('status_cancelled', 'ยกเลิกแล้ว'), color: '#757575', bgcolor: '#F5F5F5', icon: Forbidden2 },
+  skipped: { label: t('status_skipped', 'ข้ามขั้น'), color: '#757575', bgcolor: '#F5F5F5', icon: Clock },
+  in_progress: { label: t('status_in_progress', 'กำลังดำเนินการ'), color: '#ED6C02', bgcolor: '#FFF3E0', icon: Clock },
+});
 
 export default function ApprovalPage() {
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   const { data: session, status } = useSession();
+  const statusConfig = getStatusConfig(t);
   const theme = useTheme();
   const isMobileDevice = useMediaQuery(theme.breakpoints.down('md'));
   const router = useRouter();
@@ -231,6 +233,7 @@ export default function ApprovalPage() {
   const [filterYear, setFilterYear] = useState<number>(new Date().getFullYear());
 
   // Filter department/section (for HR Manager)
+  const [filterCompany, setFilterCompany] = useState<string>('all');
   const [filterDepartment, setFilterDepartment] = useState<string>('all');
   const [filterSection, setFilterSection] = useState<string>('all');
 
@@ -389,7 +392,7 @@ export default function ApprovalPage() {
     const totalDays = approval.leaveRequest.totalDays;
 
     if (totalDays <= 1) {
-      setError('ไม่สามารถแยกใบลาที่มีเพียง 1 วันได้');
+      setError(t('split_cannot_single_day', 'ไม่สามารถแยกใบลาที่มีเพียง 1 วันได้'));
       return;
     }
 
@@ -608,14 +611,14 @@ export default function ApprovalPage() {
       const data = await response.json();
 
       if (!response.ok) {
-        setError(data.error || 'เกิดข้อผิดพลาด');
+        setError(data.error || t('error_occurred', 'เกิดข้อผิดพลาด'));
         return;
       }
 
       setSplitDialogOpen(false);
       fetchApprovals();
     } catch (err) {
-      setError('เกิดข้อผิดพลาดในการเชื่อมต่อ');
+      setError(t('connection_error', 'เกิดข้อผิดพลาดในการเชื่อมต่อ'));
     } finally {
       setSubmitting(false);
     }
@@ -625,7 +628,7 @@ export default function ApprovalPage() {
     if (!selectedApproval) return;
 
     if (actionType === 'reject' && !comment.trim()) {
-      setError('กรุณาระบุเหตุผลในการปฏิเสธ');
+      setError(t('reject_reason_required', 'กรุณาระบุเหตุผลในการปฏิเสธ'));
       return;
     }
 
@@ -643,15 +646,15 @@ export default function ApprovalPage() {
       });
 
       if (!response.ok) {
-        const data = await response.json().catch(() => ({ error: 'เกิดข้อผิดพลาด' }));
-        setError(data.error || 'เกิดข้อผิดพลาด');
+        const data = await response.json().catch(() => ({ error: t('error_occurred', 'เกิดข้อผิดพลาด') }));
+        setError(data.error || t('error_occurred', 'เกิดข้อผิดพลาด'));
         return;
       }
 
       setDialogOpen(false);
       fetchApprovals();
     } catch (error) {
-      setError('เกิดข้อผิดพลาดในการเชื่อมต่อ');
+      setError(t('connection_error', 'เกิดข้อผิดพลาดในการเชื่อมต่อ'));
     } finally {
       setSubmitting(false);
     }
@@ -711,6 +714,11 @@ export default function ApprovalPage() {
       });
     }
 
+    // Apply company filter
+    if (filterCompany !== 'all') {
+      filtered = filtered.filter(a => a.leaveRequest.user.company === filterCompany);
+    }
+
     // Apply department/section filter (for HR Manager)
     if (filterDepartment !== 'all') {
       filtered = filtered.filter(a => a.leaveRequest.user.department === filterDepartment);
@@ -722,29 +730,45 @@ export default function ApprovalPage() {
     return filtered;
   })();
 
+  // Get unique companies from approvals (for HR Manager filter)
+  const uniqueCompanies = useMemo(() => {
+    const companies = new Set<string>();
+    approvals.forEach(a => {
+      if (a.leaveRequest.user.company) {
+        companies.add(a.leaveRequest.user.company);
+      }
+    });
+    return Array.from(companies).sort();
+  }, [approvals]);
+
   // Get unique departments and sections from approvals (for HR Manager filter)
   const uniqueDepartments = useMemo(() => {
     const deps = new Set<string>();
     approvals.forEach(a => {
       if (a.leaveRequest.user.department) {
-        deps.add(a.leaveRequest.user.department);
+        // Filter by selected company if not 'all'
+        if (filterCompany === 'all' || a.leaveRequest.user.company === filterCompany) {
+          deps.add(a.leaveRequest.user.department);
+        }
       }
     });
     return Array.from(deps).sort();
-  }, [approvals]);
+  }, [approvals, filterCompany]);
 
   const uniqueSections = useMemo(() => {
     const secs = new Set<string>();
     approvals.forEach(a => {
       if (a.leaveRequest.user.section) {
-        // Filter by selected department if not 'all'
-        if (filterDepartment === 'all' || a.leaveRequest.user.department === filterDepartment) {
+        // Filter by selected company and department if not 'all'
+        const companyMatch = filterCompany === 'all' || a.leaveRequest.user.company === filterCompany;
+        const deptMatch = filterDepartment === 'all' || a.leaveRequest.user.department === filterDepartment;
+        if (companyMatch && deptMatch) {
           secs.add(a.leaveRequest.user.section);
         }
       }
     });
     return Array.from(secs).sort();
-  }, [approvals, filterDepartment]);
+  }, [approvals, filterCompany, filterDepartment]);
 
   // Department summary for HR Manager (pending approvals by department)
   const departmentSummary = useMemo(() => {
@@ -805,7 +829,7 @@ export default function ApprovalPage() {
   if (status === 'loading') {
     return (
       <Box sx={{ minHeight: '100vh', bgcolor: '#EAF2F8', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <Typography>กำลังโหลด...</Typography>
+        <Typography>{t('approval_loading', 'กำลังโหลด...')}</Typography>
       </Box>
     );
   }
@@ -950,35 +974,35 @@ export default function ApprovalPage() {
                 {/* Date Filters */}
                 <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
                   <FormControl size="small" sx={{ minWidth: 130 }}>
-                    <InputLabel>เดือน</InputLabel>
+                    <InputLabel>{t('filter_month', 'เดือน')}</InputLabel>
                     <Select
                       value={filterMonth}
-                      label="เดือน"
+                      label={t('filter_month', 'เดือน')}
                       onChange={(e) => {
                         setFilterMonth(e.target.value as number | 'all');
                         setPage(1);
                       }}
                     >
-                      <MenuItem value="all">ทั้งหมด</MenuItem>
-                      <MenuItem value={1}>มกราคม</MenuItem>
-                      <MenuItem value={2}>กุมภาพันธ์</MenuItem>
-                      <MenuItem value={3}>มีนาคม</MenuItem>
-                      <MenuItem value={4}>เมษายน</MenuItem>
-                      <MenuItem value={5}>พฤษภาคม</MenuItem>
-                      <MenuItem value={6}>มิถุนายน</MenuItem>
-                      <MenuItem value={7}>กรกฎาคม</MenuItem>
-                      <MenuItem value={8}>สิงหาคม</MenuItem>
-                      <MenuItem value={9}>กันยายน</MenuItem>
-                      <MenuItem value={10}>ตุลาคม</MenuItem>
-                      <MenuItem value={11}>พฤศจิกายน</MenuItem>
-                      <MenuItem value={12}>ธันวาคม</MenuItem>
+                      <MenuItem value="all">{t('filter_all_months', 'ทั้งหมด')}</MenuItem>
+                      <MenuItem value={1}>{t('month_jan', 'มกราคม')}</MenuItem>
+                      <MenuItem value={2}>{t('month_feb', 'กุมภาพันธ์')}</MenuItem>
+                      <MenuItem value={3}>{t('month_mar', 'มีนาคม')}</MenuItem>
+                      <MenuItem value={4}>{t('month_apr', 'เมษายน')}</MenuItem>
+                      <MenuItem value={5}>{t('month_may', 'พฤษภาคม')}</MenuItem>
+                      <MenuItem value={6}>{t('month_jun', 'มิถุนายน')}</MenuItem>
+                      <MenuItem value={7}>{t('month_jul', 'กรกฎาคม')}</MenuItem>
+                      <MenuItem value={8}>{t('month_aug', 'สิงหาคม')}</MenuItem>
+                      <MenuItem value={9}>{t('month_sep', 'กันยายน')}</MenuItem>
+                      <MenuItem value={10}>{t('month_oct', 'ตุลาคม')}</MenuItem>
+                      <MenuItem value={11}>{t('month_nov', 'พฤศจิกายน')}</MenuItem>
+                      <MenuItem value={12}>{t('month_dec', 'ธันวาคม')}</MenuItem>
                     </Select>
                   </FormControl>
                   <FormControl size="small" sx={{ minWidth: 100 }}>
-                    <InputLabel>ปี</InputLabel>
+                    <InputLabel>{t('filter_year', 'ปี')}</InputLabel>
                     <Select
                       value={filterYear}
-                      label="ปี"
+                      label={t('filter_year', 'ปี')}
                       onChange={(e) => {
                         setFilterYear(e.target.value as number);
                         setPage(1);
@@ -997,53 +1021,74 @@ export default function ApprovalPage() {
                 </Box>
 
                 {/* Divider */}
-                {isHrManager && uniqueDepartments.length > 0 && (
+                {isHrManager && uniqueCompanies.length > 0 && (
                   <Divider orientation="vertical" flexItem sx={{ mx: 1 }} />
                 )}
 
-                {/* Department/Section Filter - HR Manager Only */}
-                {isHrManager && uniqueDepartments.length > 0 && (
+                {/* Company/Department/Section Filter - HR Manager Only */}
+                {isHrManager && uniqueCompanies.length > 0 && (
                   <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-                    <FormControl size="small" sx={{ minWidth: 160 }}>
-                      <InputLabel>ฝ่าย</InputLabel>
+                    <FormControl size="small" sx={{ minWidth: 140 }}>
+                      <InputLabel>{t('filter_company', 'บริษัท')}</InputLabel>
                       <Select
-                        value={filterDepartment}
-                        label="ฝ่าย"
+                        value={filterCompany}
+                        label={t('filter_company', 'บริษัท')}
                         onChange={(e) => {
-                          setFilterDepartment(e.target.value);
+                          setFilterCompany(e.target.value);
+                          setFilterDepartment('all');
                           setFilterSection('all');
                           setPage(1);
                         }}
                       >
-                        <MenuItem value="all">ทุกฝ่าย</MenuItem>
-                        {uniqueDepartments.map((dept) => {
-                          const deptPending = departmentSummary.find(d => d.department === dept)?.pending || 0;
-                          return (
-                            <MenuItem key={dept} value={dept}>
-                              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
-                                <span>{dept}</span>
-                                {deptPending > 0 && (
-                                  <Chip label={deptPending} size="small" sx={{ height: 18, fontSize: '0.7rem', bgcolor: '#FFF3E0', color: '#E65100', fontWeight: 600, ml: 1 }} />
-                                )}
-                              </Box>
-                            </MenuItem>
-                          );
-                        })}
+                        <MenuItem value="all">{t('filter_all_companies', 'ทุกบริษัท')}</MenuItem>
+                        {uniqueCompanies.map((company) => (
+                          <MenuItem key={company} value={company}>{company}</MenuItem>
+                        ))}
                       </Select>
                     </FormControl>
 
+                    {uniqueDepartments.length > 0 && (
+                      <FormControl size="small" sx={{ minWidth: 160 }}>
+                        <InputLabel>{t('filter_department', 'ฝ่าย')}</InputLabel>
+                        <Select
+                          value={filterDepartment}
+                          label={t('filter_department', 'ฝ่าย')}
+                          onChange={(e) => {
+                            setFilterDepartment(e.target.value);
+                            setFilterSection('all');
+                            setPage(1);
+                          }}
+                        >
+                          <MenuItem value="all">{t('filter_all_departments', 'ทุกฝ่าย')}</MenuItem>
+                          {uniqueDepartments.map((dept) => {
+                            const deptPending = departmentSummary.find(d => d.department === dept)?.pending || 0;
+                            return (
+                              <MenuItem key={dept} value={dept}>
+                                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                                  <span>{dept}</span>
+                                  {deptPending > 0 && (
+                                    <Chip label={deptPending} size="small" sx={{ height: 18, fontSize: '0.7rem', bgcolor: '#FFF3E0', color: '#E65100', fontWeight: 600, ml: 1 }} />
+                                  )}
+                                </Box>
+                              </MenuItem>
+                            );
+                          })}
+                        </Select>
+                      </FormControl>
+                    )}
+
                     {uniqueSections.length > 0 && (
                       <FormControl size="small" sx={{ minWidth: 160 }}>
-                        <InputLabel>แผนก</InputLabel>
+                        <InputLabel>{t('filter_section', 'แผนก')}</InputLabel>
                         <Select
                           value={filterSection}
-                          label="แผนก"
+                          label={t('filter_section', 'แผนก')}
                           onChange={(e) => {
                             setFilterSection(e.target.value);
                             setPage(1);
                           }}
                         >
-                          <MenuItem value="all">ทุกแผนก</MenuItem>
+                          <MenuItem value="all">{t('filter_all_sections', 'ทุกแผนก')}</MenuItem>
                           {uniqueSections.map((sec) => (
                             <MenuItem key={sec} value={sec}>{sec}</MenuItem>
                           ))}
@@ -1227,52 +1272,70 @@ export default function ApprovalPage() {
                     </Box>
                   </Box>
 
-                  {/* Department/Section Filters - HR Manager Only */}
-                  {isHrManager && uniqueDepartments.length > 0 && (
+                  {/* Company/Department/Section Filters - HR Manager Only */}
+                  {isHrManager && uniqueCompanies.length > 0 && (
                     <Box>
                       <Typography sx={{ fontSize: '0.75rem', color: '#64748B', fontWeight: 600, mb: 1, textTransform: 'uppercase' }}>
-                        ฝ่าย / แผนก
+                        {t('filter_company', 'บริษัท')} / {t('filter_department', 'ฝ่าย')} / {t('filter_section', 'แผนก')}
                       </Typography>
-                      <Box sx={{ display: 'flex', gap: 1 }}>
+                      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                         <FormControl size="small" fullWidth>
-                          <InputLabel>ฝ่าย</InputLabel>
+                          <InputLabel>{t('filter_company', 'บริษัท')}</InputLabel>
                           <Select
-                            value={filterDepartment}
-                            label="ฝ่าย"
-                            onChange={(e) => { setFilterDepartment(e.target.value); setFilterSection('all'); setPage(1); }}
+                            value={filterCompany}
+                            label={t('filter_company', 'บริษัท')}
+                            onChange={(e) => { setFilterCompany(e.target.value); setFilterDepartment('all'); setFilterSection('all'); setPage(1); }}
                           >
-                            <MenuItem value="all">ทุกฝ่าย</MenuItem>
-                            {uniqueDepartments.map((dept) => (
-                              <MenuItem key={dept} value={dept}>{dept}</MenuItem>
+                            <MenuItem value="all">{t('filter_all_companies', 'ทุกบริษัท')}</MenuItem>
+                            {uniqueCompanies.map((company) => (
+                              <MenuItem key={company} value={company}>{company}</MenuItem>
                             ))}
                           </Select>
                         </FormControl>
-                        {uniqueSections.length > 0 && (
-                          <FormControl size="small" fullWidth>
-                            <InputLabel>แผนก</InputLabel>
-                            <Select
-                              value={filterSection}
-                              label="แผนก"
-                              onChange={(e) => { setFilterSection(e.target.value); setPage(1); }}
-                            >
-                              <MenuItem value="all">ทุกแผนก</MenuItem>
-                              {uniqueSections.map((sec) => (
-                                <MenuItem key={sec} value={sec}>{sec}</MenuItem>
-                              ))}
-                            </Select>
-                          </FormControl>
-                        )}
+                        <Box sx={{ display: 'flex', gap: 1 }}>
+                          {uniqueDepartments.length > 0 && (
+                            <FormControl size="small" fullWidth>
+                              <InputLabel>{t('filter_department', 'ฝ่าย')}</InputLabel>
+                              <Select
+                                value={filterDepartment}
+                                label={t('filter_department', 'ฝ่าย')}
+                                onChange={(e) => { setFilterDepartment(e.target.value); setFilterSection('all'); setPage(1); }}
+                              >
+                                <MenuItem value="all">{t('filter_all_departments', 'ทุกฝ่าย')}</MenuItem>
+                                {uniqueDepartments.map((dept) => (
+                                  <MenuItem key={dept} value={dept}>{dept}</MenuItem>
+                                ))}
+                              </Select>
+                            </FormControl>
+                          )}
+                          {uniqueSections.length > 0 && (
+                            <FormControl size="small" fullWidth>
+                              <InputLabel>{t('filter_section', 'แผนก')}</InputLabel>
+                              <Select
+                                value={filterSection}
+                                label={t('filter_section', 'แผนก')}
+                                onChange={(e) => { setFilterSection(e.target.value); setPage(1); }}
+                              >
+                                <MenuItem value="all">{t('filter_all_sections', 'ทุกแผนก')}</MenuItem>
+                                {uniqueSections.map((sec) => (
+                                  <MenuItem key={sec} value={sec}>{sec}</MenuItem>
+                                ))}
+                              </Select>
+                            </FormControl>
+                          )}
+                        </Box>
                       </Box>
                     </Box>
                   )}
 
                   {/* Clear Filters Button */}
-                  {(filterMonth !== 'all' || filterDepartment !== 'all' || filterSection !== 'all') && (
+                  {(filterMonth !== 'all' || filterCompany !== 'all' || filterDepartment !== 'all' || filterSection !== 'all') && (
                     <Button
                       size="small"
                       variant="text"
                       onClick={() => {
                         setFilterMonth('all');
+                        setFilterCompany('all');
                         setFilterDepartment('all');
                         setFilterSection('all');
                         setPage(1);
@@ -1280,7 +1343,7 @@ export default function ApprovalPage() {
                       startIcon={<CloseSquare size={16} />}
                       sx={{ color: '#EF5350', alignSelf: 'flex-start' }}
                     >
-                      ล้างตัวกรองทั้งหมด
+                      {t('filter_clear_all', 'ล้างตัวกรองทั้งหมด')}
                     </Button>
                   )}
                 </Box>
@@ -1290,15 +1353,15 @@ export default function ApprovalPage() {
         )}
 
         {/* HR Manager Department Summary Cards - Show only when not filtering and pending tab */}
-        {!loading && isHrManager && tabValue === 0 && filterDepartment === 'all' && departmentSummary.filter(d => d.pending > 0).length > 0 && groupViewMode === 'list' && (
+        {!loading && isHrManager && tabValue === 0 && filterCompany === 'all' && filterDepartment === 'all' && departmentSummary.filter(d => d.pending > 0).length > 0 && groupViewMode === 'list' && (
           <Box sx={{ mb: 3 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
               <DirectboxNotif size={20} color={PRIMARY_COLOR} variant="Bold" />
               <Typography variant="subtitle1" fontWeight={700} color="text.primary">
-                สรุปรออนุมัติตามฝ่าย
+                {t('dept_summary_title', 'สรุปรออนุมัติตามฝ่าย')}
               </Typography>
               <Chip
-                label={`${departmentSummary.filter(d => d.pending > 0).length} ฝ่าย`}
+                label={`${departmentSummary.filter(d => d.pending > 0).length} ${t('dept_summary_dept', 'ฝ่าย')}`}
                 size="small"
                 sx={{
                   height: 22,
@@ -1425,7 +1488,7 @@ export default function ApprovalPage() {
         )}
 
         {/* Active Filter Indicator */}
-        {!loading && (filterDepartment !== 'all' || filterSection !== 'all') && (
+        {!loading && (filterCompany !== 'all' || filterDepartment !== 'all' || filterSection !== 'all') && (
           <Box sx={{
             mb: 2,
             p: 1.5,
@@ -1440,11 +1503,29 @@ export default function ApprovalPage() {
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
               <FilterSearch size={18} color="#1976D2" variant="Bold" />
               <Typography sx={{ fontSize: '0.875rem', color: '#1976D2', fontWeight: 500 }}>
-                กำลังกรอง:
+                {t('filter_currently', 'กำลังกรอง:')}
               </Typography>
+              {filterCompany !== 'all' && (
+                <Chip
+                  label={`${t('filter_company', 'บริษัท')}: ${filterCompany}`}
+                  size="small"
+                  onDelete={() => {
+                    setFilterCompany('all');
+                    setFilterDepartment('all');
+                    setFilterSection('all');
+                    setPage(1);
+                  }}
+                  sx={{
+                    bgcolor: 'white',
+                    color: '#1976D2',
+                    fontWeight: 600,
+                    '& .MuiChip-deleteIcon': { color: '#1976D2' }
+                  }}
+                />
+              )}
               {filterDepartment !== 'all' && (
                 <Chip
-                  label={`ฝ่าย: ${filterDepartment}`}
+                  label={`${t('filter_department', 'ฝ่าย')}: ${filterDepartment}`}
                   size="small"
                   onDelete={() => {
                     setFilterDepartment('all');
@@ -1461,7 +1542,7 @@ export default function ApprovalPage() {
               )}
               {filterSection !== 'all' && (
                 <Chip
-                  label={`แผนก: ${filterSection}`}
+                  label={`${t('filter_section', 'แผนก')}: ${filterSection}`}
                   size="small"
                   onDelete={() => {
                     setFilterSection('all');
@@ -1479,13 +1560,14 @@ export default function ApprovalPage() {
             <Button
               size="small"
               onClick={() => {
+                setFilterCompany('all');
                 setFilterDepartment('all');
                 setFilterSection('all');
                 setPage(1);
               }}
               sx={{ color: '#1976D2', fontWeight: 600 }}
             >
-              ล้างตัวกรอง
+              {t('filter_clear', 'ล้างตัวกรอง')}
             </Button>
           </Box>
         )}
@@ -1526,10 +1608,10 @@ export default function ApprovalPage() {
 
               {/* Tabs Items */}
               {[
-                { id: 0, label: 'รออนุมัติ', icon: Clock, color: '#E65100', shadow: '230, 81, 0', count: counts.pending },
-                { id: 1, label: 'อนุมัติ', icon: TickCircle, color: '#2E7D32', shadow: '46, 125, 50', count: counts.approved },
-                { id: 2, label: 'ปฏิเสธ', icon: CloseCircle, color: '#D32F2F', shadow: '211, 47, 47', count: counts.rejected },
-                { id: 3, label: 'ยกเลิก', icon: Forbidden2, color: '#757575', shadow: '117, 117, 117', count: counts.cancelled },
+                { id: 0, label: t('tab_pending', 'รออนุมัติ'), icon: Clock, color: '#E65100', shadow: '230, 81, 0', count: counts.pending },
+                { id: 1, label: t('tab_approved', 'อนุมัติ'), icon: TickCircle, color: '#2E7D32', shadow: '46, 125, 50', count: counts.approved },
+                { id: 2, label: t('tab_rejected', 'ปฏิเสธ'), icon: CloseCircle, color: '#D32F2F', shadow: '211, 47, 47', count: counts.rejected },
+                { id: 3, label: t('tab_cancelled', 'ยกเลิก'), icon: Forbidden2, color: '#757575', shadow: '117, 117, 117', count: counts.cancelled },
               ].map((tab) => {
                 const Icon = tab.icon;
                 const isActive = tabValue === tab.id;
@@ -1601,10 +1683,10 @@ export default function ApprovalPage() {
         {!loading && filteredApprovals.length > 0 && (
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
             <Typography variant="body2" color="text.secondary" fontWeight={500}>
-              ทั้งหมด {filteredApprovals.length} รายการ
+              {t('total_items', 'ทั้งหมด')} {filteredApprovals.length} {t('items_label', 'รายการ')}
             </Typography>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <Typography variant="caption" color="text.secondary">แสดง</Typography>
+              <Typography variant="caption" color="text.secondary">{t('show_label', 'แสดง')}</Typography>
               <Select
                 size="small"
                 value={itemsPerPage}
@@ -1624,7 +1706,7 @@ export default function ApprovalPage() {
                 <MenuItem value={10}>10</MenuItem>
                 <MenuItem value={20}>20</MenuItem>
               </Select>
-              <Typography variant="caption" color="text.secondary">รายการ/หน้า</Typography>
+              <Typography variant="caption" color="text.secondary">{t('items_per_page', 'รายการ/หน้า')}</Typography>
             </Box>
           </Box>
         )}
@@ -1754,13 +1836,13 @@ export default function ApprovalPage() {
                                   <Forbidden2 size={40} color="#9e9e9e" variant="Bulk" />}
                           </Box>
                           <Typography variant="subtitle1" color="text.secondary" fontWeight={600} gutterBottom>
-                            {tabValue === 0 ? 'ไม่มีรายการรออนุมัติ' :
-                              tabValue === 1 ? 'ยังไม่มีรายการที่อนุมัติ' :
-                                tabValue === 2 ? 'ไม่มีรายการที่ถูกปฏิเสธ' :
-                                  'ไม่มีรายการที่ยกเลิก'}
+                            {tabValue === 0 ? t('no_pending_items', 'ไม่มีรายการรออนุมัติ') :
+                              tabValue === 1 ? t('no_approved_items', 'ยังไม่มีรายการที่อนุมัติ') :
+                                tabValue === 2 ? t('no_rejected_items', 'ไม่มีรายการที่ถูกปฏิเสธ') :
+                                  t('no_cancelled_items', 'ไม่มีรายการที่ยกเลิก')}
                           </Typography>
                           <Typography variant="body2" color="text.secondary">
-                            {tabValue === 0 ? 'คุณจัดการรายการทั้งหมดเรียบร้อยแล้ว' : 'รายการจะแสดงที่นี่เมื่อมีการดำเนินการ'}
+                            {tabValue === 0 ? t('all_items_handled', 'คุณจัดการรายการทั้งหมดเรียบร้อยแล้ว') : t('items_will_show_here', 'รายการจะแสดงที่นี่เมื่อมีการดำเนินการ')}
                           </Typography>
                         </Box>
                       </TableCell>
@@ -1789,13 +1871,13 @@ export default function ApprovalPage() {
                       <Forbidden2 size={48} color="#9e9e9e" variant="Bulk" />}
               </Box>
               <Typography variant="h6" color="text.secondary" fontWeight={600} gutterBottom>
-                {tabValue === 0 ? 'ไม่มีรายการรออนุมัติ' :
-                  tabValue === 1 ? 'ยังไม่มีรายการที่อนุมัติ' :
-                    tabValue === 2 ? 'ไม่มีรายการที่ถูกปฏิเสธ' :
-                      'ไม่มีรายการที่ยกเลิก'}
+                {tabValue === 0 ? t('no_pending_items', 'ไม่มีรายการรออนุมัติ') :
+                  tabValue === 1 ? t('no_approved_items', 'ยังไม่มีรายการที่อนุมัติ') :
+                    tabValue === 2 ? t('no_rejected_items', 'ไม่มีรายการที่ถูกปฏิเสธ') :
+                      t('no_cancelled_items', 'ไม่มีรายการที่ยกเลิก')}
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                {tabValue === 0 ? 'คุณจัดการรายการทั้งหมดเรียบร้อยแล้ว' : 'รายการจะแสดงที่นี่เมื่อมีการดำเนินการ'}
+                {tabValue === 0 ? t('all_items_handled', 'คุณจัดการรายการทั้งหมดเรียบร้อยแล้ว') : t('items_will_show_here', 'รายการจะแสดงที่นี่เมื่อมีการดำเนินการ')}
               </Typography>
             </Box>
           )

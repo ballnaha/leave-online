@@ -339,13 +339,29 @@ const DashboardCard: React.FC<DashboardCardProps> = ({ leaveTypes, leaveRequests
             <Paper
                 elevation={0}
                 sx={{
-                    background: 'linear-gradient(135deg, #6C63FF 0%, #5A52E0 100%)',
+                    backgroundImage: 'url(/images/bg-company.png)',
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center',
                     borderRadius: { xs: 0, sm: 1 },
                     p: { xs: 2.5, sm: 3 },
                     color: 'white',
                     position: 'relative',
                     overflow: 'hidden',
                     boxShadow: { xs: 'none', sm: '0 10px 30px rgba(108, 99, 255, 0.25)' },
+                    '&::before': {
+                        content: '""',
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        background: 'linear-gradient(135deg, rgba(108, 99, 255, 0.75) 0%, rgba(60, 50, 150, 0.9) 100%)',
+                        zIndex: 1,
+                    },
+                    '& > *': {
+                        position: 'relative',
+                        zIndex: 2,
+                    },
                 }}
             >
                 {/* Decorative Circles */}
@@ -358,6 +374,7 @@ const DashboardCard: React.FC<DashboardCardProps> = ({ leaveTypes, leaveRequests
                     borderRadius: '50%',
                     background: 'rgba(255, 255, 255, 0.1)',
                     pointerEvents: 'none',
+                    zIndex: 3,
                 }} />
                 <Box sx={{
                     position: 'absolute',
@@ -368,6 +385,7 @@ const DashboardCard: React.FC<DashboardCardProps> = ({ leaveTypes, leaveRequests
                     borderRadius: '50%',
                     background: 'rgba(255, 255, 255, 0.05)',
                     pointerEvents: 'none',
+                    zIndex: 3,
                 }} />
 
                 {/* Header: Leave Type Name + Year Selector */}

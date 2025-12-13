@@ -77,14 +77,14 @@ const leaveTypeConfig: Record<string, { icon: any; color: string; lightColor: st
   default: { icon: InfoCircle, color: PRIMARY_COLOR, lightColor: PRIMARY_LIGHT },
 };
 
-const statusConfig: Record<string, { label: string; color: string; bgcolor: string; icon: any }> = {
-  pending: { label: 'รออนุมัติ', color: '#ED6C02', bgcolor: '#FFF3E0', icon: Clock },
-  approved: { label: 'อนุมัติแล้ว', color: '#2E7D32', bgcolor: '#E8F5E9', icon: TickCircle },
-  rejected: { label: 'ปฏิเสธ', color: '#D32F2F', bgcolor: '#FFEBEE', icon: CloseCircle },
-  cancelled: { label: 'ยกเลิกแล้ว', color: '#757575', bgcolor: '#F5F5F5', icon: Forbidden2 },
-  skipped: { label: 'ข้ามขั้น', color: '#757575', bgcolor: '#F5F5F5', icon: Clock },
-  in_progress: { label: 'กำลังดำเนินการ', color: '#ED6C02', bgcolor: '#FFF3E0', icon: Clock },
-};
+const getStatusConfig = (t: (key: string, fallback?: string) => string): Record<string, { label: string; color: string; bgcolor: string; icon: any }> => ({
+  pending: { label: t('status_pending', 'รออนุมัติ'), color: '#ED6C02', bgcolor: '#FFF3E0', icon: Clock },
+  approved: { label: t('status_approved', 'อนุมัติแล้ว'), color: '#2E7D32', bgcolor: '#E8F5E9', icon: TickCircle },
+  rejected: { label: t('status_rejected', 'ปฏิเสธ'), color: '#D32F2F', bgcolor: '#FFEBEE', icon: CloseCircle },
+  cancelled: { label: t('status_cancelled', 'ยกเลิกแล้ว'), color: '#757575', bgcolor: '#F5F5F5', icon: Forbidden2 },
+  skipped: { label: t('status_skipped', 'ข้ามขั้น'), color: '#757575', bgcolor: '#F5F5F5', icon: Clock },
+  in_progress: { label: t('status_in_progress', 'กำลังดำเนินการ'), color: '#ED6C02', bgcolor: '#FFF3E0', icon: Clock },
+});
 
 interface LeaveDetail {
   id: number;
@@ -135,11 +135,12 @@ interface LeaveDetail {
 }
 
 export default function ApprovalDetailPage() {
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   const { data: session } = useSession();
   const router = useRouter();
   const params = useParams();
   const searchParams = useSearchParams();
+  const statusConfig = getStatusConfig(t);
 
   const leaveId = params?.id as string;
   const actionParam = searchParams?.get('action') as 'approve' | 'reject' | null;
@@ -225,7 +226,7 @@ export default function ApprovalDetailPage() {
       setCanApprove(isPendingOrInProgress && (isAdmin || isInApprovalList));
     } catch (error) {
       console.error('Error fetching leave detail:', error);
-      setError('ไม่สามารถโหลดข้อมูลใบลาได้');
+      setError(t('leave_load_error', 'ไม่สามารถโหลดข้อมูลใบลาได้'));
     } finally {
       setLoading(false);
     }
@@ -254,7 +255,7 @@ export default function ApprovalDetailPage() {
     if (!leaveDetail) return;
 
     if (actionType === 'reject' && !comment.trim()) {
-      setError('กรุณาระบุเหตุผลในการปฏิเสธ');
+      setError(t('reject_reason_required', 'กรุณาระบุเหตุผลในการปฏิเสธ'));
       return;
     }
 
@@ -272,8 +273,8 @@ export default function ApprovalDetailPage() {
       });
 
       if (!response.ok) {
-        const data = await response.json().catch(() => ({ error: 'เกิดข้อผิดพลาด' }));
-        setError(data.error || 'เกิดข้อผิดพลาด');
+        const data = await response.json().catch(() => ({ error: t('error_occurred', 'เกิดข้อผิดพลาด') }));
+        setError(data.error || t('error_occurred', 'เกิดข้อผิดพลาด'));
         return;
       }
 
@@ -283,7 +284,7 @@ export default function ApprovalDetailPage() {
         router.push('/approval');
       }, 2000);
     } catch (error) {
-      setError('เกิดข้อผิดพลาดในการเชื่อมต่อ');
+      setError(t('connection_error', 'เกิดข้อผิดพลาดในการเชื่อมต่อ'));
     } finally {
       setSubmitting(false);
     }
@@ -454,7 +455,7 @@ export default function ApprovalDetailPage() {
       <Box sx={{ minHeight: '100vh', bgcolor: '#F8FAFC', pb: 10 }}>
         <Container maxWidth="sm" sx={{ pt: 3 }}>
           <Alert severity="error" sx={{ borderRadius: 1 }}>
-            ไม่พบข้อมูลใบลา
+            {t('leave_detail_not_found', 'ไม่พบข้อมูลใบลา')}
           </Alert>
           <Button
             variant="outlined"
@@ -496,10 +497,10 @@ export default function ApprovalDetailPage() {
                 : <CloseCircle size={50} variant="Bold" color="#F44336" />}
             </Box>
             <Typography variant="h5" fontWeight={700} gutterBottom>
-              {actionType === 'approve' ? 'อนุมัติสำเร็จ' : 'ปฏิเสธสำเร็จ'}
+              {actionType === 'approve' ? t('approve_success', 'อนุมัติสำเร็จ') : t('reject_success', 'ปฏิเสธสำเร็จ')}
             </Typography>
             <Typography color="text.secondary" sx={{ mb: 3 }}>
-              กำลังกลับไปยังหน้ารายการ...
+              {t('redirecting_to_list', 'กำลังกลับไปยังหน้ารายการ...')}
             </Typography>
           </Paper>
         </Container>
@@ -524,7 +525,7 @@ export default function ApprovalDetailPage() {
               <ArrowLeft size={24} color="#334155" />
             </IconButton>
             <Typography variant="h6" fontWeight={700} sx={{ flex: 1 }}>
-              {canApprove ? (actionType === 'approve' ? 'อนุมัติใบลา' : 'ปฏิเสธใบลา') : 'รายละเอียดใบลา'}
+              {canApprove ? (actionType === 'approve' ? t('approve_leave_title', 'อนุมัติใบลา') : t('reject_leave_title', 'ปฏิเสธใบลา')) : t('leave_detail_title', 'รายละเอียดใบลา')}
             </Typography>
             <Chip
               label={statusInfo.label}
@@ -595,7 +596,7 @@ export default function ApprovalDetailPage() {
                   style={{ transition: 'all 0.2s' }}
                 />
                 <Typography fontWeight={actionType === 'approve' ? 700 : 500} fontSize="0.95rem" sx={{ transition: 'font-weight 0.2s' }}>
-                  อนุมัติ
+                  {t('approve', 'อนุมัติ')}
                 </Typography>
               </Box>
 
@@ -623,7 +624,7 @@ export default function ApprovalDetailPage() {
                   style={{ transition: 'all 0.2s' }}
                 />
                 <Typography fontWeight={actionType === 'reject' ? 700 : 500} fontSize="0.95rem" sx={{ transition: 'font-weight 0.2s' }}>
-                  ปฏิเสธ
+                  {t('reject', 'ปฏิเสธ')}
                 </Typography>
               </Box>
             </Box>
@@ -649,12 +650,12 @@ export default function ApprovalDetailPage() {
                 : <CloseCircle size={45} variant="Bold" color="#F44336" />}
             </Box>
             <Typography variant="h6" fontWeight={700}>
-              {actionType === 'approve' ? 'ยืนยันการอนุมัติ' : 'ยืนยันการปฏิเสธ'}
+              {actionType === 'approve' ? t('confirm_approve_title', 'ยืนยันการอนุมัติ') : t('confirm_reject_title', 'ยืนยันการปฏิเสธ')}
             </Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
               {actionType === 'approve'
-                ? 'คุณต้องการอนุมัติคำขอลาของพนักงานใช่หรือไม่?'
-                : 'คุณต้องการปฏิเสธคำขอลาของพนักงานใช่หรือไม่?'}
+                ? t('confirm_approve_desc', 'คุณต้องการอนุมัติคำขอลาของพนักงานใช่หรือไม่?')
+                : t('confirm_reject_desc', 'คุณต้องการปฏิเสธคำขอลาของพนักงานใช่หรือไม่?')}}
             </Typography>
           </Box>
         )}
@@ -699,7 +700,7 @@ export default function ApprovalDetailPage() {
                 <LeaveIcon size={22} color={leaveConfig.color} variant="Bold" />
               </Box>
               <Box>
-                <Typography variant="body2" color="text.secondary">ประเภทการลา</Typography>
+                <Typography variant="body2" color="text.secondary">{t('leave_type_label', 'ประเภทการลา')}</Typography>
                 <Typography fontWeight={600}>{t(`leave_${leaveDetail.leaveType}`, leaveDetail.leaveType)}</Typography>
                 {leaveDetail.leaveCode && (
                   <Typography variant="body2" sx={{ color: '#64748B', fontFamily: 'monospace', fontSize: '0.8rem' }}>
@@ -835,7 +836,7 @@ export default function ApprovalDetailPage() {
           <Card sx={{ mb: 2, borderRadius: 1, boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
             <CardContent sx={{ p: 2.5 }}>
               <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
-                <Clock size={18} color={PRIMARY_COLOR} variant="Bold" /> ประวัติการอนุมัติ
+                <Clock size={18} color={PRIMARY_COLOR} variant="Bold" /> {t('approval_history_title', 'ประวัติการอนุมัติ')}
               </Typography>
 
               <Box sx={{ bgcolor: '#F8FAFC', borderRadius: 1, p: 2 }}>
@@ -918,14 +919,14 @@ export default function ApprovalDetailPage() {
               )}
 
               <TextField
-                label={actionType === 'approve' ? 'ความคิดเห็นเพิ่มเติม (ถ้ามี)' : 'เหตุผลในการปฏิเสธ *'}
+                label={actionType === 'approve' ? t('comment_placeholder', 'ความคิดเห็นเพิ่มเติม (ถ้ามี)') : t('reject_reason_required', 'เหตุผลในการปฏิเสธ *')}
                 multiline
                 rows={3}
                 fullWidth
                 value={comment}
                 onChange={(e) => setComment(e.target.value)}
                 error={actionType === 'reject' && !comment.trim() && !!error}
-                placeholder={actionType === 'approve' ? 'ระบุความคิดเห็น...' : 'กรุณาระบุเหตุผล...'}
+                placeholder={actionType === 'approve' ? t('comment_placeholder', 'ระบุความคิดเห็น...') : t('please_enter_reason', 'กรุณาระบุเหตุผล...')}
                 sx={{
                   mb: 2,
                   '& .MuiOutlinedInput-root': {
@@ -942,7 +943,7 @@ export default function ApprovalDetailPage() {
                   size="large"
                   sx={{ flex: 1, borderRadius: 1, py: 1.25, borderColor: 'grey.300', color: 'text.primary' }}
                 >
-                  ยกเลิก
+                  {t('cancel', 'ยกเลิก')}
                 </Button>
                 <Button
                   variant="contained"
@@ -960,7 +961,7 @@ export default function ApprovalDetailPage() {
                     }
                   }}
                 >
-                  {submitting ? 'กำลังดำเนินการ...' : 'ยืนยัน'}
+                  {submitting ? t('submitting', 'กำลังดำเนินการ...') : t('confirm', 'ยืนยัน')}
                 </Button>
               </Box>
             </CardContent>
@@ -976,7 +977,7 @@ export default function ApprovalDetailPage() {
             onClick={() => router.push('/approval')}
             sx={{ borderRadius: 1, py: 1.25 }}
           >
-            กลับหน้ารายการ
+            {t('back_to_approval', 'กลับหน้ารายการ')}
           </Button>
         )}
       </Container>
