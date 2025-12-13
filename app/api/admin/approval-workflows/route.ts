@@ -2,6 +2,20 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions, isAdminRole } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { Prisma, UserRole } from '@prisma/client';
+
+function isUserRole(value: unknown): value is UserRole {
+  return (
+    typeof value === 'string' &&
+    (Object.values(UserRole) as string[]).includes(value)
+  );
+}
+
+type WorkflowWithSteps = Prisma.ApprovalWorkflowGetPayload<{
+  include: {
+    steps: true;
+  };
+}>;
 
 export async function GET(request: Request) {
   try {
@@ -14,11 +28,11 @@ export async function GET(request: Request) {
     const company = searchParams.get('company');
     const department = searchParams.get('department');
 
-    const where: any = {};
+    const where: Prisma.ApprovalWorkflowWhereInput = {};
     if (company) where.company = company;
     if (department) where.department = department;
 
-    const workflows = await (prisma as any).approvalWorkflow.findMany({
+    const workflows = await prisma.approvalWorkflow.findMany({
       where,
       include: {
         steps: {
@@ -32,25 +46,25 @@ export async function GET(request: Request) {
     // For the UI, we probably want names.
     // Let's fetch all referenced users.
     const userIds = new Set<number>();
-    workflows.forEach((w: any) => {
-        w.steps.forEach((s: any) => {
-            if (s.approverId) userIds.add(s.approverId);
-        });
+    (workflows as WorkflowWithSteps[]).forEach((w) => {
+      w.steps.forEach((s) => {
+        if (s.approverId) userIds.add(s.approverId);
+      });
     });
 
     const users = await prisma.user.findMany({
-        where: { id: { in: Array.from(userIds) } },
-        select: { id: true, firstName: true, lastName: true, email: true }
+      where: { id: { in: Array.from(userIds) } },
+      select: { id: true, firstName: true, lastName: true, email: true }
     });
 
-    const userMap = new Map(users.map(u => [u.id, u]));
+    const userMap = new Map(users.map((u) => [u.id, u]));
 
-    const enrichedWorkflows = workflows.map((w: any) => ({
-        ...w,
-        steps: w.steps.map((s: any) => ({
-            ...s,
-            approver: s.approverId ? userMap.get(s.approverId) : null
-        }))
+    const enrichedWorkflows = (workflows as WorkflowWithSteps[]).map((w) => ({
+      ...w,
+      steps: w.steps.map((s) => ({
+        ...s,
+        approver: s.approverId ? (userMap.get(s.approverId) ?? null) : null,
+      }))
     }));
 
     return NextResponse.json(enrichedWorkflows);
@@ -66,11 +80,38 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const body = await request.json();
+  const body = (await request.json()) as {
+    name: string;
+    description?: string;
+    company?: string;
+    department?: string;
+    section?: string;
+    steps?: Array<{
+      level: number;
+      approverRole?: string | null;
+      approverId?: number | null;
+    }>;
+  };
   const { name, description, company, department, section, steps } = body;
 
+  if (steps?.length) {
+    const invalid = steps
+      .map((s, idx) => ({ idx, role: s.approverRole }))
+      .filter((x) => x.role != null && x.role !== '' && !isUserRole(x.role));
+
+    if (invalid.length > 0) {
+      return NextResponse.json(
+        {
+          error: 'Invalid approverRole',
+          details: invalid.map((x) => ({ index: x.idx, approverRole: x.role })),
+        },
+        { status: 400 }
+      );
+    }
+  }
+
   try {
-    const workflow = await (prisma as any).approvalWorkflow.create({
+    const workflow = await prisma.approvalWorkflow.create({
       data: {
         name,
         description,
@@ -78,11 +119,14 @@ export async function POST(request: Request) {
         department,
         section,
         steps: {
-          create: steps.map((step: any) => ({
+          create: (steps ?? []).map((step) => ({
             level: step.level,
-            approverRole: step.approverRole || null,
+            approverRole:
+              step.approverRole && isUserRole(step.approverRole)
+                ? step.approverRole
+                : null,
             approverId: step.approverId || null,
-          }))
+          })),
         }
       },
       include: {

@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState, useMemo } from 'react';
 import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Navigation, Pagination as SwiperPagination, Zoom } from 'swiper/modules';
 import 'swiper/css';
@@ -107,8 +108,10 @@ import { useLocale } from '@/app/providers/LocaleProvider';
 const PRIMARY_COLOR = '#6C63FF'; // Soft Purple/Blue from the design
 const PRIMARY_LIGHT = '#EAF2F8'; // Light blueish background
 
+type IconComponent = React.ElementType;
+
 // กำหนด icon และสีสำหรับแต่ละประเภทการลา
-const leaveTypeConfig: Record<string, { icon: any; color: string; lightColor: string }> = {
+const leaveTypeConfig: Record<string, { icon: IconComponent; color: string; lightColor: string }> = {
   sick: { icon: Health, color: '#D32F2F', lightColor: '#FFEBEE' }, // แดง
   personal: { icon: Briefcase, color: '#1976D2', lightColor: '#E3F2FD' }, // น้ำเงิน
   vacation: { icon: Sun1, color: '#ED6C02', lightColor: '#FFF3E0' }, // ส้ม
@@ -165,6 +168,12 @@ interface ApprovalItem {
       status: string;
       comment?: string;
       actionAt?: string;
+      actedBy?: {
+        id: number;
+        firstName: string;
+        lastName: string;
+        position?: string;
+      } | null;
       approver: {
         id: number;
         firstName: string;
@@ -175,7 +184,7 @@ interface ApprovalItem {
   };
 }
 
-const statusConfig: Record<string, { label: string; color: string; bgcolor: string; icon: any }> = {
+const statusConfig: Record<string, { label: string; color: string; bgcolor: string; icon: IconComponent }> = {
   pending: { label: 'รออนุมัติ', color: '#ED6C02', bgcolor: '#FFF3E0', icon: Clock },
   approved: { label: 'อนุมัติแล้ว', color: '#2E7D32', bgcolor: '#E8F5E9', icon: TickCircle },
   rejected: { label: 'ปฏิเสธ', color: '#D32F2F', bgcolor: '#FFEBEE', icon: CloseCircle },
@@ -188,7 +197,7 @@ export default function ApprovalPage() {
   const { data: session, status } = useSession();
   const theme = useTheme();
   const isMobileDevice = useMediaQuery(theme.breakpoints.down('md'));
-  const router = require('next/navigation').useRouter();
+  const router = useRouter();
 
   // Roles that can access approval page
   const allowedRoles = ['admin', 'hr_manager', 'hr', 'dept_manager', 'shift_supervisor', 'section_head'];
@@ -2632,7 +2641,7 @@ export default function ApprovalPage() {
                                         </Box>
                                         {hist.comment && (
                                           <Typography sx={{ fontSize: '0.85rem', display: 'block', mt: 0.5, color: 'text.secondary' }}>
-                                            "{hist.comment}"
+                                            &quot;{hist.comment}&quot;
                                           </Typography>
                                         )}
                                       </Box>
@@ -3127,7 +3136,7 @@ export default function ApprovalPage() {
                                     {hist.comment && (
                                       <Paper elevation={0} sx={{ mt: 1, p: 1.5, bgcolor: '#F8FAFC', borderRadius: 1 }}>
                                         <Typography sx={{ fontSize: '0.8rem', color: '#475569', fontStyle: 'italic' }}>
-                                          "{hist.comment}"
+                                          &quot;{hist.comment}&quot;
                                         </Typography>
                                       </Paper>
                                     )}

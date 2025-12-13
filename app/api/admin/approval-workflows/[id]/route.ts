@@ -2,6 +2,14 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions, isAdminRole } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { UserRole } from '@prisma/client';
+
+function isUserRole(value: unknown): value is UserRole {
+  return (
+    typeof value === 'string' &&
+    (Object.values(UserRole) as string[]).includes(value)
+  );
+}
 
 export async function DELETE(
   request: Request,
@@ -51,6 +59,22 @@ export async function PUT(
   };
   const { name, description, company, department, section, steps } = body;
 
+  if (steps?.length) {
+    const invalid = steps
+      .map((s, idx) => ({ idx, role: s.approverRole }))
+      .filter((x) => x.role != null && x.role !== '' && !isUserRole(x.role));
+
+    if (invalid.length > 0) {
+      return NextResponse.json(
+        {
+          error: 'Invalid approverRole',
+          details: invalid.map((x) => ({ index: x.idx, approverRole: x.role })),
+        },
+        { status: 400 }
+      );
+    }
+  }
+
   try {
     // Transaction to update workflow and replace steps
     const workflow = await prisma.$transaction(async (tx) => {
@@ -76,7 +100,10 @@ export async function PUT(
           data: steps.map((step) => ({
             workflowId: id,
             level: step.level,
-            approverRole: step.approverRole || null,
+            approverRole:
+              step.approverRole && isUserRole(step.approverRole)
+                ? step.approverRole
+                : null,
             approverId: step.approverId || null,
           }))
         });
