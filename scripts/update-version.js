@@ -8,6 +8,7 @@ const path = require('path');
 
 const versionFilePath = path.join(__dirname, '..', 'lib', 'version.ts');
 const swFilePath = path.join(__dirname, '..', 'public', 'sw.js');
+const oneSignalSwFilePath = path.join(__dirname, '..', 'public', 'OneSignalSDKWorker.js');
 
 // Read current version file
 const content = fs.readFileSync(versionFilePath, 'utf8');
@@ -53,7 +54,18 @@ if (fs.existsSync(swFilePath)) {
         `const APP_VERSION = '${newVersion}';`
     );
     fs.writeFileSync(swFilePath, swContent, 'utf8');
-    console.log(`✅ Service Worker version updated to: ${newVersion}`);
+    console.log(`✅ sw.js version updated to: ${newVersion}`);
+}
+
+// Update OneSignalSDKWorker.js with new version
+if (fs.existsSync(oneSignalSwFilePath)) {
+    let osSwContent = fs.readFileSync(oneSignalSwFilePath, 'utf8');
+    osSwContent = osSwContent.replace(
+        /const APP_VERSION = '[^']+';/,
+        `const APP_VERSION = '${newVersion}';`
+    );
+    fs.writeFileSync(oneSignalSwFilePath, osSwContent, 'utf8');
+    console.log(`✅ OneSignalSDKWorker.js version updated to: ${newVersion}`);
 }
 
 console.log(`✅ Version updated: ${versionMatch[0].match(/'[\d.]+'/)[0]} → '${newVersion}'`);

@@ -121,22 +121,12 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
       // Note: OneSignal v16 doesn't have a public initialized property we can rely on easily
       // but we can try-catch the init call
       try {
-        // Unregister old sw.js worker if exists
-        if ('serviceWorker' in navigator) {
-          const registrations = await navigator.serviceWorker.getRegistrations();
-          for (const registration of registrations) {
-            if (registration.active?.scriptURL.includes('sw.js')) {
-              await registration.unregister();
-              console.log('🔔 OneSignal: Unregistered old sw.js worker');
-            }
-          }
-        }
-
         await OneSignal.init({
           appId: ONESIGNAL_APP_ID,
           // safarai_web_id is only required for Legacy Safari (macOS < 13), optional for modern browsers
           safari_web_id: ONESIGNAL_SAFARI_WEB_ID || undefined,
           allowLocalhostAsSecureOrigin: true,
+          serviceWorkerParam: { scope: '/' },
           notifyButton: {
             enable: false, // Disabled - using custom toggle in profile page
           },

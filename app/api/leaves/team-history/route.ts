@@ -52,6 +52,40 @@ export async function GET(request: NextRequest) {
         select: { userId: true },
       });
       subordinateIds = [...new Set(approvalFlows.map(af => af.userId))];
+
+      // ถ้าไม่มี workflow และเป็น dept_manager หรือ section_head - ให้เห็นคนในฝ่าย/แผนกเดียวกัน
+      if (subordinateIds.length === 0 && (userRole === 'dept_manager' || userRole === 'section_head')) {
+        // หาข้อมูล user ที่ login
+        const currentUser = await prisma.user.findUnique({
+          where: { id: approverId },
+          select: { department: true, section: true },
+        });
+
+        if (currentUser) {
+          // dept_manager: เห็นทุกคนในฝ่ายเดียวกัน (ยกเว้น role สูงกว่าตัวเอง)
+          // section_head: เห็นคนในแผนกเดียวกัน
+          const whereClause: Record<string, unknown> = {
+            isActive: true,
+            id: { not: approverId }, // ไม่รวมตัวเอง
+          };
+
+          if (userRole === 'dept_manager') {
+            whereClause.department = currentUser.department;
+            // ไม่รวม admin, hr_manager, hr, dept_manager ที่เป็นระดับเดียวกันหรือสูงกว่า
+            whereClause.role = { in: ['employee', 'shift_supervisor', 'section_head'] };
+          } else if (userRole === 'section_head' && currentUser.section) {
+            whereClause.section = currentUser.section;
+            // ไม่รวม section_head, dept_manager, admin, hr_manager, hr
+            whereClause.role = { in: ['employee', 'shift_supervisor'] };
+          }
+
+          const sameUnitUsers = await prisma.user.findMany({
+            where: whereClause,
+            select: { id: true },
+          });
+          subordinateIds = sameUnitUsers.map(u => u.id);
+        }
+      }
     }
 
     if (subordinateIds.length === 0) {

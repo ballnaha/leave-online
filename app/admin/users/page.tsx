@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo, useCallback, memo } from 'react';
 import {
   Box,
   Typography,
@@ -34,6 +34,11 @@ import {
   Tab,
   Badge,
   Divider,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
+  ToggleButton,
+  ToggleButtonGroup,
 } from '@mui/material';
 import {
   Add,
@@ -50,6 +55,10 @@ import {
   ShieldTick,
   People,
   Eye,
+  ArrowDown2,
+  Building4,
+  RowVertical,
+  Hierarchy,
 } from 'iconsax-react';
 import UserDialog from './UserDialog';
 import UserViewDialog from './UserViewDialog';
@@ -90,7 +99,7 @@ interface StatCardProps {
   subtitle?: string;
 }
 
-function StatCard({ title, value, icon, color, subtitle }: StatCardProps) {
+const StatCard = memo(function StatCard({ title, value, icon, color, subtitle }: StatCardProps) {
   const theme = useTheme();
 
   const colorMap = {
@@ -144,7 +153,8 @@ function StatCard({ title, value, icon, color, subtitle }: StatCardProps) {
       </CardContent>
     </Card>
   );
-}
+});
+StatCard.displayName = 'StatCard';
 
 // Table Skeleton
 function TableSkeleton() {
@@ -187,7 +197,14 @@ export default function UsersPage() {
   // Filters
   const [companyFilter, setCompanyFilter] = useState<string>('all');
   const [departmentFilter, setDepartmentFilter] = useState<string>('all');
+  const [sectionFilter, setSectionFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+
+  // View Mode: 'list' (table/card) or 'tree' (accordion)
+  const [viewMode, setViewMode] = useState<'list' | 'tree'>('list');
+  const [expandedCompanies, setExpandedCompanies] = useState<Set<string>>(new Set());
+  const [expandedDepartments, setExpandedDepartments] = useState<Set<string>>(new Set());
+  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
 
   // Pagination State
   const [page, setPage] = useState(0);
@@ -255,25 +272,25 @@ export default function UsersPage() {
     fetchDepartmentsAndSections();
   }, []);
 
-  const handleCreate = () => {
+  const handleCreate = useCallback(() => {
     setSelectedUser(undefined);
     setDialogOpen(true);
-  };
+  }, []);
 
-  const handleEdit = (user: UserData) => {
+  const handleEdit = useCallback((user: UserData) => {
     setSelectedUser(user);
     setDialogOpen(true);
-  };
+  }, []);
 
-  const handleView = (user: UserData) => {
+  const handleView = useCallback((user: UserData) => {
     setViewUser(user);
     setViewDialogOpen(true);
-  };
+  }, []);
 
-  const handleDelete = (user: UserData) => {
+  const handleDelete = useCallback((user: UserData) => {
     setDeleteTarget(user);
     setConfirmOpen(true);
-  };
+  }, []);
 
   const handleConfirmDelete = async () => {
     if (!deleteTarget) return;
@@ -298,18 +315,32 @@ export default function UsersPage() {
     }
   };
 
-  const handleSave = () => {
+  const handleSave = useCallback(() => {
     setDialogOpen(false);
     toastr.success(selectedUser ? 'แก้ไขข้อมูลผู้ใช้งานสำเร็จ' : 'เพิ่มผู้ใช้งานสำเร็จ');
     fetchUsers();
-  };
+  }, [selectedUser, toastr]);
 
-  // Get unique values for filters
-  const uniqueCompanies = [...new Set(users.map((u) => u.company))].filter(Boolean);
-  const uniqueDepartments = [...new Set(users.map((u) => u.department))].filter(Boolean);
+  // Get unique values for filters - memoized
+  const uniqueCompanies = useMemo(() => 
+    [...new Set(users.map((u) => u.company))].filter(Boolean), [users]);
+  const uniqueDepartments = useMemo(() => 
+    [...new Set(users.map((u) => u.department))].filter(Boolean), [users]);
+  
+  // Get unique sections (filtered by department if selected) - memoized
+  const uniqueSections = useMemo(() => [...new Set(
+    users
+      .filter((u) => departmentFilter === 'all' || u.department === departmentFilter)
+      .map((u) => u.section)
+  )].filter(Boolean) as string[], [users, departmentFilter]);
 
-  // Create department code to name map
-  const departmentNameMap = new Map(users.map((u) => [u.department, u.departmentName]));
+  // Create department code to name map - memoized
+  const departmentNameMap = useMemo(() => 
+    new Map(users.map((u) => [u.department, u.departmentName])), [users]);
+  
+  // Create section code to name map - memoized
+  const sectionNameMap = useMemo(() => 
+    new Map(users.map((u) => [u.section, u.sectionName])), [users]);
 
   // Role tabs configuration
   const roleTabs = [
@@ -323,8 +354,8 @@ export default function UsersPage() {
     { value: 'shift_supervisor', label: 'หัวหน้ากะ', color: 'warning' },
   ] as const;
 
-  // Count users by role
-  const roleUserCounts = {
+  // Count users by role - memoized
+  const roleUserCounts = useMemo(() => ({
     all: users.length,
     employee: users.filter(u => u.role === 'employee').length,
     admin: users.filter(u => u.role === 'admin').length,
@@ -333,26 +364,29 @@ export default function UsersPage() {
     dept_manager: users.filter(u => u.role === 'dept_manager').length,
     section_head: users.filter(u => u.role === 'section_head').length,
     shift_supervisor: users.filter(u => u.role === 'shift_supervisor').length,
-  };
+  }), [users]);
 
-  // Filter users
-  const filteredUsers = users.filter((user) => {
-    const matchesSearch =
-      user.employeeId.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      user.firstName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      user.lastName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (user.email?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false);
+  // Filter users (memoized to prevent unnecessary re-renders)
+  const filteredUsers = useMemo(() => {
+    return users.filter((user) => {
+      const matchesSearch =
+        user.employeeId.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        user.firstName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        user.lastName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (user.email?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false);
 
-    const matchesCompany = companyFilter === 'all' || user.company === companyFilter;
-    const matchesDepartment = departmentFilter === 'all' || user.department === departmentFilter;
-    const matchesRole = roleTab === 'all' || user.role === roleTab;
-    const matchesStatus =
-      statusFilter === 'all' ||
-      (statusFilter === 'active' && user.isActive) ||
-      (statusFilter === 'inactive' && !user.isActive);
+      const matchesCompany = companyFilter === 'all' || user.company === companyFilter;
+      const matchesDepartment = departmentFilter === 'all' || user.department === departmentFilter;
+      const matchesSection = sectionFilter === 'all' || user.section === sectionFilter;
+      const matchesRole = roleTab === 'all' || user.role === roleTab;
+      const matchesStatus =
+        statusFilter === 'all' ||
+        (statusFilter === 'active' && user.isActive) ||
+        (statusFilter === 'inactive' && !user.isActive);
 
-    return matchesSearch && matchesCompany && matchesDepartment && matchesRole && matchesStatus;
-  });
+      return matchesSearch && matchesCompany && matchesDepartment && matchesSection && matchesRole && matchesStatus;
+    });
+  }, [users, searchQuery, companyFilter, departmentFilter, sectionFilter, roleTab, statusFilter]);
 
   // Paginated users
   const paginatedUsers = filteredUsers.slice(
@@ -360,27 +394,153 @@ export default function UsersPage() {
     page * rowsPerPage + rowsPerPage
   );
 
-  // Handle page change
-  const handleChangePage = (_event: unknown, newPage: number) => {
-    setPage(newPage);
-  };
+  // Group filtered users by Company > Department > Section for Tree View
+  const groupedData = useMemo(() => {
+    const grouped: Map<string, {
+      company: string;
+      companyName: string;
+      departments: Map<string, {
+        department: string;
+        departmentName: string;
+        sections: Map<string | null, {
+          section: string | null;
+          sectionName: string | null;
+          users: UserData[];
+        }>;
+        usersWithoutSection: UserData[];
+      }>;
+    }> = new Map();
 
-  // Handle rows per page change
-  const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement>) => {
+    filteredUsers.forEach(user => {
+      if (!grouped.has(user.company)) {
+        grouped.set(user.company, {
+          company: user.company,
+          companyName: user.company,
+          departments: new Map(),
+        });
+      }
+      const companyGroup = grouped.get(user.company)!;
+
+      if (!companyGroup.departments.has(user.department)) {
+        companyGroup.departments.set(user.department, {
+          department: user.department,
+          departmentName: user.departmentName || user.department,
+          sections: new Map(),
+          usersWithoutSection: [],
+        });
+      }
+      const deptGroup = companyGroup.departments.get(user.department)!;
+
+      // Group by section within department
+      if (user.section) {
+        if (!deptGroup.sections.has(user.section)) {
+          deptGroup.sections.set(user.section, {
+            section: user.section,
+            sectionName: user.sectionName || user.section,
+            users: [],
+          });
+        }
+        deptGroup.sections.get(user.section)!.users.push(user);
+      } else {
+        deptGroup.usersWithoutSection.push(user);
+      }
+    });
+
+    // Sort by company then by department then by section
+    return Array.from(grouped.values())
+      .sort((a, b) => a.company.localeCompare(b.company))
+      .map(c => ({
+        ...c,
+        departments: Array.from(c.departments.values())
+          .sort((a, b) => a.departmentName.localeCompare(b.departmentName))
+          .map(d => ({
+            ...d,
+            sections: Array.from(d.sections.values())
+              .sort((a, b) => (a.sectionName || '').localeCompare(b.sectionName || '')),
+          })),
+      }));
+  }, [filteredUsers]);
+
+  // Toggle Company expand/collapse
+  // Toggle Company expand/collapse - memoized
+  const toggleCompany = useCallback((company: string) => {
+    setExpandedCompanies(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(company)) {
+        newSet.delete(company);
+      } else {
+        newSet.add(company);
+      }
+      return newSet;
+    });
+  }, []);
+
+  // Toggle Department expand/collapse - memoized
+  const toggleDepartment = useCallback((key: string) => {
+    setExpandedDepartments(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(key)) {
+        newSet.delete(key);
+      } else {
+        newSet.add(key);
+      }
+      return newSet;
+    });
+  }, []);
+
+  // Toggle Section expand/collapse - memoized
+  const toggleSection = useCallback((key: string) => {
+    setExpandedSections(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(key)) {
+        newSet.delete(key);
+      } else {
+        newSet.add(key);
+      }
+      return newSet;
+    });
+  }, []);
+
+  // Expand all companies, departments and sections when switching to tree view
+  // Only run when viewMode changes, not when groupedData changes
+  useEffect(() => {
+    if (viewMode === 'tree') {
+      // Start with only companies expanded, sections/departments collapsed for better performance
+      const companies = new Set(filteredUsers.map(u => u.company));
+      setExpandedCompanies(companies);
+      setExpandedDepartments(new Set());
+      setExpandedSections(new Set());
+    }
+  }, [viewMode]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Handle page change - memoized
+  const handleChangePage = useCallback((_event: unknown, newPage: number) => {
+    setPage(newPage);
+  }, []);
+
+  // Handle rows per page change - memoized
+  const handleChangeRowsPerPage = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     setRowsPerPage(parseInt(event.target.value, 10));
     setPage(0);
-  };
+  }, []);
 
   // Reset page when filters change
   useEffect(() => {
     setPage(0);
-  }, [searchQuery, companyFilter, departmentFilter, roleTab, statusFilter]);
+  }, [searchQuery, companyFilter, departmentFilter, sectionFilter, roleTab, statusFilter]);
 
-  // Stats
-  const activeUsers = users.filter((u) => u.isActive).length;
-  const inactiveUsers = users.filter((u) => !u.isActive).length;
-  const totalUsers = users.length;
-  const newUsersThisMonth = users.filter((u) => dayjs(u.startDate).isSame(dayjs(), 'month')).length;
+  // Reset section filter when department changes
+  useEffect(() => {
+    setSectionFilter('all');
+  }, [departmentFilter]);
+
+  // Stats - memoized for performance
+  const { activeUsers, inactiveUsers, totalUsers, newUsersThisMonth } = useMemo(() => ({
+    activeUsers: users.filter((u) => u.isActive).length,
+    inactiveUsers: users.filter((u) => !u.isActive).length,
+    totalUsers: users.length,
+    newUsersThisMonth: users.filter((u) => dayjs(u.startDate).isSame(dayjs(), 'month')).length,
+  }), [users]);
 
   return (
     <Box>
@@ -529,11 +689,13 @@ export default function UsersPage() {
           boxShadow: 'none',
         }}
       >
+        {/* Row 1: Search + Company + Department */}
         <Box sx={{ 
           display: 'grid', 
-          gridTemplateColumns: { xs: '1fr 1fr', sm: 'repeat(2, 1fr)', md: '2fr 1fr 1fr 1fr auto auto' }, 
+          gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: '2fr 1fr 1fr' }, 
           gap: 1.5, 
-          alignItems: 'center' 
+          alignItems: 'center',
+          mb: { xs: 1.5, md: 1.5 }
         }}>
           <TextField
             placeholder="ค้นหาชื่อ, รหัสพนักงาน..."
@@ -541,7 +703,7 @@ export default function UsersPage() {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             sx={{
-              gridColumn: { xs: '1 / -1', md: 'auto' },
+              gridColumn: { xs: '1 / -1', sm: '1 / -1', md: 'auto' },
               '& .MuiOutlinedInput-root': {
                 borderRadius: 1,
                 bgcolor: 'background.default',
@@ -607,6 +769,37 @@ export default function UsersPage() {
               ))}
             </Select>
           </FormControl>
+        </Box>
+
+        {/* Row 2: Section + Status + Count + Refresh */}
+        <Box sx={{ 
+          display: 'grid', 
+          gridTemplateColumns: { xs: '1fr 1fr', sm: 'repeat(2, 1fr)', md: '1fr 1fr auto auto' }, 
+          gap: 1.5, 
+          alignItems: 'center' 
+        }}>
+          {/* Section Filter */}
+          <FormControl size="small" fullWidth>
+            <InputLabel>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                <Layer size={16} color={theme.palette.text.secondary} />
+                แผนก
+              </Box>
+            </InputLabel>
+            <Select
+              value={sectionFilter}
+              onChange={(e) => setSectionFilter(e.target.value)}
+              label="แผนก"
+              sx={{ borderRadius: 1 }}
+            >
+              <MenuItem value="all">ทั้งหมด</MenuItem>
+              {uniqueSections.map((section) => (
+                <MenuItem key={section} value={section}>
+                  {sectionNameMap.get(section) || section}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
 
           {/* Status Filter */}
           <FormControl size="small" fullWidth>
@@ -635,6 +828,41 @@ export default function UsersPage() {
             gridColumn: { xs: '1 / -1', md: 'auto' },
             justifyContent: { xs: 'flex-end', md: 'flex-start' }
           }}>
+            {/* View Mode Toggle */}
+            <ToggleButtonGroup
+              value={viewMode}
+              exclusive
+              onChange={(_e, v) => v && setViewMode(v)}
+              size="small"
+              sx={{ 
+                display: { xs: 'none', md: 'flex' },
+                '& .MuiToggleButton-root': {
+                  px: 1.5,
+                  py: 0.5,
+                  borderRadius: 1,
+                  '&.Mui-selected': {
+                    bgcolor: alpha(theme.palette.primary.main, 0.1),
+                    color: 'primary.main',
+                  },
+                },
+              }}
+            >
+              <ToggleButton value="list">
+                <Tooltip title="รายการ">
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                    <RowVertical size={18} color={viewMode === 'list' ? theme.palette.primary.main : theme.palette.text.secondary} />
+                  </Box>
+                </Tooltip>
+              </ToggleButton>
+              <ToggleButton value="tree">
+                <Tooltip title="โครงสร้าง">
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                    <Hierarchy size={18} color={viewMode === 'tree' ? theme.palette.primary.main : theme.palette.text.secondary} />
+                  </Box>
+                </Tooltip>
+              </ToggleButton>
+            </ToggleButtonGroup>
+
             <Chip
               label={`${filteredUsers.length} รายการ`}
               size="small"
@@ -684,8 +912,764 @@ export default function UsersPage() {
         </Alert>
       )}
 
-      {/* Mobile Card View (Visible on xs, sm) */}
-      <Box sx={{ display: { xs: 'flex', md: 'none' }, flexDirection: 'column', gap: 2 }}>
+      {/* Tree View (Table Row Group) - แสดงเมื่อ viewMode === 'tree' */}
+      {viewMode === 'tree' && (
+        <Box>
+          {loading ? (
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              {Array.from({ length: 3 }).map((_, i) => (
+                <Skeleton key={i} variant="rounded" height={150} sx={{ borderRadius: 1 }} />
+              ))}
+            </Box>
+          ) : filteredUsers.length === 0 ? (
+            <Paper 
+              sx={{ 
+                p: 6, 
+                textAlign: 'center', 
+                borderRadius: 1, 
+                border: '1px solid',
+                borderColor: 'divider',
+              }}
+            >
+              <People size={64} color={theme.palette.text.disabled} variant="Bulk" />
+              <Typography variant="h6" color="text.secondary" sx={{ mt: 2 }}>
+                ไม่พบข้อมูลผู้ใช้งาน
+              </Typography>
+            </Paper>
+          ) : (
+            <>
+              {/* Desktop Table with Row Grouping */}
+              <TableContainer
+                component={Paper}
+                sx={{
+                  display: { xs: 'none', md: 'block' },
+                  borderRadius: 1,
+                  border: '1px solid',
+                  borderColor: 'divider',
+                  boxShadow: 'none',
+                }}
+              >
+                <Table size="small" stickyHeader>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell sx={{ fontWeight: 600, bgcolor: 'background.paper', color: 'text.secondary', width: 40 }} />
+                      <TableCell sx={{ fontWeight: 600, bgcolor: 'background.paper', color: 'text.secondary' }}>พนักงาน</TableCell>
+                      <TableCell sx={{ fontWeight: 600, bgcolor: 'background.paper', color: 'text.secondary' }}>แผนก</TableCell>
+                      <TableCell sx={{ fontWeight: 600, bgcolor: 'background.paper', color: 'text.secondary' }}>ตำแหน่ง</TableCell>
+                      <TableCell sx={{ fontWeight: 600, bgcolor: 'background.paper', color: 'text.secondary' }}>สิทธิ์</TableCell>
+                      <TableCell sx={{ fontWeight: 600, bgcolor: 'background.paper', color: 'text.secondary' }} align="center">สถานะ</TableCell>
+                      <TableCell sx={{ fontWeight: 600, bgcolor: 'background.paper', color: 'text.secondary' }} align="right">จัดการ</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {groupedData.map((companyGroup, companyIndex) => {
+                      const isCompanyExpanded = expandedCompanies.has(companyGroup.company);
+                      const companyUserCount = companyGroup.departments.reduce((sum, d) => 
+                        sum + d.sections.reduce((s, sec) => s + sec.users.length, 0) + d.usersWithoutSection.length, 0);
+                      // สลับสีพื้นหลังบริษัท
+                      const companyBgColor = companyGroup.company === 'PSC' 
+                        ? '#EEF2FF' 
+                        : companyIndex % 2 === 0 ? '#FFF7ED' : '#F0FDF4';
+
+                      return (
+                        <React.Fragment key={companyGroup.company}>
+                          {/* Company Header Row */}
+                          <TableRow
+                            onClick={() => toggleCompany(companyGroup.company)}
+                            sx={{
+                              cursor: 'pointer',
+                              bgcolor: companyBgColor,
+                              '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.08) },
+                            }}
+                          >
+                            <TableCell sx={{ py: 1.5 }}>
+                              <IconButton size="small" sx={{ p: 0.5 }}>
+                                <ArrowDown2 
+                                  size={18} 
+                                  color={theme.palette.primary.main}
+                                  style={{ 
+                                    transform: isCompanyExpanded ? 'rotate(0deg)' : 'rotate(-90deg)',
+                                    transition: 'transform 0.2s ease',
+                                  }}
+                                />
+                              </IconButton>
+                            </TableCell>
+                            <TableCell colSpan={6} sx={{ py: 1.5 }}>
+                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                                <Building size={22} color={theme.palette.primary.main} variant="Bold" />
+                                <Typography fontWeight={700} color="primary.main">
+                                  {companyGroup.companyName}
+                                </Typography>
+                                <Chip
+                                  label={`${companyUserCount} คน`}
+                                  size="small"
+                                  sx={{ 
+                                    bgcolor: alpha(theme.palette.primary.main, 0.15), 
+                                    color: theme.palette.primary.main, 
+                                    fontWeight: 600,
+                                    height: 24,
+                                  }}
+                                />
+                                <Typography variant="caption" color="text.secondary">
+                                  ({companyGroup.departments.length} ฝ่าย)
+                                </Typography>
+                              </Box>
+                            </TableCell>
+                          </TableRow>
+
+                          {/* Department, Section and Users - แสดงเมื่อ Company expanded */}
+                          {isCompanyExpanded && companyGroup.departments.map((deptGroup, deptIndex) => {
+                            const isDeptExpanded = expandedDepartments.has(`${companyGroup.company}-${deptGroup.department}`);
+                            const deptUserCount = deptGroup.sections.reduce((sum, sec) => sum + sec.users.length, 0) + deptGroup.usersWithoutSection.length;
+                            // สลับสีพื้นหลังฝ่าย
+                            const deptBgColor = deptIndex % 2 === 0 
+                              ? alpha(theme.palette.info.main, 0.04)
+                              : alpha(theme.palette.secondary.main, 0.04);
+
+                            return (
+                              <React.Fragment key={`${companyGroup.company}-${deptGroup.department}`}>
+                                {/* Department Header Row */}
+                                <TableRow
+                                  onClick={() => toggleDepartment(`${companyGroup.company}-${deptGroup.department}`)}
+                                  sx={{
+                                    cursor: 'pointer',
+                                    bgcolor: deptBgColor,
+                                    '&:hover': { bgcolor: alpha(theme.palette.info.main, 0.1) },
+                                  }}
+                                >
+                                  <TableCell sx={{ py: 1, pl: 3 }}>
+                                    <IconButton size="small" sx={{ p: 0.25 }}>
+                                      <ArrowDown2 
+                                        size={16} 
+                                        color={theme.palette.text.secondary}
+                                        style={{ 
+                                          transform: isDeptExpanded ? 'rotate(0deg)' : 'rotate(-90deg)',
+                                          transition: 'transform 0.2s ease',
+                                        }}
+                                      />
+                                    </IconButton>
+                                  </TableCell>
+                                  <TableCell colSpan={6} sx={{ py: 1 }}>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, pl: 1 }}>
+                                      <Building4 size={18} color={theme.palette.info.main} />
+                                      <Typography fontWeight={600} color="text.primary" fontSize="0.875rem">
+                                        {deptGroup.departmentName}
+                                      </Typography>
+                                      <Chip
+                                        label={`${deptUserCount} คน`}
+                                        size="small"
+                                        sx={{ 
+                                          bgcolor: alpha(theme.palette.info.main, 0.1), 
+                                          color: theme.palette.info.main, 
+                                          fontWeight: 600,
+                                          height: 22,
+                                          fontSize: '0.7rem',
+                                        }}
+                                      />
+                                      {deptGroup.sections.length > 0 && (
+                                        <Typography variant="caption" color="text.secondary">
+                                          ({deptGroup.sections.length} แผนก)
+                                        </Typography>
+                                      )}
+                                    </Box>
+                                  </TableCell>
+                                </TableRow>
+
+                                {/* Section and Users - แสดงเมื่อ Department expanded */}
+                                {isDeptExpanded && (
+                                  <>
+                                    {/* Sections with users */}
+                                    {deptGroup.sections.map((sectionGroup, sectionIndex) => {
+                                      const isSectionExpanded = expandedSections.has(`${companyGroup.company}-${deptGroup.department}-${sectionGroup.section}`);
+                                      const sectionBgColor = sectionIndex % 2 === 0 
+                                        ? alpha(theme.palette.warning.main, 0.04)
+                                        : alpha(theme.palette.success.main, 0.04);
+
+                                      return (
+                                        <React.Fragment key={`${companyGroup.company}-${deptGroup.department}-${sectionGroup.section}`}>
+                                          {/* Section Header Row */}
+                                          <TableRow
+                                            onClick={() => toggleSection(`${companyGroup.company}-${deptGroup.department}-${sectionGroup.section}`)}
+                                            sx={{
+                                              cursor: 'pointer',
+                                              bgcolor: sectionBgColor,
+                                              '&:hover': { bgcolor: alpha(theme.palette.warning.main, 0.1) },
+                                            }}
+                                          >
+                                            <TableCell sx={{ py: 0.75, pl: 5 }}>
+                                              <IconButton size="small" sx={{ p: 0.25 }}>
+                                                <ArrowDown2 
+                                                  size={14} 
+                                                  color={theme.palette.warning.dark}
+                                                  style={{ 
+                                                    transform: isSectionExpanded ? 'rotate(0deg)' : 'rotate(-90deg)',
+                                                    transition: 'transform 0.2s ease',
+                                                  }}
+                                                />
+                                              </IconButton>
+                                            </TableCell>
+                                            <TableCell colSpan={6} sx={{ py: 0.75 }}>
+                                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, pl: 2 }}>
+                                                <Layer size={16} color={theme.palette.warning.dark} />
+                                                <Typography fontWeight={500} color="text.primary" fontSize="0.8rem">
+                                                  {sectionGroup.sectionName}
+                                                </Typography>
+                                                <Chip
+                                                  label={`${sectionGroup.users.length} คน`}
+                                                  size="small"
+                                                  sx={{ 
+                                                    bgcolor: alpha(theme.palette.warning.main, 0.1), 
+                                                    color: theme.palette.warning.dark, 
+                                                    fontWeight: 600,
+                                                    height: 20,
+                                                    fontSize: '0.65rem',
+                                                  }}
+                                                />
+                                              </Box>
+                                            </TableCell>
+                                          </TableRow>
+
+                                          {/* User Rows within Section */}
+                                          {isSectionExpanded && sectionGroup.users.map(user => (
+                                            <TableRow 
+                                              key={user.id} 
+                                              hover
+                                              sx={{
+                                                '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.04) },
+                                              }}
+                                            >
+                                              <TableCell />
+                                              <TableCell sx={{ pl: 6 }}>
+                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                                                  <Avatar
+                                                    src={user.avatar || undefined}
+                                                    sx={{ width: 32, height: 32, bgcolor: theme.palette.primary.main, fontSize: '0.875rem' }}
+                                                  >
+                                                    {user.firstName.charAt(0)}
+                                                  </Avatar>
+                                                  <Box>
+                                                    <Typography variant="body2" fontWeight={600}>
+                                                      {user.firstName} {user.lastName}
+                                                    </Typography>
+                                                    <Typography variant="caption" color="text.secondary">
+                                                      {user.employeeId}
+                                                    </Typography>
+                                                  </Box>
+                                                </Box>
+                                              </TableCell>
+                                              <TableCell>
+                                                <Typography variant="body2" fontSize="0.8rem" color="text.secondary">
+                                                  -
+                                                </Typography>
+                                              </TableCell>
+                                              <TableCell>
+                                                <Typography variant="body2" fontSize="0.8rem">
+                                                  {user.position || '-'}
+                                                </Typography>
+                                              </TableCell>
+                                              <TableCell>
+                                                <Chip
+                                                  label={user.role}
+                                                  size="small"
+                                                  sx={{
+                                                    bgcolor: alpha(theme.palette.info.main, 0.1),
+                                                    color: theme.palette.info.main,
+                                                    fontWeight: 500,
+                                                    borderRadius: 1,
+                                                    textTransform: 'capitalize',
+                                                    height: 22,
+                                                    fontSize: '0.7rem',
+                                                  }}
+                                                />
+                                              </TableCell>
+                                              <TableCell align="center">
+                                                <Chip
+                                                  icon={user.isActive
+                                                    ? <TickCircle size={12} color={theme.palette.success.main} variant="Bold" />
+                                                    : <CloseCircle size={12} color={theme.palette.text.secondary} variant="Bold" />
+                                                  }
+                                                  label={user.isActive ? 'Active' : 'Inactive'}
+                                                  size="small"
+                                                  sx={{
+                                                    fontWeight: 500,
+                                                    bgcolor: user.isActive
+                                                      ? alpha(theme.palette.success.main, 0.1)
+                                                      : alpha(theme.palette.text.secondary, 0.1),
+                                                    color: user.isActive
+                                                      ? theme.palette.success.main
+                                                      : 'text.secondary',
+                                                    '& .MuiChip-icon': { color: 'inherit' },
+                                                    height: 22,
+                                                    fontSize: '0.7rem',
+                                                  }}
+                                                />
+                                              </TableCell>
+                                              <TableCell align="right">
+                                                <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 0.5 }}>
+                                                  <Tooltip title="ดูรายละเอียด">
+                                                    <IconButton
+                                                      onClick={(e) => { e.stopPropagation(); handleView(user); }}
+                                                      size="small"
+                                                      sx={{
+                                                        color: 'info.main',
+                                                        bgcolor: alpha(theme.palette.info.main, 0.1),
+                                                        '&:hover': { bgcolor: alpha(theme.palette.info.main, 0.2) },
+                                                      }}
+                                                    >
+                                                      <Eye size={14} color={theme.palette.info.main} />
+                                                    </IconButton>
+                                                  </Tooltip>
+                                                  <Tooltip title="แก้ไข">
+                                                    <IconButton
+                                                      onClick={(e) => { e.stopPropagation(); handleEdit(user); }}
+                                                      size="small"
+                                                      sx={{
+                                                        color: 'primary.main',
+                                                        bgcolor: alpha(theme.palette.primary.main, 0.1),
+                                                        '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.2) },
+                                                      }}
+                                                    >
+                                                      <Edit2 size={14} color={theme.palette.primary.main} />
+                                                    </IconButton>
+                                                  </Tooltip>
+                                                  <Tooltip title="ลบ">
+                                                    <IconButton
+                                                      onClick={(e) => { e.stopPropagation(); handleDelete(user); }}
+                                                      size="small"
+                                                      sx={{
+                                                        color: 'error.main',
+                                                        bgcolor: alpha(theme.palette.error.main, 0.1),
+                                                        '&:hover': { bgcolor: alpha(theme.palette.error.main, 0.2) },
+                                                      }}
+                                                    >
+                                                      <Trash size={14} color={theme.palette.error.main} />
+                                                    </IconButton>
+                                                  </Tooltip>
+                                                </Box>
+                                              </TableCell>
+                                            </TableRow>
+                                          ))}
+                                        </React.Fragment>
+                                      );
+                                    })}
+
+                                    {/* Users without section (directly under department) */}
+                                    {deptGroup.usersWithoutSection.map(user => (
+                                      <TableRow 
+                                        key={user.id} 
+                                        hover
+                                        sx={{
+                                          '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.04) },
+                                        }}
+                                      >
+                                        <TableCell />
+                                        <TableCell sx={{ pl: 5 }}>
+                                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                                            <Avatar
+                                              src={user.avatar || undefined}
+                                              sx={{ width: 32, height: 32, bgcolor: theme.palette.primary.main, fontSize: '0.875rem' }}
+                                            >
+                                              {user.firstName.charAt(0)}
+                                            </Avatar>
+                                            <Box>
+                                              <Typography variant="body2" fontWeight={600}>
+                                                {user.firstName} {user.lastName}
+                                              </Typography>
+                                              <Typography variant="caption" color="text.secondary">
+                                                {user.employeeId}
+                                              </Typography>
+                                            </Box>
+                                          </Box>
+                                        </TableCell>
+                                        <TableCell>
+                                          <Typography variant="body2" fontSize="0.8rem" color="text.secondary">
+                                            -
+                                          </Typography>
+                                        </TableCell>
+                                        <TableCell>
+                                          <Typography variant="body2" fontSize="0.8rem">
+                                            {user.position || '-'}
+                                          </Typography>
+                                        </TableCell>
+                                        <TableCell>
+                                          <Chip
+                                            label={user.role}
+                                            size="small"
+                                            sx={{
+                                              bgcolor: alpha(theme.palette.info.main, 0.1),
+                                              color: theme.palette.info.main,
+                                              fontWeight: 500,
+                                              borderRadius: 1,
+                                              textTransform: 'capitalize',
+                                              height: 22,
+                                              fontSize: '0.7rem',
+                                            }}
+                                          />
+                                        </TableCell>
+                                        <TableCell align="center">
+                                          <Chip
+                                            icon={user.isActive
+                                              ? <TickCircle size={12} color={theme.palette.success.main} variant="Bold" />
+                                              : <CloseCircle size={12} color={theme.palette.text.secondary} variant="Bold" />
+                                            }
+                                            label={user.isActive ? 'Active' : 'Inactive'}
+                                            size="small"
+                                            sx={{
+                                              fontWeight: 500,
+                                              bgcolor: user.isActive
+                                                ? alpha(theme.palette.success.main, 0.1)
+                                                : alpha(theme.palette.text.secondary, 0.1),
+                                              color: user.isActive
+                                                ? theme.palette.success.main
+                                                : 'text.secondary',
+                                              '& .MuiChip-icon': { color: 'inherit' },
+                                              height: 22,
+                                              fontSize: '0.7rem',
+                                            }}
+                                          />
+                                        </TableCell>
+                                        <TableCell align="right">
+                                          <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 0.5 }}>
+                                            <Tooltip title="ดูรายละเอียด">
+                                              <IconButton
+                                                onClick={(e) => { e.stopPropagation(); handleView(user); }}
+                                                size="small"
+                                                sx={{
+                                                  color: 'info.main',
+                                                  bgcolor: alpha(theme.palette.info.main, 0.1),
+                                                  '&:hover': { bgcolor: alpha(theme.palette.info.main, 0.2) },
+                                                }}
+                                              >
+                                                <Eye size={14} color={theme.palette.info.main} />
+                                              </IconButton>
+                                            </Tooltip>
+                                            <Tooltip title="แก้ไข">
+                                              <IconButton
+                                                onClick={(e) => { e.stopPropagation(); handleEdit(user); }}
+                                                size="small"
+                                                sx={{
+                                                  color: 'primary.main',
+                                                  bgcolor: alpha(theme.palette.primary.main, 0.1),
+                                                  '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.2) },
+                                                }}
+                                              >
+                                                <Edit2 size={14} color={theme.palette.primary.main} />
+                                              </IconButton>
+                                            </Tooltip>
+                                            <Tooltip title="ลบ">
+                                              <IconButton
+                                                onClick={(e) => { e.stopPropagation(); handleDelete(user); }}
+                                                size="small"
+                                                sx={{
+                                                  color: 'error.main',
+                                                  bgcolor: alpha(theme.palette.error.main, 0.1),
+                                                  '&:hover': { bgcolor: alpha(theme.palette.error.main, 0.2) },
+                                                }}
+                                              >
+                                                <Trash size={14} color={theme.palette.error.main} />
+                                              </IconButton>
+                                            </Tooltip>
+                                          </Box>
+                                        </TableCell>
+                                      </TableRow>
+                                    ))}
+                                  </>
+                                )}
+                              </React.Fragment>
+                            );
+                          })}
+                        </React.Fragment>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+
+              {/* Mobile Card View for Tree Mode */}
+              <Box sx={{ display: { xs: 'flex', md: 'none' }, flexDirection: 'column', gap: 1.5 }}>
+                {groupedData.map((companyGroup, companyIndex) => {
+                  const isCompanyExpanded = expandedCompanies.has(companyGroup.company);
+                  const companyUserCount = companyGroup.departments.reduce((sum, d) => 
+                    sum + d.sections.reduce((s, sec) => s + sec.users.length, 0) + d.usersWithoutSection.length, 0);
+                  const companyBgColor = companyGroup.company === 'PSC' 
+                    ? '#EEF2FF' 
+                    : companyIndex % 2 === 0 ? '#FFF7ED' : '#F0FDF4';
+
+                  return (
+                    <Paper 
+                      key={companyGroup.company} 
+                      elevation={0} 
+                      sx={{ 
+                        borderRadius: 1, 
+                        border: '1px solid', 
+                        borderColor: 'divider',
+                        overflow: 'hidden',
+                      }}
+                    >
+                      {/* Company Header */}
+                      <Box
+                        onClick={() => toggleCompany(companyGroup.company)}
+                        sx={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 1.5,
+                          p: 1.5,
+                          bgcolor: companyBgColor,
+                          cursor: 'pointer',
+                        }}
+                      >
+                        <ArrowDown2 
+                          size={18} 
+                          color={theme.palette.primary.main}
+                          style={{ 
+                            transform: isCompanyExpanded ? 'rotate(0deg)' : 'rotate(-90deg)',
+                            transition: 'transform 0.2s ease',
+                          }}
+                        />
+                        <Building size={20} color={theme.palette.primary.main} variant="Bold" />
+                        <Typography fontWeight={700} color="primary.main" sx={{ flex: 1 }} fontSize="0.9rem">
+                          {companyGroup.companyName}
+                        </Typography>
+                        <Chip
+                          label={`${companyUserCount} คน`}
+                          size="small"
+                          sx={{ 
+                            bgcolor: alpha(theme.palette.primary.main, 0.15), 
+                            color: theme.palette.primary.main, 
+                            fontWeight: 600,
+                            height: 22,
+                            fontSize: '0.7rem',
+                          }}
+                        />
+                      </Box>
+
+                      {/* Departments */}
+                      {isCompanyExpanded && companyGroup.departments.map((deptGroup, deptIndex) => {
+                        const isDeptExpanded = expandedDepartments.has(`${companyGroup.company}-${deptGroup.department}`);
+                        const deptUserCount = deptGroup.sections.reduce((sum, sec) => sum + sec.users.length, 0) + deptGroup.usersWithoutSection.length;
+                        const deptBgColor = deptIndex % 2 === 0 
+                          ? alpha(theme.palette.info.main, 0.04)
+                          : alpha(theme.palette.secondary.main, 0.04);
+
+                        return (
+                          <Box key={`${companyGroup.company}-${deptGroup.department}`}>
+                            {/* Department Header */}
+                            <Box
+                              onClick={() => toggleDepartment(`${companyGroup.company}-${deptGroup.department}`)}
+                              sx={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 1,
+                                py: 1,
+                                px: 1.5,
+                                pl: 3,
+                                bgcolor: deptBgColor,
+                                borderTop: '1px solid',
+                                borderColor: 'divider',
+                                cursor: 'pointer',
+                              }}
+                            >
+                              <ArrowDown2 
+                                size={16} 
+                                color={theme.palette.text.secondary}
+                                style={{ 
+                                  transform: isDeptExpanded ? 'rotate(0deg)' : 'rotate(-90deg)',
+                                  transition: 'transform 0.2s ease',
+                                }}
+                              />
+                              <Building4 size={16} color={theme.palette.info.main} />
+                              <Typography fontWeight={600} fontSize="0.85rem" sx={{ flex: 1 }}>
+                                {deptGroup.departmentName}
+                              </Typography>
+                              <Chip
+                                label={`${deptUserCount}`}
+                                size="small"
+                                sx={{ 
+                                  bgcolor: alpha(theme.palette.info.main, 0.1), 
+                                  color: theme.palette.info.main, 
+                                  fontWeight: 600,
+                                  height: 20,
+                                  fontSize: '0.65rem',
+                                  minWidth: 28,
+                                }}
+                              />
+                            </Box>
+
+                            {/* Sections and Users */}
+                            {isDeptExpanded && (
+                              <>
+                                {/* Sections with users */}
+                                {deptGroup.sections.map((sectionGroup, sectionIndex) => {
+                                  const isSectionExpanded = expandedSections.has(`${companyGroup.company}-${deptGroup.department}-${sectionGroup.section}`);
+                                  const sectionBgColor = sectionIndex % 2 === 0 
+                                    ? alpha(theme.palette.warning.main, 0.04)
+                                    : alpha(theme.palette.success.main, 0.04);
+
+                                  return (
+                                    <Box key={`${companyGroup.company}-${deptGroup.department}-${sectionGroup.section}`}>
+                                      {/* Section Header */}
+                                      <Box
+                                        onClick={() => toggleSection(`${companyGroup.company}-${deptGroup.department}-${sectionGroup.section}`)}
+                                        sx={{
+                                          display: 'flex',
+                                          alignItems: 'center',
+                                          gap: 1,
+                                          py: 0.75,
+                                          px: 1.5,
+                                          pl: 5,
+                                          bgcolor: sectionBgColor,
+                                          borderTop: '1px solid',
+                                          borderColor: alpha(theme.palette.divider, 0.5),
+                                          cursor: 'pointer',
+                                        }}
+                                      >
+                                        <ArrowDown2 
+                                          size={14} 
+                                          color={theme.palette.warning.dark}
+                                          style={{ 
+                                            transform: isSectionExpanded ? 'rotate(0deg)' : 'rotate(-90deg)',
+                                            transition: 'transform 0.2s ease',
+                                          }}
+                                        />
+                                        <Layer size={14} color={theme.palette.warning.dark} />
+                                        <Typography fontWeight={500} fontSize="0.8rem" sx={{ flex: 1 }}>
+                                          {sectionGroup.sectionName}
+                                        </Typography>
+                                        <Chip
+                                          label={`${sectionGroup.users.length}`}
+                                          size="small"
+                                          sx={{ 
+                                            bgcolor: alpha(theme.palette.warning.main, 0.1), 
+                                            color: theme.palette.warning.dark, 
+                                            fontWeight: 600,
+                                            height: 18,
+                                            fontSize: '0.6rem',
+                                            minWidth: 24,
+                                          }}
+                                        />
+                                      </Box>
+
+                                      {/* Users in Section */}
+                                      {isSectionExpanded && (
+                                        <Box sx={{ px: 1.5, py: 0.5, bgcolor: 'background.paper' }}>
+                                          {sectionGroup.users.map(user => (
+                                            <Box
+                                              key={user.id}
+                                              sx={{
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: 1.5,
+                                                py: 0.75,
+                                                pl: 4,
+                                                borderBottom: '1px solid',
+                                                borderColor: alpha(theme.palette.divider, 0.3),
+                                                '&:last-child': { borderBottom: 'none' },
+                                              }}
+                                            >
+                                              <Avatar
+                                                src={user.avatar || undefined}
+                                                sx={{ width: 28, height: 28, bgcolor: theme.palette.primary.main, fontSize: '0.7rem' }}
+                                              >
+                                                {user.firstName.charAt(0)}
+                                              </Avatar>
+                                              <Box sx={{ flex: 1, minWidth: 0 }}>
+                                                <Typography variant="body2" fontWeight={600} noWrap fontSize="0.8rem">
+                                                  {user.firstName} {user.lastName}
+                                                </Typography>
+                                                <Typography variant="caption" color="text.secondary" noWrap fontSize="0.65rem">
+                                                  {user.employeeId} • {user.position || user.role}
+                                                </Typography>
+                                              </Box>
+                                              <Box sx={{ display: 'flex', gap: 0.25 }}>
+                                                <IconButton
+                                                  onClick={() => handleView(user)}
+                                                  size="small"
+                                                  sx={{ p: 0.25, color: 'info.main' }}
+                                                >
+                                                  <Eye size={14} />
+                                                </IconButton>
+                                                <IconButton
+                                                  onClick={() => handleEdit(user)}
+                                                  size="small"
+                                                  sx={{ p: 0.25, color: 'primary.main' }}
+                                                >
+                                                  <Edit2 size={14} />
+                                                </IconButton>
+                                              </Box>
+                                            </Box>
+                                          ))}
+                                        </Box>
+                                      )}
+                                    </Box>
+                                  );
+                                })}
+
+                                {/* Users without section (directly under department) */}
+                                {deptGroup.usersWithoutSection.length > 0 && (
+                                  <Box sx={{ px: 1.5, py: 0.5, bgcolor: 'background.paper' }}>
+                                    {deptGroup.usersWithoutSection.map(user => (
+                                      <Box
+                                        key={user.id}
+                                        sx={{
+                                          display: 'flex',
+                                          alignItems: 'center',
+                                          gap: 1.5,
+                                          py: 0.75,
+                                          pl: 3,
+                                          borderBottom: '1px solid',
+                                          borderColor: alpha(theme.palette.divider, 0.3),
+                                          '&:last-child': { borderBottom: 'none' },
+                                        }}
+                                      >
+                                        <Avatar
+                                          src={user.avatar || undefined}
+                                          sx={{ width: 28, height: 28, bgcolor: theme.palette.primary.main, fontSize: '0.7rem' }}
+                                        >
+                                          {user.firstName.charAt(0)}
+                                        </Avatar>
+                                        <Box sx={{ flex: 1, minWidth: 0 }}>
+                                          <Typography variant="body2" fontWeight={600} noWrap fontSize="0.8rem">
+                                            {user.firstName} {user.lastName}
+                                          </Typography>
+                                          <Typography variant="caption" color="text.secondary" noWrap fontSize="0.65rem">
+                                            {user.employeeId} • {user.position || user.role}
+                                          </Typography>
+                                        </Box>
+                                        <Box sx={{ display: 'flex', gap: 0.25 }}>
+                                          <IconButton
+                                            onClick={() => handleView(user)}
+                                            size="small"
+                                            sx={{ p: 0.25, color: 'info.main' }}
+                                          >
+                                            <Eye size={14} />
+                                          </IconButton>
+                                          <IconButton
+                                            onClick={() => handleEdit(user)}
+                                            size="small"
+                                            sx={{ p: 0.25, color: 'primary.main' }}
+                                          >
+                                            <Edit2 size={14} />
+                                          </IconButton>
+                                        </Box>
+                                      </Box>
+                                    ))}
+                                  </Box>
+                                )}
+                              </>
+                            )}
+                          </Box>
+                        );
+                      })}
+                    </Paper>
+                  );
+                })}
+              </Box>
+            </>
+          )}
+        </Box>
+      )}
+      {/* Mobile Card View (Visible on xs, sm) - แสดงเมื่อ viewMode === 'list' */}
+      <Box sx={{ display: viewMode === 'list' ? { xs: 'flex', md: 'none' } : 'none', flexDirection: 'column', gap: 2 }}>
         {loading ? (
           Array.from({ length: 3 }).map((_, i) => (
             <Skeleton key={i} variant="rounded" height={220} sx={{ borderRadius: 1 }} />
@@ -830,12 +1814,12 @@ export default function UsersPage() {
         )}
       </Box>
 
-      {/* Table */}
-      <Fade in={true} timeout={500}>
+      {/* Table - แสดงเมื่อ viewMode === 'list' */}
+      <Fade in={viewMode === 'list'} timeout={500}>
         <TableContainer
           component={Paper}
           sx={{
-            display: { xs: 'none', md: 'block' },
+            display: viewMode === 'list' ? { xs: 'none', md: 'block' } : 'none',
             borderRadius: 1,
             border: '1px solid',
             borderColor: 'divider',
@@ -1101,8 +2085,8 @@ export default function UsersPage() {
         </TableContainer>
       </Fade>
 
-      {/* Pagination */}
-      {filteredUsers.length > 0 && (
+      {/* Pagination - แสดงเมื่อ viewMode === 'list' */}
+      {viewMode === 'list' && filteredUsers.length > 0 && (
         <Paper
           sx={{
             mt: 2,

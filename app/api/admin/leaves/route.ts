@@ -25,7 +25,12 @@ export async function GET(request: NextRequest) {
 
     // Filter by status
     if (status && status !== 'all') {
-      where.status = status;
+      // Include both 'pending' and 'in_progress' for pending filter
+      if (status === 'pending') {
+        where.status = { in: ['pending', 'in_progress'] };
+      } else {
+        where.status = status;
+      }
     }
 
     // Filter by leave type
@@ -157,7 +162,7 @@ export async function GET(request: NextRequest) {
 
     const stats = {
       total: allFilteredLeaves.length,
-      pending: allFilteredLeaves.filter(l => l.status === 'pending').length,
+      pending: allFilteredLeaves.filter(l => l.status === 'pending' || l.status === 'in_progress').length,
       approved: allFilteredLeaves.filter(l => l.status === 'approved').length,
       rejected: allFilteredLeaves.filter(l => l.status === 'rejected').length,
       cancelled: allFilteredLeaves.filter(l => l.status === 'cancelled').length,

@@ -607,7 +607,16 @@ export default function UserDialog({
                   <Autocomplete
                     multiple
                     size="small"
-                    options={departments.filter(d => d.code !== formData.department)}
+                    options={departments
+                      .filter(d => d.code !== formData.department)
+                      .sort((a, b) => {
+                        // Sort by company first, then by name
+                        if (a.company !== b.company) {
+                          return a.company.localeCompare(b.company);
+                        }
+                        return a.name.localeCompare(b.name);
+                      })
+                    }
                     getOptionLabel={(option) => `${option.name} (${option.code})`}
                     value={departments.filter(d => formData.managedDepartments.includes(d.code))}
                     onChange={(_, newValue) => {
@@ -651,6 +660,7 @@ export default function UserDialog({
                     renderTags={(value, getTagProps) =>
                       value.map((option, index) => {
                         const { key, ...tagProps } = getTagProps({ index });
+                        const companyObj = companies.find(c => c.code === option.company);
                         return (
                           <Chip
                             key={key}
@@ -663,26 +673,31 @@ export default function UserDialog({
                         );
                       })
                     }
-                    renderGroup={(params) => (
-                      <li key={params.key}>
-                        <Box
-                          sx={{
-                            px: 2,
-                            py: 0.5,
-                            bgcolor: params.group === 'PSC' 
-                              ? alpha(theme.palette.primary.main, 0.1)
-                              : alpha(theme.palette.secondary.main, 0.1),
-                            borderBottom: '1px solid',
-                            borderColor: 'divider',
-                          }}
-                        >
-                          <Typography variant="caption" fontWeight={700}>
-                            {params.group}
-                          </Typography>
-                        </Box>
-                        <ul style={{ padding: 0 }}>{params.children}</ul>
-                      </li>
-                    )}
+                    renderGroup={(params) => {
+                      const companyObj = companies.find(c => c.code === params.group);
+                      const companyName = companyObj ? `${companyObj.name} (${companyObj.code})` : params.group;
+                      return (
+                        <li key={params.key}>
+                          <Box
+                            sx={{
+                              px: 2,
+                              py: 0.75,
+                              bgcolor: params.group === 'PSC' ? '#EEF2FF' : '#FCE7F3',
+                              borderBottom: '1px solid',
+                              borderColor: 'divider',
+                              position: 'sticky',
+                              top: 0,
+                              zIndex: 1,
+                            }}
+                          >
+                            <Typography variant="caption" fontWeight={700} color={params.group === 'PSC' ? 'primary.main' : 'secondary.main'}>
+                              {companyName}
+                            </Typography>
+                          </Box>
+                          <ul style={{ padding: 0 }}>{params.children}</ul>
+                        </li>
+                      );
+                    }}
                   />
                 </Box>
                 <Box sx={{ gridColumn: '1 / -1' }}>
@@ -691,11 +706,25 @@ export default function UserDialog({
                     <Autocomplete
                       multiple
                       size="small"
-                      options={sections.filter(s => {
-                        // แสดงเฉพาะแผนกที่อยู่ในฝ่ายที่เลือกไว้
-                        const dept = departments.find(d => d.id === s.departmentId);
-                        return dept && formData.managedDepartments.includes(dept.code) && s.code !== formData.section;
-                      })}
+                      options={sections
+                        .filter(s => {
+                          // แสดงเฉพาะแผนกที่อยู่ในฝ่ายที่เลือกไว้
+                          const dept = departments.find(d => d.id === s.departmentId);
+                          return dept && formData.managedDepartments.includes(dept.code) && s.code !== formData.section;
+                        })
+                        .sort((a, b) => {
+                          // Sort by company first, then by department
+                          const deptA = departments.find(d => d.id === a.departmentId);
+                          const deptB = departments.find(d => d.id === b.departmentId);
+                          if (!deptA || !deptB) return 0;
+                          // Compare company
+                          if (deptA.company !== deptB.company) {
+                            return deptA.company.localeCompare(deptB.company);
+                          }
+                          // Compare department name
+                          return deptA.name.localeCompare(deptB.name);
+                        })
+                      }
                       getOptionLabel={(option) => `${option.name} (${option.code})`}
                       value={sections.filter(s => formData.managedSections.includes(s.code))}
                       onChange={(_, newValue) => {
@@ -706,7 +735,11 @@ export default function UserDialog({
                       }}
                       groupBy={(option) => {
                         const dept = departments.find(d => d.id === option.departmentId);
-                        return dept ? `${dept.name} (${dept.code})` : 'ไม่ระบุฝ่าย';
+                        if (!dept) return 'ไม่ระบุ|ไม่ระบุฝ่าย';
+                        const companyObj = companies.find(c => c.code === dept.company);
+                        const companyName = companyObj ? companyObj.name : dept.company;
+                        // Use | as separator for parsing: "CompanyCode|CompanyName|DeptName"
+                        return `${dept.company}|${companyName}|${dept.name}`;
                       }}
                       renderInput={(params) => (
                         <TextField
@@ -744,24 +777,35 @@ export default function UserDialog({
                           );
                         })
                       }
-                      renderGroup={(params) => (
-                        <li key={params.key}>
-                          <Box
-                            sx={{
-                              px: 2,
-                              py: 0.5,
-                              bgcolor: alpha(theme.palette.info.main, 0.1),
-                              borderBottom: '1px solid',
-                              borderColor: 'divider',
-                            }}
-                          >
-                            <Typography variant="caption" fontWeight={700} color="info.main">
-                              {params.group}
-                            </Typography>
-                          </Box>
-                          <ul style={{ padding: 0 }}>{params.children}</ul>
-                        </li>
-                      )}
+                      renderGroup={(params) => {
+                        // Parse group name: "CompanyCode|CompanyName|DeptName"
+                        const [companyCode, companyName, deptName] = params.group.split('|');
+                        const isPSC = companyCode === 'PSC';
+                        return (
+                          <li key={params.key}>
+                            <Box
+                              sx={{
+                                px: 2,
+                                py: 0.75,
+                                bgcolor: isPSC ? '#EEF2FF' : '#FCE7F3',
+                                borderBottom: '1px solid',
+                                borderColor: 'divider',
+                                position: 'sticky',
+                                top: 0,
+                                zIndex: 1,
+                              }}
+                            >
+                              <Typography variant="caption" fontWeight={700} color={isPSC ? 'primary.main' : 'secondary.main'}>
+                                {companyName}
+                              </Typography>
+                              <Typography variant="caption" fontWeight={600} color="text.secondary" sx={{ ml: 0.5 }}>
+                                {'>'} {deptName}
+                              </Typography>
+                            </Box>
+                            <ul style={{ padding: 0 }}>{params.children}</ul>
+                          </li>
+                        );
+                      }}
                     />
                   ) : (
                     <TextField

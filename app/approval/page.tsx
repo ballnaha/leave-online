@@ -1755,7 +1755,7 @@ export default function ApprovalPage() {
                 { id: 1, label: t('tab_approved', 'อนุมัติ'), icon: TickCircle, color: '#2E7D32', count: counts.approved, showBadge: true },
                 { id: 2, label: t('tab_rejected', 'ปฏิเสธ'), icon: CloseCircle, color: '#D32F2F', count: counts.rejected, showBadge: true },
                 { id: 3, label: t('tab_cancelled', 'ยกเลิก'), icon: Forbidden2, color: '#757575', count: counts.cancelled, showBadge: true },
-                { id: 4, label: t('tab_team_history', 'ประวัติทีม'), icon: Profile2User, color: '#1976D2', count: 0, showBadge: false },
+                { id: 4, label: t('tab_team_history', 'ประวัติทีม'), icon: Profile2User, color: '#6C63FF', count: 0, showBadge: false },
               ].map((tab) => {
                 const Icon = tab.icon;
                 const isActive = tabValue === tab.id;
@@ -1765,7 +1765,7 @@ export default function ApprovalPage() {
                     key={tab.id}
                     value={tab.id}
                     disableRipple
-                    icon={<Icon size={18} variant={isActive ? 'Bold' : 'Linear'} color={isActive ? tab.color : '#64748B'} />}
+                    icon={<Icon size={18} variant={isActive ? 'Bold' : 'Bulk'} color={tab.color} />}
                     iconPosition="start"
                     label={
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
@@ -3180,7 +3180,7 @@ export default function ApprovalPage() {
                       bgcolor: 'white',
                     }}
                   >
-                    {/* Row 1: Avatar + Name + Status */}
+                    {/* Row 1: Avatar + Name + Arrow */}
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1.5 }}>
                       <Avatar
                         src={approval.leaveRequest.user.avatar}
@@ -3199,28 +3199,28 @@ export default function ApprovalPage() {
                       </Avatar>
 
                       <Box sx={{ flex: 1, minWidth: 0 }}>
-                        <Typography sx={{ fontWeight: 700, fontSize: '0.95rem', color: '#1E293B', lineHeight: 1.2 }}>
+                        <Typography sx={{ 
+                          fontWeight: 700, 
+                          fontSize: '0.95rem', 
+                          color: '#1E293B', 
+                          lineHeight: 1.2,
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis'
+                        }}>
                           {approval.leaveRequest.user.firstName} {approval.leaveRequest.user.lastName}
                         </Typography>
-                        <Typography sx={{ fontSize: '0.75rem', color: '#64748B', lineHeight: 1.2 }}>
+                        <Typography sx={{ 
+                          fontSize: '0.75rem', 
+                          color: '#64748B', 
+                          lineHeight: 1.2,
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis'
+                        }}>
                           {approval.leaveRequest.user.position || '-'}
                         </Typography>
                       </Box>
-
-                      <Chip
-                        label={statusInfo.label}
-                        size="small"
-                        icon={<StatusIcon size={14} color={statusInfo.color} variant="Bold" />}
-                        sx={{
-                          bgcolor: statusInfo.bgcolor,
-                          color: statusInfo.color,
-                          fontWeight: 600,
-                          fontSize: '0.7rem',
-                          height: 24,
-                          flexShrink: 0,
-                          '& .MuiChip-icon': { ml: 0.5 }
-                        }}
-                      />
 
                       <Box sx={{ flexShrink: 0 }}>
                         {isExpanded ?
@@ -3230,7 +3230,7 @@ export default function ApprovalPage() {
                       </Box>
                     </Box>
 
-                    {/* Row 2: Leave Type and Days */}
+                    {/* Row 2: Leave Type, Days and Status */}
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap', mb: 1.5 }}>
                       <Chip
                         label={t(`leave_${approval.leaveRequest.leaveType}`, approval.leaveRequest.leaveType)}
@@ -3255,6 +3255,20 @@ export default function ApprovalPage() {
                           fontWeight: 600,
                           fontSize: '0.75rem',
                           height: 24,
+                        }}
+                      />
+                      <Chip
+                        label={statusInfo.label}
+                        size="small"
+                        icon={<StatusIcon size={14} color={statusInfo.color} variant="Bold" />}
+                        sx={{
+                          bgcolor: statusInfo.bgcolor,
+                          color: statusInfo.color,
+                          fontWeight: 600,
+                          fontSize: '0.7rem',
+                          height: 24,
+                          ml: 'auto',
+                          '& .MuiChip-icon': { ml: 0.5 }
                         }}
                       />
                     </Box>

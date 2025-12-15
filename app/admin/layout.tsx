@@ -127,6 +127,12 @@ const menuGroups: MenuGroup[] = [
                 iconColor: '#6C63FF',
                 path: '/admin/user-approval-flow',
             },
+            {
+                text: 'โครงสร้างองค์กร',
+                icon: People,
+                iconColor: '#6C63FF',
+                path: '/admin/organization-structure',
+            },
         ],
     },
 

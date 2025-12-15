@@ -177,6 +177,7 @@ interface Stats {
 
 const statusConfig: Record<string, { label: string; color: 'warning' | 'success' | 'error' | 'default'; icon: React.ReactElement }> = {
   pending: { label: 'รออนุมัติ', color: 'warning', icon: <ClockIcon size={14} variant="Bold" color="currentColor" /> },
+  in_progress: { label: 'กำลังดำเนินการ', color: 'warning', icon: <ClockIcon size={14} variant="Bold" color="currentColor" /> },
   approved: { label: 'อนุมัติแล้ว', color: 'success', icon: <TickCircle size={14} variant="Bold" color="currentColor" /> },
   rejected: { label: 'ไม่อนุมัติ', color: 'error', icon: <CloseCircle size={14} variant="Bold" color="currentColor" /> },
   cancelled: { label: 'ยกเลิก', color: 'default', icon: <InfoCircle size={14} variant="Bold" color="currentColor" /> },
@@ -859,7 +860,7 @@ export default function AdminLeavesPage() {
                   </Button>
                 </Box>
 
-                {leave.status === 'pending' && currentApprover && (
+                {(leave.status === 'pending' || leave.status === 'in_progress') && currentApprover && (
                   <Box sx={{ bgcolor: alpha(theme.palette.warning.main, 0.05), p: 1, borderRadius: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
                     <ClockIcon size={14} color={theme.palette.warning.main} variant="Bold" />
                     <Typography variant="body2" color="text.secondary">
@@ -1028,16 +1029,16 @@ export default function AdminLeavesPage() {
                         label={statusInfo.label}
                         size="small"
                         color={statusInfo.color}
-                        variant={leave.status === 'pending' ? 'filled' : 'outlined'}
+                        variant={leave.status === 'pending' || leave.status === 'in_progress' ? 'filled' : 'outlined'}
                         sx={{
                           fontWeight: 600,
                           borderRadius: 1,
-                          borderWidth: leave.status === 'pending' ? 0 : 1,
+                          borderWidth: leave.status === 'pending' || leave.status === 'in_progress' ? 0 : 1,
                         }}
                       />
                     </TableCell>
                     <TableCell sx={{ py: 2 }}>
-                      {leave.status === 'pending' && currentApprover ? (
+                      {(leave.status === 'pending' || leave.status === 'in_progress') && currentApprover ? (
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                           <Avatar
                             sx={{ width: 24, height: 24, fontSize: '0.75rem', bgcolor: alpha(theme.palette.warning.main, 0.2), color: 'warning.main', fontWeight: 'bold' }}
