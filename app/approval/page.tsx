@@ -4865,12 +4865,25 @@ export default function ApprovalPage() {
               {/* Leave History List */}
               {selectedEmployee && (
                 <>
-                  <Typography sx={{ fontSize: '0.8rem', fontWeight: 700, color: '#1E293B', mb: 1.5, textTransform: 'uppercase', letterSpacing: 0.5 }}>
-                    {t('leave_history_detail', 'ประวัติการลา')}
-                  </Typography>
+                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1.5 }}>
+                    <Typography sx={{ fontSize: '0.8rem', fontWeight: 700, color: '#1E293B', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                      {t('leave_history_detail', 'ประวัติการลา')}
+                    </Typography>
+                    <Chip
+                      size="small"
+                      label={teamHistoryFilterStatus === 'all' ? t('filter_all', 'ทั้งหมด') : teamHistoryFilterStatus === 'approved' ? t('status_approved', 'อนุมัติ') : teamHistoryFilterStatus === 'pending' ? t('status_pending', 'รออนุมัติ') : teamHistoryFilterStatus === 'rejected' ? t('status_rejected', 'ปฏิเสธ') : t('status_cancelled', 'ยกเลิก')}
+                      sx={{
+                        height: 22,
+                        fontSize: '0.7rem',
+                        fontWeight: 600,
+                        bgcolor: teamHistoryFilterStatus === 'approved' ? '#E8F5E9' : teamHistoryFilterStatus === 'pending' ? '#FFF3E0' : teamHistoryFilterStatus === 'rejected' ? '#FFEBEE' : teamHistoryFilterStatus === 'cancelled' ? '#ECEFF1' : '#F1F5F9',
+                        color: teamHistoryFilterStatus === 'approved' ? '#2E7D32' : teamHistoryFilterStatus === 'pending' ? '#E65100' : teamHistoryFilterStatus === 'rejected' ? '#D32F2F' : teamHistoryFilterStatus === 'cancelled' ? '#757575' : '#64748B',
+                      }}
+                    />
+                  </Box>
                   
                   <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-                    {teamHistory
+                    {filteredTeamHistory
                       .filter(leave => leave.user.id === selectedEmployee.user.id)
                       .map((leave) => {
                         const config = leaveTypeConfig[leave.leaveType] || leaveTypeConfig.default;
@@ -4978,10 +4991,10 @@ export default function ApprovalPage() {
                   </Box>
 
                   {/* No history for this employee */}
-                  {teamHistory.filter(leave => leave.user.id === selectedEmployee.user.id).length === 0 && (
+                  {filteredTeamHistory.filter(leave => leave.user.id === selectedEmployee.user.id).length === 0 && (
                     <Box sx={{ textAlign: 'center', py: 4 }}>
                       <Typography color="text.secondary">
-                        {t('no_leave_history', 'ไม่พบประวัติการลา')}
+                        {t('no_leave_history_for_status', 'ไม่พบประวัติการลาสำหรับสถานะที่เลือก')}
                       </Typography>
                     </Box>
                   )}
