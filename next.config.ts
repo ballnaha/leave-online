@@ -2,6 +2,11 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   /* config options here */
+  allowedDevOrigins: [
+    'http://192.168.132.30:3004',
+    'http://192.168.132.30',
+    '192.168.132.30',
+  ],
   images: {
     // เปิดใช้งาน image optimization
     unoptimized: false,

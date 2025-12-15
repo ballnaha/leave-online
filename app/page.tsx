@@ -26,6 +26,7 @@ import LeaveDetailDrawer from './components/LeaveDetailDrawer';
 import { HelpCircle, AlertTriangle } from 'lucide-react';
 import { useUser } from './providers/UserProvider';
 import DashboardCard from './components/DashboardCard';
+import { mdxCompile } from 'next/dist/build/swc/generated-native';
 
 interface LeaveType {
   id: number;
@@ -315,9 +316,11 @@ export default function Home() {
         {user?.role && user.role !== 'employee' && (
           <Card
             sx={{
-              mt: -2,
+              
               mx: 2.5,
               mb: 1 ,
+              maxWidth: {xs: 330, md: 600},
+              margin:'-1rem auto 0 auto',
               borderRadius: '20px',
               boxShadow: '0 8px 32px rgba(0,0,0,0.08)',
               background: 'rgba(255, 255, 255, 0.7)',

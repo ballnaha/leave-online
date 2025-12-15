@@ -103,6 +103,7 @@ import {
 import BottomNav from '../components/BottomNav';
 import Sidebar from '../components/Sidebar';
 import { useLocale } from '@/app/providers/LocaleProvider';
+import { Drawer as VaulDrawer } from 'vaul';
 
 // สีหลักของระบบ (ตาม theme.ts)
 const PRIMARY_COLOR = '#6C63FF'; // Soft Purple/Blue from the design
@@ -288,6 +289,57 @@ export default function ApprovalPage() {
   const [leaveTypeSheetOpen, setLeaveTypeSheetOpen] = useState(false);
   const [currentEditingPartIndex, setCurrentEditingPartIndex] = useState<number | null>(null);
 
+  // Team History state
+  const [teamHistory, setTeamHistory] = useState<Array<{
+    id: number;
+    leaveCode?: string;
+    leaveType: string;
+    leaveTypeName: string;
+    startDate: string;
+    endDate: string;
+    totalDays: number;
+    reason: string;
+    status: string;
+    createdAt: string;
+    user: {
+      id: number;
+      employeeId: string;
+      firstName: string;
+      lastName: string;
+      position?: string;
+      company: string;
+      department: string;
+      section?: string;
+      avatar?: string;
+    };
+    attachments: Array<{ id: number; fileName: string; filePath: string }>;
+    approvalHistory: Array<{
+      level: number;
+      status: string;
+      comment?: string;
+      actionAt?: string;
+    }>;
+  }>>([]);
+  const [teamHistoryLoading, setTeamHistoryLoading] = useState(false);
+  const [teamHistoryCounts, setTeamHistoryCounts] = useState({ total: 0, approved: 0, rejected: 0, pending: 0, cancelled: 0 });
+  const [teamHistorySummary, setTeamHistorySummary] = useState<Array<{ code: string; name: string; totalDays: number; count: number }>>([]);
+  const [teamHistoryEmployeeSummary, setTeamHistoryEmployeeSummary] = useState<Array<{
+    user: { id: number; firstName: string; lastName: string; department: string; section?: string; position?: string; avatar?: string };
+    totalDays: number;
+    leaveCount: number;
+    byType: Record<string, number>;
+  }>>([]);
+  const [teamHistoryFilterStatus, setTeamHistoryFilterStatus] = useState<string>('all');
+
+  // Employee detail dialog state
+  const [employeeDetailOpen, setEmployeeDetailOpen] = useState(false);
+  const [selectedEmployee, setSelectedEmployee] = useState<{
+    user: { id: number; firstName: string; lastName: string; department: string; section?: string; position?: string; avatar?: string };
+    totalDays: number;
+    leaveCount: number;
+    byType: Record<string, number>;
+  } | null>(null);
+
   // โหลดข้อมูลครั้งแรกเมื่อ mount เท่านั้น (เพราะ fetch all แล้ว filter client-side)
   useEffect(() => {
     fetchApprovals();
@@ -298,7 +350,19 @@ export default function ApprovalPage() {
   useEffect(() => {
     setPage(1);
     setExpandedCards(new Set());
+    // Fetch team history when tab 4 is selected
+    if (tabValue === 4 && teamHistory.length === 0 && !teamHistoryLoading) {
+      fetchTeamHistory();
+    }
   }, [tabValue]);
+
+  // Fetch team history when filters change (year, month only - not status)
+  useEffect(() => {
+    if (tabValue === 4) {
+      fetchTeamHistory();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filterYear, filterMonth]);
 
   // Reset expanded cards when view mode changes
   useEffect(() => {
@@ -320,6 +384,71 @@ export default function ApprovalPage() {
       setLoading(false);
     }
   };
+
+  // Fetch team history (ประวัติการลาของลูกน้องทั้งหมด)
+  const fetchTeamHistory = async () => {
+    setTeamHistoryLoading(true);
+    try {
+      const params = new URLSearchParams();
+      params.set('year', filterYear.toString());
+      if (filterMonth !== 'all') {
+        params.set('month', filterMonth.toString());
+      }
+      // Always fetch all status - filter on frontend
+      // params.set('status', 'all'); // default is all
+
+      const response = await fetch(`/api/leaves/team-history?${params.toString()}`);
+      if (!response.ok) throw new Error('Failed to fetch team history');
+      const data = await response.json();
+      setTeamHistory(data.data || []);
+      setTeamHistoryCounts(data.counts || { total: 0, approved: 0, rejected: 0, pending: 0, cancelled: 0 });
+      setTeamHistorySummary(data.summary || []);
+      // employeeSummary will be calculated on frontend based on filter
+      setTeamHistoryEmployeeSummary(data.employeeSummary || []);
+    } catch (error) {
+      console.error('Error fetching team history:', error);
+    } finally {
+      setTeamHistoryLoading(false);
+    }
+  };
+
+  // Filter team history data based on selected status (frontend filtering)
+  const filteredTeamHistory = useMemo(() => {
+    if (teamHistoryFilterStatus === 'all') {
+      return teamHistory;
+    }
+    if (teamHistoryFilterStatus === 'pending') {
+      return teamHistory.filter(item => ['pending', 'in_progress'].includes(item.status));
+    }
+    return teamHistory.filter(item => item.status === teamHistoryFilterStatus);
+  }, [teamHistory, teamHistoryFilterStatus]);
+
+  // Calculate employee summary based on filtered data
+  const filteredEmployeeSummary = useMemo(() => {
+    const employeeMap: Record<number, {
+      user: typeof filteredTeamHistory[0]['user'];
+      totalDays: number;
+      leaveCount: number;
+      byType: Record<string, number>;
+    }> = {};
+
+    filteredTeamHistory.forEach(item => {
+      if (!employeeMap[item.user.id]) {
+        employeeMap[item.user.id] = {
+          user: item.user,
+          totalDays: 0,
+          leaveCount: 0,
+          byType: {},
+        };
+      }
+      employeeMap[item.user.id].totalDays += item.totalDays;
+      employeeMap[item.user.id].leaveCount += 1;
+      employeeMap[item.user.id].byType[item.leaveType] = 
+        (employeeMap[item.user.id].byType[item.leaveType] || 0) + item.totalDays;
+    });
+
+    return Object.values(employeeMap).sort((a, b) => b.totalDays - a.totalDays);
+  }, [filteredTeamHistory]);
 
   // Helper function to check if file is an image
   const isImageFile = (fileName: string) => {
@@ -674,7 +803,7 @@ export default function ApprovalPage() {
       weekday: 'short',
       day: 'numeric',
       month: 'short',
-      year: 'numeric',
+      year: '2-digit',
     });
     return timeString ? `${dateStr} ${timeString} น.` : dateStr;
   };
@@ -1572,110 +1701,118 @@ export default function ApprovalPage() {
           </Box>
         )}
 
-        {/* Status Tabs - Neumorphism Style */}
+        {/* Status Tabs - Swiper Style like Leave Page */}
         {!loading && (
-          <Box sx={{ mb: 4 }}>
-            <Box
+          <Box sx={{
+            mb: 3,
+            mx: { xs: -2, sm: 0 },
+            width: { xs: 'calc(100% + 32px)', sm: '100%' },
+            bgcolor: 'white',
+            borderRadius: { xs: 0, sm: 2 },
+            boxShadow: { xs: 'none', sm: '0 1px 3px rgba(0,0,0,0.05)' },
+            border: '1px solid #E2E8F0',
+            borderLeft: { xs: 'none', sm: '1px solid #E2E8F0' },
+            borderRight: { xs: 'none', sm: '1px solid #E2E8F0' },
+          }}>
+            <Tabs
+              value={tabValue}
+              onChange={(_, newValue) => setTabValue(newValue)}
+              variant="scrollable"
+              scrollButtons={false}
               sx={{
-                background: 'linear-gradient(145deg, #E8ECF0 0%, #F8FAFC 100%)',
-                p: 0.75,
-                borderRadius: 3,
-                display: 'grid',
-                gridTemplateColumns: 'repeat(4, 1fr)',
-                position: 'relative',
-                isolation: 'isolate',
-                boxShadow: 'inset 0 2px 8px rgba(0,0,0,0.08), inset 0 -1px 2px rgba(255,255,255,0.8), 0 4px 12px rgba(0,0,0,0.06)',
-                border: '1px solid rgba(255,255,255,0.6)',
+                minHeight: 48,
+                '& .MuiTabs-indicator': {
+                  height: 3,
+                  borderRadius: '3px 3px 0 0',
+                  bgcolor: [
+                    { id: 0, color: '#E65100' },
+                    { id: 1, color: '#2E7D32' },
+                    { id: 2, color: '#D32F2F' },
+                    { id: 3, color: '#757575' },
+                    { id: 4, color: '#1976D2' },
+                  ][tabValue]?.color || '#667eea',
+                  transition: 'left 0.25s ease, width 0.25s ease, background-color 0.3s ease',
+                },
+                '& .MuiTabs-scroller': {
+                  scrollBehavior: 'smooth',
+                  '&::-webkit-scrollbar': { display: 'none' },
+                  msOverflowStyle: 'none',
+                  scrollbarWidth: 'none',
+                },
+                '& .MuiTabs-flexContainer': {
+                  gap: { xs: 2, sm: 3 },
+                  px: { xs: 2, sm: 3 },
+                  '&::after': {
+                    content: '""',
+                    minWidth: { xs: 2, sm: 2 },
+                    flexShrink: 0,
+                  },
+                },
               }}
             >
-              {/* Sliding Background */}
-              <Box
-                sx={{
-                  position: 'absolute',
-                  top: 6,
-                  bottom: 6,
-                  left: 6,
-                  width: 'calc(25% - 3px)',
-                  background: 'linear-gradient(145deg, #FFFFFF 0%, #F8FAFC 100%)',
-                  borderRadius: 2.5,
-                  boxShadow: '0 4px 15px rgba(0,0,0,0.1), 0 2px 6px rgba(0,0,0,0.08), inset 0 1px 0 rgba(255,255,255,1)',
-                  transition: 'transform 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
-                  transform: `translateX(${tabValue * 100}%)`,
-                  zIndex: 0,
-                  border: '1px solid rgba(255,255,255,0.9)',
-                }}
-              />
-
-              {/* Tabs Items */}
               {[
-                { id: 0, label: t('tab_pending', 'รออนุมัติ'), icon: Clock, color: '#E65100', shadow: '230, 81, 0', count: counts.pending },
-                { id: 1, label: t('tab_approved', 'อนุมัติ'), icon: TickCircle, color: '#2E7D32', shadow: '46, 125, 50', count: counts.approved },
-                { id: 2, label: t('tab_rejected', 'ปฏิเสธ'), icon: CloseCircle, color: '#D32F2F', shadow: '211, 47, 47', count: counts.rejected },
-                { id: 3, label: t('tab_cancelled', 'ยกเลิก'), icon: Forbidden2, color: '#757575', shadow: '117, 117, 117', count: counts.cancelled },
+                { id: 0, label: t('tab_pending', 'รออนุมัติ'), icon: Clock, color: '#E65100', count: counts.pending, showBadge: true },
+                { id: 1, label: t('tab_approved', 'อนุมัติ'), icon: TickCircle, color: '#2E7D32', count: counts.approved, showBadge: true },
+                { id: 2, label: t('tab_rejected', 'ปฏิเสธ'), icon: CloseCircle, color: '#D32F2F', count: counts.rejected, showBadge: true },
+                { id: 3, label: t('tab_cancelled', 'ยกเลิก'), icon: Forbidden2, color: '#757575', count: counts.cancelled, showBadge: true },
+                { id: 4, label: t('tab_team_history', 'ประวัติทีม'), icon: Profile2User, color: '#1976D2', count: 0, showBadge: false },
               ].map((tab) => {
                 const Icon = tab.icon;
                 const isActive = tabValue === tab.id;
-                const activeColor = tab.color;
-                const inactiveColor = '#64748B';
 
                 return (
-                  <Box
+                  <Tab
                     key={tab.id}
-                    onClick={() => setTabValue(tab.id)}
-                    sx={{
-                      py: 1.5,
-                      borderRadius: 2.5,
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: { xs: 0.5, sm: 1 },
-                      flexDirection: { xs: 'column', sm: 'row' },
-                      position: 'relative',
-                      zIndex: 1,
-                      transition: 'all 0.2s',
-                      color: isActive ? activeColor : inactiveColor,
-                    }}
-                  >
-                    <Icon
-                      size={20}
-                      variant={isActive ? 'Bold' : 'Linear'}
-                      color={isActive ? activeColor : inactiveColor}
-                      style={{ transition: 'all 0.2s' }}
-                    />
-                    <Box sx={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 0.5,
-                      flexDirection: 'row'
-                    }}>
-                      <Typography fontWeight={isActive ? 700 : 500} fontSize={{ xs: '0.7rem', sm: '0.9rem' }}>
-                        {tab.label}
-                      </Typography>
-                      <Box
-                        sx={{
-                          height: { xs: 20, sm: 26 },
-                          minWidth: { xs: 20, sm: 26 },
-                          px: 0.5,
-                          borderRadius: '13px',
-                          fontSize: { xs: '0.65rem', sm: '0.8rem' },
-                          fontWeight: 800,
-                          bgcolor: isActive ? activeColor : '#CBD5E1',
-                          color: 'white',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          transition: 'all 0.2s',
-                          boxShadow: isActive ? `0 2px 6px rgba(${tab.shadow}, 0.4)` : 'none',
-                        }}
-                      >
-                        {tab.count}
+                    value={tab.id}
+                    disableRipple
+                    icon={<Icon size={18} variant={isActive ? 'Bold' : 'Linear'} color={isActive ? tab.color : '#64748B'} />}
+                    iconPosition="start"
+                    label={
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+                        <span>{tab.label}</span>
+                        {tab.showBadge && (
+                          <Box
+                            component="span"
+                            sx={{
+                              bgcolor: isActive ? tab.color : '#E2E8F0',
+                              color: isActive ? 'white' : '#64748B',
+                              px: 0.75,
+                              py: 0.25,
+                              borderRadius: 1,
+                              fontSize: '0.7rem',
+                              fontWeight: 600,
+                              minWidth: 20,
+                              textAlign: 'center',
+                            }}
+                          >
+                            {tab.count}
+                          </Box>
+                        )}
                       </Box>
-                    </Box>
-                  </Box>
+                    }
+                    sx={{
+                      textTransform: 'none',
+                      fontWeight: isActive ? 600 : 500,
+                      fontSize: { xs: '0.8rem', sm: '0.9rem' },
+                      color: isActive ? '#1E293B' : '#64748B',
+                      minHeight: 48,
+                      px: 0,
+                      minWidth: 'auto',
+                      '& .MuiTab-iconWrapper': {
+                        mr: 0.5,
+                      },
+                      '&:hover': {
+                        color: '#1E293B',
+                        bgcolor: 'transparent',
+                      },
+                      '&.Mui-selected': {
+                        color: '#1E293B',
+                      },
+                    }}
+                  />
                 );
               })}
-            </Box>
+            </Tabs>
           </Box>
         )}
 
@@ -1711,8 +1848,171 @@ export default function ApprovalPage() {
           </Box>
         )}
 
-        {/* List */}
-        {loading ? (
+        {/* Team History Tab Content */}
+        {tabValue === 4 ? (
+          teamHistoryLoading ? (
+            /* Loading state for Team History */
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              {[1, 2, 3, 4, 5].map((i) => (
+                <Paper key={i} elevation={0} sx={{ p: 2, borderRadius: 1, border: '1px solid', borderColor: 'grey.200' }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1.5 }}>
+                    <Skeleton variant="circular" width={44} height={44} />
+                    <Box sx={{ flex: 1 }}>
+                      <Skeleton variant="text" width={120} />
+                      <Skeleton variant="text" width={80} height={14} />
+                    </Box>
+                    <Skeleton variant="rounded" width={70} height={24} sx={{ borderRadius: 2 }} />
+                  </Box>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 }}>
+                    <Skeleton variant="rounded" width={90} height={24} sx={{ borderRadius: 1 }} />
+                    <Skeleton variant="rounded" width={50} height={24} sx={{ borderRadius: 1 }} />
+                  </Box>
+                  <Skeleton variant="rounded" width="100%" height={48} sx={{ borderRadius: 1 }} />
+                </Paper>
+              ))}
+            </Box>
+          ) : teamHistoryCounts.total === 0 ? (
+            /* Empty state for Team History - only show when NO data at all */
+            <Box sx={{ textAlign: 'center', py: 10, opacity: 0.7 }}>
+              <Box sx={{
+                bgcolor: '#E3F2FD',
+                width: 100,
+                height: 100,
+                borderRadius: '50%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                mx: 'auto',
+                mb: 3
+              }}>
+                <Profile2User size={48} color="#1976D2" variant="Bulk" />
+              </Box>
+              <Typography variant="h6" color="text.secondary" fontWeight={600} gutterBottom>
+                {t('no_team_history', 'ไม่พบประวัติการลาของทีม')}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                {t('team_history_empty_desc', 'ประวัติการลาของลูกน้องจะแสดงที่นี่')}
+              </Typography>
+            </Box>
+          ) : (
+            /* Team History Content */
+            <Box>
+              {/* Summary Cards */}
+              <Box sx={{ mb: 3 }}>
+                <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1.5, color: '#1E293B' }}>
+                  {t('team_summary', 'สรุปการลาของทีม')} ({filterYear + 543})
+                </Typography>
+                
+                {/* Status Summary */}
+                <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mb: 2 }}>
+                  {[
+                    { key: 'all', label: t('filter_all', 'ทั้งหมด'), count: teamHistoryCounts.total, color: '#64748B' },
+                    { key: 'approved', label: t('status_approved', 'อนุมัติ'), count: teamHistoryCounts.approved, color: '#2E7D32' },
+                    { key: 'pending', label: t('status_pending', 'รออนุมัติ'), count: teamHistoryCounts.pending, color: '#E65100' },
+                    { key: 'rejected', label: t('status_rejected', 'ปฏิเสธ'), count: teamHistoryCounts.rejected, color: '#D32F2F' },
+                    { key: 'cancelled', label: t('status_cancelled', 'ยกเลิก'), count: teamHistoryCounts.cancelled, color: '#757575' },
+                  ].map((item) => (
+                    <Chip
+                      key={item.key}
+                      label={`${item.label} (${item.count})`}
+                      onClick={() => setTeamHistoryFilterStatus(item.key)}
+                      sx={{
+                        bgcolor: teamHistoryFilterStatus === item.key ? item.color : '#F1F5F9',
+                        color: teamHistoryFilterStatus === item.key ? 'white' : '#64748B',
+                        fontWeight: 600,
+                        fontSize: '0.8rem',
+                        cursor: 'pointer',
+                        '&:hover': { bgcolor: teamHistoryFilterStatus === item.key ? item.color : '#E2E8F0' },
+                      }}
+                    />
+                  ))}
+                </Box>
+
+                {/* Employee Summary - Clickable to show details */}
+                <Paper elevation={0} sx={{ p: 2, borderRadius: 1, border: '1px solid #E2E8F0' }}>
+                  {filteredEmployeeSummary.length > 0 ? (
+                    <>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5 }}>
+                        <Typography variant="caption" fontWeight={600} color="text.secondary">
+                          {t('employee_summary_filtered', 'สรุปตามพนักงาน')} ({teamHistoryFilterStatus === 'all' ? t('filter_all', 'ทั้งหมด') : teamHistoryFilterStatus === 'approved' ? t('status_approved', 'อนุมัติ') : teamHistoryFilterStatus === 'pending' ? t('status_pending', 'รออนุมัติ') : teamHistoryFilterStatus === 'rejected' ? t('status_rejected', 'ปฏิเสธ') : t('status_cancelled', 'ยกเลิก')})
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {t('click_to_view_detail', 'คลิกเพื่อดูรายละเอียด')}
+                        </Typography>
+                      </Box>
+                      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                        {filteredEmployeeSummary.map((item, index) => (
+                        <Box 
+                          key={item.user.id} 
+                          onClick={() => {
+                            setSelectedEmployee(item);
+                            setEmployeeDetailOpen(true);
+                          }}
+                          sx={{ 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            gap: 1.5,
+                            p: 1,
+                            mx: -1,
+                            borderRadius: 1,
+                            cursor: 'pointer',
+                            transition: 'all 0.2s',
+                            '&:hover': {
+                              bgcolor: '#F8FAFC',
+                            },
+                            '&:active': {
+                              bgcolor: '#F1F5F9',
+                            }
+                          }}
+                        >
+                          <Typography sx={{ fontSize: '0.75rem', color: '#94A3B8', fontWeight: 600, width: 20 }}>
+                            #{index + 1}
+                          </Typography>
+                          <Avatar
+                            src={item.user.avatar}
+                            sx={{ width: 32, height: 32, fontSize: '0.75rem', bgcolor: PRIMARY_COLOR }}
+                          >
+                            {item.user.firstName?.[0]}
+                          </Avatar>
+                          <Box sx={{ flex: 1, minWidth: 0 }}>
+                            <Typography sx={{ fontSize: '0.85rem', fontWeight: 600, color: '#1E293B' }} noWrap>
+                              {item.user.firstName} {item.user.lastName}
+                            </Typography>
+                            <Typography sx={{ fontSize: '0.7rem', color: '#64748B' }} noWrap>
+                              {item.user.department}
+                            </Typography>
+                          </Box>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <Box sx={{ textAlign: 'right' }}>
+                              <Typography sx={{ fontSize: '0.85rem', fontWeight: 700, color: PRIMARY_COLOR }}>
+                                {item.totalDays} {t('days_unit', 'วัน')}
+                              </Typography>
+                              <Typography sx={{ fontSize: '0.65rem', color: '#94A3B8' }}>
+                                {item.leaveCount} {t('times_unit', 'ครั้ง')}
+                              </Typography>
+                            </Box>
+                            <ArrowRight2 size={16} color="#94A3B8" />
+                          </Box>
+                        </Box>
+                      ))}
+                      </Box>
+                    </>
+                  ) : (
+                    /* No data for selected status */
+                    <Box sx={{ textAlign: 'center', py: 4, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                      <Profile2User size={40} color="#94A3B8" variant="Bulk" />
+                      <Typography sx={{ fontSize: '0.9rem', color: '#64748B', mt: 1 }}>
+                        {t('no_data_for_status', 'ไม่พบข้อมูลสำหรับสถานะที่เลือก')}
+                      </Typography>
+                    </Box>
+                  )}
+                </Paper>
+              </Box>
+            </Box>
+          )
+        ) : (
+        /* Original List Content */
+        loading ? (
           viewMode === 'desktop' ? (
             /* Desktop Loading Skeleton */
             <Paper elevation={0} sx={{ borderRadius: 1, border: '1px solid', borderColor: 'grey.200', overflow: 'hidden' }}>
@@ -2881,7 +3181,7 @@ export default function ApprovalPage() {
                     }}
                   >
                     {/* Row 1: Avatar + Name + Status */}
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1.5 }}>
                       <Avatar
                         src={approval.leaveRequest.user.avatar}
                         sx={{
@@ -2930,15 +3230,7 @@ export default function ApprovalPage() {
                       </Box>
                     </Box>
 
-                    {/* Row 2: Company / Department / Section - Full width, left aligned */}
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 1 }}>
-                      <Building size={14} color="#94A3B8" variant="Bold" />
-                      <Typography sx={{ fontSize: '0.75rem', color: '#64748B' }}>
-                        {approval.leaveRequest.user.company || '-'} / {approval.leaveRequest.user.department || '-'} {approval.leaveRequest.user.section ? `/ ${approval.leaveRequest.user.section}` : ''}
-                      </Typography>
-                    </Box>
-
-                    {/* Row 3: Leave Type and Days */}
+                    {/* Row 2: Leave Type and Days */}
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap', mb: 1.5 }}>
                       <Chip
                         label={t(`leave_${approval.leaveRequest.leaveType}`, approval.leaveRequest.leaveType)}
@@ -2988,7 +3280,7 @@ export default function ApprovalPage() {
                             <Calendar size={14} color="white" variant="Bold" />
                           </Box>
                           <Typography sx={{ fontSize: '0.8rem', color: '#1E293B', fontWeight: 600 }}>
-                            {new Date(approval.leaveRequest.startDate).toLocaleDateString('th-TH', { weekday: 'short', day: 'numeric', month: 'short', year: '2-digit' })}
+                            วันที่ลา: {new Date(approval.leaveRequest.startDate).toLocaleDateString('th-TH', { weekday: 'short', day: 'numeric', month: 'short', year: '2-digit' })}
                           </Typography>
                           {(approval.leaveRequest.startTime || approval.leaveRequest.endTime) && (
                             <Typography sx={{ fontSize: '0.8rem', color: '#1E293B', fontWeight: 600 }}>
@@ -3361,6 +3653,7 @@ export default function ApprovalPage() {
               </Box>
             )}
           </Box>
+        )
         )}
       </Container>
 
@@ -4342,6 +4635,373 @@ export default function ApprovalPage() {
           </Button>
         </Box>
       </Drawer>
+
+      {/* Employee Leave Detail Drawer - Vaul Style */}
+      <VaulDrawer.Root
+        open={employeeDetailOpen}
+        onOpenChange={(isOpen) => {
+          if (!isOpen) {
+            setEmployeeDetailOpen(false);
+            setSelectedEmployee(null);
+          }
+        }}
+        shouldScaleBackground={false}
+      >
+        <VaulDrawer.Portal>
+          <VaulDrawer.Overlay
+            style={{
+              position: 'fixed',
+              inset: 0,
+              background: 'linear-gradient(180deg, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.6) 100%)',
+              zIndex: 1300,
+              backdropFilter: 'blur(8px)',
+              WebkitBackdropFilter: 'blur(8px)',
+            }}
+          />
+          <VaulDrawer.Content
+            style={{
+              position: 'fixed',
+              bottom: 0,
+              left: 0,
+              right: 0,
+              backgroundColor: '#FAFBFC',
+              borderTopLeftRadius: 24,
+              borderTopRightRadius: 24,
+              maxHeight: '90vh',
+              zIndex: 1300,
+              display: 'flex',
+              flexDirection: 'column',
+              outline: 'none',
+              boxShadow: '0 -10px 50px rgba(0,0,0,0.15)',
+            }}
+          >
+        {selectedEmployee && (
+          <Box sx={{ display: 'flex', flexDirection: 'column', height: '90vh' }}>
+            {/* Vaul Handle - Drag indicator */}
+            <Box sx={{ 
+              display: 'flex', 
+              justifyContent: 'center', 
+              pt: 1.5,
+              pb: 1,
+              bgcolor: 'white',
+              borderTopLeftRadius: 24,
+              borderTopRightRadius: 24,
+            }}>
+              <VaulDrawer.Handle
+                style={{
+                  width: 48,
+                  height: 5,
+                  borderRadius: 3,
+                  backgroundColor: '#E2E8F0',
+                }}
+              />
+            </Box>
+
+            {/* Fixed Header */}
+            <Box sx={{ 
+              bgcolor: 'white',
+              px: 2.5, 
+              pb: 2,
+              borderBottom: '1px solid #F1F5F9',
+            }}>
+              {/* Employee Info */}
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+                <Avatar
+                  src={selectedEmployee.user.avatar}
+                  sx={{ 
+                    width: 60, 
+                    height: 60, 
+                    fontSize: '1.5rem', 
+                    bgcolor: PRIMARY_COLOR,
+                    boxShadow: '0 4px 12px rgba(108, 99, 255, 0.3)',
+                  }}
+                >
+                  {selectedEmployee.user.firstName?.[0]}
+                </Avatar>
+                <Box sx={{ flex: 1 }}>
+                  <VaulDrawer.Title asChild>
+                    <Typography sx={{ fontSize: '1.15rem', fontWeight: 700, color: '#1E293B' }}>
+                      {selectedEmployee.user.firstName} {selectedEmployee.user.lastName}
+                    </Typography>
+                  </VaulDrawer.Title>
+                  <VaulDrawer.Description asChild>
+                    <Typography sx={{ fontSize: '0.85rem', color: '#64748B' }}>
+                      {selectedEmployee.user.position || selectedEmployee.user.department}
+                    </Typography>
+                  </VaulDrawer.Description>
+                  {selectedEmployee.user.section && (
+                    <Typography sx={{ fontSize: '0.75rem', color: '#94A3B8' }}>
+                      {selectedEmployee.user.department} • {selectedEmployee.user.section}
+                    </Typography>
+                  )}
+                </Box>
+                <IconButton 
+                  onClick={() => {
+                    setEmployeeDetailOpen(false);
+                    setSelectedEmployee(null);
+                  }}
+                  sx={{ 
+                    bgcolor: '#F1F5F9',
+                    '&:hover': { bgcolor: '#E2E8F0' }
+                  }}
+                >
+                  <CloseCircle size={22} color="#64748B" />
+                </IconButton>
+              </Box>
+
+              {/* Summary Stats */}
+              <Box sx={{ 
+                display: 'flex', 
+                gap: 1.5,
+              }}>
+                <Paper elevation={0} sx={{ 
+                  flex: 1, 
+                  p: 1.5, 
+                  borderRadius: 2, 
+                  bgcolor: PRIMARY_LIGHT,
+                  textAlign: 'center',
+                }}>
+                  <Typography sx={{ fontSize: '1.75rem', fontWeight: 800, color: PRIMARY_COLOR, lineHeight: 1 }}>
+                    {selectedEmployee.totalDays}
+                  </Typography>
+                  <Typography sx={{ fontSize: '0.7rem', color: '#64748B', mt: 0.5 }}>
+                    {t('total_days_leave', 'วันลารวม')}
+                  </Typography>
+                </Paper>
+                <Paper elevation={0} sx={{ 
+                  flex: 1, 
+                  p: 1.5, 
+                  borderRadius: 2, 
+                  bgcolor: '#FFF3E0',
+                  textAlign: 'center',
+                }}>
+                  <Typography sx={{ fontSize: '1.75rem', fontWeight: 800, color: '#E65100', lineHeight: 1 }}>
+                    {selectedEmployee.leaveCount}
+                  </Typography>
+                  <Typography sx={{ fontSize: '0.7rem', color: '#64748B', mt: 0.5 }}>
+                    {t('total_leave_times', 'จำนวนครั้ง')}
+                  </Typography>
+                </Paper>
+                <Paper elevation={0} sx={{ 
+                  flex: 1, 
+                  p: 1.5, 
+                  borderRadius: 2, 
+                  bgcolor: '#E8F5E9',
+                  textAlign: 'center',
+                }}>
+                  <Typography sx={{ fontSize: '1.75rem', fontWeight: 800, color: '#2E7D32', lineHeight: 1 }}>
+                    {Object.keys(selectedEmployee.byType || {}).length}
+                  </Typography>
+                  <Typography sx={{ fontSize: '0.7rem', color: '#64748B', mt: 0.5 }}>
+                    {t('leave_types_count', 'ประเภทลา')}
+                  </Typography>
+                </Paper>
+              </Box>
+            </Box>
+
+            {/* Scrollable Content */}
+            <Box sx={{ 
+              flex: 1, 
+              overflow: 'auto',
+              px: 2.5,
+              py: 2,
+            }}>
+              {/* Leave by Type Summary */}
+              <Typography sx={{ fontSize: '0.8rem', fontWeight: 700, color: '#1E293B', mb: 1.5, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                {t('leave_breakdown', 'รายละเอียดการลาแต่ละประเภท')} ({filterYear + 543})
+              </Typography>
+              
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, mb: 3 }}>
+                {selectedEmployee.byType && Object.entries(selectedEmployee.byType).map(([leaveType, days]) => {
+                  const config = leaveTypeConfig[leaveType] || leaveTypeConfig.default;
+                  const LeaveIcon = config.icon;
+                  const leaveTypeName = teamHistorySummary.find(s => s.code === leaveType)?.name || leaveType;
+
+                  return (
+                    <Paper
+                      key={leaveType}
+                      elevation={0}
+                      sx={{
+                        p: 1.5,
+                        borderRadius: 2,
+                        bgcolor: 'white',
+                        border: '1px solid #F1F5F9',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 1.5,
+                      }}
+                    >
+                      <Box sx={{
+                        width: 44,
+                        height: 44,
+                        borderRadius: 2,
+                        bgcolor: config.lightColor,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}>
+                        <LeaveIcon size={24} color={config.color} variant="Bold" />
+                      </Box>
+                      <Box sx={{ flex: 1 }}>
+                        <Typography sx={{ fontSize: '0.9rem', fontWeight: 600, color: '#1E293B' }}>
+                          {leaveTypeName}
+                        </Typography>
+                      </Box>
+                      <Box sx={{
+                        bgcolor: config.lightColor,
+                        px: 1.5,
+                        py: 0.5,
+                        borderRadius: 2,
+                      }}>
+                        <Typography sx={{ fontSize: '1rem', fontWeight: 700, color: config.color }}>
+                          {days} {t('days_unit', 'วัน')}
+                        </Typography>
+                      </Box>
+                    </Paper>
+                  );
+                })}
+              </Box>
+
+              {/* Leave History List */}
+              {selectedEmployee && (
+                <>
+                  <Typography sx={{ fontSize: '0.8rem', fontWeight: 700, color: '#1E293B', mb: 1.5, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                    {t('leave_history_detail', 'ประวัติการลา')}
+                  </Typography>
+                  
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                    {teamHistory
+                      .filter(leave => leave.user.id === selectedEmployee.user.id)
+                      .map((leave) => {
+                        const config = leaveTypeConfig[leave.leaveType] || leaveTypeConfig.default;
+                        const LeaveIcon = config.icon;
+                        const statusInfo = statusConfig[leave.status] || statusConfig.pending;
+                        const StatusIcon = statusInfo.icon;
+
+                        return (
+                          <Paper
+                            key={leave.id}
+                            elevation={0}
+                            sx={{
+                              p: 2,
+                              borderRadius: 1,
+                              bgcolor: 'white',
+                              border: '1px solid #F1F5F9',
+                            }}
+                          >
+                            {/* Header: Leave Type + Status */}
+                            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1.5 }}>
+                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                <Box sx={{
+                                  width: 32,
+                                  height: 32,
+                                  borderRadius: 1.5,
+                                  bgcolor: config.lightColor,
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                }}>
+                                  <LeaveIcon size={18} color={config.color} variant="Bold" />
+                                </Box>
+                                <Box>
+                                  <Typography sx={{ fontSize: '0.9rem', fontWeight: 600, color: '#1E293B' }}>
+                                    {leave.leaveTypeName}
+                                  </Typography>
+                                  {leave.leaveCode && (
+                                    <Typography sx={{ fontSize: '0.7rem', color: '#94A3B8' }}>
+                                      {leave.leaveCode}
+                                    </Typography>
+                                  )}
+                                </Box>
+                              </Box>
+                              <Chip
+                                icon={<StatusIcon size={12} variant="Bold" />}
+                                label={statusInfo.label}
+                                size="small"
+                                sx={{
+                                  height: 24,
+                                  bgcolor: statusInfo.bgcolor,
+                                  color: statusInfo.color,
+                                  fontWeight: 600,
+                                  fontSize: '0.7rem',
+                                  '& .MuiChip-icon': { color: statusInfo.color },
+                                }}
+                              />
+                            </Box>
+
+                            {/* Date & Days */}
+                            <Box sx={{ 
+                              display: 'flex', 
+                              alignItems: 'center', 
+                              gap: 2,
+                              bgcolor: '#F8FAFC',
+                              borderRadius: 1.5,
+                              px: 1.5,
+                              py: 1,
+                            }}>
+                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flex: 1 }}>
+                                <Calendar size={16} color="#64748B" />
+                                <Typography sx={{ fontSize: '0.8rem', color: '#475569' }}>
+                                  {formatDate(leave.startDate)}
+                                  {leave.startDate !== leave.endDate && ` - ${formatDate(leave.endDate)}`}
+                                </Typography>
+                              </Box>
+                              <Chip
+                                label={`${leave.totalDays} ${t('days_unit', 'วัน')}`}
+                                size="small"
+                                sx={{
+                                  height: 24,
+                                  bgcolor: config.lightColor,
+                                  color: config.color,
+                                  fontWeight: 700,
+                                  fontSize: '0.75rem',
+                                }}
+                              />
+                            </Box>
+
+                            {/* Reason */}
+                            {leave.reason && (
+                              <Typography sx={{ 
+                                fontSize: '0.8rem', 
+                                color: '#64748B', 
+                                mt: 1.5,
+                                fontStyle: 'italic',
+                                borderLeft: '3px solid #E2E8F0',
+                                pl: 1.5,
+                              }}>
+                                {leave.reason}
+                              </Typography>
+                            )}
+                          </Paper>
+                        );
+                      })}
+                  </Box>
+
+                  {/* No history for this employee */}
+                  {teamHistory.filter(leave => leave.user.id === selectedEmployee.user.id).length === 0 && (
+                    <Box sx={{ textAlign: 'center', py: 4 }}>
+                      <Typography color="text.secondary">
+                        {t('no_leave_history', 'ไม่พบประวัติการลา')}
+                      </Typography>
+                    </Box>
+                  )}
+                </>
+              )}
+
+              {/* No leave data */}
+              {(!selectedEmployee.byType || Object.keys(selectedEmployee.byType).length === 0) && (
+                <Box sx={{ textAlign: 'center', py: 4 }}>
+                  <Typography color="text.secondary">
+                    {t('no_leave_data', 'ไม่มีข้อมูลการลา')}
+                  </Typography>
+                </Box>
+              )}
+            </Box>
+          </Box>
+        )}
+          </VaulDrawer.Content>
+        </VaulDrawer.Portal>
+      </VaulDrawer.Root>
 
       <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       <BottomNav />
