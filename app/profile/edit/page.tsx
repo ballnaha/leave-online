@@ -18,9 +18,6 @@ import {
     Paper,
     Skeleton,
     Dialog,
-    DialogTitle,
-    DialogContent,
-    DialogActions,
     Slider,
 } from '@mui/material';
 import { 
@@ -37,7 +34,6 @@ import {
     Location,
     Sms,
     Clock,
-    CloseCircle,
     SearchZoomIn,
     SearchZoomOut,
     RotateRight,
@@ -109,6 +105,7 @@ export default function EditProfilePage() {
     const { refetch: refetchUser } = useUser();
     const fileInputRef = useRef<HTMLInputElement>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
+    const originalImageUrlRef = useRef<string | null>(null);
 
     const [formData, setFormData] = useState({
         company: '',
@@ -135,8 +132,21 @@ export default function EditProfilePage() {
     const [zoom, setZoom] = useState(1);
     const [rotation, setRotation] = useState(0);
     const [position, setPosition] = useState({ x: 0, y: 0 });
-    const [isDragging, setIsDragging] = useState(false);
-    const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+    
+    // Use refs for gesture tracking to avoid re-renders during drag/pinch
+    const imageRef = useRef<HTMLImageElement>(null);
+    const containerRef = useRef<HTMLDivElement>(null);
+    const gestureRef = useRef({
+        isDragging: false,
+        isPinching: false,
+        dragStart: { x: 0, y: 0 },
+        initialPinchDistance: 0,
+        initialZoom: 1,
+        lastTouchCenter: { x: 0, y: 0 },
+        currentPosition: { x: 0, y: 0 },
+        currentZoom: 1,
+        animationFrameId: 0,
+    });
 
     // Data from API
     const [companies, setCompanies] = useState<Company[]>([]);
@@ -298,6 +308,64 @@ export default function EditProfilePage() {
         setFormData({ ...formData, [field]: e.target.value });
     };
 
+    const createPreparedImageUrl = useCallback(async (file: File): Promise<string> => {
+        // For avatar cropping we don't need extremely large bitmaps; downscale to reduce mobile flicker.
+        const MAX_DIMENSION = 1600;
+        const JPEG_QUALITY = 0.9;
+
+        try {
+            // Prefer createImageBitmap for faster decode off-main-thread (where supported).
+            // imageOrientation helps on iOS for correct rotation.
+            const bitmap = await (createImageBitmap as any)(file, { imageOrientation: 'from-image' });
+            const sourceWidth = (bitmap as ImageBitmap).width;
+            const sourceHeight = (bitmap as ImageBitmap).height;
+
+            const maxSide = Math.max(sourceWidth, sourceHeight);
+            if (maxSide <= MAX_DIMENSION) {
+                (bitmap as any).close?.();
+                return URL.createObjectURL(file);
+            }
+
+            const scale = MAX_DIMENSION / maxSide;
+            const targetWidth = Math.max(1, Math.round(sourceWidth * scale));
+            const targetHeight = Math.max(1, Math.round(sourceHeight * scale));
+
+            const canvas = document.createElement('canvas');
+            canvas.width = targetWidth;
+            canvas.height = targetHeight;
+            const ctx = canvas.getContext('2d', { alpha: false });
+            if (!ctx) {
+                (bitmap as any).close?.();
+                return URL.createObjectURL(file);
+            }
+            ctx.drawImage(bitmap as ImageBitmap, 0, 0, targetWidth, targetHeight);
+            (bitmap as any).close?.();
+
+            const blob = await new Promise<Blob>((resolve, reject) => {
+                canvas.toBlob(
+                    (b) => (b ? resolve(b) : reject(new Error('Failed to create resized image blob'))),
+                    'image/jpeg',
+                    JPEG_QUALITY
+                );
+            });
+
+            return URL.createObjectURL(blob);
+        } catch (e) {
+            // Fallback: use original file object URL
+            return URL.createObjectURL(file);
+        }
+    }, []);
+
+    // Cleanup object URL on unmount
+    useEffect(() => {
+        return () => {
+            if (originalImageUrlRef.current) {
+                URL.revokeObjectURL(originalImageUrlRef.current);
+                originalImageUrlRef.current = null;
+            }
+        };
+    }, []);
+
     // Image handling functions
     const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -315,16 +383,28 @@ export default function EditProfilePage() {
             return;
         }
 
-        const reader = new FileReader();
-        reader.onload = (event) => {
-            const imageData = event.target?.result as string;
-            setOriginalImage(imageData);
+        void (async () => {
+            // Use object URL (better performance + less flicker on mobile than base64)
+            if (originalImageUrlRef.current) {
+                URL.revokeObjectURL(originalImageUrlRef.current);
+                originalImageUrlRef.current = null;
+            }
+
+            // Reset gesture ref
+            gestureRef.current.currentZoom = 1;
+            gestureRef.current.currentPosition = { x: 0, y: 0 };
+
+            // Prepare (downscale if needed) before opening editor to avoid flicker on large images
+            const preparedUrl = await createPreparedImageUrl(file);
+            originalImageUrlRef.current = preparedUrl;
+
+            // Batch state updates
+            setOriginalImage(preparedUrl);
             setZoom(1);
             setRotation(0);
             setPosition({ x: 0, y: 0 });
             setImageEditorOpen(true);
-        };
-        reader.readAsDataURL(file);
+        })();
 
         // Reset input
         if (fileInputRef.current) {
@@ -382,11 +462,9 @@ export default function EditProfilePage() {
             }
 
             const img = new Image();
-            img.crossOrigin = 'anonymous';
             img.onload = () => {
                 const outputSize = 200; // Final output size
-                const cropAreaSize = 200; // Crop area size in preview (diameter)
-                const previewHeight = 300; // Preview container height
+                const cropRadius = 140; // Same as SVG circle radius in preview
                 
                 canvas.width = outputSize;
                 canvas.height = outputSize;
@@ -407,34 +485,54 @@ export default function EditProfilePage() {
                 ctx.closePath();
                 ctx.clip();
 
-                // Calculate how image is displayed in preview
+                // Get actual preview container size
+                const container = containerRef.current;
+                const previewWidth = container?.clientWidth || window.innerWidth;
+                const previewHeight = container?.clientHeight || (window.innerHeight - 150);
+                
                 const imgAspect = img.width / img.height;
+                const containerAspect = previewWidth / previewHeight;
                 
-                // Image fills container height, maintaining aspect ratio
-                const displayHeight = previewHeight;
-                const displayWidth = previewHeight * imgAspect;
+                // Calculate how image is displayed with object-fit: contain
+                let displayWidth, displayHeight;
+                if (imgAspect > containerAspect) {
+                    displayWidth = previewWidth;
+                    displayHeight = previewWidth / imgAspect;
+                } else {
+                    displayHeight = previewHeight;
+                    displayWidth = previewHeight * imgAspect;
+                }
 
-                // Scale factor: crop area to output size
-                const scale = outputSize / cropAreaSize;
+                // Scale factor: from preview crop circle diameter to output size
+                const cropDiameter = cropRadius * 2; // 280px in preview
+                const scale = outputSize / cropDiameter;
 
-                // Apply transformations
+                // Move to center of canvas
                 ctx.translate(outputSize / 2, outputSize / 2);
-                ctx.rotate((rotation * Math.PI) / 180);
-
-                // Apply zoom and calculate draw dimensions
-                const drawWidth = displayWidth * zoom * scale;
-                const drawHeight = displayHeight * zoom * scale;
                 
-                // Position offset: divide by zoom because CSS transform does translate before scale
-                const offsetX = (position.x / zoom) * scale;
-                const offsetY = (position.y / zoom) * scale;
+                // Apply rotation
+                ctx.rotate((rotation * Math.PI) / 180);
+                
+                // The CSS transform order is: translate3d(x, y, 0) scale(zoom) rotate(deg)
+                // This means: first translate, then scale, then rotate
+                // In canvas we need to reverse: first rotate (done above), then scale, then translate
+                
+                // Calculate scaled image dimensions
+                const scaledWidth = displayWidth * zoom * scale;
+                const scaledHeight = displayHeight * zoom * scale;
+                
+                // Position offset: CSS does translate then scale
+                // So position.x pixels in screen space = position.x * zoom in image space
+                // Then we scale by 'scale' to fit canvas
+                const offsetX = position.x * zoom * scale;
+                const offsetY = position.y * zoom * scale;
                 
                 ctx.drawImage(
                     img,
-                    -drawWidth / 2 + offsetX,
-                    -drawHeight / 2 + offsetY,
-                    drawWidth,
-                    drawHeight
+                    -scaledWidth / 2 + offsetX,
+                    -scaledHeight / 2 + offsetY,
+                    scaledWidth,
+                    scaledHeight
                 );
 
                 // Restore context
@@ -449,11 +547,13 @@ export default function EditProfilePage() {
         });
     }, [originalImage, zoom, rotation, position]);
 
+    // Reset gesture ref when editor opens
     useEffect(() => {
-        if (imageEditorOpen && originalImage) {
-            cropCircleImage();
+        if (imageEditorOpen) {
+            gestureRef.current.currentPosition = position;
+            gestureRef.current.currentZoom = zoom;
         }
-    }, [imageEditorOpen, originalImage, zoom, rotation, position, cropCircleImage]);
+    }, [imageEditorOpen, position, zoom]);
 
     const handleSaveImage = async () => {
         if (!canvasRef.current || !originalImage) return;
@@ -471,50 +571,136 @@ export default function EditProfilePage() {
         
         // Verify that the image is not empty/black
         if (croppedImage && croppedImage.length > 100) {
-            // Store the cropped image for later upload and show preview
-            setPendingAvatarUpload(croppedImage);
-            setAvatarPreview(croppedImage);
+            // Close editor first, then update avatar after a small delay
+            // This prevents the flashing effect when the drawer closes
             setImageEditorOpen(false);
+            
+            // Wait for drawer to close before updating avatar
+            requestAnimationFrame(() => {
+                setPendingAvatarUpload(croppedImage);
+                setAvatarPreview(croppedImage);
+            });
             
         } else {
             toastr.error(t('error_process_image', 'ไม่สามารถประมวลผลรูปภาพได้ กรุณาลองใหม่อีกครั้ง'));
         }
     };
 
-    const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
-        setIsDragging(true);
-        setDragStart({ x: e.clientX - position.x, y: e.clientY - position.y });
+    // Optimized: Update image transform directly without state
+    const updateImageTransform = useCallback(() => {
+        if (imageRef.current) {
+            const { currentZoom, currentPosition } = gestureRef.current;
+            imageRef.current.style.transform = `translate3d(${currentPosition.x}px, ${currentPosition.y}px, 0) scale(${currentZoom}) rotate(${rotation}deg)`;
+        }
+    }, [rotation]);
+
+    // Calculate distance between two touch points
+    const getTouchDistance = (touches: React.TouchList) => {
+        const dx = touches[0].clientX - touches[1].clientX;
+        const dy = touches[0].clientY - touches[1].clientY;
+        return Math.sqrt(dx * dx + dy * dy);
     };
 
-    const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
-        if (!isDragging) return;
-        setPosition({
-            x: e.clientX - dragStart.x,
-            y: e.clientY - dragStart.y,
-        });
+    // Calculate center point between two touches
+    const getTouchCenter = (touches: React.TouchList) => {
+        return {
+            x: (touches[0].clientX + touches[1].clientX) / 2,
+            y: (touches[0].clientY + touches[1].clientY) / 2,
+        };
+    };
+
+    const handleGestureStart = (clientX: number, clientY: number, touches?: React.TouchList) => {
+        const gesture = gestureRef.current;
+        
+        if (touches && touches.length === 2) {
+            // Pinch gesture start
+            gesture.isPinching = true;
+            gesture.isDragging = false;
+            gesture.initialPinchDistance = getTouchDistance(touches);
+            gesture.initialZoom = gesture.currentZoom;
+            gesture.lastTouchCenter = getTouchCenter(touches);
+        } else {
+            // Single touch/mouse drag
+            gesture.isDragging = true;
+            gesture.isPinching = false;
+            gesture.dragStart = {
+                x: clientX - gesture.currentPosition.x,
+                y: clientY - gesture.currentPosition.y,
+            };
+        }
+    };
+
+    const handleGestureMove = (clientX: number, clientY: number, touches?: React.TouchList) => {
+        const gesture = gestureRef.current;
+        
+        if (touches && touches.length === 2 && gesture.isPinching) {
+            // Pinch gesture move
+            const currentDistance = getTouchDistance(touches);
+            const scale = currentDistance / gesture.initialPinchDistance;
+            gesture.currentZoom = Math.max(0.5, Math.min(3, gesture.initialZoom * scale));
+
+            // Also allow panning while pinching
+            const currentCenter = getTouchCenter(touches);
+            gesture.currentPosition.x += currentCenter.x - gesture.lastTouchCenter.x;
+            gesture.currentPosition.y += currentCenter.y - gesture.lastTouchCenter.y;
+            gesture.lastTouchCenter = currentCenter;
+            
+            // Update transform using requestAnimationFrame
+            cancelAnimationFrame(gesture.animationFrameId);
+            gesture.animationFrameId = requestAnimationFrame(updateImageTransform);
+        } else if (gesture.isDragging && !gesture.isPinching) {
+            // Single touch/mouse drag
+            gesture.currentPosition = {
+                x: clientX - gesture.dragStart.x,
+                y: clientY - gesture.dragStart.y,
+            };
+            
+            // Update transform using requestAnimationFrame
+            cancelAnimationFrame(gesture.animationFrameId);
+            gesture.animationFrameId = requestAnimationFrame(updateImageTransform);
+        }
+    };
+
+    const handleGestureEnd = (touches?: React.TouchList) => {
+        const gesture = gestureRef.current;
+        
+        if (touches && touches.length < 2) {
+            gesture.isPinching = false;
+        }
+        if (!touches || touches.length === 0) {
+            gesture.isDragging = false;
+            // Sync state with ref values when gesture ends
+            setPosition({ ...gesture.currentPosition });
+            setZoom(gesture.currentZoom);
+        }
+    };
+
+    const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
+        if (e.touches.length >= 2) e.preventDefault();
+        const touch = e.touches[0];
+        handleGestureStart(touch.clientX, touch.clientY, e.touches);
+    };
+
+    const handleTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
+        if (e.touches.length >= 2) e.preventDefault();
+        const touch = e.touches[0];
+        handleGestureMove(touch.clientX, touch.clientY, e.touches);
+    };
+
+    const handleTouchEnd = (e: React.TouchEvent<HTMLDivElement>) => {
+        handleGestureEnd(e.touches);
+    };
+
+    const handleMouseDown = (e: React.MouseEvent) => {
+        handleGestureStart(e.clientX, e.clientY);
+    };
+
+    const handleMouseMove = (e: React.MouseEvent) => {
+        handleGestureMove(e.clientX, e.clientY);
     };
 
     const handleMouseUp = () => {
-        setIsDragging(false);
-    };
-
-    const handleTouchStart = (e: React.TouchEvent<HTMLCanvasElement>) => {
-        const touch = e.touches[0];
-        setIsDragging(true);
-        setDragStart({ x: touch.clientX - position.x, y: touch.clientY - position.y });
-    };
-
-    const handleTouchMove = (e: React.TouchEvent<HTMLCanvasElement>) => {
-        if (!isDragging) return;
-        const touch = e.touches[0];
-        setPosition({
-            x: touch.clientX - dragStart.x,
-            y: touch.clientY - dragStart.y,
-        });
-    };
-
-    const handleTouchEnd = () => {
-        setIsDragging(false);
+        handleGestureEnd();
     };
 
     const handleSubmit = async () => {
@@ -792,6 +978,7 @@ export default function EditProfilePage() {
                         <Box sx={{ display: 'flex', justifyContent: 'center', mb: 3, mt: 2 }}>
                             <Box sx={{ position: 'relative' }}>
                                 <Avatar
+                                    key={avatarPreview?.substring(0, 50) || 'no-avatar'}
                                     src={avatarPreview || undefined}
                                     sx={{
                                         width: 120,
@@ -801,6 +988,14 @@ export default function EditProfilePage() {
                                         fontWeight: 700,
                                         boxShadow: '0 8px 24px rgba(27, 25, 75, 0.3)',
                                         border: '4px solid white',
+                                        transition: 'none',
+                                        '& img': {
+                                            transition: 'none',
+                                        },
+                                    }}
+                                    imgProps={{
+                                        loading: 'eager',
+                                        decoding: 'sync',
                                     }}
                                 >
                                     {!avatarPreview && getInitials()}
@@ -1382,208 +1577,273 @@ export default function EditProfilePage() {
                 </List>
             </Drawer>
 
-            {/* Image Editor Dialog */}
+            {/* Image Editor - Fullscreen Native Mobile Style */}
             <Dialog
                 open={imageEditorOpen}
                 onClose={() => setImageEditorOpen(false)}
-                maxWidth="sm"
-                fullWidth
+                fullScreen
+                TransitionProps={{
+                    timeout: 0,
+                }}
                 PaperProps={{
-                    sx: { borderRadius: 1 },
+                    sx: { 
+                        bgcolor: '#000',
+                        display: 'flex',
+                        flexDirection: 'column',
+                    },
+                }}
+                sx={{
+                    '& .MuiDialog-container': {
+                        transition: 'none !important',
+                    },
+                    '& .MuiBackdrop-root': {
+                        transition: 'none !important',
+                    },
                 }}
             >
-                <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pb: 1 }}>
-                    <Typography component="span" variant="h6" sx={{ fontWeight: 700 }}>
-                        {t('edit_image', 'ปรับแต่งรูปภาพ')}
-                    </Typography>
-                    <IconButton onClick={() => setImageEditorOpen(false)} size="small">
-                        <CloseCircle size={20} />
-                    </IconButton>
-                </DialogTitle>
-                <DialogContent sx={{ p: 0 }}>
-                    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                        {/* Image Preview Container */}
-                        <Box
-                            sx={{
-                                position: 'relative',
-                                width: '100%',
-                                height: 300,
-                                bgcolor: '#1a1a1a',
-                                overflow: 'hidden',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                            }}
-                        >
-                            {/* Original Image */}
-                            {originalImage && (
-                                <Box
-                                    component="img"
-                                    src={originalImage}
-                                    sx={{
-                                        maxWidth: '100%',
-                                        maxHeight: '100%',
-                                        transform: `scale(${zoom}) rotate(${rotation}deg) translate(${position.x / zoom}px, ${position.y / zoom}px)`,
-                                        transition: isDragging ? 'none' : 'transform 0.1s ease-out',
-                                        cursor: isDragging ? 'grabbing' : 'grab',
-                                        userSelect: 'none',
-                                        pointerEvents: 'none',
-                                    }}
-                                    draggable={false}
-                                />
-                            )}
-                            
-                            {/* Crop Circle Overlay */}
-                            <Box
-                                sx={{
-                                    position: 'absolute',
-                                    inset: 0,
-                                    pointerEvents: 'none',
-                                }}
-                            >
-                                {/* Dark overlay with circle cutout using SVG */}
-                                <svg width="100%" height="100%" style={{ position: 'absolute' }}>
-                                    <defs>
-                                        <mask id="circleMask">
-                                            <rect width="100%" height="100%" fill="white" />
-                                            <circle cx="50%" cy="50%" r="100" fill="black" />
-                                        </mask>
-                                    </defs>
-                                    <rect 
-                                        width="100%" 
-                                        height="100%" 
-                                        fill="rgba(0,0,0,0.6)" 
-                                        mask="url(#circleMask)" 
-                                    />
-                                    <circle 
-                                        cx="50%" 
-                                        cy="50%" 
-                                        r="100" 
-                                        fill="none" 
-                                        stroke="white" 
-                                        strokeWidth="2"
-                                        strokeDasharray="8 4"
-                                    />
-                                </svg>
-                            </Box>
-
-                            {/* Drag Area (invisible) */}
-                            <Box
-                                sx={{
-                                    position: 'absolute',
-                                    inset: 0,
-                                    cursor: isDragging ? 'grabbing' : 'grab',
-                                    touchAction: 'none',
-                                }}
-                                onMouseDown={(e) => {
-                                    setIsDragging(true);
-                                    setDragStart({ x: e.clientX - position.x, y: e.clientY - position.y });
-                                }}
-                                onMouseMove={(e) => {
-                                    if (!isDragging) return;
-                                    setPosition({
-                                        x: e.clientX - dragStart.x,
-                                        y: e.clientY - dragStart.y,
-                                    });
-                                }}
-                                onMouseUp={() => setIsDragging(false)}
-                                onMouseLeave={() => setIsDragging(false)}
-                                onTouchStart={(e) => {
-                                    const touch = e.touches[0];
-                                    setIsDragging(true);
-                                    setDragStart({ x: touch.clientX - position.x, y: touch.clientY - position.y });
-                                }}
-                                onTouchMove={(e) => {
-                                    if (!isDragging) return;
-                                    const touch = e.touches[0];
-                                    setPosition({
-                                        x: touch.clientX - dragStart.x,
-                                        y: touch.clientY - dragStart.y,
-                                    });
-                                }}
-                                onTouchEnd={() => setIsDragging(false)}
-                            />
-                        </Box>
-
-                        {/* Controls */}
-                        <Box sx={{ width: '100%', p: 2, pt: 2 }}>
-                            <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', textAlign: 'center', mb: 2 }}>
-                                {t('drag_to_adjust', 'ลากเพื่อปรับตำแหน่ง • ใช้ slider เพื่อซูม')}
-                            </Typography>
-
-                            {/* Zoom Control */}
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
-                                <SearchZoomOut size={20} color="#666" />
-                                <Slider
-                                    value={zoom}
-                                    onChange={(_, value) => setZoom(value as number)}
-                                    min={0.5}
-                                    max={3}
-                                    step={0.05}
-                                    sx={{
-                                        color: '#1b194b',
-                                        '& .MuiSlider-thumb': {
-                                            bgcolor: '#1b194b',
-                                        },
-                                    }}
-                                />
-                                <SearchZoomIn size={20} color="#666" />
-                            </Box>
-
-                            {/* Rotation Control */}
-                            <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center' }}>
-                                <Button
-                                    variant="outlined"
-                                    size="small"
-                                    onClick={() => setRotation((r) => r - 90)}
-                                    startIcon={<RotateRight size={16} style={{ transform: 'scaleX(-1)' }} />}
-                                    sx={{ borderColor: '#1b194b', color: '#1b194b' }}
-                                >
-                                    {t('rotate_left', 'หมุนซ้าย')}
-                                </Button>
-                                <Button
-                                    variant="outlined"
-                                    size="small"
-                                    onClick={() => {
-                                        setZoom(1);
-                                        setRotation(0);
-                                        setPosition({ x: 0, y: 0 });
-                                    }}
-                                    sx={{ borderColor: '#999', color: '#666' }}
-                                >
-                                    {t('reset', 'รีเซ็ต')}
-                                </Button>
-                                <Button
-                                    variant="outlined"
-                                    size="small"
-                                    onClick={() => setRotation((r) => r + 90)}
-                                    startIcon={<RotateRight size={16} />}
-                                    sx={{ borderColor: '#1b194b', color: '#1b194b' }}
-                                >
-                                    {t('rotate_right', 'หมุนขวา')}
-                                </Button>
-                            </Box>
-                        </Box>
-                    </Box>
-                </DialogContent>
-                <DialogActions sx={{ p: 2, pt: 0 }}>
-                    <Button 
+                {/* Header */}
+                <Box
+                    sx={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        px: 1,
+                        py: 1,
+                        pt: 'calc(env(safe-area-inset-top, 0px) + 8px)',
+                        bgcolor: 'rgba(0,0,0,0.8)',
+                        backdropFilter: 'blur(10px)',
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        zIndex: 10,
+                    }}
+                >
+                    <Button
                         onClick={() => setImageEditorOpen(false)}
-                        sx={{ color: '#666' }}
+                        sx={{ 
+                            color: 'white',
+                            minWidth: 'auto',
+                            fontSize: '0.95rem',
+                        }}
                     >
                         {t('cancel', 'ยกเลิก')}
                     </Button>
+                    <Typography sx={{ color: 'white', fontWeight: 600, fontSize: '1rem' }}>
+                        {t('move_and_scale', 'ย้ายและปรับขนาด')}
+                    </Typography>
                     <Button
-                        variant="contained"
                         onClick={handleSaveImage}
-                        sx={{
-                            bgcolor: '#1b194b',
-                            '&:hover': { bgcolor: '#2d2a6e' },
+                        sx={{ 
+                            color: '#4CAF50',
+                            fontWeight: 600,
+                            minWidth: 'auto',
+                            fontSize: '0.95rem',
                         }}
                     >
-                        {t('save_image', 'บันทึกรูปภาพ')}
+                        {t('choose', 'เลือก')}
                     </Button>
-                </DialogActions>
+                </Box>
+
+                {/* Main Image Area */}
+                <Box
+                    ref={containerRef}
+                    sx={{
+                        flex: 1,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        position: 'relative',
+                        overflow: 'hidden',
+                        touchAction: 'none',
+                        userSelect: 'none',
+                        WebkitUserSelect: 'none',
+                        cursor: 'grab',
+                        '&:active': { cursor: 'grabbing' },
+                    }}
+                    onTouchStart={handleTouchStart}
+                    onTouchMove={handleTouchMove}
+                    onTouchEnd={handleTouchEnd}
+                    onMouseDown={handleMouseDown}
+                    onMouseMove={handleMouseMove}
+                    onMouseUp={handleMouseUp}
+                    onMouseLeave={handleMouseUp}
+                    onWheel={(e) => {
+                        // Mouse wheel zoom support for desktop
+                        e.preventDefault();
+                        const delta = e.deltaY > 0 ? -0.1 : 0.1;
+                        const newZoom = Math.max(0.5, Math.min(3, zoom + delta));
+                        setZoom(newZoom);
+                        gestureRef.current.currentZoom = newZoom;
+                        if (imageRef.current) {
+                            imageRef.current.style.transform = `translate3d(${position.x}px, ${position.y}px, 0) scale(${newZoom}) rotate(${rotation}deg)`;
+                        }
+                    }}
+                >
+                    {/* Image */}
+                    <Box
+                        component="img"
+                        ref={imageRef}
+                        src={originalImage || ''}
+                        onLoad={() => {
+                            // Set initial transform when image loads
+                            if (imageRef.current && originalImage) {
+                                imageRef.current.style.transform = `translate3d(${position.x}px, ${position.y}px, 0) scale(${zoom}) rotate(${rotation}deg)`;
+                            }
+                        }}
+                        sx={{
+                            maxWidth: '100%',
+                            maxHeight: '100%',
+                            objectFit: 'contain',
+                            pointerEvents: 'none',
+                            willChange: 'transform',
+                            backfaceVisibility: 'hidden',
+                            WebkitBackfaceVisibility: 'hidden',
+                            visibility: originalImage ? 'visible' : 'hidden',
+                        }}
+                        draggable={false}
+                    />
+                    
+                    {/* Circular Crop Overlay */}
+                    <Box
+                        sx={{
+                            position: 'absolute',
+                            inset: 0,
+                            pointerEvents: 'none',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                        }}
+                    >
+                        <Box
+                            sx={{
+                                width: 280,
+                                height: 280,
+                                borderRadius: '50%',
+                                boxShadow: '0 0 0 9999px rgba(0,0,0,0.7)',
+                                border: '1px solid rgba(255,255,255,0.6)',
+                            }}
+                        />
+                    </Box>
+
+                    {/* Gesture Hint */}
+                    <Box
+                        sx={{
+                            position: 'absolute',
+                            bottom: 100,
+                            left: 0,
+                            right: 0,
+                            textAlign: 'center',
+                            pointerEvents: 'none',
+                        }}
+                    >
+                        <Typography 
+                            variant="caption" 
+                            sx={{ 
+                                color: 'rgba(255,255,255,0.7)',
+                                fontSize: '0.75rem',
+                                textShadow: '0 1px 3px rgba(0,0,0,0.5)',
+                            }}
+                        >
+                            {t('pinch_to_zoom', 'ใช้ 2 นิ้ว หนีบเพื่อซูม')}
+                        </Typography>
+                    </Box>
+                </Box>
+
+                {/* Bottom Controls */}
+                <Box
+                    sx={{
+                        bgcolor: 'rgba(0,0,0,0.9)',
+                        backdropFilter: 'blur(10px)',
+                        px: 2,
+                        pt: 1.5,
+                        pb: 'calc(env(safe-area-inset-bottom, 0px) + 16px)',
+                    }}
+                >
+                    {/* Zoom Slider */}
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+                        <SearchZoomOut size={18} color="rgba(255,255,255,0.6)" />
+                        <Slider
+                            value={zoom}
+                            onChange={(_, value) => {
+                                const newZoom = value as number;
+                                setZoom(newZoom);
+                                gestureRef.current.currentZoom = newZoom;
+                                if (imageRef.current) {
+                                    imageRef.current.style.transform = `translate3d(${position.x}px, ${position.y}px, 0) scale(${newZoom}) rotate(${rotation}deg)`;
+                                }
+                            }}
+                            min={0.5}
+                            max={3}
+                            step={0.02}
+                            sx={{
+                                color: 'white',
+                                '& .MuiSlider-track': {
+                                    bgcolor: 'white',
+                                },
+                                '& .MuiSlider-rail': {
+                                    bgcolor: 'rgba(255,255,255,0.3)',
+                                },
+                                '& .MuiSlider-thumb': {
+                                    bgcolor: 'white',
+                                    width: 20,
+                                    height: 20,
+                                    '&:hover, &.Mui-focusVisible': {
+                                        boxShadow: '0 0 0 8px rgba(255,255,255,0.16)',
+                                    },
+                                },
+                            }}
+                        />
+                        <SearchZoomIn size={18} color="rgba(255,255,255,0.6)" />
+                    </Box>
+
+                    {/* Rotation & Reset Controls */}
+                    <Box sx={{ display: 'flex', justifyContent: 'center', gap: 3 }}>
+                        <IconButton
+                            onClick={() => setRotation((r) => r - 90)}
+                            sx={{ 
+                                color: 'white',
+                                bgcolor: 'rgba(255,255,255,0.1)',
+                                '&:hover': { bgcolor: 'rgba(255,255,255,0.2)' },
+                            }}
+                        >
+                            <RotateRight size={22} style={{ transform: 'scaleX(-1)' }} />
+                        </IconButton>
+                        <IconButton
+                            onClick={() => {
+                                setZoom(1);
+                                setRotation(0);
+                                setPosition({ x: 0, y: 0 });
+                                gestureRef.current.currentZoom = 1;
+                                gestureRef.current.currentPosition = { x: 0, y: 0 };
+                                if (imageRef.current) {
+                                    imageRef.current.style.transform = `translate3d(0px, 0px, 0) scale(1) rotate(0deg)`;
+                                }
+                            }}
+                            sx={{ 
+                                color: 'white',
+                                bgcolor: 'rgba(255,255,255,0.1)',
+                                px: 2,
+                                borderRadius: 2,
+                                '&:hover': { bgcolor: 'rgba(255,255,255,0.2)' },
+                            }}
+                        >
+                            <Typography sx={{ fontSize: '0.8rem', fontWeight: 500 }}>
+                                {t('reset', 'รีเซ็ต')}
+                            </Typography>
+                        </IconButton>
+                        <IconButton
+                            onClick={() => setRotation((r) => r + 90)}
+                            sx={{ 
+                                color: 'white',
+                                bgcolor: 'rgba(255,255,255,0.1)',
+                                '&:hover': { bgcolor: 'rgba(255,255,255,0.2)' },
+                            }}
+                        >
+                            <RotateRight size={22} />
+                        </IconButton>
+                    </Box>
+                </Box>
             </Dialog>
 
             {/* Hidden canvas for image processing - placed outside Dialog to ensure it's always available */}

@@ -1,6 +1,7 @@
 'use client';
 import React, { useEffect, useState, useMemo } from 'react';
-import { Box, Typography, Button, Card, CardContent, Skeleton, Container, Dialog, DialogTitle, DialogContent, DialogActions, TextField, CircularProgress } from '@mui/material';
+import { Box, Typography, Button, Card, CardContent, CardActionArea, Skeleton, Container, Dialog, DialogTitle, DialogContent, DialogActions, TextField, CircularProgress, IconButton } from '@mui/material';
+import { ViewCarousel, ViewList, ArrowForwardIos } from '@mui/icons-material';
 import Image from 'next/image';
 import Header from './components/Header';
 import ImageSlider from './components/ImageSlider';
@@ -12,7 +13,8 @@ import {
   Calendar2, Activity, Briefcase, Heart, Sun1, Lovely,
   Building4, Shield, People, Car, Clock, MessageQuestion, Health,
   Profile2User, Danger, MoneySend,
-  Money
+  Money,
+  TaskSquare
 } from 'iconsax-react';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import 'swiper/css';
@@ -96,6 +98,7 @@ export default function Home() {
   const [cancelReason, setCancelReason] = useState('');
   const [hasBanners, setHasBanners] = useState(true);
   const [year, setYear] = useState(new Date().getFullYear());
+  const [recentRequestsDisplayMode, setRecentRequestsDisplayMode] = useState<'list' | 'swiper'>('swiper');
 
   useEffect(() => {
     setMounted(true);
@@ -307,11 +310,71 @@ export default function Home() {
           year={year}
           onYearChange={setYear}
         />
+
+        {/* Manage Leave Card - Show only for approvers (not employee) */}
+        {user?.role && user.role !== 'employee' && (
+          <Card
+            sx={{
+              mt: -2,
+              mx: 2.5,
+              mb: 1 ,
+              borderRadius: '20px',
+              boxShadow: '0 8px 32px rgba(0,0,0,0.08)',
+              background: 'rgba(255, 255, 255, 0.7)',
+              backdropFilter: 'blur(20px)',
+              WebkitBackdropFilter: 'blur(20px)',
+              border: '1px solid rgba(255, 255, 255, 0.5)',
+              position: 'relative',
+              overflow: 'hidden',
+              zIndex: 10,
+              '&::before': {
+                content: '""',
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                background: 'linear-gradient(135deg, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0.1) 100%)',
+                pointerEvents: 'none',
+              },
+            }}
+          >
+            <CardActionArea onClick={() => router.push('/approval')} sx={{ p: 0}}>
+              <CardContent sx={{ py: 2.5, px: 2.5, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, zIndex: 1 }}>
+                  <Box
+                    sx={{
+                      width: 48,
+                      height: 48,
+                      borderRadius: '14px',
+                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      boxShadow: '0 4px 12px rgba(102, 126, 234, 0.3)',
+                    }}
+                  >
+                    <TaskSquare size={26} color="white" variant="Outline" />
+                  </Box>
+                  <Box>
+                    <Typography variant="subtitle1" sx={{ fontWeight: 700, color: '#1E293B', lineHeight: 1.3 }}>
+                      {t('home_manage_leave', 'จัดการใบลา')}
+                    </Typography>
+                    <Typography variant="caption" sx={{ color: '#64748B' }}>
+                      {t('home_manage_leave_desc', 'จัดการคำขออนุมัติการลา')}
+                    </Typography>
+                  </Box>
+                </Box>
+                <ArrowForwardIos sx={{ color: '#94A3B8', fontSize: 18, zIndex: 1 }} />
+              </CardContent>
+            </CardActionArea>
+          </Card>
+        )}
       </Box>
 
-      <Container maxWidth={false} sx={{ maxWidth: 1200, px: { xs: 2.5, sm: 3, md: 4 } }}>
+      <Container maxWidth={false} sx={{ maxWidth: 1200, px: { xs: 2.5, sm: 3, md: 4  } }}>
         {/* Quick Actions Section */}
-        <Box sx={{ mt: 1.5, mb: 3 }}>
+        <Box sx={{ mt: 3, mb: 3 }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5 }}>
             <Typography variant="h6" sx={{ fontWeight: 'bold', color: 'text.primary' }}>
               {t('home_categories', 'ประเภทการลา')}
@@ -428,7 +491,7 @@ export default function Home() {
 
 
         {/* Recent Requests Section */}
-        <Box>
+        <Box sx={{ pb: 3 }}>
           {showLoading ? (
             <>
               <Skeleton variant="text" width={160} height={28} sx={{ mb: 1 }} />
@@ -446,13 +509,29 @@ export default function Home() {
                   </Typography>
 
                 </Box>
-                <Button
-                  size="small"
-                  sx={{ fontWeight: 'medium' }}
-                  onClick={() => router.push('/leave')}
-                >
-                  {t('home_see_all', 'ดูทั้งหมด')}
-                </Button>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                  <IconButton
+                    size="small"
+                    aria-label={t('home_recent_requests_toggle_view', 'สลับรูปแบบการแสดงผล')}
+                    onClick={() =>
+                      setRecentRequestsDisplayMode((prev) => (prev === 'list' ? 'swiper' : 'list'))
+                    }
+                  >
+                    {recentRequestsDisplayMode === 'list' ? (
+                      <ViewCarousel fontSize="small" />
+                    ) : (
+                      <ViewList fontSize="small" />
+                    )}
+                  </IconButton>
+
+                  <Button
+                    size="small"
+                    sx={{ fontWeight: 'medium' }}
+                    onClick={() => router.push('/leave')}
+                  >
+                    {t('home_see_all', 'ดูทั้งหมด')}
+                  </Button>
+                </Box>
               </Box>
 
               <LeaveTimeline
@@ -486,6 +565,7 @@ export default function Home() {
                     onClick: () => handleLeaveClick(leave),
                   };
                 })}
+                displayMode={recentRequestsDisplayMode}
               />
             </>
           )}
