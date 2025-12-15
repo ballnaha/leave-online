@@ -19,6 +19,44 @@ const nextConfig: NextConfig = {
     // กำหนด minimum cache time (seconds)
     minimumCacheTTL: 60 * 60 * 24 * 30, // 30 days
   },
+  async headers() {
+    return [
+      {
+        // Apply to all routes - prevent caching of HTML pages
+        source: '/:path*',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'no-cache, no-store, must-revalidate',
+          },
+        ],
+      },
+      {
+        // Allow caching for static assets
+        source: '/images/:path*',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=31536000, immutable',
+          },
+        ],
+      },
+      {
+        // Service worker should not be cached
+        source: '/sw.js',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'no-cache, no-store, must-revalidate',
+          },
+          {
+            key: 'Service-Worker-Allowed',
+            value: '/',
+          },
+        ],
+      },
+    ];
+  },
   async rewrites() {
     return [
       {

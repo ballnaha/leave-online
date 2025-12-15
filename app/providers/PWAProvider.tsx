@@ -1,5 +1,6 @@
 'use client';
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import { APP_VERSION } from '@/lib/version';
 
 interface PWAContextType {
     isInstallPromptVisible: boolean;
@@ -9,6 +10,8 @@ interface PWAContextType {
     isStandalone: boolean;
     isIOS: boolean;
     installPWA: () => Promise<void>;
+    checkForUpdates: () => Promise<void>;
+    clearCache: () => Promise<void>;
 }
 
 const PWAContext = createContext<PWAContextType>({
@@ -19,6 +22,8 @@ const PWAContext = createContext<PWAContextType>({
     isStandalone: false,
     isIOS: false,
     installPWA: async () => {},
+    checkForUpdates: async () => {},
+    clearCache: async () => {},
 });
 
 export const usePWA = () => useContext(PWAContext);
@@ -29,15 +34,134 @@ export default function PWAProvider({ children }: { children: React.ReactNode })
     const [isInstallPromptVisible, setIsInstallPromptVisible] = useState(false);
     const [isIOS, setIsIOS] = useState(false);
     const [canInstall, setCanInstall] = useState(false);
+    const [swRegistration, setSwRegistration] = useState<ServiceWorkerRegistration | null>(null);
+
+    // Function to clear all caches and reload
+    const clearCache = useCallback(async () => {
+        try {
+            // Clear all caches
+            if ('caches' in window) {
+                const cacheNames = await caches.keys();
+                await Promise.all(cacheNames.map(name => caches.delete(name)));
+                console.log('[PWA] All caches cleared');
+            }
+            
+            // Unregister service workers and re-register
+            if ('serviceWorker' in navigator) {
+                const registrations = await navigator.serviceWorker.getRegistrations();
+                await Promise.all(registrations.map(reg => reg.unregister()));
+                console.log('[PWA] Service workers unregistered');
+            }
+            
+            // Reload the page
+            window.location.reload();
+        } catch (error) {
+            console.error('[PWA] Error clearing cache:', error);
+        }
+    }, []);
+
+    // Function to check for updates
+    const checkForUpdates = useCallback(async () => {
+        if (swRegistration) {
+            try {
+                await swRegistration.update();
+                console.log('[PWA] Checked for updates');
+            } catch (error) {
+                console.error('[PWA] Error checking for updates:', error);
+            }
+        }
+    }, [swRegistration]);
 
     useEffect(() => {
         // Register Service Worker
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('/OneSignalSDKWorker.js')
-                .then(registration => console.log('SW registered:', registration))
-                .catch(error => console.log('SW registration failed:', error));
+            // Register main service worker
+            navigator.serviceWorker.register('/sw.js')
+                .then(registration => {
+                    console.log('[PWA] SW registered:', registration);
+                    setSwRegistration(registration);
+                    
+                    // Check for updates immediately
+                    registration.update();
+                    
+                    // Check for updates periodically (every 5 minutes)
+                    const updateInterval = setInterval(() => {
+                        registration.update();
+                    }, 5 * 60 * 1000);
+                    
+                    // Handle updates
+                    registration.addEventListener('updatefound', () => {
+                        const newWorker = registration.installing;
+                        console.log('[PWA] New service worker installing...');
+                        
+                        if (newWorker) {
+                            newWorker.addEventListener('statechange', () => {
+                                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                    console.log('[PWA] New version available, reloading...');
+                                    // Auto-reload when new version is available
+                                    window.location.reload();
+                                }
+                            });
+                        }
+                    });
+                    
+                    return () => clearInterval(updateInterval);
+                })
+                .catch(error => console.log('[PWA] SW registration failed:', error));
+            
+            // Also register OneSignal worker for push notifications
+            navigator.serviceWorker.register('/OneSignalSDKWorker.js', { scope: '/push/' })
+                .then(registration => console.log('[PWA] OneSignal SW registered:', registration))
+                .catch(error => console.log('[PWA] OneSignal SW registration failed:', error));
+            
+            // Listen for messages from service worker
+            navigator.serviceWorker.addEventListener('message', (event) => {
+                if (event.data && event.data.type === 'SW_UPDATED') {
+                    console.log('[PWA] Received SW_UPDATED message, version:', event.data.version);
+                    // Reload the page when SW is updated
+                    window.location.reload();
+                }
+            });
+            
+            // Handle page visibility change - check for updates when app becomes visible
+            const handleVisibilityChange = () => {
+                if (document.visibilityState === 'visible') {
+                    console.log('[PWA] App became visible, checking for updates...');
+                    
+                    // Check API for version mismatch
+                    fetch('/api/version')
+                        .then(res => res.json())
+                        .then(data => {
+                            if (data.version && data.version !== APP_VERSION) {
+                                console.log('[PWA] Version mismatch detected, clearing cache and reloading...');
+                                clearCache();
+                            }
+                        })
+                        .catch(err => console.log('[PWA] Version check failed:', err));
+                    
+                    // Also update service worker
+                    if (swRegistration) {
+                        swRegistration.update();
+                    }
+                }
+            };
+            
+            document.addEventListener('visibilitychange', handleVisibilityChange);
+            
+            // Handle page show event (for back/forward cache)
+            const handlePageShow = (event: PageTransitionEvent) => {
+                if (event.persisted) {
+                    console.log('[PWA] Page restored from bfcache, reloading...');
+                    window.location.reload();
+                }
+            };
+            
+            window.addEventListener('pageshow', handlePageShow);
         }
+    }, [clearCache, swRegistration]);
 
+    // Separate useEffect for standalone mode and install prompt
+    useEffect(() => {
         // Check if already in standalone mode
         const isStandaloneMode = window.matchMedia('(display-mode: standalone)').matches || 
                                (window.navigator as any).standalone || 
@@ -131,7 +255,9 @@ export default function PWAProvider({ children }: { children: React.ReactNode })
             deferredPrompt, 
             isStandalone,
             isIOS,
-            installPWA 
+            installPWA,
+            checkForUpdates,
+            clearCache
         }}>
             {children}
         </PWAContext.Provider>

@@ -7,6 +7,7 @@ const fs = require('fs');
 const path = require('path');
 
 const versionFilePath = path.join(__dirname, '..', 'lib', 'version.ts');
+const swFilePath = path.join(__dirname, '..', 'public', 'sw.js');
 
 // Read current version file
 const content = fs.readFileSync(versionFilePath, 'utf8');
@@ -31,7 +32,7 @@ const month = String(now.getMonth() + 1).padStart(2, '0');
 const day = String(now.getDate()).padStart(2, '0');
 const buildDate = `${year}${month}${day}`;
 
-// Create new content
+// Create new content for version.ts
 const newContent = `// App version configuration
 export const APP_VERSION = '${newVersion}';
 export const BUILD_NUMBER = '${buildDate}'; // YYYYMMDD format
@@ -43,6 +44,17 @@ export const getFullVersion = () => {
 
 // Write updated version file
 fs.writeFileSync(versionFilePath, newContent, 'utf8');
+
+// Update sw.js with new version
+if (fs.existsSync(swFilePath)) {
+    let swContent = fs.readFileSync(swFilePath, 'utf8');
+    swContent = swContent.replace(
+        /const APP_VERSION = '[^']+';/,
+        `const APP_VERSION = '${newVersion}';`
+    );
+    fs.writeFileSync(swFilePath, swContent, 'utf8');
+    console.log(`✅ Service Worker version updated to: ${newVersion}`);
+}
 
 console.log(`✅ Version updated: ${versionMatch[0].match(/'[\d.]+'/)[0]} → '${newVersion}'`);
 console.log(`✅ Build date: ${buildDate}`);
