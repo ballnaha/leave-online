@@ -83,10 +83,12 @@ const DashboardCard: React.FC<DashboardCardProps> = ({ leaveTypes, leaveRequests
 
     // Calculate balances for all leave types
     const balances = useMemo(() => {
-        const result: Record<string, { total: number; used: number; approved: number; pending: number; rejected: number; cancelled: number; remaining: number; name: string; isPaid: boolean }> = {};
+        const result: Record<string, { total: number; used: number; approved: number; pending: number; rejected: number; cancelled: number; remaining: number; name: string; isPaid: boolean; isUnlimited: boolean }> = {};
 
         leaveTypes.forEach(type => {
-            const maxDays = type.maxDaysPerYear || 0; // If null (unlimited), treat as 0 or handle specifically
+            // null = unlimited, 0 = no entitlement, >0 = limited days
+            const isUnlimitedType = type.maxDaysPerYear === null;
+            const maxDays = type.maxDaysPerYear ?? 0;
 
             // Calculate used days for this type in selected year
             // Use leaveType field (which contains the leave type code like 'personal', 'sick', etc.)
@@ -123,7 +125,8 @@ const DashboardCard: React.FC<DashboardCardProps> = ({ leaveTypes, leaveRequests
                 cancelled: cancelled,
                 remaining: maxDays - totalUsed,
                 name: type.name,
-                isPaid: type.isPaid
+                isPaid: type.isPaid,
+                isUnlimited: isUnlimitedType
             };
         });
         return result;
@@ -188,15 +191,16 @@ const DashboardCard: React.FC<DashboardCardProps> = ({ leaveTypes, leaveRequests
         }
     };
 
-    const currentBalance = balances[selectedCode] || { total: 0, used: 0, approved: 0, pending: 0, rejected: 0, cancelled: 0, remaining: 0, name: '', isPaid: true };
-    const isUnlimited = currentBalance.total === 0;
+    const currentBalance = balances[selectedCode] || { total: 0, used: 0, approved: 0, pending: 0, rejected: 0, cancelled: 0, remaining: 0, name: '', isPaid: true, isUnlimited: false };
+    const isUnlimited = currentBalance.isUnlimited;
+    const isNoEntitlement = !isUnlimited && currentBalance.total === 0; // ไม่มีสิทธิ์ (เช่น ยังไม่ครบ 1 ปี)
 
     // Calculate percentage for graph
     let approvedPercentage = 0;
     let pendingPercentage = 0;
     let isOverLimit = false;
 
-    if (!isUnlimited) {
+    if (!isUnlimited && !isNoEntitlement) {
         if (currentBalance.remaining < 0) {
             approvedPercentage = 100;
             isOverLimit = true;
@@ -204,6 +208,10 @@ const DashboardCard: React.FC<DashboardCardProps> = ({ leaveTypes, leaveRequests
             approvedPercentage = (currentBalance.approved / currentBalance.total) * 100;
             pendingPercentage = (currentBalance.pending / currentBalance.total) * 100;
         }
+    } else if (isNoEntitlement) {
+        // ไม่มีสิทธิ์ แสดง 0%
+        approvedPercentage = 0;
+        pendingPercentage = 0;
     } else {
         approvedPercentage = 0;
     }
@@ -219,6 +227,11 @@ const DashboardCard: React.FC<DashboardCardProps> = ({ leaveTypes, leaveRequests
 
     // Calculate percentages for multi-ring display
     const calculatePercentage = useMemo(() => {
+        // กรณีไม่มีสิทธิ์ (เช่น ยังไม่ครบ 1 ปี)
+        if (isNoEntitlement) {
+            return { approved: 0, pending: 0, remaining: 0, total: 0 };
+        }
+
         if (isUnlimited) {
             // For unlimited leave types, remaining is always 100% (unlimited availability)
             const totalUsed = currentBalance.approved + currentBalance.pending;
@@ -612,13 +625,17 @@ const DashboardCard: React.FC<DashboardCardProps> = ({ leaveTypes, leaveRequests
                                     pointerEvents: 'none'
                                 }}>
                                     <Typography variant="caption" sx={{ fontSize: '0.7rem', color: 'white', mb: -0.5 }}>
-                                        {isOverLimit ? t('dashboard_over_limit', 'เกินสิทธิ์') : t('dashboard_remaining', 'คงเหลือ')}
+                                        {isNoEntitlement
+                                            ? t('dashboard_no_entitlement', 'ยังไม่มีสิทธิ์')
+                                            : (isOverLimit ? t('dashboard_over_limit', 'เกินสิทธิ์') : t('dashboard_remaining', 'คงเหลือ'))}
                                     </Typography>
-                                    <Typography variant="h4" sx={{ fontWeight: 'bold', color: isOverLimit ? '#E74C3C' : 'white', fontSize: '2.2rem' }}>
-                                        {isOverLimit ? Math.abs(currentBalance.remaining) : (isUnlimited ? '∞' : currentBalance.remaining)}
+                                    <Typography variant="h4" sx={{ fontWeight: 'bold', color: isNoEntitlement ? '#9E9E9E' : (isOverLimit ? '#E74C3C' : 'white'), fontSize: isNoEntitlement ? '1.5rem' : '2.2rem' }}>
+                                        {isNoEntitlement ? '0' : (isOverLimit ? Math.abs(currentBalance.remaining) : (isUnlimited ? '∞' : currentBalance.remaining))}
                                     </Typography>
                                     <Typography variant="caption" sx={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.7)' }}>
-                                        {isUnlimited ? t('dashboard_unlimited', 'ไม่จำกัด') : t('dashboard_from_total', 'จาก {{total}} วัน').replace('{{total}}', String(currentBalance.total))}
+                                        {isNoEntitlement
+                                            ? t('dashboard_need_1_year', 'ต้องทำงานครบ 1 ปี')
+                                            : (isUnlimited ? t('dashboard_unlimited', 'ไม่จำกัด') : t('dashboard_from_total', 'จาก {{total}} วัน').replace('{{total}}', String(currentBalance.total)))}
                                     </Typography>
                                 </Box>
                             </Box>
@@ -647,20 +664,23 @@ const DashboardCard: React.FC<DashboardCardProps> = ({ leaveTypes, leaveRequests
                             <Typography sx={{
                                 fontSize: '0.9rem',
                                 fontWeight: 700,
-                                color: isOverLimit ? '#FF6B6B' : '#fff',
+                                color: isNoEntitlement ? '#9E9E9E' : (isOverLimit ? '#FF6B6B' : '#fff'),
                                 textShadow: '0 1px 2px rgba(0,0,0,0.1)',
                                 minWidth: 16,
                                 textAlign: 'center'
                             }}>
-                                {isUnlimited ? '∞' : Math.max(0, currentBalance.remaining)}
+                                {isNoEntitlement ? '0' : (isUnlimited ? '∞' : Math.max(0, currentBalance.remaining))}
                             </Typography>
                             <Typography sx={{ fontSize: '0.7rem', opacity: 0.7, fontWeight: 500 }}>
-                                {isUnlimited
-                                    ? t('dashboard_unlimited_short', 'ไม่จำกัด')
-                                    : `/ ${currentBalance.total} ${t('days_short', 'วัน')}`
+                                {isNoEntitlement
+                                    ? `/ 0 ${t('days_short', 'วัน')}`
+                                    : (isUnlimited
+                                        ? t('dashboard_unlimited_short', 'ไม่จำกัด')
+                                        : `/ ${currentBalance.total} ${t('days_short', 'วัน')}`
+                                    )
                                 }
                             </Typography>
-                            {!isUnlimited && (
+                            {!isUnlimited && !isNoEntitlement && (
                                 <Box sx={{
                                     width: '100%',
                                     height: 4,
@@ -669,7 +689,7 @@ const DashboardCard: React.FC<DashboardCardProps> = ({ leaveTypes, leaveRequests
                                     overflow: 'hidden',
                                     position: 'relative',
                                     boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.1)',
-                                    
+
                                 }}>
                                     <Box sx={{
                                         position: 'absolute',
