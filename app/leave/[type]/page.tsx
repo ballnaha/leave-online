@@ -164,6 +164,8 @@ export default function LeaveFormPage() {
     const [holidays, setHolidays] = useState<HolidayData[]>([]); // วันหยุดจาก database
     const [forcedLeaveDays, setForcedLeaveDays] = useState<number>(0); // จำนวนวันบังคับพักร้อน
     const [shiftType, setShiftType] = useState<'day' | 'night'>('day'); // กะทำงาน: day = กะเช้า, night = กะดึก
+    const [durationType, setDurationType] = useState<'full' | 'morning' | 'afternoon'>('full'); // ประเภทเวลาเริ่ม: เต็มวัน, ครึ่งเช้า, ครึ่งบ่าย
+    const [endDurationType, setEndDurationType] = useState<'full' | 'morning' | 'afternoon'>('full'); // ประเภทเวลาสิ้นสุด: เต็มวัน, ครึ่งเช้า, ครึ่งบ่าย
     const [worksOnSunday, setWorksOnSunday] = useState<boolean>(false); // ทำงานวันอาทิตย์หรือไม่
     const [backdateWarning, setBackdateWarning] = useState<{
         show: boolean;
@@ -291,30 +293,101 @@ export default function LeaveFormPage() {
         }
     };
 
+    // Helper to get start/end times based on shift and duration type
+    const getTimesForDuration = (shift: 'day' | 'night', duration: 'full' | 'morning' | 'afternoon', isStart: boolean) => {
+        let time = '';
+        if (shift === 'day') {
+            if (duration === 'full') {
+                time = isStart ? '08:00' : '17:00';
+            } else if (duration === 'morning') {
+                time = isStart ? '08:00' : '12:00';
+            } else if (duration === 'afternoon') {
+                time = isStart ? '13:00' : '17:00';
+            }
+        } else { // night
+            if (duration === 'full') {
+                time = isStart ? '20:00' : '05:00';
+            } else if (duration === 'morning') { // ครึ่งแรกของกะดึก (20:00 - 00:00)
+                time = isStart ? '20:00' : '00:00';
+            } else if (duration === 'afternoon') { // ครึ่งหลังของกะดึก (01:00 - 05:00)
+                time = isStart ? '01:00' : '05:00';
+            }
+        }
+        return time;
+    };
+
+    // ฟังก์ชันอัปเดตเวลาตามกะและประเภทเวลา
+    // ฟังก์ชันอัปเดตเวลาตามกะและประเภทเวลา
+    const updateTimes = (
+        shift: 'day' | 'night',
+        startDur: 'full' | 'morning' | 'afternoon',
+        endDur: 'full' | 'morning' | 'afternoon',
+        dateOverrides?: { startDate?: string, endDate?: string }
+    ) => {
+        const newStart = getTimesForDuration(shift, startDur, true);
+        const newEnd = getTimesForDuration(shift, endDur, false);
+
+        // อัปเดต state เวลา
+        const [sh, sm] = newStart.split(':').map(Number);
+        const [eh, em] = newEnd.split(':').map(Number);
+
+        setStartTimeValue(dayjs().hour(sh).minute(sm));
+        setEndTimeValue(dayjs().hour(eh).minute(em));
+
+        // อัปเดต formData (ต้องทำทีละ field เพราะ handleFormChange จัดการทีละ field)
+        setFormData(prev => ({
+            ...prev,
+            startTime: newStart,
+            endTime: newEnd
+        }));
+
+        // ใช้ค่าจาก override ถ้ามี ไม่งั้นใช้จาก state
+        const sDate = dateOverrides?.startDate ?? formData.startDate;
+        const eDate = dateOverrides?.endDate ?? formData.endDate;
+
+        // คำนวณจำนวนวันลาใหม่
+        if (sDate && eDate) {
+            recalculateTotalDays(sDate, newStart, eDate, newEnd, worksOnSunday, holidays);
+        }
+    };
+
+    // ฟังก์ชันเปลี่ยนกะทำงาน
     // ฟังก์ชันเปลี่ยนกะทำงาน
     const handleShiftChange = (newShift: 'day' | 'night') => {
         setShiftType(newShift);
+        updateTimes(newShift, durationType, endDurationType);
+    };
 
-        if (newShift === 'day') {
-            // กะเช้า: 08:00 - 17:00
-            setStartTimeValue(dayjs().hour(8).minute(0));
-            setEndTimeValue(dayjs().hour(17).minute(0));
-            handleFormChange('startTime', '08:00');
-            handleFormChange('endTime', '17:00');
+    // ฟังก์ชันเปลี่ยนประเภทเวลาลางาน (เริ่ม)
+    const handleDurationTypeChange = (newDuration: 'full' | 'morning' | 'afternoon') => {
+        setDurationType(newDuration);
+
+        const isSameDay = formData.startDate && formData.endDate && dayjs(formData.startDate).isSame(dayjs(formData.endDate), 'day');
+        const isMultiDay = formData.startDate && formData.endDate && !isSameDay;
+
+        // ถ้าเลือก 'ครึ่งเช้า' แต่เป็นการลาหลายวัน -> ไม่อนุญาต (เพราะบ่ายต้องกลับมาทำงาน)
+        if (newDuration === 'morning' && isMultiDay) {
+            // Reset endDate เป็นวันเดียวกับ startDate
+            handleFormChange('endDate', formData.startDate);
+            setEndDateValue(startDateValue);
+            setEndDurationType('morning');
+            toastr.warning('ลาครึ่งเช้าสามารถลาได้เฉพาะวันเดียวเท่านั้น เนื่องจากบ่ายต้องกลับมาทำงาน');
+            updateTimes(shiftType, newDuration, newDuration, { endDate: formData.startDate });
+            return;
+        }
+
+        if (isSameDay) {
+            setEndDurationType(newDuration);
+            updateTimes(shiftType, newDuration, newDuration);
         } else {
-            // กะดึก: 20:00 - 05:00
-            setStartTimeValue(dayjs().hour(20).minute(0));
-            setEndTimeValue(dayjs().hour(5).minute(0));
-            handleFormChange('startTime', '20:00');
-            handleFormChange('endTime', '05:00');
+            updateTimes(shiftType, newDuration, endDurationType);
         }
+    };
 
-        // คำนวณจำนวนวันลาใหม่
-        if (formData.startDate && formData.endDate) {
-            const newStartTime = newShift === 'day' ? '08:00' : '20:00';
-            const newEndTime = newShift === 'day' ? '17:00' : '05:00';
-            recalculateTotalDays(formData.startDate, newStartTime, formData.endDate, newEndTime, worksOnSunday, holidays);
-        }
+    // ฟังก์ชันเปลี่ยนประเภทเวลาลางาน (สิ้นสุด)
+    const handleEndDurationTypeChange = (newEndDuration: 'full' | 'morning' | 'afternoon') => {
+        setEndDurationType(newEndDuration);
+        updateTimes(shiftType, durationType, newEndDuration);
     };
 
     // ฟังก์ชันคำนวณจำนวนวันลาตามช่วงเวลา
@@ -330,6 +403,7 @@ export default function LeaveFormPage() {
 
         const start = dayjs(startDate);
         const end = dayjs(endDate);
+        const daysDiff = end.diff(start, 'day');
 
         if (end.isBefore(start)) return 0;
 
@@ -419,7 +493,7 @@ export default function LeaveFormPage() {
 
         // === กะปกติ: 08:00 - 17:00 ===
         // ถ้าไม่ทำงานวันอาทิตย์ ต้องนับเฉพาะวันที่ไม่ใช่วันอาทิตย์
-        const daysDiff = end.diff(start, 'day');
+        // const daysDiff = end.diff(start, 'day'); // moved to top
 
         // นับจำนวนวันอาทิตย์และวันหยุดในช่วง (ถ้าไม่ทำงานวันอาทิตย์)
         let sundaysInRange = 0;
@@ -491,21 +565,22 @@ export default function LeaveFormPage() {
             const isLastDay = dayIndex === totalCalendarDays - 1;
 
             if (isFirstDay) {
-                // วันแรก - ดูว่าเริ่มลาตอนไหน
-                if (startMinutes <= WORK_START_MORNING) {
-                    totalDays += 1; // ลาเต็มวัน
-                } else if (startMinutes <= WORK_HALF_DAY_2) {
-                    totalDays += 0.5; // ลาครึ่งวันบ่าย
+                // วันแรก - ลาจากเวลาที่เลือกจนถึงสิ้นวัน
+                // ถ้าเริ่ม 08:00 (เช้า/เต็มวัน) = ลา 08:00-17:00 = 1.0 วัน
+                // ถ้าเริ่ม 13:00 (บ่าย) = ลา 13:00-17:00 = 0.5 วัน
+                if (startMinutes <= WORK_HALF_DAY_1) { // เริ่มก่อนหรือตอนเที่ยง (รวม 08:00)
+                    totalDays += 1; // ลาเต็มวันแรก
+                } else { // เริ่มหลังเที่ยง (13:00+)
+                    totalDays += 0.5; // ลาครึ่งวันบ่ายของวันแรก
                 }
-                // ถ้าเริ่มหลังบ่าย ไม่นับวันแรก
             } else if (isLastDay) {
-                // วันสุดท้าย - ดูว่าสิ้นสุดตอนไหน
-                if (endMinutes >= WORK_END_DAY) {
-                    totalDays += 1; // ลาเต็มวัน
-                } else if (endMinutes >= WORK_HALF_DAY_1) {
-                    totalDays += 1; // ถ้าจบหลังเที่ยง ถือว่าเต็มวัน
-                } else if (endMinutes > WORK_START_MORNING) {
-                    totalDays += 0.5; // ลาครึ่งวันเช้า
+                // วันสุดท้าย - ลาจากเริ่มต้นวันจนถึงเวลาที่เลือก
+                // ถ้าจบ 12:00 (เช้า) = ลา 08:00-12:00 = 0.5 วัน
+                // ถ้าจบ 17:00 (บ่าย/เต็มวัน) = ลา 08:00-17:00 = 1.0 วัน
+                if (endMinutes >= WORK_HALF_DAY_2) { // จบ 13:00+ (รวม 17:00)
+                    totalDays += 1; // ลาเต็มวันสุดท้าย
+                } else { // จบก่อน 13:00 (12:00 หรือก่อนหน้า)
+                    totalDays += 0.5; // ลาครึ่งวันเช้าของวันสุดท้าย
                 }
             } else {
                 // วันกลาง (ลาเต็มวัน)
@@ -556,9 +631,8 @@ export default function LeaveFormPage() {
         holidayList: HolidayData[] = holidays
     ) => {
         const days = calculateLeaveDays(startDate, startTime, endDate, endTime, worksOnSun, holidayList);
-        if (days > 0) {
-            handleFormChange('totalDays', days.toString());
-        }
+        // อัปเดตเสมอ รวมถึงกรณี 0 วัน (วันหยุด)
+        handleFormChange('totalDays', days.toString());
     };
 
     const baseTotalDaysHelper = 'ระบุจำนวนวันลา เช่น 0.5 = ครึ่งวัน, 1 = เต็มวัน';
@@ -1270,206 +1344,86 @@ export default function LeaveFormPage() {
                             </Typography>
                         </Box>
 
-                        {/* เลือกกะทำงาน */}
-                        <Box sx={{ mb: 2.5, pb: 2, borderBottom: '1px dashed', borderColor: 'grey.200' }}>
-                            <FormControl component="fieldset" fullWidth>
-                                <FormLabel
-                                    component="legend"
-                                    sx={{
-                                        fontSize: '0.875rem',
-                                        fontWeight: 600,
-                                        color: 'text.primary',
-                                        mb: 1,
-
-                                        width: '100%',
-                                        '&.Mui-focused': { color: 'text.primary' }
-                                    }}
-                                >
-                                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'left', gap: 1 }}>
-                                        <Clock size={16} color={config.color} />
+                        {/* Options Group: Shift & Sunday (Mobile Friendly) */}
+                        <Box sx={{ mb: 3 }}>
+                            {/* Row 1: Shift & Sunday */}
+                            <Box sx={{ display: 'flex', gap: 2, flexDirection: { xs: 'column', sm: 'row' } }}>
+                                {/* Shift Type */}
+                                <Box sx={{ flex: 1 }}>
+                                    <Typography variant="caption" sx={{ mb: 1, display: 'block', color: 'text.secondary', fontWeight: 600 }}>
                                         {t('shift_type', 'กะทำงาน')}
-                                    </Box>
-                                </FormLabel>
-                                <RadioGroup
-                                    row
-                                    value={shiftType}
-                                    onChange={(e) => handleShiftChange(e.target.value as 'day' | 'night')}
-                                    sx={{ gap: 2, justifyContent: 'center' }}
-                                >
-                                    <FormControlLabel
-                                        value="day"
-                                        control={
-                                            <Radio
-                                                size="small"
-                                                sx={{
-                                                    color: config.color,
-                                                    '&.Mui-checked': { color: config.color },
-                                                }}
-                                            />
-                                        }
-                                        label={
-                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                                <Sun1 size={14} color='#E65100' variant='Bold' />
-                                                <Typography variant="body2" sx={{ fontWeight: shiftType === 'day' ? 600 : 400 }}>
-                                                    {t('leave_shift_day', 'กะเช้า')} (08:00 - 17:00)
-                                                </Typography>
-                                            </Box>
-                                        }
-                                        sx={{
-                                            m: 0,
-                                            px: 1.5,
-                                            py: 0.75,
-                                            borderRadius: 2,
-                                            border: '1px solid',
-                                            borderColor: shiftType === 'day' ? config.color : 'grey.300',
-                                            bgcolor: shiftType === 'day' ? config.lightColor : 'transparent',
-                                            transition: 'all 0.2s',
-                                            '&:hover': { borderColor: config.color, bgcolor: config.lightColor },
-                                        }}
-                                    />
-                                    <FormControlLabel
-                                        value="night"
-                                        control={
-                                            <Radio
-                                                size="small"
-                                                sx={{
-                                                    color: config.color,
-                                                    '&.Mui-checked': { color: config.color },
-                                                }}
-                                            />
-                                        }
-                                        label={
-                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                                <Moon size={14} variant='Bold' color="black" />
-                                                <Typography variant="body2" sx={{ fontWeight: shiftType === 'night' ? 600 : 400 }}>
-                                                    {t('leave_shift_night', 'กะดึก')} (20:00 - 05:00)
-                                                </Typography>
-                                            </Box>
-                                        }
-                                        sx={{
-                                            m: 0,
-                                            px: 1.5,
-                                            py: 0.75,
-                                            borderRadius: 2,
-                                            border: '1px solid',
-                                            borderColor: shiftType === 'night' ? config.color : 'grey.300',
-                                            bgcolor: shiftType === 'night' ? config.lightColor : 'transparent',
-                                            transition: 'all 0.2s',
-                                            '&:hover': { borderColor: config.color, bgcolor: config.lightColor },
-                                        }}
-                                    />
-                                </RadioGroup>
-                            </FormControl>
-                        </Box>
-
-                        {/* เลือกทำงานวันอาทิตย์ */}
-                        <Box sx={{ mb: 2.5, pb: 2, borderBottom: '1px dashed', borderColor: 'grey.200' }}>
-                            <FormControl component="fieldset" fullWidth>
-                                <FormLabel
-                                    component="legend"
-                                    sx={{
-                                        fontSize: '0.875rem',
-                                        fontWeight: 600,
-                                        color: 'text.primary',
-                                        mb: 1,
-                                        width: '100%',
-                                        '&.Mui-focused': { color: 'text.primary' }
-                                    }}
-                                >
-                                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'left', gap: 1 }}>
-                                        <Calendar size={16} color={config.color} />
-                                        {t('works_on_sunday', 'ทำงานวันอาทิตย์')}
-                                    </Box>
-                                </FormLabel>
-                                <RadioGroup
-                                    row
-                                    value={worksOnSunday ? 'yes' : 'no'}
-                                    onChange={(e) => handleWorksOnSundayChange(e.target.value === 'yes')}
-                                    sx={{ gap: 2, justifyContent: 'center' }}
-                                >
-                                    <FormControlLabel
-                                        value="no"
-                                        control={
-                                            <Radio
-                                                size="small"
-                                                sx={{
-                                                    color: config.color,
-                                                    '&.Mui-checked': { color: config.color },
-                                                }}
-                                            />
-                                        }
-                                        label={
-                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                                <CalendarRemove size={14} color='#ef5350' variant='Bold' />
-                                                <Typography variant="body2" sx={{ fontWeight: !worksOnSunday ? 600 : 400 }}>
-                                                    {t('works_sunday_no', 'หยุดวันอาทิตย์')}
-                                                </Typography>
-                                            </Box>
-                                        }
-                                        sx={{
-                                            m: 0,
-                                            px: 1.5,
-                                            py: 0.75,
-                                            borderRadius: 2,
-                                            border: '1px solid',
-                                            borderColor: !worksOnSunday ? config.color : 'grey.300',
-                                            bgcolor: !worksOnSunday ? config.lightColor : 'transparent',
-                                            transition: 'all 0.2s',
-                                            '&:hover': { borderColor: config.color, bgcolor: config.lightColor },
-                                        }}
-                                    />
-                                    <FormControlLabel
-                                        value="yes"
-                                        control={
-                                            <Radio
-                                                size="small"
-                                                sx={{
-                                                    color: config.color,
-                                                    '&.Mui-checked': { color: config.color },
-                                                }}
-                                            />
-                                        }
-                                        label={
-                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                                <TickCircle size={14} color='#4CAF50' variant='Bold' />
-                                                <Typography variant="body2" sx={{ fontWeight: worksOnSunday ? 600 : 400 }}>
-                                                    {t('works_sunday_yes', 'ทำงานวันอาทิตย์')}
-                                                </Typography>
-                                            </Box>
-                                        }
-                                        sx={{
-                                            m: 0,
-                                            px: 1.5,
-                                            py: 0.75,
-                                            borderRadius: 2,
-                                            border: '1px solid',
-                                            borderColor: worksOnSunday ? config.color : 'grey.300',
-                                            bgcolor: worksOnSunday ? config.lightColor : 'transparent',
-                                            transition: 'all 0.2s',
-                                            '&:hover': { borderColor: config.color, bgcolor: config.lightColor },
-                                        }}
-                                    />
-
-                                </RadioGroup>
-                                {!worksOnSunday && (
-                                    <Typography
-                                        variant="caption"
-                                        sx={{
-                                            display: 'block',
-                                            textAlign: 'center',
-                                            mt: 1.5,
-                                            color: 'text.secondary',
-                                            bgcolor: 'rgba(25, 118, 210, 0.08)',
-                                            py: 0.75,
-                                            px: 1.5,
-                                            borderRadius: 1,
-                                        }}
-                                    >
-                                        <InfoCircle size={12} style={{ marginRight: 4, verticalAlign: 'middle' }} />
-                                        {t('sunday_not_counted', 'วันอาทิตย์จะไม่ถูกนับเป็นวันลา')}
                                     </Typography>
-                                )}
-                            </FormControl>
+                                    <Box sx={{ display: 'flex', bgcolor: 'transparent', gap: 1 }}>
+                                        <Box onClick={() => handleShiftChange('day')}
+                                            sx={{
+                                                flex: 1, py: 1, borderRadius: 1.5, cursor: 'pointer', textAlign: 'center',
+                                                bgcolor: shiftType === 'day' ? '#FFF3E0' : 'white',
+                                                color: shiftType === 'day' ? '#E65100' : 'text.secondary',
+                                                border: shiftType === 'day' ? '1px solid #E65100' : '1px solid #E2E8F0',
+                                                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5,
+                                                transition: 'all 0.2s',
+                                                boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
+                                            }}>
+                                            <Sun1 size={20} color={shiftType === 'day' ? '#E65100' : '#94A3B8'} variant={shiftType === 'day' ? 'Bold' : 'Linear'} />
+                                            <Typography variant="button" sx={{ textTransform: 'none', fontSize: '0.85rem', fontWeight: 600 }}>{t('leave_shift_day', 'กะเช้า')}</Typography>
+                                        </Box>
+                                        <Box onClick={() => handleShiftChange('night')}
+                                            sx={{
+                                                flex: 1, py: 1, borderRadius: 1.5, cursor: 'pointer', textAlign: 'center',
+                                                bgcolor: shiftType === 'night' ? '#E8EAF6' : 'white',
+                                                color: shiftType === 'night' ? '#3949AB' : 'text.secondary',
+                                                border: shiftType === 'night' ? '1px solid #3949AB' : '1px solid #E2E8F0',
+                                                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5,
+                                                transition: 'all 0.2s',
+                                                boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
+                                            }}>
+                                            <Moon size={20} color={shiftType === 'night' ? '#3949AB' : '#94A3B8'} variant={shiftType === 'night' ? 'Bold' : 'Linear'} />
+                                            <Typography variant="button" sx={{ textTransform: 'none', fontSize: '0.85rem', fontWeight: 600 }}>{t('leave_shift_night', 'กะดึก')}</Typography>
+                                        </Box>
+                                    </Box>
+                                </Box>
+
+                                {/* Work on Sunday */}
+                                <Box sx={{ flex: 1 }}>
+                                    <Typography variant="caption" sx={{ mb: 1, display: 'block', color: 'text.secondary', fontWeight: 600 }}>
+                                        {t('works_on_sunday', 'ทำงานวันอาทิตย์')}
+                                    </Typography>
+                                    <Box sx={{ display: 'flex', bgcolor: 'transparent', gap: 1 }}>
+                                        <Box onClick={() => handleWorksOnSundayChange(false)}
+                                            sx={{
+                                                flex: 1, py: 1, borderRadius: 1.5, cursor: 'pointer', textAlign: 'center',
+                                                bgcolor: !worksOnSunday ? '#FFEBEE' : 'white',
+                                                color: !worksOnSunday ? '#D32F2F' : 'text.secondary',
+                                                border: !worksOnSunday ? '1px solid #D32F2F' : '1px solid #E2E8F0',
+                                                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5,
+                                                transition: 'all 0.2s',
+                                                boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
+                                            }}>
+                                            <CalendarRemove size={20} color={!worksOnSunday ? '#D32F2F' : '#94A3B8'} variant={!worksOnSunday ? 'Bold' : 'Linear'} />
+                                            <Typography variant="button" sx={{ textTransform: 'none', fontSize: '0.85rem', fontWeight: 600 }}>{t('sunday_off', 'หยุด')}</Typography>
+                                        </Box>
+                                        <Box onClick={() => handleWorksOnSundayChange(true)}
+                                            sx={{
+                                                flex: 1, py: 1, borderRadius: 1.5, cursor: 'pointer', textAlign: 'center',
+                                                bgcolor: worksOnSunday ? '#E8F5E9' : 'white',
+                                                color: worksOnSunday ? '#2E7D32' : 'text.secondary',
+                                                border: worksOnSunday ? '1px solid #2E7D32' : '1px solid #E2E8F0',
+                                                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5,
+                                                transition: 'all 0.2s',
+                                                boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
+                                            }}>
+                                            <TickCircle size={20} color={worksOnSunday ? '#2E7D32' : '#94A3B8'} variant={worksOnSunday ? 'Bold' : 'Linear'} />
+                                            <Typography variant="button" sx={{ textTransform: 'none', fontSize: '0.85rem', fontWeight: 600 }}>{t('sunday_work', 'ทำ')}</Typography>
+                                        </Box>
+                                    </Box>
+                                </Box>
+                            </Box>
+                            {!worksOnSunday && (
+                                <Box sx={{ mt: 1.5, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5, color: 'text.secondary', bgcolor: '#F1F5F9', py: 0.5, borderRadius: 1 }}>
+                                    <InfoCircle size={14} color="#64748B" />
+                                    <Typography variant="caption">{t('sunday_not_counted', 'วันอาทิตย์จะไม่ถูกนับเป็นวันลา')}</Typography>
+                                </Box>
+                            )}
                         </Box>
 
                         {/* ส่วนเริ่มลา */}
@@ -1488,11 +1442,44 @@ export default function LeaveFormPage() {
                                             if (newValue && newValue.isValid()) {
                                                 const newStartDate = newValue.format('YYYY-MM-DD');
                                                 handleFormChange('startDate', newStartDate);
+
+                                                // ตรวจสอบว่าเป็นวันหยุดหรือไม่ - แจ้งเตือน
+                                                const selectedDate = dayjs(newStartDate);
+                                                const isSunday = selectedDate.day() === 0 && !worksOnSunday;
+                                                const isHolidayDate = isHoliday(selectedDate, holidays);
+
+                                                if (isSunday || isHolidayDate) {
+                                                    const holidayData = holidays.find(h => dayjs(h.date).isSame(selectedDate, 'day'));
+                                                    // ใช้ t() เพื่อแปลชื่อวันหยุด โดย fallback เป็นชื่อเดิมถ้าไม่มีการแปล
+                                                    const holidayName = holidayData ? t(holidayData.name, holidayData.name) : t('holiday', 'วันหยุด');
+                                                    toastr.warning(
+                                                        isSunday
+                                                            ? t('sunday_is_holiday', 'วันอาทิตย์เป็นวันหยุด ไม่สามารถลาได้')
+                                                            : t('selected_date_is_holiday', '{name} เป็นวันหยุด ไม่สามารถลาได้').replace('{name}', holidayName)
+                                                    );
+                                                }
+
+                                                // ตรวจสอบกรณี durationType เป็น 'morning' แต่ endDate ต่างจาก startDate (หลายวัน)
+                                                // กรณีนี้ไม่อนุญาต เพราะลาครึ่งเช้าต้องลาวันเดียวเท่านั้น
+                                                if (formData.endDate && durationType === 'morning') {
+                                                    const isMultiDay = newStartDate !== formData.endDate;
+                                                    if (isMultiDay) {
+                                                        // Reset endDate ให้เป็นวันเดียวกับ startDate
+                                                        handleFormChange('endDate', newStartDate);
+                                                        setEndDateValue(newValue);
+                                                        setEndDurationType('morning');
+                                                        toastr.warning(t('morning_leave_single_day_only', 'ลาครึ่งเช้าสามารถลาได้เฉพาะวันเดียวเท่านั้น ระบบได้ปรับวันสิ้นสุดให้ตรงกับวันเริ่ม'));
+                                                        updateTimes(shiftType, durationType, durationType, { startDate: newStartDate, endDate: newStartDate });
+                                                        return; // ไม่ต้องทำต่อ เพราะ updateTimes จะคำนวณให้แล้ว
+                                                    }
+                                                }
+
                                                 // ตรวจสอบลาย้อนหลัง (เฉพาะเมื่อมี endDate แล้ว)
                                                 if (formData.endDate) {
                                                     checkBackdateWarning(newStartDate, worksOnSunday, formData.endDate);
                                                 }
-                                                // คำนวณจำนวนวันลาอัตโนมัติตามเวลา
+
+                                                // คำนวณจำนวนวันลาอัตโนมัติตามเวลา (calculateLeaveDays จะ return 0 ถ้าเป็นวันหยุด)
                                                 if (endDateValue && endDateValue.isValid()) {
                                                     recalculateTotalDays(
                                                         newStartDate,
@@ -1500,6 +1487,11 @@ export default function LeaveFormPage() {
                                                         formData.endDate,
                                                         formData.endTime
                                                     );
+                                                } else {
+                                                    // ถ้ายังไม่มี endDate ให้ set เป็น 0 ถ้าวันเริ่มเป็นวันหยุด
+                                                    if (isSunday || isHolidayDate) {
+                                                        handleFormChange('totalDays', '0');
+                                                    }
                                                 }
                                             } else {
                                                 handleFormChange('startDate', '');
@@ -1522,44 +1514,44 @@ export default function LeaveFormPage() {
                                             },
                                         }}
                                     />
-                                    <TimePicker
-                                        label={t('leave_start_time', 'เวลา')}
-                                        value={startTimeValue}
-                                        onChange={(newValue) => {
-                                            setStartTimeValue(newValue);
-                                            if (newValue && newValue.isValid()) {
-                                                const newStartTime = newValue.format('HH:mm');
-                                                handleFormChange('startTime', newStartTime);
-                                                // คำนวณจำนวนวันลาอัตโนมัติเมื่อเปลี่ยนเวลา
-                                                if (formData.startDate && formData.endDate) {
-                                                    recalculateTotalDays(
-                                                        formData.startDate,
-                                                        newStartTime,
-                                                        formData.endDate,
-                                                        formData.endTime
-                                                    );
-                                                }
-                                            }
-                                        }}
-                                        ampm={false}
-                                        slotProps={{
-                                            textField: {
-                                                size: 'small',
-                                                fullWidth: true,
-                                                sx: {
-                                                    '& .MuiOutlinedInput-root': {
-                                                        '& fieldset': { borderColor: '#e5e7eb' },
-                                                        '&:hover fieldset': { borderColor: config.color },
-                                                    },
-                                                },
-                                            },
-                                        }}
-                                    />
+
                                 </LocalizationProvider>
+
+                                {/* Duration Type Selection (Compact) */}
+                                <Box sx={{ mt: 1 }}>
+                                    <Box sx={{ display: 'flex', bgcolor: 'transparent', gap: 0.5 }}>
+                                        {['full', 'morning', 'afternoon'].map((type) => {
+                                            const isSelected = durationType === type;
+                                            const label = type === 'full'
+                                                ? t('leave_duration_full', 'เต็มวัน')
+                                                : type === 'morning'
+                                                    ? (shiftType === 'day' ? t('leave_duration_morning', 'ครึ่งเช้า') : t('leave_duration_first_half', 'ครึ่งแรก'))
+                                                    : (shiftType === 'day' ? t('leave_duration_afternoon', 'ครึ่งบ่าย') : t('leave_duration_second_half', 'ครึ่งหลัง'));
+
+                                            return (
+                                                <Box
+                                                    key={type}
+                                                    onClick={() => handleDurationTypeChange(type as any)}
+                                                    sx={{
+                                                        flex: 1, py: 0.75, borderRadius: 1, cursor: 'pointer', textAlign: 'center',
+                                                        bgcolor: isSelected ? config.lightColor : 'white',
+                                                        color: isSelected ? config.color : 'text.secondary',
+                                                        border: isSelected ? `1px solid ${config.color}` : '1px solid #E2E8F0',
+                                                        transition: 'all 0.2s',
+                                                        fontSize: '0.85rem', fontWeight: 600,
+                                                        boxShadow: isSelected ? '0 1px 2px rgba(0,0,0,0.05)' : 'none'
+                                                    }}
+                                                >
+                                                    {label}
+                                                </Box>
+                                            );
+                                        })}
+                                    </Box>
+                                </Box>
                             </Box>
                         </Box>
 
-                        {/* ส่วนสิ้นสุด */}
+                        {/* ส่วนสิ้นสุด (แสดงเสมอเพื่อให้เลือกวันสิ้นสุดและช่วงเวลา) */}
                         <Box sx={{ mb: 1 }}>
                             <Typography variant="subtitle2" sx={{ mb: 1.5, color: 'text.secondary', display: 'flex', alignItems: 'center', gap: 1 }}>
                                 <Box component="span" sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: '#ef5350', boxShadow: '0 0 0 2px rgba(239, 83, 80, 0.2)' }} />
@@ -1575,18 +1567,57 @@ export default function LeaveFormPage() {
                                             if (newValue && newValue.isValid()) {
                                                 const newEndDate = newValue.format('YYYY-MM-DD');
                                                 handleFormChange('endDate', newEndDate);
+
+                                                // ตรวจสอบว่าวันสิ้นสุดเป็นวันหยุดหรือไม่
+                                                const selectedEndDate = dayjs(newEndDate);
+                                                const isEndSunday = selectedEndDate.day() === 0 && !worksOnSunday;
+                                                const isEndHoliday = isHoliday(selectedEndDate, holidays);
+
+                                                if (isEndSunday || isEndHoliday) {
+                                                    const holidayData = holidays.find(h => dayjs(h.date).isSame(selectedEndDate, 'day'));
+                                                    const holidayName = holidayData ? t(holidayData.name, holidayData.name) : t('holiday', 'วันหยุด');
+                                                    toastr.warning(
+                                                        isEndSunday
+                                                            ? t('sunday_is_holiday_short', 'วันอาทิตย์เป็นวันหยุด')
+                                                            : t('date_is_holiday', '{name} เป็นวันหยุด').replace('{name}', holidayName)
+                                                    );
+                                                }
+
                                                 // ตรวจสอบลาย้อนหลัง (ใช้ endDate ใหม่)
                                                 if (formData.startDate) {
                                                     checkBackdateWarning(formData.startDate, worksOnSunday, newEndDate);
                                                 }
-                                                // คำนวณจำนวนวันลาอัตโนมัติตามเวลา
-                                                if (startDateValue && startDateValue.isValid()) {
-                                                    recalculateTotalDays(
-                                                        formData.startDate,
-                                                        formData.startTime,
-                                                        newEndDate,
-                                                        formData.endTime
-                                                    );
+
+                                                // ถ้าวันสิ้นสุดเท่ากับวันเริ่ม ให้ปรับ endDurationType ตาม durationType (เริ่ม) โดยอัตโนมัติ
+                                                // เพื่อให้กรณีเลือกครึ่งวัน (เช่น เช้า -> เช้า) ได้ 0.5 วัน
+                                                const isSameDay = formData.startDate === newEndDate;
+
+                                                if (isSameDay) {
+                                                    // ใช้ durationType ของ start เป็นหลักสำหรับวันเดียว
+                                                    setEndDurationType(durationType);
+                                                    // ส่ง endDate ใหม่ไปคำนวณทันที ไม่รอ state
+                                                    updateTimes(shiftType, durationType, durationType, { endDate: newEndDate });
+                                                } else {
+                                                    // กรณีหลายวัน - ตรวจสอบว่า durationType เป็น 'morning' หรือไม่
+                                                    if (durationType === 'morning') {
+                                                        // ไม่อนุญาตลาหลายวันถ้าเริ่มครึ่งเช้า (บ่ายต้องกลับมาทำงาน)
+                                                        toastr.warning('ลาครึ่งเช้าไม่สามารถลาหลายวันได้ กรุณาเลือก "ครึ่งบ่าย" หรือ "เต็มวัน" ถ้าต้องการลาหลายวัน');
+                                                        // Reset endDate กลับเป็นวันเดียวกับ startDate
+                                                        setEndDateValue(startDateValue);
+                                                        handleFormChange('endDate', formData.startDate);
+                                                        setEndDurationType('morning');
+                                                        updateTimes(shiftType, durationType, durationType, { endDate: formData.startDate });
+                                                    } else {
+                                                        // คำนวณจำนวนวันลาอัตโนมัติตามเวลา (กรณีคนละวัน)
+                                                        if (startDateValue && startDateValue.isValid()) {
+                                                            recalculateTotalDays(
+                                                                formData.startDate,
+                                                                formData.startTime,
+                                                                newEndDate,
+                                                                formData.endTime
+                                                            );
+                                                        }
+                                                    }
                                                 }
                                             } else {
                                                 handleFormChange('endDate', '');
@@ -1611,42 +1642,50 @@ export default function LeaveFormPage() {
                                             },
                                         }}
                                     />
-                                    <TimePicker
-                                        label={t('leave_end_time', 'เวลา')}
-                                        value={endTimeValue}
-                                        onChange={(newValue) => {
-                                            setEndTimeValue(newValue);
-                                            if (newValue && newValue.isValid()) {
-                                                const newEndTime = newValue.format('HH:mm');
-                                                handleFormChange('endTime', newEndTime);
-                                                // คำนวณจำนวนวันลาอัตโนมัติเมื่อเปลี่ยนเวลา
-                                                if (formData.startDate && formData.endDate) {
-                                                    recalculateTotalDays(
-                                                        formData.startDate,
-                                                        formData.startTime,
-                                                        formData.endDate,
-                                                        newEndTime
-                                                    );
-                                                }
-                                            }
-                                        }}
-                                        ampm={false}
-                                        slotProps={{
-                                            textField: {
-                                                size: 'small',
-                                                fullWidth: true,
-                                                sx: {
-                                                    '& .MuiOutlinedInput-root': {
-                                                        '& fieldset': { borderColor: '#e5e7eb' },
-                                                        '&:hover fieldset': { borderColor: config.color },
-                                                    },
-                                                },
-                                            },
-                                        }}
-                                    />
+
                                 </LocalizationProvider>
+
+                                {/* End Duration Type Selection (Compact) - ซ่อนถ้าวันตรงกัน */}
+                                {/* สำหรับการลาหลายวัน: แสดงเฉพาะ "ครึ่งเช้า" และ "เต็มวัน" */}
+                                {/* เพราะ "ครึ่งบ่าย" สำหรับวันสุดท้ายจะทำให้เกิดช่องว่างช่วงเช้า */}
+                                {formData.startDate !== formData.endDate && (
+                                    <Box sx={{ mt: 1 }}>
+                                        <Typography variant="caption" sx={{ mb: 0.5, display: 'block', color: 'text.secondary' }}>
+                                            {t('end_duration_label', 'ลาถึงช่วง:')}
+                                        </Typography>
+                                        <Box sx={{ display: 'flex', bgcolor: 'transparent', gap: 0.5 }}>
+                                            {/* แสดงเฉพาะ morning และ full สำหรับวันสุดท้าย */}
+                                            {['morning', 'full'].map((type) => {
+                                                const isSelected = endDurationType === type || (type === 'full' && endDurationType === 'afternoon');
+                                                const label = type === 'full'
+                                                    ? t('leave_duration_full_day', 'เต็มวัน')
+                                                    : (shiftType === 'day' ? t('leave_duration_morning_end', 'ครึ่งเช้า') : t('leave_duration_first_half', 'ครึ่งแรก'));
+
+                                                return (
+                                                    <Box
+                                                        key={type}
+                                                        onClick={() => handleEndDurationTypeChange(type as any)}
+                                                        sx={{
+                                                            flex: 1, py: 0.75, borderRadius: 1, cursor: 'pointer', textAlign: 'center',
+                                                            bgcolor: isSelected ? config.lightColor : 'white',
+                                                            color: isSelected ? config.color : 'text.secondary',
+                                                            border: isSelected ? `1px solid ${config.color}` : '1px solid #E2E8F0',
+                                                            transition: 'all 0.2s',
+                                                            fontSize: '0.85rem', fontWeight: 600,
+                                                            boxShadow: isSelected ? '0 1px 2px rgba(0,0,0,0.05)' : 'none'
+                                                        }}
+                                                    >
+                                                        {label}
+                                                    </Box>
+                                                );
+                                            })}
+                                        </Box>
+                                    </Box>
+                                )}
                             </Box>
                         </Box>
+
+
 
                         {/* Warning สำหรับลาย้อนหลังเกินกำหนดเท่านั้น */}
                         {backdateWarning?.show && backdateWarning.isOverdue && formData.endDate && (
@@ -1736,7 +1775,7 @@ export default function LeaveFormPage() {
 
                     <Divider sx={{ my: 3 }} />
 
-                    {/* จำนวนวันลา */}
+                    {/* จำนวนวันลา (Auto Calculation) */}
                     <Box sx={{ mb: 3, p: 2, bgcolor: 'grey.50', borderRadius: 1, border: '1px solid', borderColor: 'grey.200' }}>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 }}>
                             <Box sx={{
@@ -1760,91 +1799,29 @@ export default function LeaveFormPage() {
                                 mb: 1.5,
                             }}
                         >
-                            {/* ปุ่มลด */}
-                            <IconButton
-                                onClick={() => {
-                                    const current = parseFloat(formData.totalDays) || 0.5;
-                                    if (current > 0.5) {
-                                        handleFormChange('totalDays', (current - 0.5).toString());
-                                    }
-                                }}
-                                disabled={!formData.totalDays || parseFloat(formData.totalDays) <= 0.5}
-                                sx={{
-                                    width: 36,
-                                    height: 36,
-                                    bgcolor: config.lightColor,
-                                    border: `1.5px solid ${config.color}`,
-                                    '&:hover': { bgcolor: config.lightColor },
-                                    '&:disabled': { opacity: 0.4 },
-                                }}
-                            >
-                                <Minus size={18} color={config.color} />
-                            </IconButton>
-
                             {/* แสดงจำนวนวัน */}
                             <Box
                                 sx={{
-                                    minWidth: 80,
+                                    minWidth: 120,
                                     textAlign: 'center',
-                                    py: 1,
-                                    px: 2,
+                                    py: 1.5,
+                                    px: 3,
                                     bgcolor: config.color,
                                     borderRadius: 1.5,
+                                    boxShadow: `0 4px 12px ${config.lightColor}`
                                 }}
                             >
-                                <Typography sx={{ fontSize: '1.25rem', fontWeight: 700, color: 'white', lineHeight: 1.2 }}>
-                                    {formData.totalDays || '0'}
-                                </Typography>
-                                <Typography sx={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.9)' }}>
-                                    {t('leave_days_unit', 'วัน')}
+                                <Typography sx={{ fontSize: '1rem', fontWeight: 700, color: 'white', lineHeight: 1.2 }}>
+                                    {formData.totalDays || '0'} {t('days_unit', 'วัน')}
                                 </Typography>
                             </Box>
-
-                            {/* ปุ่มเพิ่ม */}
-                            <IconButton
-                                onClick={() => {
-                                    const current = parseFloat(formData.totalDays) || 0;
-                                    const max = maxLeaveDaysByRange || 999;
-                                    if (current + 0.5 <= max) {
-                                        handleFormChange('totalDays', (current + 0.5).toString());
-                                    }
-                                }}
-                                disabled={maxLeaveDaysByRange !== null && parseFloat(formData.totalDays) >= maxLeaveDaysByRange}
-                                sx={{
-                                    width: 36,
-                                    height: 36,
-                                    bgcolor: config.lightColor,
-                                    border: `1.5px solid ${config.color}`,
-                                    '&:hover': { bgcolor: config.lightColor },
-                                    '&:disabled': { opacity: 0.4 },
-                                }}
-                            >
-                                <Add size={18} color={config.color} />
-                            </IconButton>
                         </Box>
 
-                        {/* Helper text */}
-                        <Typography
-                            variant="caption"
-                            sx={{
-                                display: 'block',
-                                textAlign: 'center',
-                                color: errors.totalDays ? 'error.main' : 'text.secondary',
-                                mb: 2,
-                            }}
-                        >
-                            {errors.totalDays || (
-                                maxLeaveDaysByRange
-                                    ? `${t('leave_adjust_hint', 'กดปุ่ม +/- เพื่อปรับทีละ 0.5 วัน')} (${t('max', 'สูงสุด')} ${maxLeaveDaysByRange} ${t('leave_days_unit', 'วัน')})`
-                                    : t('leave_adjust_hint', 'กดปุ่ม +/- เพื่อปรับทีละ 0.5 วัน')
-                            )}
-                        </Typography>
-
-                        {leaveType.maxDaysPerYear && (
+                        {leaveType && leaveType.maxDaysPerYear && (
                             <Typography
                                 variant="caption"
                                 color={(parseFloat(formData.totalDays) || 0) > leaveType.maxDaysPerYear ? 'error.main' : 'text.secondary'}
-                                sx={{ mt: 1, display: 'block', textAlign: 'center', fontWeight: (parseFloat(formData.totalDays) || 0) > leaveType.maxDaysPerYear ? 'bold' : 'normal' }}
+                                sx={{ mt: 1.5, display: 'block', textAlign: 'center', fontWeight: (parseFloat(formData.totalDays) || 0) > leaveType.maxDaysPerYear ? 'bold' : 'normal' }}
                             >
                                 {leaveType.isPaid
                                     ? t('leave_max_quota_paid', 'สิทธิ์ลา {days} วัน/ปี (ได้รับค่าจ้าง)').replace('{days}', leaveType.maxDaysPerYear.toString())
@@ -2101,11 +2078,11 @@ export default function LeaveFormPage() {
                             </Alert>
                         )}
                     </Box>
-                </Container>
-            </Box>
+                </Container >
+            </Box >
 
             {/* Fixed Footer - ปุ่มดำเนินการ */}
-            <Box
+            < Box
                 sx={{
                     position: 'fixed',
                     bottom: 0,
@@ -2118,7 +2095,8 @@ export default function LeaveFormPage() {
                     py: 2,
                     boxShadow: '0 -4px 20px rgba(0,0,0,0.08)',
                     zIndex: 100,
-                }}
+                }
+                }
             >
                 <Box sx={{ maxWidth: 1200, mx: 'auto' }}>
                     <Button
@@ -2142,10 +2120,10 @@ export default function LeaveFormPage() {
                         {submitting ? t('leave_submitting', 'กำลังส่ง...') : t('leave_submit', 'ส่งคำขอลา')}
                     </Button>
                 </Box>
-            </Box>
+            </Box >
 
             {/* Confirm Dialog */}
-            <Dialog
+            < Dialog
                 open={showConfirmDialog}
                 onClose={() => setShowConfirmDialog(false)}
                 maxWidth="xs"
@@ -2242,10 +2220,10 @@ export default function LeaveFormPage() {
                         </Button>
                     </Box>
                 </Box>
-            </Dialog>
+            </Dialog >
 
             {/* Dialog Preview รูปภาพ */}
-            <Dialog
+            < Dialog
                 open={!!previewImage}
                 onClose={() => setPreviewImage(null)}
                 maxWidth="lg"
@@ -2299,7 +2277,7 @@ export default function LeaveFormPage() {
                         />
                     )}
                 </Box>
-            </Dialog>
+            </Dialog >
         </>
     );
 }

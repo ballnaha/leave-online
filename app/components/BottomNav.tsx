@@ -5,32 +5,33 @@ import { Box, Fab, Paper, Typography } from '@mui/material';
 import { useLocale } from '../providers/LocaleProvider';
 import { useUser } from '../providers/UserProvider';
 import { usePWA } from '../providers/PWAProvider';
-import { 
-    Home2, 
-    Message, 
-    Heart, 
-    User, 
-    Add, 
-    Health, 
-    Sun1, 
-    Lovely, 
+import {
+    Home2,
+    Message,
+    Heart,
+    User,
+    Add,
+    Health,
+    Sun1,
+    Lovely,
     More,
-    Briefcase, 
-    Calendar2,   
-    Clock, 
-    Building4, 
-    Shield, 
-    People, 
-    Car, 
+    Briefcase,
+    Calendar2,
+    Clock,
+    Building4,
+    Shield,
+    People,
+    Car,
     MessageQuestion,
     Profile2User,
     Clock as ClockTimer,
-    
+    Chart
+
 } from 'iconsax-react';
 import { HelpCircle } from 'lucide-react';
 
 interface BottomNavProps {
-    activePage?: 'home' | 'leave-types' | 'leave' | 'profile';
+    activePage?: 'home' | 'chart' | 'leave' | 'profile';
 }
 
 interface LeaveType {
@@ -59,8 +60,8 @@ const leaveTypeConfig: Record<string, { icon: any; color: string; gradient: stri
     paternity: { icon: Profile2User, color: '#11CDEF', gradient: 'linear-gradient(135deg, #11CDEF 0%, #1171EF 100%)' },
     sterilization: { icon: Health, color: '#2DCECC', gradient: 'linear-gradient(135deg, #2DCECC 0%, #2D8BCC 100%)' },
     business: { icon: Car, color: '#8965E0', gradient: 'linear-gradient(135deg, #8965E0 0%, #BC65E0 100%)' },
-    unpaid: { icon: Clock, color: '#8898AA', gradient: 'linear-gradient(135deg, #8898AA 0%, #6A7A8A 100%)' },
-    other: { icon: HelpCircle, color: '#5E72E4', gradient: 'linear-gradient(135deg, #8898AA 0%, #6A7A8A 100%)'},
+    unpaid: { icon: Clock, color: '#F5365C', gradient: 'linear-gradient(135deg, #F5365C 0%, #F56036 100%)' },
+    other: { icon: HelpCircle, color: '#5E72E4', gradient: 'linear-gradient(135deg, #5E72E4 0%, #825EE4 100%)' },
     default: { icon: MessageQuestion, color: '#8898AA', gradient: 'linear-gradient(135deg, #8898AA 0%, #6A7A8A 100%)' },
 };
 
@@ -79,16 +80,21 @@ const BottomNav: React.FC<BottomNavProps> = ({ activePage = 'home' }) => {
     const [leaveTypes, setLeaveTypes] = useState<LeaveType[]>(cachedLeaveTypes || []);
     const closeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-    // Filter leave types based on gender
-    // maternity (ลาคลอด) is only for female
-    // paternity (ลาดูแลภรรยาคลอด) is only for male
+    // คำนวณอายุงานเป็นปี
+    const getYearsOfService = (startDate: string | null | undefined): number => {
+        if (!startDate) return 0;
+        const start = new Date(startDate);
+        const now = new Date();
+        const years = (now.getTime() - start.getTime()) / (1000 * 60 * 60 * 24 * 365.25);
+        return years;
+    };
+
+    // Filter leave types based on gender and years of service
+    // แสดงทุกประเภทการลาที่ผู้ใช้มีสิทธิ์
     const filteredLeaveTypes = useMemo(() => {
-        // แสดงเฉพาะ ลาป่วย, ลากิจ, ลาพักร้อน ในเมนู FAB
-        const allowedCodes = ['sick', 'personal', 'vacation'];
+        const yearsOfService = getYearsOfService(user?.startDate);
 
         return leaveTypes.filter(leave => {
-            if (!allowedCodes.includes(leave.code)) return false;
-
             // ถ้าเป็นเพศชาย ไม่แสดงลาคลอด (maternity)
             if (user?.gender === 'male' && leave.code === 'maternity') {
                 return false;
@@ -101,9 +107,13 @@ const BottomNav: React.FC<BottomNavProps> = ({ activePage = 'home' }) => {
             if (user?.gender === 'female' && leave.code === 'ordination') {
                 return false;
             }
+            // ลาบวช ต้องมีอายุงาน >= 1 ปี
+            if (leave.code === 'ordination' && yearsOfService < 1) {
+                return false;
+            }
             return true;
         });
-    }, [leaveTypes, user?.gender]);
+    }, [leaveTypes, user?.gender, user?.startDate]);
 
     // Fetch leave types from API - only if not cached
     useEffect(() => {
@@ -112,10 +122,10 @@ const BottomNav: React.FC<BottomNavProps> = ({ activePage = 'home' }) => {
             setLeaveTypes(cachedLeaveTypes);
             return;
         }
-        
+
         // ถ้ากำลัง fetch อยู่ ไม่ต้องทำซ้ำ
         if (isFetching) return;
-        
+
         fetchLeaveTypes();
     }, []);
 
@@ -196,14 +206,14 @@ const BottomNav: React.FC<BottomNavProps> = ({ activePage = 'home' }) => {
                     }}
                 />
             )}
-            <Box sx={{ 
-                position: 'fixed', 
-                bottom: isInstallPromptVisible ? 'calc(80px + env(safe-area-inset-bottom, 20px))' : 0, 
-                left: '50%', 
-                transform: 'translateX(-50%)', 
-                pointerEvents: 'none', 
-                zIndex: 1000, 
-                width: '100%', 
+            <Box sx={{
+                position: 'fixed',
+                bottom: isInstallPromptVisible ? 'calc(80px + env(safe-area-inset-bottom, 20px))' : 0,
+                left: '50%',
+                transform: 'translateX(-50%)',
+                pointerEvents: 'none',
+                zIndex: 1000,
+                width: '100%',
                 maxWidth: 560,
                 transition: 'bottom 0.3s ease'
             }}>
@@ -219,7 +229,7 @@ const BottomNav: React.FC<BottomNavProps> = ({ activePage = 'home' }) => {
                                 zIndex: 1001,
                             }}
                         >
-                            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                                 {filteredLeaveTypes.map((leave, index) => {
                                     const config = getLeaveTypeConfig(leave.code);
                                     const Icon = config.icon;
@@ -232,9 +242,9 @@ const BottomNav: React.FC<BottomNavProps> = ({ activePage = 'home' }) => {
                                             sx={{
                                                 display: 'flex',
                                                 alignItems: 'center',
-                                                gap: 1.5,
-                                                p: 1.5,
-                                                borderRadius: 3,
+                                                gap: 1,
+                                                p: 1,
+                                                borderRadius: 2.5,
                                                 cursor: 'pointer',
                                                 background: 'rgba(255, 255, 255, 0.98)',
                                                 backdropFilter: 'blur(20px)',
@@ -289,9 +299,9 @@ const BottomNav: React.FC<BottomNavProps> = ({ activePage = 'home' }) => {
                                         >
                                             <Box
                                                 sx={{
-                                                    width: 42,
-                                                    height: 42,
-                                                    borderRadius: 2.5,
+                                                    width: 32,
+                                                    height: 32,
+                                                    borderRadius: 2,
                                                     background: config.gradient,
                                                     display: 'flex',
                                                     alignItems: 'center',
@@ -325,14 +335,14 @@ const BottomNav: React.FC<BottomNavProps> = ({ activePage = 'home' }) => {
                                                     },
                                                 }}
                                             >
-                                                <Icon size={22} color="white" />
+                                                <Icon size={18} color="white" />
                                             </Box>
                                             <Typography
                                                 variant="body2"
                                                 sx={{
                                                     fontWeight: 600,
                                                     color: 'text.primary',
-                                                    fontSize: '0.9rem',
+                                                    fontSize: '0.8rem',
                                                     animation: openMenu
                                                         ? `textFade-${index} 0.4s ease ${delay + 0.15}s both`
                                                         : animatingOut
@@ -388,14 +398,14 @@ const BottomNav: React.FC<BottomNavProps> = ({ activePage = 'home' }) => {
                             pointerEvents: 'auto',
                         }}
                     >
-                        <Box 
-                            sx={{ 
-                                display: 'flex', 
-                                flexDirection: 'column', 
-                                alignItems: 'center', 
-                                gap: 0.5, 
-                                cursor: 'pointer', 
-                                justifySelf: 'center', 
+                        <Box
+                            sx={{
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: 'center',
+                                gap: 0.5,
+                                cursor: 'pointer',
+                                justifySelf: 'center',
                                 textAlign: 'center',
                                 py: 1,
                             }}
@@ -423,22 +433,22 @@ const BottomNav: React.FC<BottomNavProps> = ({ activePage = 'home' }) => {
                                     },
                                 }}
                             >
-                                <Home2 
-                                    size={22} 
-                                    variant={activePage === 'home' ? 'Bold' : 'TwoTone'} 
-                                    color={activePage === 'home' ? '#6C63FF' : '#8B7FC7'} 
+                                <Home2
+                                    size={22}
+                                    variant={activePage === 'home' ? 'Bold' : 'TwoTone'}
+                                    color={activePage === 'home' ? '#6C63FF' : '#8B7FC7'}
                                 />
                             </Box>
                         </Box>
 
-                        <Box 
-                            sx={{ 
-                                display: 'flex', 
-                                flexDirection: 'column', 
-                                alignItems: 'center', 
-                                gap: 0.5, 
-                                cursor: 'pointer', 
-                                justifySelf: 'center', 
+                        <Box
+                            sx={{
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: 'center',
+                                gap: 0.5,
+                                cursor: 'pointer',
+                                justifySelf: 'center',
                                 textAlign: 'center',
                                 py: 1,
                             }}
@@ -466,10 +476,10 @@ const BottomNav: React.FC<BottomNavProps> = ({ activePage = 'home' }) => {
                                     },
                                 }}
                             >
-                                <Clock 
-                                    size={22} 
-                                    variant={activePage === 'leave' ? 'Bold' : 'TwoTone'} 
-                                    color={activePage === 'leave' ? '#6C63FF' : '#8B7FC7'} 
+                                <Clock
+                                    size={22}
+                                    variant={activePage === 'leave' ? 'Bold' : 'TwoTone'}
+                                    color={activePage === 'leave' ? '#6C63FF' : '#8B7FC7'}
                                 />
                             </Box>
                         </Box>
@@ -490,20 +500,20 @@ const BottomNav: React.FC<BottomNavProps> = ({ activePage = 'home' }) => {
                             />
                         </Box>
 
-                        <Box 
-                            sx={{ 
-                                display: 'flex', 
-                                flexDirection: 'column', 
-                                alignItems: 'center', 
-                                gap: 0.5, 
-                                cursor: 'pointer', 
-                                justifySelf: 'center', 
+                        <Box
+                            sx={{
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: 'center',
+                                gap: 0.5,
+                                cursor: 'pointer',
+                                justifySelf: 'center',
                                 textAlign: 'center',
                                 py: 1,
                             }}
                             onClick={() => {
                                 setOpenMenu(false);
-                                router.push('/leave-types');
+                                router.push('/charts');
                             }}
                         >
                             <Box
@@ -514,7 +524,7 @@ const BottomNav: React.FC<BottomNavProps> = ({ activePage = 'home' }) => {
                                     display: 'flex',
                                     alignItems: 'center',
                                     justifyContent: 'center',
-                                    bgcolor: activePage === 'leave-types' ? 'rgba(108, 99, 255, 0.15)' : 'transparent',
+                                    bgcolor: activePage === 'chart' ? 'rgba(108, 99, 255, 0.15)' : 'transparent',
                                     transition: 'all 0.3s ease',
                                     '&:hover': {
                                         bgcolor: 'rgba(108, 99, 255, 0.1)',
@@ -525,22 +535,22 @@ const BottomNav: React.FC<BottomNavProps> = ({ activePage = 'home' }) => {
                                     },
                                 }}
                             >
-                                <Calendar2 
-                                    size={22} 
-                                    variant={activePage === 'leave-types' ? 'Bold' : 'Outline'} 
-                                    color={activePage === 'leave-types' ? '#6C63FF' : '#8B7FC7'} 
+                                <Chart
+                                    size={22}
+                                    variant={activePage === 'chart' ? 'Bold' : 'TwoTone'}
+                                    color={activePage === 'chart' ? '#6C63FF' : '#8B7FC7'}
                                 />
                             </Box>
                         </Box>
 
                         <Box
-                            sx={{ 
-                                display: 'flex', 
-                                flexDirection: 'column', 
-                                alignItems: 'center', 
-                                gap: 0.5, 
-                                cursor: 'pointer', 
-                                justifySelf: 'center', 
+                            sx={{
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: 'center',
+                                gap: 0.5,
+                                cursor: 'pointer',
+                                justifySelf: 'center',
                                 textAlign: 'center',
                                 py: 1,
                             }}
@@ -568,10 +578,10 @@ const BottomNav: React.FC<BottomNavProps> = ({ activePage = 'home' }) => {
                                     },
                                 }}
                             >
-                                <Profile2User 
-                                    size={22} 
-                                    variant={activePage === 'profile' ? 'Bold' : 'TwoTone'} 
-                                    color={activePage === 'profile' ? '#6C63FF' : '#8B7FC7'} 
+                                <Profile2User
+                                    size={22}
+                                    variant={activePage === 'profile' ? 'Bold' : 'TwoTone'}
+                                    color={activePage === 'profile' ? '#6C63FF' : '#8B7FC7'}
                                 />
                             </Box>
                         </Box>

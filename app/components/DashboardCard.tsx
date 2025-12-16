@@ -352,9 +352,14 @@ const DashboardCard: React.FC<DashboardCardProps> = ({ leaveTypes, leaveRequests
             <Paper
                 elevation={0}
                 sx={{
-                    backgroundImage: 'url(/images/bg-company.png)',
+                    backgroundImage: {
+                        xs: 'url(/images/bg_psc3.webp)',      // Mobile
+                        sm: 'url(/images/bg_psc1.webp)',      // iPad/Tablet - เปลี่ยนเป็นรูปอื่นได้
+                        md: 'url(/images/bg_psc1.webp)',      // Desktop - เปลี่ยนเป็นรูปอื่นได้
+                    },
                     backgroundSize: 'cover',
-                    backgroundPosition: 'center',
+                    backgroundPosition: 'center center',
+                    backgroundRepeat: 'no-repeat',
                     borderRadius: { xs: 0, sm: 1 },
                     p: { xs: 2.5, sm: 3 },
                     color: 'white',
@@ -401,7 +406,7 @@ const DashboardCard: React.FC<DashboardCardProps> = ({ leaveTypes, leaveRequests
                     zIndex: 3,
                 }} />
 
-                {/* Header: Leave Type Name + Year Selector */}
+                {/* Header: Leave Type Name */}
                 <Box sx={{
                     display: 'flex',
                     justifyContent: 'space-between',
@@ -413,36 +418,6 @@ const DashboardCard: React.FC<DashboardCardProps> = ({ leaveTypes, leaveRequests
                     <Typography variant="subtitle1" sx={{ fontWeight: 600, fontSize: '0.95rem', color: '#FFFFFF;' }}>
                         {t(`leave_${selectedCode}`, currentBalance.name)}
                     </Typography>
-                    <Select
-                        value={year}
-                        onChange={(e) => onYearChange(Number(e.target.value))}
-                        variant="standard"
-                        disableUnderline
-                        sx={{
-                            color: 'white',
-                            fontSize: '0.875rem',
-                            fontWeight: 600,
-                            '.MuiSelect-icon': { color: 'rgba(255,255,255,0.7)' },
-                            '& .MuiSelect-select': { py: 0.5, pr: '24px !important' }
-                        }}
-                        MenuProps={{
-                            PaperProps: {
-                                sx: {
-                                    bgcolor: 'rgba(255, 255, 255, 0.95)',
-                                    backdropFilter: 'blur(10px)',
-                                    borderRadius: 0.5,
-                                    mt: 1,
-                                    boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
-                                }
-                            }
-                        }}
-                    >
-                        {years.map((y) => (
-                            <MenuItem key={y} value={y} sx={{ fontSize: '0.875rem', fontWeight: 500 }}>
-                                {y + 543} {/* Show Buddhist Year */}
-                            </MenuItem>
-                        ))}
-                    </Select>
                 </Box>
 
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2.5 }}>
@@ -451,7 +426,7 @@ const DashboardCard: React.FC<DashboardCardProps> = ({ leaveTypes, leaveRequests
                         <ClickAwayListener onClickAway={() => setActiveTooltip(null)}>
                             <Box sx={{ position: 'relative', width: 160, height: 160 }}>
                                 {/* Multi-ring Chart using nested circles */}
-                                <Box sx={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}>
+                                <Box sx={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', borderRadius: '50%', overflow: 'hidden' }}>
                                     {/* Outer ring - Approved (Green) */}
                                     <MuiTooltip
                                         open={activeTooltip === 'approved'}
@@ -585,11 +560,22 @@ const DashboardCard: React.FC<DashboardCardProps> = ({ leaveTypes, leaveRequests
                                     >
                                         <svg
                                             viewBox="0 0 100 100"
-                                            style={{ position: 'absolute', top: '24%', left: '24%', width: '52%', height: '52%', transform: 'rotate(-90deg)', cursor: 'pointer' }}
+                                            style={{
+                                                position: 'absolute',
+                                                top: '24%',
+                                                left: '24%',
+                                                width: '52%',
+                                                height: '52%',
+                                                transform: 'rotate(-90deg)',
+                                                cursor: 'pointer',
+                                                overflow: 'hidden',
+                                                borderRadius: '50%',
+                                                background: 'transparent'
+                                            }}
                                             onClick={() => setActiveTooltip(activeTooltip === 'remaining' ? null : 'remaining')}
                                         >
                                             {/* Background circle */}
-                                            <circle cx="50" cy="50" r="45" fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="12" />
+                                            <circle cx="50" cy="50" r="45" fill="transparent" stroke="rgba(255,255,255,0.15)" strokeWidth="12" />
                                             {/* Progress circle */}
                                             <circle
                                                 cx="50" cy="50" r="45"

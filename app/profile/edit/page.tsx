@@ -20,14 +20,14 @@ import {
     Dialog,
     Slider,
 } from '@mui/material';
-import { 
-    Building, 
-    User, 
-    HashtagSquare, 
-    Briefcase, 
-    Calendar, 
-    ArrowDown2, 
-    TickCircle, 
+import {
+    Building,
+    User,
+    HashtagSquare,
+    Briefcase,
+    Calendar,
+    ArrowDown2,
+    TickCircle,
     ArrowLeft2,
     TickSquare,
     Camera,
@@ -36,7 +36,6 @@ import {
     Clock,
     SearchZoomIn,
     SearchZoomOut,
-    RotateRight,
     Eye,
     EyeSlash,
 } from 'iconsax-react';
@@ -132,7 +131,7 @@ export default function EditProfilePage() {
     const [zoom, setZoom] = useState(1);
     const [rotation, setRotation] = useState(0);
     const [position, setPosition] = useState({ x: 0, y: 0 });
-    
+
     // Use refs for gesture tracking to avoid re-renders during drag/pinch
     const imageRef = useRef<HTMLImageElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
@@ -199,12 +198,12 @@ export default function EditProfilePage() {
             });
             // Only set avatar preview if there's no pending upload (user hasn't selected a new image)
             setAvatarPreview(prev => {
-                    // If there's already a pending upload or a base64 image, don't override
-                    if (prev && prev.startsWith('data:')) {
-                        return prev;
-                    }
-                    return data.avatar || prev;
-                });
+                // If there's already a pending upload or a base64 image, don't override
+                if (prev && prev.startsWith('data:')) {
+                    return prev;
+                }
+                return data.avatar || prev;
+            });
         } catch (error) {
             console.error('Error fetching profile:', error);
             toastr.error(t('error_fetch_profile', 'ไม่สามารถดึงข้อมูลได้'));
@@ -221,7 +220,7 @@ export default function EditProfilePage() {
         // Set theme-color for status bar to match header gradient
         const metaThemeColor = document.querySelector('meta[name="theme-color"]');
         const originalColor = metaThemeColor?.getAttribute('content') || '#EAF2F8';
-        
+
         if (metaThemeColor) {
             metaThemeColor.setAttribute('content', '#667eea');
         } else {
@@ -230,7 +229,7 @@ export default function EditProfilePage() {
             newMeta.content = '#667eea';
             document.head.appendChild(newMeta);
         }
-        
+
         const fetchCompanies = async () => {
             try {
                 const res = await fetch('/api/companies');
@@ -465,13 +464,13 @@ export default function EditProfilePage() {
             img.onload = () => {
                 const outputSize = 200; // Final output size
                 const cropRadius = 140; // Same as SVG circle radius in preview
-                
+
                 canvas.width = outputSize;
                 canvas.height = outputSize;
 
                 // Clear canvas completely
                 ctx.clearRect(0, 0, outputSize, outputSize);
-                
+
                 // Fill with background color first
                 ctx.fillStyle = '#f5f5f5';
                 ctx.fillRect(0, 0, outputSize, outputSize);
@@ -489,10 +488,10 @@ export default function EditProfilePage() {
                 const container = containerRef.current;
                 const previewWidth = container?.clientWidth || window.innerWidth;
                 const previewHeight = container?.clientHeight || (window.innerHeight - 150);
-                
+
                 const imgAspect = img.width / img.height;
                 const containerAspect = previewWidth / previewHeight;
-                
+
                 // Calculate how image is displayed with object-fit: contain
                 let displayWidth, displayHeight;
                 if (imgAspect > containerAspect) {
@@ -509,24 +508,24 @@ export default function EditProfilePage() {
 
                 // Move to center of canvas
                 ctx.translate(outputSize / 2, outputSize / 2);
-                
+
                 // Apply rotation
                 ctx.rotate((rotation * Math.PI) / 180);
-                
+
                 // The CSS transform order is: translate3d(x, y, 0) scale(zoom) rotate(deg)
                 // This means: first translate, then scale, then rotate
                 // In canvas we need to reverse: first rotate (done above), then scale, then translate
-                
+
                 // Calculate scaled image dimensions
                 const scaledWidth = displayWidth * zoom * scale;
                 const scaledHeight = displayHeight * zoom * scale;
-                
+
                 // Position offset: CSS does translate then scale
                 // So position.x pixels in screen space = position.x * zoom in image space
                 // Then we scale by 'scale' to fit canvas
                 const offsetX = position.x * zoom * scale;
                 const offsetY = position.y * zoom * scale;
-                
+
                 ctx.drawImage(
                     img,
                     -scaledWidth / 2 + offsetX,
@@ -560,27 +559,27 @@ export default function EditProfilePage() {
 
         // Wait for the image to be cropped first
         await cropCircleImage();
-        
+
         // Small delay to ensure canvas is fully rendered
         await new Promise(resolve => setTimeout(resolve, 100));
-        
+
         const canvas = canvasRef.current;
         if (!canvas) return;
-        
+
         const croppedImage = canvas.toDataURL('image/jpeg', 0.8);
-        
+
         // Verify that the image is not empty/black
         if (croppedImage && croppedImage.length > 100) {
             // Close editor first, then update avatar after a small delay
             // This prevents the flashing effect when the drawer closes
             setImageEditorOpen(false);
-            
+
             // Wait for drawer to close before updating avatar
             requestAnimationFrame(() => {
                 setPendingAvatarUpload(croppedImage);
                 setAvatarPreview(croppedImage);
             });
-            
+
         } else {
             toastr.error(t('error_process_image', 'ไม่สามารถประมวลผลรูปภาพได้ กรุณาลองใหม่อีกครั้ง'));
         }
@@ -611,7 +610,7 @@ export default function EditProfilePage() {
 
     const handleGestureStart = (clientX: number, clientY: number, touches?: React.TouchList) => {
         const gesture = gestureRef.current;
-        
+
         if (touches && touches.length === 2) {
             // Pinch gesture start
             gesture.isPinching = true;
@@ -632,7 +631,7 @@ export default function EditProfilePage() {
 
     const handleGestureMove = (clientX: number, clientY: number, touches?: React.TouchList) => {
         const gesture = gestureRef.current;
-        
+
         if (touches && touches.length === 2 && gesture.isPinching) {
             // Pinch gesture move
             const currentDistance = getTouchDistance(touches);
@@ -644,7 +643,7 @@ export default function EditProfilePage() {
             gesture.currentPosition.x += currentCenter.x - gesture.lastTouchCenter.x;
             gesture.currentPosition.y += currentCenter.y - gesture.lastTouchCenter.y;
             gesture.lastTouchCenter = currentCenter;
-            
+
             // Update transform using requestAnimationFrame
             cancelAnimationFrame(gesture.animationFrameId);
             gesture.animationFrameId = requestAnimationFrame(updateImageTransform);
@@ -654,7 +653,7 @@ export default function EditProfilePage() {
                 x: clientX - gesture.dragStart.x,
                 y: clientY - gesture.dragStart.y,
             };
-            
+
             // Update transform using requestAnimationFrame
             cancelAnimationFrame(gesture.animationFrameId);
             gesture.animationFrameId = requestAnimationFrame(updateImageTransform);
@@ -663,7 +662,7 @@ export default function EditProfilePage() {
 
     const handleGestureEnd = (touches?: React.TouchList) => {
         const gesture = gestureRef.current;
-        
+
         if (touches && touches.length < 2) {
             gesture.isPinching = false;
         }
@@ -704,20 +703,17 @@ export default function EditProfilePage() {
     };
 
     const handleSubmit = async () => {
-        // Validate first name
-        if (!formData.firstName.trim()) {
-            toastr.warning(t('error_first_name_required', 'กรุณากรอกชื่อ'));
-            return;
-        }
-
-        // Validate last name
-        if (!formData.lastName.trim()) {
-            toastr.warning(t('error_last_name_required', 'กรุณากรอกนามสกุล'));
-            return;
-        }
-
-        // Password validations when section is open or any field filled
+        // Check if there's anything to save
         const wantsPasswordChange = changePasswordOpen || currentPassword || newPassword || confirmPassword;
+        const hasAvatarChange = !!pendingAvatarUpload;
+
+        if (!wantsPasswordChange && !hasAvatarChange) {
+            toastr.info(t('no_changes', 'ไม่มีการเปลี่ยนแปลง'));
+            router.push('/profile');
+            return;
+        }
+
+        // Password validations when password change is requested
         if (wantsPasswordChange) {
             if (!currentPassword) {
                 toastr.warning(t('error_current_password_required', 'กรุณากรอกรหัสผ่านปัจจุบัน'));
@@ -759,9 +755,33 @@ export default function EditProfilePage() {
                     const uploadData = await uploadRes.json().catch(() => ({ error: t('error_upload_image', 'อัพโหลดรูปภาพไม่สำเร็จ') }));
                     throw new Error(uploadData.error || t('error_upload_image', 'อัพโหลดรูปภาพไม่สำเร็จ'));
                 }
-                
+
                 const uploadData = await uploadRes.json();
                 avatarPath = uploadData.path;
+            }
+
+            // Build request body - only include avatar and password (other fields are read-only now)
+            const requestBody: Record<string, unknown> = {
+                // Keep existing values for read-only fields
+                firstName: formData.firstName,
+                lastName: formData.lastName,
+                email: formData.email || null,
+                company: formData.company,
+                employeeType: formData.employeeType,
+                department: formData.departmentId,
+                section: formData.sectionId || null,
+                position: formData.position || null,
+                shift: formData.shift || null,
+                gender: formData.gender || null,
+                // Updatable fields
+                avatar: avatarPath,
+            };
+
+            // Add password fields if changing password
+            if (wantsPasswordChange) {
+                requestBody.currentPassword = currentPassword;
+                requestBody.newPassword = newPassword;
+                requestBody.confirmPassword = confirmPassword;
             }
 
             const response = await fetch('/api/profile', {
@@ -769,26 +789,7 @@ export default function EditProfilePage() {
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({
-                    firstName: formData.firstName,
-                    lastName: formData.lastName,
-                    email: formData.email || null,
-                    company: formData.company,
-                    employeeType: formData.employeeType,
-                    department: formData.departmentId,
-                    section: formData.sectionId || null,
-                    position: formData.position || null,
-                    shift: formData.shift || null,
-                    gender: formData.gender || null,
-                    avatar: avatarPath,
-                    ...(wantsPasswordChange
-                        ? {
-                              currentPassword,
-                              newPassword,
-                              confirmPassword,
-                          }
-                        : {}),
-                }),
+                body: JSON.stringify(requestBody),
             });
 
             if (!response.ok) {
@@ -805,7 +806,7 @@ export default function EditProfilePage() {
             setNewPassword('');
             setConfirmPassword('');
             setChangePasswordOpen(false);
-            
+
             // Delay navigation to allow toastr to show
             setTimeout(() => {
                 router.push('/profile');
@@ -820,7 +821,7 @@ export default function EditProfilePage() {
 
     const openDrawer = (type: 'company' | 'employeeType' | 'department' | 'section' | 'shift' | 'gender') => {
         setDrawerType(type);
-        
+
         switch (type) {
             case 'company':
                 setDrawerTitle(t('select_company', 'เลือกบริษัท'));
@@ -847,7 +848,7 @@ export default function EditProfilePage() {
                     { value: '', label: t('not_specified', 'ไม่ระบุ') },
                     { value: 'day', label: t('shift_day', 'กะกลางวัน') },
                     { value: 'night', label: t('shift_night', 'กะกลางคืน') },
-                    
+
                 ]);
                 break;
             case 'gender':
@@ -947,8 +948,8 @@ export default function EditProfilePage() {
                         >
                             <ArrowLeft2 size={20} color="white" />
                         </IconButton>
-                        <Typography variant="h6" sx={{ color: 'white', fontWeight: 500 , fontSize: '1rem'}}>
-                            {t('edit_profile_title', 'แก้ไขโปรไฟล์')}
+                        <Typography variant="h6" sx={{ color: 'white', fontWeight: 500, fontSize: '1rem' }}>
+                            {t('profile_settings_title', 'ตั้งค่าโปรไฟล์')}
                         </Typography>
                     </Box>
                 </Box>
@@ -1015,13 +1016,13 @@ export default function EditProfilePage() {
                                         right: 0,
                                         width: 40,
                                         height: 40,
-                                        bgcolor:'white',
+                                        bgcolor: 'white',
                                         color: 'white',
                                         boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2)',
                                         '&:hover': { bgcolor: 'white' },
                                     }}
                                 >
-                                    <Camera size={20} color="#764ba2" variant='Bold'/>
+                                    <Camera size={20} color="#764ba2" variant='Bold' />
                                 </IconButton>
                             </Box>
                         </Box>
@@ -1030,7 +1031,7 @@ export default function EditProfilePage() {
                             {t('tap_camera_to_change', 'แตะที่ไอคอนกล้องเพื่อเปลี่ยนรูปโปรไฟล์')}
                         </Typography>
 
-                        {/* Form */}
+                        {/* Profile Information Display - Read Only */}
                         <Paper
                             elevation={0}
                             sx={{
@@ -1040,437 +1041,547 @@ export default function EditProfilePage() {
                                 border: '1px solid rgba(0, 0, 0, 0.05)',
                             }}
                         >
-                            {/* Employee ID (Read-only) */}
-                            <Box sx={{ mb: 2.5 }}>
-                                <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, mb: 0.5, display: 'block' }}>
-                                    {t('employee_id', 'รหัสพนักงาน')}
-                                </Typography>
-                                <TextField
-                                    id="edit-employeeId"
-                                    fullWidth
-                                    size="small"
-                                    value={formData.employeeId}
-                                    disabled
-                                    InputProps={{
-                                        startAdornment: (
-                                            <InputAdornment position="start">
-                                                <HashtagSquare size={18} color="#9e9e9e" />
-                                            </InputAdornment>
-                                        ),
-                                    }}
-                                    sx={{
-                                        '& .MuiOutlinedInput-root': {
-                                            bgcolor: '#f5f5f5',
-                                        },
-                                    }}
-                                />
-                            </Box>
+                            {/* Section Title */}
+                            <Typography
+                                variant="subtitle2"
+                                sx={{
+                                    color: '#667eea',
+                                    fontWeight: 700,
+                                    mb: 2,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 1,
+                                }}
+                            >
+                                <User size={18} color="#667eea" />
+                                {t('personal_info', 'ข้อมูลส่วนตัว')}
+                            </Typography>
 
-                            {/* First Name */}
-                            <Box sx={{ mb: 2.5 }}>
-                                <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, mb: 0.5, display: 'block' }}>
-                                    {t('first_name_required', 'ชื่อ *')}
-                                </Typography>
-                                <TextField
-                                    id="edit-firstName"
-                                    fullWidth
-                                    size="small"
-                                    value={formData.firstName}
-                                    onChange={handleChange('firstName')}
-                                    placeholder={t('placeholder_first_name', 'กรอกชื่อ')}
-                                    InputProps={{
-                                        startAdornment: (
-                                            <InputAdornment position="start">
-                                                <User size={18} color="#1b194b" />
-                                            </InputAdornment>
-                                        ),
-                                    }}
-                                    sx={{
-                                        '& .MuiOutlinedInput-root': {
-                                            '&:focus-within': {
-                                                '& fieldset': { borderColor: '#1b194b' },
-                                            },
-                                        },
-                                    }}
-                                />
-                            </Box>
-
-                            {/* Last Name */}
-                            <Box sx={{ mb: 2.5 }}>
-                                <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, mb: 0.5, display: 'block' }}>
-                                    {t('last_name_required', 'นามสกุล *')}
-                                </Typography>
-                                <TextField
-                                    id="edit-lastName"
-                                    fullWidth
-                                    size="small"
-                                    value={formData.lastName}
-                                    onChange={handleChange('lastName')}
-                                    placeholder={t('placeholder_last_name', 'กรอกนามสกุล')}
-                                    InputProps={{
-                                        startAdornment: (
-                                            <InputAdornment position="start">
-                                                <User size={18} color="#1b194b" />
-                                            </InputAdornment>
-                                        ),
-                                    }}
-                                    sx={{
-                                        '& .MuiOutlinedInput-root': {
-                                            '&:focus-within': {
-                                                '& fieldset': { borderColor: '#1b194b' },
-                                            },
-                                        },
-                                    }}
-                                />
-                            </Box>
-
-                            
-                            {/* Gender */}
-                            <Box sx={{ mb: 2.5 }}>
-                                <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, mb: 0.5, display: 'block' }}>
-                                    {t('gender', 'เพศ')}
-                                </Typography>
-                                <TextField
-                                    id="edit-gender"
-                                    fullWidth
-                                    size="small"
-                                    value={getDisplayValue('gender')}
-                                    onClick={() => openDrawer('gender')}
-                                    placeholder={t('placeholder_gender', 'เลือกเพศ')}
-                                    InputProps={{
-                                        readOnly: true,
-                                        startAdornment: (
-                                            <InputAdornment position="start">
-                                                <User size={18} color="#1b194b" />
-                                            </InputAdornment>
-                                        ),
-                                        endAdornment: <ArrowDown2 size={18} color="#9e9e9e" />,
-                                    }}
-                                    sx={{ cursor: 'pointer' }}
-                                />
-                            </Box>
-
-                            {/* Email */}
-                            <Box sx={{ mb: 2.5 }}>
-                                <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, mb: 0.5, display: 'block' }}>
-                                    {t('email', 'อีเมล')}
-                                </Typography>
-                                <TextField
-                                    id="edit-email"
-                                    fullWidth
-                                    size="small"
-                                    type="email"
-                                    value={formData.email}
-                                    onChange={handleChange('email')}
-                                    placeholder="example@company.com"
-                                    InputProps={{
-                                        startAdornment: (
-                                            <InputAdornment position="start">
-                                                <Sms size={18} color="#1b194b" />
-                                            </InputAdornment>
-                                        ),
-                                    }}
-                                    sx={{
-                                        '& .MuiOutlinedInput-root': {
-                                            '&:focus-within': {
-                                                '& fieldset': { borderColor: '#1b194b' },
-                                            },
-                                        },
-                                    }}
-                                />
-                            </Box>
-
-                            {/* Company */}
-                            <Box sx={{ mb: 2.5 }}>
-                                <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, mb: 0.5, display: 'block' }}>
-                                    {t('company', 'บริษัท')}
-                                </Typography>
-                                <TextField
-                                    id="edit-company"
-                                    fullWidth
-                                    size="small"
-                                    value={getDisplayValue('company')}
-                                    placeholder={t('placeholder_company', 'เลือกบริษัท')}
-                                    disabled
-                                    InputProps={{
-                                        readOnly: true,
-                                        startAdornment: (
-                                            <InputAdornment position="start">
-                                                <Building size={18} color="#9e9e9e" />
-                                            </InputAdornment>
-                                        ),
-                                    }}
-                                    sx={{
-                                        '& .MuiOutlinedInput-root': {
-                                            bgcolor: '#f5f5f5',
-                                        },
-                                    }}
-                                />
-                            </Box>
-
-                            {/* Employee Type */}
-                            <Box sx={{ mb: 2.5 }}>
-                                <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, mb: 0.5, display: 'block' }}>
-                                    {t('employee_type', 'ประเภทพนักงาน')}
-                                </Typography>
-                                <TextField
-                                    id="edit-employeeType"
-                                    fullWidth
-                                    size="small"
-                                    value={getDisplayValue('employeeType')}
-                                    placeholder={t('placeholder_employee_type', 'เลือกประเภทพนักงาน')}
-                                    disabled
-                                    InputProps={{
-                                        readOnly: true,
-                                        startAdornment: (
-                                            <InputAdornment position="start">
-                                                <Briefcase size={18} color="#9e9e9e" />
-                                            </InputAdornment>
-                                        ),
-                                    }}
-                                    sx={{
-                                        '& .MuiOutlinedInput-root': {
-                                            bgcolor: '#f5f5f5',
-                                        },
-                                    }}
-                                />
-                            </Box>
-
-                            {/* Department */}
-                            <Box sx={{ mb: 2.5 }}>
-                                <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, mb: 0.5, display: 'block' }}>
-                                    {t('department', 'ฝ่าย')}
-                                </Typography>
-                                <TextField
-                                    id="edit-department"
-                                    fullWidth
-                                    size="small"
-                                    value={getDisplayValue('department')}
-                                    placeholder={t('placeholder_department', 'เลือกฝ่าย')}
-                                    disabled
-                                    InputProps={{
-                                        readOnly: true,
-                                        startAdornment: (
-                                            <InputAdornment position="start">
-                                                <Briefcase size={18} color="#9e9e9e" />
-                                            </InputAdornment>
-                                        ),
-                                    }}
-                                    sx={{
-                                        '& .MuiOutlinedInput-root': {
-                                            bgcolor: '#f5f5f5',
-                                        },
-                                    }}
-                                />
-                            </Box>
-
-                            {/* Section */}
-                            <Box sx={{ mb: 2.5 }}>
-                                <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, mb: 0.5, display: 'block' }}>
-                                    {t('section', 'แผนก')}
-                                </Typography>
-                                <TextField
-                                    id="edit-section"
-                                    fullWidth
-                                    size="small"
-                                    value={getDisplayValue('section')}
-                                    placeholder={t('placeholder_section', 'เลือกแผนก')}
-                                    disabled
-                                    InputProps={{
-                                        readOnly: true,
-                                        startAdornment: (
-                                            <InputAdornment position="start">
-                                                <Location size={18} color="#9e9e9e" />
-                                            </InputAdornment>
-                                        ),
-                                    }}
-                                    sx={{
-                                        '& .MuiOutlinedInput-root': {
-                                            bgcolor: '#f5f5f5',
-                                        },
-                                    }}
-                                />
-                            </Box>
-
-                            {/* Position */}
-                            <Box sx={{ mb: 2.5 }}>
-                                <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, mb: 0.5, display: 'block' }}>
-                                    {t('position', 'ตำแหน่ง')}
-                                </Typography>
-                                <TextField
-                                    id="edit-position"
-                                    fullWidth
-                                    size="small"
-                                    value={formData.position}
-                                    disabled
-                                    onChange={handleChange('position')}
-                                    placeholder={t('placeholder_position', 'ระบุตำแหน่งงาน')}
-                                    InputProps={{
-                                        startAdornment: (
-                                            <InputAdornment position="start">
-                                                <Briefcase size={18} color="#1b194b" />
-                                            </InputAdornment>
-                                        ),
-                                    }}
-                                    sx={{
-                                        '& .MuiOutlinedInput-root': {
-                                            '&:focus-within': {
-                                                '& fieldset': { borderColor: '#1b194b' },
-                                            },
-                                            bgcolor: '#f5f5f5'
-                                            
-                                        },
-                                        
-                                    }}
-                                />
-                            </Box>
-
-                            {/* Shift */}
-                            <Box sx={{ mb: 2.5 }}>
-                                <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, mb: 0.5, display: 'block' }}>
-                                    {t('shift', 'กะทำงาน')}
-                                </Typography>
-                                <TextField
-                                    id="edit-shift"
-                                    fullWidth
-                                    size="small"
-                                    value={getDisplayValue('shift')}
-                                    onClick={() => openDrawer('shift')}
-                                    placeholder={t('placeholder_shift', 'เลือกกะทำงาน')}
-                                    InputProps={{
-                                        readOnly: true,
-                                        startAdornment: (
-                                            <InputAdornment position="start">
-                                                <Clock size={18} color="#1b194b" />
-                                            </InputAdornment>
-                                        ),
-                                        endAdornment: <ArrowDown2 size={18} color="#9e9e9e" />,
-                                    }}
-                                    sx={{ cursor: 'pointer' }}
-                                />
-                            </Box>
-
-
-                            {/* Start Date (Read-only) */}
-                            <Box sx={{ mb: 1 }}>
-                                <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, mb: 0.5, display: 'block' }}>
-                                    {t('start_date', 'วันที่เริ่มงาน')}
-                                </Typography>
-                                <TextField
-                                    id="edit-startDate"
-                                    fullWidth
-                                    size="small"
-                                    value={formatThaiDate(formData.startDate)}
-                                    disabled
-                                    InputProps={{
-                                        startAdornment: (
-                                            <InputAdornment position="start">
-                                                <Calendar size={18} color="#9e9e9e" />
-                                            </InputAdornment>
-                                        ),
-                                    }}
-                                    sx={{
-                                        '& .MuiOutlinedInput-root': {
-                                            bgcolor: '#f5f5f5',
-                                        },
-                                    }}
-                                />
-                            </Box>
-
-                                {/* Change Password Section */}
-                                <Box sx={{ mt: 3 }}>
-                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                                        <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600 }}>
-                                            {t('change_password', 'เปลี่ยนรหัสผ่าน')}
+                            {/* Display Fields - Read Only */}
+                            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                                {/* Employee ID */}
+                                <Box sx={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 1.5,
+                                    p: 1.5,
+                                    bgcolor: 'rgba(102, 126, 234, 0.04)',
+                                    borderRadius: 1,
+                                    border: '1px solid rgba(102, 126, 234, 0.1)',
+                                }}>
+                                    <Box sx={{
+                                        width: 36,
+                                        height: 36,
+                                        borderRadius: 1,
+                                        bgcolor: 'rgba(102, 126, 234, 0.1)',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                    }}>
+                                        <HashtagSquare size={18} color="#667eea" />
+                                    </Box>
+                                    <Box sx={{ flex: 1 }}>
+                                        <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', fontSize: '0.7rem' }}>
+                                            {t('employee_id', 'รหัสพนักงาน')}
                                         </Typography>
-                                        <Button
-                                            variant="outlined"
+                                        <Typography variant="body2" sx={{ fontWeight: 600, color: '#1b194b' }}>
+                                            {formData.employeeId || '-'}
+                                        </Typography>
+                                    </Box>
+                                </Box>
+
+                                {/* Full Name */}
+                                <Box sx={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 1.5,
+                                    p: 1.5,
+                                    bgcolor: 'rgba(102, 126, 234, 0.04)',
+                                    borderRadius: 1,
+                                    border: '1px solid rgba(102, 126, 234, 0.1)',
+                                }}>
+                                    <Box sx={{
+                                        width: 36,
+                                        height: 36,
+                                        borderRadius: 1,
+                                        bgcolor: 'rgba(102, 126, 234, 0.1)',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                    }}>
+                                        <User size={18} color="#667eea" />
+                                    </Box>
+                                    <Box sx={{ flex: 1 }}>
+                                        <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', fontSize: '0.7rem' }}>
+                                            {t('full_name', 'ชื่อ - นามสกุล')}
+                                        </Typography>
+                                        <Typography variant="body2" sx={{ fontWeight: 600, color: '#1b194b' }}>
+                                            {formData.firstName} {formData.lastName}
+                                        </Typography>
+                                    </Box>
+                                </Box>
+
+                                {/* Gender */}
+                                <Box sx={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 1.5,
+                                    p: 1.5,
+                                    bgcolor: 'rgba(102, 126, 234, 0.04)',
+                                    borderRadius: 1,
+                                    border: '1px solid rgba(102, 126, 234, 0.1)',
+                                }}>
+                                    <Box sx={{
+                                        width: 36,
+                                        height: 36,
+                                        borderRadius: 1,
+                                        bgcolor: 'rgba(102, 126, 234, 0.1)',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                    }}>
+                                        <User size={18} color="#667eea" />
+                                    </Box>
+                                    <Box sx={{ flex: 1 }}>
+                                        <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', fontSize: '0.7rem' }}>
+                                            {t('gender', 'เพศ')}
+                                        </Typography>
+                                        <Typography variant="body2" sx={{ fontWeight: 600, color: '#1b194b' }}>
+                                            {getDisplayValue('gender') || '-'}
+                                        </Typography>
+                                    </Box>
+                                </Box>
+
+                                {/* Email */}
+                                <Box sx={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 1.5,
+                                    p: 1.5,
+                                    bgcolor: 'rgba(102, 126, 234, 0.04)',
+                                    borderRadius: 1,
+                                    border: '1px solid rgba(102, 126, 234, 0.1)',
+                                }}>
+                                    <Box sx={{
+                                        width: 36,
+                                        height: 36,
+                                        borderRadius: 1,
+                                        bgcolor: 'rgba(102, 126, 234, 0.1)',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                    }}>
+                                        <Sms size={18} color="#667eea" />
+                                    </Box>
+                                    <Box sx={{ flex: 1 }}>
+                                        <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', fontSize: '0.7rem' }}>
+                                            {t('email', 'อีเมล')}
+                                        </Typography>
+                                        <Typography variant="body2" sx={{ fontWeight: 600, color: '#1b194b' }}>
+                                            {formData.email || '-'}
+                                        </Typography>
+                                    </Box>
+                                </Box>
+                            </Box>
+                        </Paper>
+
+                        {/* Work Information Display - Read Only */}
+                        <Paper
+                            elevation={0}
+                            sx={{
+                                p: 2.5,
+                                borderRadius: 1,
+                                boxShadow: '0 4px 20px rgba(0, 0, 0, 0.06)',
+                                border: '1px solid rgba(0, 0, 0, 0.05)',
+                                mt: 2,
+                            }}
+                        >
+                            {/* Section Title */}
+                            <Typography
+                                variant="subtitle2"
+                                sx={{
+                                    color: '#764ba2',
+                                    fontWeight: 700,
+                                    mb: 2,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 1,
+                                }}
+                            >
+                                <Briefcase size={18} color="#764ba2" />
+                                {t('work_info', 'ข้อมูลการทำงาน')}
+                            </Typography>
+
+                            {/* Display Fields - Read Only */}
+                            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                                {/* Company */}
+                                <Box sx={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 1.5,
+                                    p: 1.5,
+                                    bgcolor: 'rgba(118, 75, 162, 0.04)',
+                                    borderRadius: 1,
+                                    border: '1px solid rgba(118, 75, 162, 0.1)',
+                                }}>
+                                    <Box sx={{
+                                        width: 36,
+                                        height: 36,
+                                        borderRadius: 1,
+                                        bgcolor: 'rgba(118, 75, 162, 0.1)',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                    }}>
+                                        <Building size={18} color="#764ba2" />
+                                    </Box>
+                                    <Box sx={{ flex: 1 }}>
+                                        <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', fontSize: '0.7rem' }}>
+                                            {t('company', 'บริษัท')}
+                                        </Typography>
+                                        <Typography variant="body2" sx={{ fontWeight: 600, color: '#1b194b' }}>
+                                            {getDisplayValue('company') || '-'}
+                                        </Typography>
+                                    </Box>
+                                </Box>
+
+                                {/* Employee Type */}
+                                <Box sx={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 1.5,
+                                    p: 1.5,
+                                    bgcolor: 'rgba(118, 75, 162, 0.04)',
+                                    borderRadius: 1,
+                                    border: '1px solid rgba(118, 75, 162, 0.1)',
+                                }}>
+                                    <Box sx={{
+                                        width: 36,
+                                        height: 36,
+                                        borderRadius: 1,
+                                        bgcolor: 'rgba(118, 75, 162, 0.1)',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                    }}>
+                                        <Briefcase size={18} color="#764ba2" />
+                                    </Box>
+                                    <Box sx={{ flex: 1 }}>
+                                        <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', fontSize: '0.7rem' }}>
+                                            {t('employee_type', 'ประเภทพนักงาน')}
+                                        </Typography>
+                                        <Typography variant="body2" sx={{ fontWeight: 600, color: '#1b194b' }}>
+                                            {getDisplayValue('employeeType') || '-'}
+                                        </Typography>
+                                    </Box>
+                                </Box>
+
+                                {/* Department */}
+                                <Box sx={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 1.5,
+                                    p: 1.5,
+                                    bgcolor: 'rgba(118, 75, 162, 0.04)',
+                                    borderRadius: 1,
+                                    border: '1px solid rgba(118, 75, 162, 0.1)',
+                                }}>
+                                    <Box sx={{
+                                        width: 36,
+                                        height: 36,
+                                        borderRadius: 1,
+                                        bgcolor: 'rgba(118, 75, 162, 0.1)',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                    }}>
+                                        <Briefcase size={18} color="#764ba2" />
+                                    </Box>
+                                    <Box sx={{ flex: 1 }}>
+                                        <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', fontSize: '0.7rem' }}>
+                                            {t('department', 'ฝ่าย')}
+                                        </Typography>
+                                        <Typography variant="body2" sx={{ fontWeight: 600, color: '#1b194b' }}>
+                                            {getDisplayValue('department') || '-'}
+                                        </Typography>
+                                    </Box>
+                                </Box>
+
+                                {/* Section */}
+                                <Box sx={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 1.5,
+                                    p: 1.5,
+                                    bgcolor: 'rgba(118, 75, 162, 0.04)',
+                                    borderRadius: 1,
+                                    border: '1px solid rgba(118, 75, 162, 0.1)',
+                                }}>
+                                    <Box sx={{
+                                        width: 36,
+                                        height: 36,
+                                        borderRadius: 1,
+                                        bgcolor: 'rgba(118, 75, 162, 0.1)',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                    }}>
+                                        <Location size={18} color="#764ba2" />
+                                    </Box>
+                                    <Box sx={{ flex: 1 }}>
+                                        <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', fontSize: '0.7rem' }}>
+                                            {t('section', 'แผนก')}
+                                        </Typography>
+                                        <Typography variant="body2" sx={{ fontWeight: 600, color: '#1b194b' }}>
+                                            {getDisplayValue('section') || '-'}
+                                        </Typography>
+                                    </Box>
+                                </Box>
+
+                                {/* Position */}
+                                <Box sx={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 1.5,
+                                    p: 1.5,
+                                    bgcolor: 'rgba(118, 75, 162, 0.04)',
+                                    borderRadius: 1,
+                                    border: '1px solid rgba(118, 75, 162, 0.1)',
+                                }}>
+                                    <Box sx={{
+                                        width: 36,
+                                        height: 36,
+                                        borderRadius: 1,
+                                        bgcolor: 'rgba(118, 75, 162, 0.1)',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                    }}>
+                                        <Briefcase size={18} color="#764ba2" />
+                                    </Box>
+                                    <Box sx={{ flex: 1 }}>
+                                        <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', fontSize: '0.7rem' }}>
+                                            {t('position', 'ตำแหน่ง')}
+                                        </Typography>
+                                        <Typography variant="body2" sx={{ fontWeight: 600, color: '#1b194b' }}>
+                                            {formData.position || '-'}
+                                        </Typography>
+                                    </Box>
+                                </Box>
+
+                                {/* Shift */}
+                                <Box sx={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 1.5,
+                                    p: 1.5,
+                                    bgcolor: 'rgba(118, 75, 162, 0.04)',
+                                    borderRadius: 1,
+                                    border: '1px solid rgba(118, 75, 162, 0.1)',
+                                }}>
+                                    <Box sx={{
+                                        width: 36,
+                                        height: 36,
+                                        borderRadius: 1,
+                                        bgcolor: 'rgba(118, 75, 162, 0.1)',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                    }}>
+                                        <Clock size={18} color="#764ba2" />
+                                    </Box>
+                                    <Box sx={{ flex: 1 }}>
+                                        <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', fontSize: '0.7rem' }}>
+                                            {t('shift', 'กะทำงาน')}
+                                        </Typography>
+                                        <Typography variant="body2" sx={{ fontWeight: 600, color: '#1b194b' }}>
+                                            {getDisplayValue('shift') || '-'}
+                                        </Typography>
+                                    </Box>
+                                </Box>
+
+                                {/* Start Date */}
+                                <Box sx={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 1.5,
+                                    p: 1.5,
+                                    bgcolor: 'rgba(118, 75, 162, 0.04)',
+                                    borderRadius: 1,
+                                    border: '1px solid rgba(118, 75, 162, 0.1)',
+                                }}>
+                                    <Box sx={{
+                                        width: 36,
+                                        height: 36,
+                                        borderRadius: 1,
+                                        bgcolor: 'rgba(118, 75, 162, 0.1)',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                    }}>
+                                        <Calendar size={18} color="#764ba2" />
+                                    </Box>
+                                    <Box sx={{ flex: 1 }}>
+                                        <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', fontSize: '0.7rem' }}>
+                                            {t('start_date', 'วันที่เริ่มงาน')}
+                                        </Typography>
+                                        <Typography variant="body2" sx={{ fontWeight: 600, color: '#1b194b' }}>
+                                            {formatThaiDate(formData.startDate) || '-'}
+                                        </Typography>
+                                    </Box>
+                                </Box>
+                            </Box>
+                        </Paper>
+
+                        {/* Change Password Section */}
+                        <Paper
+                            elevation={0}
+                            sx={{
+                                p: 2.5,
+                                borderRadius: 1,
+                                boxShadow: '0 4px 20px rgba(0, 0, 0, 0.06)',
+                                border: '1px solid rgba(0, 0, 0, 0.05)',
+                                mt: 2,
+                            }}
+                        >
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: changePasswordOpen ? 2 : 0 }}>
+                                <Typography
+                                    variant="subtitle2"
+                                    sx={{
+                                        color: '#e74c3c',
+                                        fontWeight: 700,
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: 1,
+                                    }}
+                                >
+                                    <Eye size={18} color="#e74c3c" />
+                                    {t('change_password', 'เปลี่ยนรหัสผ่าน')}
+                                </Typography>
+                                <Button
+                                    variant="outlined"
+                                    size="small"
+                                    onClick={() => setChangePasswordOpen((v) => !v)}
+                                    sx={{
+                                        borderColor: '#e74c3c',
+                                        color: '#e74c3c',
+                                        '&:hover': {
+                                            borderColor: '#c0392b',
+                                            bgcolor: 'rgba(231, 76, 60, 0.04)',
+                                        },
+                                    }}
+                                >
+                                    {changePasswordOpen ? t('hide', 'ซ่อน') : t('show', 'แสดง')}
+                                </Button>
+                            </Box>
+
+                            {changePasswordOpen && (
+                                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                                    {/* Current Password */}
+                                    <Box>
+                                        <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, mb: 0.5, display: 'block' }}>
+                                            {t('current_password', 'รหัสผ่านปัจจุบัน')}
+                                        </Typography>
+                                        <TextField
+                                            id="edit-currentPassword"
+                                            fullWidth
                                             size="small"
-                                            onClick={() => setChangePasswordOpen((v) => !v)}
-                                            sx={{ borderColor: '#1b194b', color: '#1b194b' }}
-                                        >
-                                            {changePasswordOpen ? t('hide', 'ซ่อน') : t('show', 'แสดง')}
-                                        </Button>
+                                            type={showCurrent ? 'text' : 'password'}
+                                            value={currentPassword}
+                                            onChange={(e) => setCurrentPassword(e.target.value)}
+                                            placeholder={t('enter_current_password', 'กรอกรหัสผ่านปัจจุบัน')}
+                                            InputProps={{
+                                                endAdornment: (
+                                                    <InputAdornment position="end">
+                                                        <IconButton onClick={() => setShowCurrent((v) => !v)} edge="end">
+                                                            {showCurrent ? <EyeSlash size={18} color="#666" /> : <Eye size={18} color="#666" />}
+                                                        </IconButton>
+                                                    </InputAdornment>
+                                                ),
+                                            }}
+                                            sx={{
+                                                '& .MuiOutlinedInput-root': {
+                                                    '&:focus-within': {
+                                                        '& fieldset': { borderColor: '#e74c3c' },
+                                                    },
+                                                },
+                                            }}
+                                        />
                                     </Box>
 
-                                    {changePasswordOpen && (
-                                        <>
-                                            {/* Current Password */}
-                                            <Box sx={{ mb: 2 }}>
-                                                <TextField
-                                                    id="edit-currentPassword"
-                                                    fullWidth
-                                                    size="small"
-                                                    type={showCurrent ? 'text' : 'password'}
-                                                    value={currentPassword}
-                                                    onChange={(e) => setCurrentPassword(e.target.value)}
-                                                    placeholder={t('current_password', 'รหัสผ่านปัจจุบัน')}
-                                                    InputProps={{
-                                                        endAdornment: (
-                                                            <InputAdornment position="end">
-                                                                <IconButton onClick={() => setShowCurrent((v) => !v)} edge="end">
-                                                                    {showCurrent ? <EyeSlash size={18} /> : <Eye size={18} />}
-                                                                </IconButton>
-                                                            </InputAdornment>
-                                                        ),
-                                                    }}
-                                                />
-                                            </Box>
+                                    {/* New Password */}
+                                    <Box>
+                                        <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, mb: 0.5, display: 'block' }}>
+                                            {t('new_password', 'รหัสผ่านใหม่')}
+                                        </Typography>
+                                        <TextField
+                                            id="edit-newPassword"
+                                            fullWidth
+                                            size="small"
+                                            type={showNew ? 'text' : 'password'}
+                                            value={newPassword}
+                                            onChange={(e) => setNewPassword(e.target.value)}
+                                            placeholder={t('new_password_placeholder', 'รหัสผ่านใหม่ (อย่างน้อย 6 ตัวอักษร)')}
+                                            InputProps={{
+                                                endAdornment: (
+                                                    <InputAdornment position="end">
+                                                        <IconButton onClick={() => setShowNew((v) => !v)} edge="end">
+                                                            {showNew ? <EyeSlash size={18} color="#666" /> : <Eye size={18} color="#666" />}
+                                                        </IconButton>
+                                                    </InputAdornment>
+                                                ),
+                                            }}
+                                            sx={{
+                                                '& .MuiOutlinedInput-root': {
+                                                    '&:focus-within': {
+                                                        '& fieldset': { borderColor: '#e74c3c' },
+                                                    },
+                                                },
+                                            }}
+                                        />
+                                    </Box>
 
-                                            {/* New Password */}
-                                            <Box sx={{ mb: 2 }}>
-                                                <TextField
-                                                    id="edit-newPassword"
-                                                    fullWidth
-                                                    size="small"
-                                                    type={showNew ? 'text' : 'password'}
-                                                    value={newPassword}
-                                                    onChange={(e) => setNewPassword(e.target.value)}
-                                                    placeholder={t('new_password_placeholder', 'รหัสผ่านใหม่ (อย่างน้อย 6 ตัวอักษร)')}
-                                                    InputProps={{
-                                                        endAdornment: (
-                                                            <InputAdornment position="end">
-                                                                <IconButton onClick={() => setShowNew((v) => !v)} edge="end">
-                                                                    {showNew ? <EyeSlash size={18} /> : <Eye size={18} />}
-                                                                </IconButton>
-                                                            </InputAdornment>
-                                                        ),
-                                                    }}
-                                                />
-                                            </Box>
-
-                                            {/* Confirm Password */}
-                                            <Box sx={{ mb: 1 }}>
-                                                <TextField
-                                                    id="edit-confirmPassword"
-                                                    fullWidth
-                                                    size="small"
-                                                    type={showConfirm ? 'text' : 'password'}
-                                                    value={confirmPassword}
-                                                    onChange={(e) => setConfirmPassword(e.target.value)}
-                                                    placeholder={t('confirm_new_password', 'ยืนยันรหัสผ่านใหม่')}
-                                                    InputProps={{
-                                                        endAdornment: (
-                                                            <InputAdornment position="end">
-                                                                <IconButton onClick={() => setShowConfirm((v) => !v)} edge="end">
-                                                                    {showConfirm ? <EyeSlash size={18} /> : <Eye size={18} />}
-                                                                </IconButton>
-                                                            </InputAdornment>
-                                                        ),
-                                                    }}
-                                                />
-                                            </Box>
-                                        </>
-                                    )}
+                                    {/* Confirm Password */}
+                                    <Box>
+                                        <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, mb: 0.5, display: 'block' }}>
+                                            {t('confirm_new_password', 'ยืนยันรหัสผ่านใหม่')}
+                                        </Typography>
+                                        <TextField
+                                            id="edit-confirmPassword"
+                                            fullWidth
+                                            size="small"
+                                            type={showConfirm ? 'text' : 'password'}
+                                            value={confirmPassword}
+                                            onChange={(e) => setConfirmPassword(e.target.value)}
+                                            placeholder={t('enter_confirm_password', 'กรอกยืนยันรหัสผ่านใหม่')}
+                                            InputProps={{
+                                                endAdornment: (
+                                                    <InputAdornment position="end">
+                                                        <IconButton onClick={() => setShowConfirm((v) => !v)} edge="end">
+                                                            {showConfirm ? <EyeSlash size={18} color="#666" /> : <Eye size={18} color="#666" />}
+                                                        </IconButton>
+                                                    </InputAdornment>
+                                                ),
+                                            }}
+                                            sx={{
+                                                '& .MuiOutlinedInput-root': {
+                                                    '&:focus-within': {
+                                                        '& fieldset': { borderColor: '#e74c3c' },
+                                                    },
+                                                },
+                                            }}
+                                        />
+                                    </Box>
                                 </Box>
+                            )}
                         </Paper>
                     </>
                 )}
             </Box>
 
             {/* Fixed Footer - Save Button */}
-            <Box 
-                sx={{ 
+            <Box
+                sx={{
                     position: 'fixed',
                     bottom: 0,
                     left: 0,
@@ -1586,7 +1697,7 @@ export default function EditProfilePage() {
                     timeout: 0,
                 }}
                 PaperProps={{
-                    sx: { 
+                    sx: {
                         bgcolor: '#000',
                         display: 'flex',
                         flexDirection: 'column',
@@ -1621,7 +1732,7 @@ export default function EditProfilePage() {
                 >
                     <Button
                         onClick={() => setImageEditorOpen(false)}
-                        sx={{ 
+                        sx={{
                             color: 'white',
                             minWidth: 'auto',
                             fontSize: '0.95rem',
@@ -1634,7 +1745,7 @@ export default function EditProfilePage() {
                     </Typography>
                     <Button
                         onClick={handleSaveImage}
-                        sx={{ 
+                        sx={{
                             color: '#4CAF50',
                             fontWeight: 600,
                             minWidth: 'auto',
@@ -1703,7 +1814,7 @@ export default function EditProfilePage() {
                         }}
                         draggable={false}
                     />
-                    
+
                     {/* Circular Crop Overlay */}
                     <Box
                         sx={{
@@ -1737,9 +1848,9 @@ export default function EditProfilePage() {
                             pointerEvents: 'none',
                         }}
                     >
-                        <Typography 
-                            variant="caption" 
-                            sx={{ 
+                        <Typography
+                            variant="caption"
+                            sx={{
                                 color: 'rgba(255,255,255,0.7)',
                                 fontSize: '0.75rem',
                                 textShadow: '0 1px 3px rgba(0,0,0,0.5)',
@@ -1797,18 +1908,8 @@ export default function EditProfilePage() {
                         <SearchZoomIn size={18} color="rgba(255,255,255,0.6)" />
                     </Box>
 
-                    {/* Rotation & Reset Controls */}
-                    <Box sx={{ display: 'flex', justifyContent: 'center', gap: 3 }}>
-                        <IconButton
-                            onClick={() => setRotation((r) => r - 90)}
-                            sx={{ 
-                                color: 'white',
-                                bgcolor: 'rgba(255,255,255,0.1)',
-                                '&:hover': { bgcolor: 'rgba(255,255,255,0.2)' },
-                            }}
-                        >
-                            <RotateRight size={22} style={{ transform: 'scaleX(-1)' }} />
-                        </IconButton>
+                    {/* Reset Control */}
+                    <Box sx={{ display: 'flex', justifyContent: 'center' }}>
                         <IconButton
                             onClick={() => {
                                 setZoom(1);
@@ -1820,10 +1921,10 @@ export default function EditProfilePage() {
                                     imageRef.current.style.transform = `translate3d(0px, 0px, 0) scale(1) rotate(0deg)`;
                                 }
                             }}
-                            sx={{ 
+                            sx={{
                                 color: 'white',
                                 bgcolor: 'rgba(255,255,255,0.1)',
-                                px: 2,
+                                px: 3,
                                 borderRadius: 2,
                                 '&:hover': { bgcolor: 'rgba(255,255,255,0.2)' },
                             }}
@@ -1831,16 +1932,6 @@ export default function EditProfilePage() {
                             <Typography sx={{ fontSize: '0.8rem', fontWeight: 500 }}>
                                 {t('reset', 'รีเซ็ต')}
                             </Typography>
-                        </IconButton>
-                        <IconButton
-                            onClick={() => setRotation((r) => r + 90)}
-                            sx={{ 
-                                color: 'white',
-                                bgcolor: 'rgba(255,255,255,0.1)',
-                                '&:hover': { bgcolor: 'rgba(255,255,255,0.2)' },
-                            }}
-                        >
-                            <RotateRight size={22} />
                         </IconButton>
                     </Box>
                 </Box>
@@ -1851,7 +1942,7 @@ export default function EditProfilePage() {
                 ref={canvasRef}
                 width={200}
                 height={200}
-                style={{ 
+                style={{
                     position: 'fixed',
                     left: '-9999px',
                     top: '-9999px',

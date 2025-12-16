@@ -4,7 +4,7 @@ import { Box, Typography, Button, Card, CardContent, CardActionArea, Skeleton, C
 import { ViewCarousel, ViewList, ArrowForwardIos } from '@mui/icons-material';
 import Image from 'next/image';
 import Header from './components/Header';
-import ImageSlider from './components/ImageSlider';
+
 import LeaveTypeCard from './components/LeaveTypeCard';
 import RecentActivityCard from './components/RecentActivityCard';
 import LeaveTimeline from './components/LeaveTimeline';
@@ -16,8 +16,7 @@ import {
   Money,
   TaskSquare
 } from 'iconsax-react';
-import { Swiper, SwiperSlide } from 'swiper/react';
-import 'swiper/css';
+
 import { useLocale } from './providers/LocaleProvider';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
@@ -112,7 +111,7 @@ export default function Home() {
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const [cancelReason, setCancelReason] = useState('');
-  const [hasBanners, setHasBanners] = useState(true);
+
   const [year, setYear] = useState(new Date().getFullYear());
   const [recentRequestsDisplayMode, setRecentRequestsDisplayMode] = useState<'list' | 'swiper'>('swiper');
 
@@ -222,9 +221,11 @@ export default function Home() {
     return t('status_pending', 'รอการอนุมัติ');
   };
 
-  // แสดง 5 รายการล่าสุด
+  // แสดง 5 รายการล่าสุด โดยไม่รวมการบังคับพักร้อน (FL)
   const recentLeaveRequests = useMemo(() => {
-    return leaveRequests.slice(0, 5);
+    return leaveRequests
+      .filter(leave => !(leave.leaveCode && leave.leaveCode.startsWith('FL')))
+      .slice(0, 5);
   }, [leaveRequests]);
 
   const getLeaveTypeConfig = (code: string) => {
@@ -395,15 +396,9 @@ export default function Home() {
         <Box sx={{ mt: 3, mb: 3 }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5 }}>
             <Typography variant="h6" sx={{ fontWeight: 'bold', color: 'text.primary' }}>
-              {t('home_categories', 'ประเภทการลา')}
+              {t('home_apply_leave', 'ยื่นการลา')}
             </Typography>
-            <Button
-              size="small"
-              sx={{ fontWeight: 'medium' }}
-              onClick={() => router.push(`/leave-types`)} // No action for now or link to all banners
-            >
-              {t('home_see_all', 'ดูทั้งหมด')}
-            </Button>
+
           </Box>
 
           {showLoading ? (
@@ -473,39 +468,7 @@ export default function Home() {
           )}
         </Box>
 
-        {/* Banner Section - ซ่อนหัวข้อถ้าไม่มี banner */}
-        {(showLoading || hasBanners) && (
-          <Box sx={{ mb: 3 }}>
-            {showLoading ? (
-              <>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5 }}>
-                  <Skeleton variant="text" width={120} height={28} />
-                  <Skeleton variant="text" width={60} height={24} />
-                </Box>
-                <Box sx={{ display: 'flex', gap: 1.5, mx: -2.5, px: 2.5 }}>
-                  <Skeleton variant="rounded" sx={{ width: '60%', height: 120, borderRadius: 2, flexShrink: 0 }} />
-                  <Skeleton variant="rounded" sx={{ width: '40%', height: 120, borderRadius: 2, flexShrink: 0 }} />
-                </Box>
-              </>
-            ) : (
-              <>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5 }}>
-                  <Typography variant="h6" sx={{ fontWeight: 'bold', color: 'text.primary' }}>
-                    {t('home_information', 'ประชาสัมพันธ์')}
-                  </Typography>
-                  <Button
-                    size="small"
-                    sx={{ fontWeight: 'medium' }}
-                    onClick={() => { }} // No action for now or link to all banners
-                  >
-                    {t('home_see_all', 'ดูทั้งหมด')}
-                  </Button>
-                </Box>
-                <ImageSlider aspectRatio="16/9" onEmpty={() => setHasBanners(false)} />
-              </>
-            )}
-          </Box>
-        )}
+
 
 
         {/* Recent Requests Section */}
@@ -523,7 +486,7 @@ export default function Home() {
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                   <Typography variant="h6" sx={{ fontWeight: 'bold', color: 'text.primary' }}>
-                    {t('home_recent_requests', 'การลาล่าสุด')}
+                    {t('home_history', 'ประวัติการลา')}
                   </Typography>
 
                 </Box>

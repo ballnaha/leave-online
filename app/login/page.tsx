@@ -24,7 +24,7 @@ function LoginPageContent() {
     const searchParams = useSearchParams();
     const toastr = useToastr();
     const { data: session, status } = useSession();
-    
+
     const [showPassword, setShowPassword] = useState(false);
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
@@ -153,26 +153,34 @@ function LoginPageContent() {
 
             {/* Header Section */}
             <Box sx={{ pt: 6, pb: 5, px: 4, textAlign: 'center', position: 'relative', zIndex: 1 }}>
+                {/* Logo Container - Two logos side by side */}
                 <Box
                     sx={{
-                        width: 90,
-                        height: 90,
-                        borderRadius: 3,
-                        overflow: 'hidden',
-                        margin: '0 auto',
+                        display: 'flex',
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                        gap: 3,
                         mb: 3,
-                        boxShadow: '0 8px 32px rgba(27,25,75,0.12)',
-                        border: '3px solid #f0f0f5',
                     }}
                 >
                     <Box
                         component="img"
-                        src="/images/psc_logo.jpg"
+                        src="/images/psc1.png"
                         alt="PSC Logo"
                         sx={{
-                            width: '100%',
-                            height: '100%',
-                            objectFit: 'cover',
+                            width: 100,
+                            height: 100,
+                            objectFit: 'contain',
+                        }}
+                    />
+                    <Box
+                        component="img"
+                        src="/images/ps1.png"
+                        alt="PS Logo"
+                        sx={{
+                            width: 100,
+                            height: 100,
+                            objectFit: 'contain',
                         }}
                     />
                 </Box>
@@ -200,23 +208,23 @@ function LoginPageContent() {
             </Box>
 
             {/* Login Form */}
-            <Box 
-                component="form" 
+            <Box
+                component="form"
                 onSubmit={handleSubmit}
-                sx={{ 
-                    px: 3, 
-                    flex: 1, 
-                    position: 'relative', 
+                sx={{
+                    px: 3,
+                    flex: 1,
+                    position: 'relative',
                     zIndex: 1,
                     display: 'flex',
                     flexDirection: 'column',
-                    mt:5
+                    mt: 5
                 }}
             >
                 {/* Account Disabled Alert */}
                 {accountDisabledMessage && (
-                    <Alert 
-                        severity="error" 
+                    <Alert
+                        severity="error"
                         sx={{ mb: 2, borderRadius: 2 }}
                         onClose={() => setAccountDisabledMessage('')}
                     >
@@ -354,8 +362,8 @@ function LoginPageContent() {
                         <Typography
                             component="span"
                             variant="body2"
-                            sx={{ 
-                                color: '#1b194b', 
+                            sx={{
+                                color: '#1b194b',
                                 fontWeight: 700,
                             }}
                         >
@@ -374,10 +382,10 @@ function LoginPageContent() {
 export default function LoginPage() {
     return (
         <Suspense fallback={
-            <Box sx={{ 
-                minHeight: '100vh', 
-                display: 'flex', 
-                alignItems: 'center', 
+            <Box sx={{
+                minHeight: '100vh',
+                display: 'flex',
+                alignItems: 'center',
                 justifyContent: 'center',
                 bgcolor: '#ffffff'
             }}>

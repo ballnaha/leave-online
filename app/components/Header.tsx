@@ -1,24 +1,35 @@
 'use client';
 import React, { useMemo, useState, useEffect, useCallback } from 'react';
-import { Box, Typography, IconButton, Badge, Avatar, Skeleton, Chip } from '@mui/material';
-import { Notification, Building, Briefcase, Calendar, User, Profile2User, ArrowRight2 } from 'iconsax-react';
+import { Box, Typography, IconButton, Badge, Avatar, Skeleton, Chip, Dialog, DialogTitle, DialogContent, List, ListItemButton, ListItemText, CircularProgress } from '@mui/material';
+import { Notification, Building, Briefcase, Calendar, User, Profile2User, ArrowRight2, Logout, Global } from 'iconsax-react';
 import { Drawer } from 'vaul';
 import Sidebar from './Sidebar';
-import { useLocale } from '../providers/LocaleProvider';
+import { useLocale, localeLabel } from '../providers/LocaleProvider';
 import { useUser } from '../providers/UserProvider';
 import { useRouter } from 'next/navigation';
+import { signOut } from 'next-auth/react';
+import { useToastr } from '@/app/components/Toastr';
 import dayjs from 'dayjs';
 import 'dayjs/locale/th';
 import 'dayjs/locale/en';
 import 'dayjs/locale/my';
 
 const Header = () => {
-    const { t, locale } = useLocale();
+    const { t, locale, setLocale } = useLocale();
     const { user, loading } = useUser();
     const router = useRouter();
+    const toastr = useToastr();
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const [unreadCount, setUnreadCount] = useState(0);
     const [profileDrawerOpen, setProfileDrawerOpen] = useState(false);
+    const [isLoggingOut, setIsLoggingOut] = useState(false);
+    const [openLanguage, setOpenLanguage] = useState(false);
+
+    const languageOptions: Array<{ code: 'th' | 'en' | 'my'; label: string }> = [
+        { code: 'th', label: localeLabel.th },
+        { code: 'en', label: localeLabel.en },
+        { code: 'my', label: localeLabel.my },
+    ];
 
     const dateLocale = useMemo(() => (locale === 'th' ? 'th-TH' : locale === 'my' ? 'my-MM' : 'en-US'), [locale]);
     const currentDate = new Date().toLocaleDateString(dateLocale, {
@@ -27,6 +38,42 @@ const Header = () => {
         month: 'short',
         year: 'numeric',
     });
+
+    // Handle logout
+    const handleLogout = async () => {
+        setIsLoggingOut(true);
+        try {
+            localStorage.clear();
+            sessionStorage.clear();
+            await fetch('/api/auth/logout', { method: 'POST' });
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i];
+                const eqPos = cookie.indexOf('=');
+                const name = eqPos > -1 ? cookie.substr(0, eqPos) : cookie;
+                const trimmedName = name.trim();
+                document.cookie = `${trimmedName}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/`;
+                document.cookie = `${trimmedName}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=${window.location.hostname}`;
+                document.cookie = `${trimmedName}=;expires=Thu, 01 Jan 1970 00:00:00 GMT`;
+            }
+            if ('caches' in window) {
+                const cacheNames = await caches.keys();
+                await Promise.all(cacheNames.map(cacheName => caches.delete(cacheName)));
+            }
+            if ('indexedDB' in window) {
+                const databases = await indexedDB.databases?.() || [];
+                databases.forEach((db: { name?: string }) => {
+                    if (db.name) indexedDB.deleteDatabase(db.name);
+                });
+            }
+            toastr.success(t('logout_success', 'ออกจากระบบสำเร็จ'));
+            await signOut({ callbackUrl: '/login', redirect: true });
+        } catch (error) {
+            console.error('Logout error:', error);
+            toastr.error(t('logout_error', 'เกิดข้อผิดพลาดในการออกจากระบบ'));
+            setIsLoggingOut(false);
+        }
+    };
 
     // Fetch unread count only
     const fetchUnreadCount = useCallback(async () => {
@@ -123,11 +170,11 @@ const Header = () => {
 
     return (
         <>
-            <Box sx={{ 
-                display: 'flex', 
-                flexDirection: 'column', 
-                gap: 2, 
-                pt: 3, 
+            <Box sx={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 2,
+                pt: 3,
                 pb: 1,
                 mx: { xs: -2, md: 0 },
                 px: 2,
@@ -138,9 +185,9 @@ const Header = () => {
                 transform: { xs: 'translateX(-50%)', md: 'none' },
             }}>
                 {/* Top Row: Menu, Avatar, Date/Greeting, Notification */}
-                <Box sx={{ 
-                    display: 'flex', 
-                    justifyContent: 'space-between', 
+                <Box sx={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
                     alignItems: 'center',
                     position: 'relative',
                     zIndex: 50,
@@ -155,7 +202,7 @@ const Header = () => {
                         {showSidebar && (
                             <IconButton
                                 onClick={() => setIsSidebarOpen(true)}
-                                sx={{ 
+                                sx={{
                                     color: 'text.primary',
                                     width: 40,
                                     height: 40,
@@ -258,34 +305,68 @@ const Header = () => {
                         </Box>
                     </Box>
 
-                    <IconButton
-                        onClick={handleNotificationClick}
-                        sx={{
-                            bgcolor: 'white',
-                            boxShadow: 'none',
-                            width: 40,
-                            height: 40,
-                            '&:hover': { bgcolor: 'rgba(0,0,0,0.04)' }
-                        }}
-                    >
-                        <Badge 
-                            badgeContent={unreadCount > 0 ? unreadCount : undefined}
-                            color="error" 
-                            overlap="circular"
-                            variant={unreadCount > 0 ? "standard" : undefined}
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <IconButton
+                            onClick={() => setOpenLanguage(true)}
                             sx={{
-                                '& .MuiBadge-badge': {
-                                    fontSize: '0.65rem',
-                                    minWidth: 16,
-                                    height: 16,
-                                    top: -5,
-                                    right: -1,
-                                }
+                                bgcolor: 'white',
+                                boxShadow: 'none',
+                                width: 40,
+                                height: 40,
+                                '&:hover': { bgcolor: 'rgba(0,0,0,0.04)' }
                             }}
                         >
-                            <Notification size={20} variant="Outline" color="#64748B" />
-                        </Badge>
-                    </IconButton>
+                            <Global size={20} variant="Outline" color="#64748B" />
+                        </IconButton>
+
+                        <IconButton
+                            onClick={handleNotificationClick}
+                            sx={{
+                                bgcolor: 'white',
+                                boxShadow: 'none',
+                                width: 40,
+                                height: 40,
+                                '&:hover': { bgcolor: 'rgba(0,0,0,0.04)' }
+                            }}
+                        >
+                            <Badge
+                                badgeContent={unreadCount > 0 ? unreadCount : undefined}
+                                color="error"
+                                overlap="circular"
+                                variant={unreadCount > 0 ? "standard" : undefined}
+                                sx={{
+                                    '& .MuiBadge-badge': {
+                                        fontSize: '0.65rem',
+                                        minWidth: 16,
+                                        height: 16,
+                                        top: -5,
+                                        right: -1,
+                                    }
+                                }}
+                            >
+                                <Notification size={20} variant="Outline" color="#64748B" />
+                            </Badge>
+                        </IconButton>
+
+                        <IconButton
+                            onClick={handleLogout}
+                            disabled={isLoggingOut}
+                            sx={{
+                                bgcolor: 'white',
+                                boxShadow: 'none',
+                                width: 40,
+                                height: 40,
+                                '&:hover': { bgcolor: 'rgba(0,0,0,0.04)' },
+                                '&.Mui-disabled': { opacity: 0.7 }
+                            }}
+                        >
+                            {isLoggingOut ? (
+                                <CircularProgress size={20} color="inherit" />
+                            ) : (
+                                <Logout size={20} variant="Outline" color="#EF4444" />
+                            )}
+                        </IconButton>
+                    </Box>
                 </Box>
             </Box>
 
@@ -382,7 +463,7 @@ const Header = () => {
                                 </Box>
 
                                 {/* Avatar Section */}
-                                <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', position: 'relative', zIndex: 1 , mb:5 }}>
+                                <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', position: 'relative', zIndex: 1, mb: 8 }}>
                                     <Avatar
                                         alt={user ? `${user.firstName} ${user.lastName}` : 'User'}
                                         src={user?.avatar || undefined}
@@ -403,7 +484,7 @@ const Header = () => {
                                     >
                                         {user?.firstName?.charAt(0)?.toUpperCase()}
                                     </Avatar>
-                                    
+
                                     {/* Name and Role */}
                                     <Typography
                                         variant="h5"
@@ -471,14 +552,14 @@ const Header = () => {
 
                                     {/* Employee ID */}
                                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
-                                        <Box sx={{ 
-                                            width: 40, 
-                                            height: 40, 
-                                            borderRadius: 2, 
-                                            bgcolor: '#EEF2FF', 
-                                            display: 'flex', 
-                                            alignItems: 'center', 
-                                            justifyContent: 'center' 
+                                        <Box sx={{
+                                            width: 40,
+                                            height: 40,
+                                            borderRadius: 2,
+                                            bgcolor: '#EEF2FF',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center'
                                         }}>
                                             <User size={20} color="#667eea" variant="Bold" />
                                         </Box>
@@ -494,14 +575,14 @@ const Header = () => {
 
                                     {/* Company */}
                                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
-                                        <Box sx={{ 
-                                            width: 40, 
-                                            height: 40, 
-                                            borderRadius: 2, 
-                                            bgcolor: '#FEF3C7', 
-                                            display: 'flex', 
-                                            alignItems: 'center', 
-                                            justifyContent: 'center' 
+                                        <Box sx={{
+                                            width: 40,
+                                            height: 40,
+                                            borderRadius: 2,
+                                            bgcolor: '#FEF3C7',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center'
                                         }}>
                                             <Building size={20} color="#F59E0B" variant="Bold" />
                                         </Box>
@@ -517,14 +598,14 @@ const Header = () => {
 
                                     {/* Department / Section */}
                                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
-                                        <Box sx={{ 
-                                            width: 40, 
-                                            height: 40, 
-                                            borderRadius: 2, 
-                                            bgcolor: '#DCFCE7', 
-                                            display: 'flex', 
-                                            alignItems: 'center', 
-                                            justifyContent: 'center' 
+                                        <Box sx={{
+                                            width: 40,
+                                            height: 40,
+                                            borderRadius: 2,
+                                            bgcolor: '#DCFCE7',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center'
                                         }}>
                                             <Profile2User size={20} color="#22C55E" variant="Bold" />
                                         </Box>
@@ -541,14 +622,14 @@ const Header = () => {
                                     {/* Position */}
                                     {user?.position && (
                                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
-                                            <Box sx={{ 
-                                                width: 40, 
-                                                height: 40, 
-                                                borderRadius: 2, 
-                                                bgcolor: '#FCE7F3', 
-                                                display: 'flex', 
-                                                alignItems: 'center', 
-                                                justifyContent: 'center' 
+                                            <Box sx={{
+                                                width: 40,
+                                                height: 40,
+                                                borderRadius: 2,
+                                                bgcolor: '#FCE7F3',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center'
                                             }}>
                                                 <Briefcase size={20} color="#EC4899" variant="Bold" />
                                             </Box>
@@ -565,14 +646,14 @@ const Header = () => {
 
                                     {/* Employee Type */}
                                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                                        <Box sx={{ 
-                                            width: 40, 
-                                            height: 40, 
-                                            borderRadius: 2, 
-                                            bgcolor: '#E0E7FF', 
-                                            display: 'flex', 
-                                            alignItems: 'center', 
-                                            justifyContent: 'center' 
+                                        <Box sx={{
+                                            width: 40,
+                                            height: 40,
+                                            borderRadius: 2,
+                                            bgcolor: '#E0E7FF',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center'
                                         }}>
                                             <Briefcase size={20} color="#6366F1" variant="Bold" />
                                         </Box>
@@ -588,14 +669,14 @@ const Header = () => {
 
                                     {/* Start Date */}
                                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mt: 2 }}>
-                                        <Box sx={{ 
-                                            width: 40, 
-                                            height: 40, 
-                                            borderRadius: 2, 
-                                            bgcolor: '#DBEAFE', 
-                                            display: 'flex', 
-                                            alignItems: 'center', 
-                                            justifyContent: 'center' 
+                                        <Box sx={{
+                                            width: 40,
+                                            height: 40,
+                                            borderRadius: 2,
+                                            bgcolor: '#DBEAFE',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center'
                                         }}>
                                             <Calendar size={20} color="#3B82F6" variant="Bold" />
                                         </Box>
@@ -650,6 +731,70 @@ const Header = () => {
                     </Drawer.Content>
                 </Drawer.Portal>
             </Drawer.Root>
+
+            {/* Language Selection Dialog */}
+            <Dialog
+                open={openLanguage}
+                onClose={() => setOpenLanguage(false)}
+                PaperProps={{
+                    sx: {
+                        borderRadius: 1,
+                        width: '100%',
+                        maxWidth: 320,
+                        m: 2
+                    }
+                }}
+            >
+                <DialogTitle sx={{ pb: 1, textAlign: 'center', fontWeight: 'bold' }}>
+                    {t('select_language', 'เลือกภาษา')}
+                </DialogTitle>
+                <DialogContent>
+                    <List sx={{ pt: 0 }}>
+                        {languageOptions.map((option) => (
+                            <ListItemButton
+                                key={option.code}
+                                onClick={() => {
+                                    setLocale(option.code);
+                                    setOpenLanguage(false);
+                                }}
+                                sx={{
+                                    borderRadius: 2,
+                                    mb: 1,
+                                    bgcolor: locale === option.code ? 'primary.soft' : 'transparent',
+                                    border: locale === option.code ? '1px solid' : '1px solid transparent',
+                                    borderColor: locale === option.code ? 'primary.main' : 'transparent',
+                                    color: locale === option.code ? 'primary.main' : 'text.primary',
+                                    '&:hover': {
+                                        bgcolor: locale === option.code ? 'primary.soft' : 'action.hover',
+                                    }
+                                }}
+                            >
+                                <Box sx={{ mr: 2, display: 'flex', alignItems: 'center', fontSize: '1.5rem' }}>
+                                    {option.code === 'th' ? '🇹🇭' : option.code === 'en' ? '🇺🇸' : '🇲🇲'}
+                                </Box>
+                                <ListItemText
+                                    primary={option.label}
+                                    primaryTypographyProps={{
+                                        fontWeight: locale === option.code ? 600 : 400,
+                                    }}
+                                />
+                                {locale === option.code && (
+                                    <Box
+                                        component="span"
+                                        sx={{
+                                            width: 8,
+                                            height: 8,
+                                            borderRadius: '50%',
+                                            bgcolor: 'primary.main',
+                                            ml: 1
+                                        }}
+                                    />
+                                )}
+                            </ListItemButton>
+                        ))}
+                    </List>
+                </DialogContent>
+            </Dialog>
         </>
     );
 };
