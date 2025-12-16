@@ -9,7 +9,6 @@ import {
     Select,
     MenuItem,
     FormControl,
-    IconButton,
 } from '@mui/material';
 import { useRouter } from 'next/navigation';
 import BottomNav from '@/app/components/BottomNav';
@@ -30,7 +29,7 @@ import {
     Profile2User,
     MoneySend,
     MessageQuestion,
-    More,
+    Chart,
 } from 'iconsax-react';
 
 interface LeaveType {
@@ -55,29 +54,30 @@ interface LeaveStat {
     name: string;
     used: number;
     max: number | null;
-    percentage: number; // สำหรับ progress bar (max 100)
-    displayPercentage: number; // สำหรับแสดงตัวเลข (สามารถเกิน 100 ได้)
+    percentage: number;
+    displayPercentage: number;
     isOverLimit: boolean;
 }
 
-// Icon and color config for leave types
-const leaveTypeConfig: Record<string, { icon: any; color: string; bgColor: string }> = {
-    sick: { icon: Health, color: '#5E72E4', bgColor: '#E9ECFF' },
-    personal: { icon: Briefcase, color: '#8965E0', bgColor: '#F0E9FF' },
-    vacation: { icon: Sun1, color: '#11CDEF', bgColor: '#E3F9FC' },
-    annual: { icon: Sun1, color: '#11CDEF', bgColor: '#E3F9FC' },
-    maternity: { icon: Lovely, color: '#F3A4B5', bgColor: '#FDEEF1' },
-    ordination: { icon: Building4, color: '#FB6340', bgColor: '#FFF0EB' },
-    work_outside: { icon: Car, color: '#2DCECC', bgColor: '#E0F7FA' },
-    military: { icon: Shield, color: '#5E72E4', bgColor: '#E9ECFF' },
-    marriage: { icon: Heart, color: '#F5365C', bgColor: '#FEE2E2' },
-    funeral: { icon: People, color: '#525F7F', bgColor: '#E9ECEF' },
-    paternity: { icon: Profile2User, color: '#2DCE89', bgColor: '#E3FCF1' },
-    sterilization: { icon: Health, color: '#F5365C', bgColor: '#FEE2E2' },
-    business: { icon: Car, color: '#11CDEF', bgColor: '#E3F9FC' },
-    unpaid: { icon: MoneySend, color: '#FB6340', bgColor: '#FFF0EB' },
-    other: { icon: MessageQuestion, color: '#8898AA', bgColor: '#F0F3F5' },
-    default: { icon: MessageQuestion, color: '#8898AA', bgColor: '#F0F3F5' },
+// Icon and color config - synchronized with BottomNav colors
+const leaveTypeConfig: Record<string, { icon: any; gradient: string; color: string; glassColor: string }> = {
+    sick: { icon: Health, gradient: 'linear-gradient(135deg, #5E72E4 0%, #825EE4 100%)', color: '#5E72E4', glassColor: 'rgba(94, 114, 228, 0.15)' },
+    personal: { icon: Briefcase, gradient: 'linear-gradient(135deg, #8965E0 0%, #BC65E0 100%)', color: '#8965E0', glassColor: 'rgba(137, 101, 224, 0.15)' },
+    vacation: { icon: Sun1, gradient: 'linear-gradient(135deg, #11CDEF 0%, #1171EF 100%)', color: '#11CDEF', glassColor: 'rgba(17, 205, 239, 0.15)' },
+    annual: { icon: Sun1, gradient: 'linear-gradient(135deg, #2DCECC 0%, #2D8BCC 100%)', color: '#2DCECC', glassColor: 'rgba(45, 206, 204, 0.15)' },
+    maternity: { icon: Lovely, gradient: 'linear-gradient(135deg, #F5365C 0%, #F56036 100%)', color: '#F5365C', glassColor: 'rgba(245, 54, 92, 0.15)' },
+    ordination: { icon: Building4, gradient: 'linear-gradient(135deg, #FB6340 0%, #FBB140 100%)', color: '#FB6340', glassColor: 'rgba(251, 99, 64, 0.15)' },
+    work_outside: { icon: Car, gradient: 'linear-gradient(135deg, #2DCECC 0%, #2D8BCC 100%)', color: '#2DCECC', glassColor: 'rgba(45, 206, 204, 0.15)' },
+    absent: { icon: MessageQuestion, gradient: 'linear-gradient(135deg, #F5365C 0%, #F56036 100%)', color: '#F5365C', glassColor: 'rgba(245, 54, 92, 0.15)' },
+    military: { icon: Shield, gradient: 'linear-gradient(135deg, #5E72E4 0%, #5E9BE4 100%)', color: '#5E72E4', glassColor: 'rgba(94, 114, 228, 0.15)' },
+    marriage: { icon: Heart, gradient: 'linear-gradient(135deg, #F3A4B5 0%, #D66086 100%)', color: '#F3A4B5', glassColor: 'rgba(243, 164, 181, 0.15)' },
+    funeral: { icon: People, gradient: 'linear-gradient(135deg, #8898AA 0%, #6A7A8A 100%)', color: '#8898AA', glassColor: 'rgba(136, 152, 170, 0.15)' },
+    paternity: { icon: Profile2User, gradient: 'linear-gradient(135deg, #11CDEF 0%, #1171EF 100%)', color: '#11CDEF', glassColor: 'rgba(17, 205, 239, 0.15)' },
+    sterilization: { icon: Health, gradient: 'linear-gradient(135deg, #2DCECC 0%, #2D8BCC 100%)', color: '#2DCECC', glassColor: 'rgba(45, 206, 204, 0.15)' },
+    business: { icon: Car, gradient: 'linear-gradient(135deg, #8965E0 0%, #BC65E0 100%)', color: '#8965E0', glassColor: 'rgba(137, 101, 224, 0.15)' },
+    unpaid: { icon: MoneySend, gradient: 'linear-gradient(135deg, #F5365C 0%, #F56036 100%)', color: '#F5365C', glassColor: 'rgba(245, 54, 92, 0.15)' },
+    other: { icon: MessageQuestion, gradient: 'linear-gradient(135deg, #5E72E4 0%, #825EE4 100%)', color: '#8898AA', glassColor: 'rgba(136, 152, 170, 0.15)' },
+    default: { icon: MessageQuestion, gradient: 'linear-gradient(135deg, #8898AA 0%, #6A7A8A 100%)', color: '#8898AA', glassColor: 'rgba(136, 152, 170, 0.15)' },
 };
 
 export default function ChartsPage() {
@@ -162,27 +162,22 @@ export default function ChartsPage() {
             });
 
         // Build stats
-        // Scale: progress bar 90% = ใช้ครบ, 100% = เกินสิทธิ์
-        // แต่ตัวเลข: 100% = ใช้ครบ, >100% = เกินสิทธิ์
-        const BAR_FULL_SCALE = 90; // progress bar ที่ 90% = ใช้ครบ
+        const BAR_FULL_SCALE = 90;
         const stats: LeaveStat[] = filteredTypes.map(type => {
             const used = usedDaysMap[type.code] || 0;
             const max = type.maxDaysPerYear;
 
-            let percentage = 0; // สำหรับ progress bar (90% = ครบ, 100% = เกิน)
-            let displayPercentage = 0; // สำหรับแสดงตัวเลข (100% = ครบ, >100% = เกิน)
+            let percentage = 0;
+            let displayPercentage = 0;
             let isOverLimit = false;
 
             if (max && max > 0) {
-                // คำนวณ displayPercentage ตามจริง (100% = ใช้ครบ)
                 displayPercentage = (used / max) * 100;
 
                 if (used > max) {
-                    // เกินสิทธิ์ = bar เต็ม 100% และตัวเลขเกิน 100%
                     percentage = 100;
                     isOverLimit = true;
                 } else {
-                    // ใช้ไม่ถึงหรือครบพอดี = bar max 90%
                     percentage = (used / max) * BAR_FULL_SCALE;
                 }
             }
@@ -198,12 +193,40 @@ export default function ChartsPage() {
             };
         });
 
-        // Sort by percentage descending
         return stats.sort((a, b) => b.percentage - a.percentage);
     }, [leaveTypes, leaveRequests, user?.gender, user?.startDate, t]);
 
     const getConfig = (code: string) => {
         return leaveTypeConfig[code] || leaveTypeConfig.default;
+    };
+
+    // Liquid Glass Card Style
+    const liquidGlassCard = {
+        borderRadius: 1,
+        bgcolor: 'rgba(255, 255, 255, 0.65)',
+        backdropFilter: 'blur(40px) saturate(180%)',
+        WebkitBackdropFilter: 'blur(40px) saturate(180%)',
+        border: '1px solid rgba(255, 255, 255, 0.5)',
+        boxShadow: `
+            0 1px 2px rgba(0, 0, 0, 0.02),
+            0 4px 8px rgba(0, 0, 0, 0.03),
+            0 8px 16px rgba(0, 0, 0, 0.03),
+            inset 0 1px 0 rgba(255, 255, 255, 0.8),
+            inset 0 -1px 0 rgba(255, 255, 255, 0.2)
+        `,
+        overflow: 'visible',
+        position: 'relative' as const,
+        '&::before': {
+            content: '""',
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            height: '50%',
+            background: 'linear-gradient(180deg, rgba(255, 255, 255, 0.4) 0%, rgba(255, 255, 255, 0) 100%)',
+            borderRadius: 'inherit',
+            pointerEvents: 'none',
+        },
     };
 
     if (status === 'loading') {
@@ -215,11 +238,17 @@ export default function ChartsPage() {
     }
 
     return (
-        <Box sx={{ minHeight: '100vh', bgcolor: '#F8F9FA', pb: 12 }}>
-            {/* Header with Gradient */}
+        <Box sx={{
+            minHeight: '100vh',
+            background: 'linear-gradient(180deg, #E8EEF5 0%, #F5F7FA 50%, #FFFFFF 100%)',
+            pb: 12
+        }}>
+            {/* Header with Liquid Glass Style */}
             <Box
                 sx={{
-                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                    background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.9) 0%, rgba(118, 75, 162, 0.9) 100%)',
+                    backdropFilter: 'blur(20px) saturate(180%)',
+                    WebkitBackdropFilter: 'blur(20px) saturate(180%)',
                     pt: 'calc(env(safe-area-inset-top, 0px) + 24px)',
                     pb: 8,
                     px: 2,
@@ -228,40 +257,49 @@ export default function ChartsPage() {
                     '&::before': {
                         content: '""',
                         position: 'absolute',
-                        top: -50,
-                        right: -50,
-                        width: 200,
-                        height: 200,
-                        borderRadius: '50%',
-                        background: 'rgba(255, 255, 255, 0.1)',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        height: '100%',
+                        background: 'linear-gradient(180deg, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0) 50%)',
+                        pointerEvents: 'none',
                     },
                     '&::after': {
                         content: '""',
                         position: 'absolute',
-                        bottom: -30,
-                        left: -30,
-                        width: 150,
-                        height: 150,
+                        top: -100,
+                        right: -100,
+                        width: 300,
+                        height: 300,
                         borderRadius: '50%',
-                        background: 'rgba(255, 255, 255, 0.1)',
+                        background: 'radial-gradient(circle, rgba(255, 255, 255, 0.15) 0%, transparent 70%)',
                     },
                 }}
             >
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3, position: 'relative', zIndex: 1 }}>
-                    <Typography variant="h5" sx={{ color: 'white', fontWeight: 700 }}>
-                        {t('chart_title', 'สถิติการลา')}
-                    </Typography>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
 
-                    {/* Year Filter */}
+                        <Typography variant="h5" sx={{
+                            color: 'white',
+                            fontWeight: 700,
+                            textShadow: '0 1px 2px rgba(0, 0, 0, 0.1)',
+                        }}>
+                            {t('chart_title', 'สถิติการลา')}
+                        </Typography>
+                    </Box>
+
+                    {/* Year Filter - Liquid Glass Style */}
                     <FormControl size="small">
                         <Select
                             value={year}
                             onChange={(e) => setYear(Number(e.target.value))}
                             sx={{
                                 bgcolor: 'rgba(255, 255, 255, 0.2)',
+                                backdropFilter: 'blur(10px)',
                                 color: 'white',
                                 borderRadius: 2,
                                 minWidth: 100,
+                                border: '1px solid rgba(255, 255, 255, 0.25)',
                                 '& .MuiOutlinedInput-notchedOutline': {
                                     border: 'none',
                                 },
@@ -271,6 +309,7 @@ export default function ChartsPage() {
                                 '&:hover': {
                                     bgcolor: 'rgba(255, 255, 255, 0.3)',
                                 },
+                                boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.3)',
                             }}
                         >
                             {yearOptions.map((y) => (
@@ -288,20 +327,24 @@ export default function ChartsPage() {
                 {loading ? (
                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                         {[1, 2, 3, 4].map((item) => (
-                            <Card key={item} sx={{ borderRadius: 3, p: 2 }}>
+                            <Card key={item} sx={{ ...liquidGlassCard, p: 2 }}>
                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                                    <Skeleton variant="rounded" width={40} height={40} sx={{ borderRadius: 2 }} />
+                                    <Skeleton variant="rounded" width={44} height={44} sx={{ borderRadius: 2, bgcolor: 'rgba(0,0,0,0.06)' }} />
                                     <Box sx={{ flex: 1 }}>
-                                        <Skeleton variant="text" width="60%" height={24} />
-                                        <Skeleton variant="text" width="40%" height={20} />
+                                        <Skeleton variant="text" width="60%" height={24} sx={{ bgcolor: 'rgba(0,0,0,0.06)' }} />
+                                        <Skeleton variant="text" width="40%" height={20} sx={{ bgcolor: 'rgba(0,0,0,0.06)' }} />
                                     </Box>
                                 </Box>
-                                <Skeleton variant="rounded" height={8} sx={{ mt: 2, borderRadius: 1 }} />
+                                <Skeleton variant="rounded" height={8} sx={{ mt: 2, borderRadius: 1, bgcolor: 'rgba(0,0,0,0.06)' }} />
                             </Card>
                         ))}
                     </Box>
                 ) : leaveStats.length === 0 ? (
-                    <Card sx={{ borderRadius: 3, textAlign: 'center', py: 6 }}>
+                    <Card sx={{
+                        ...liquidGlassCard,
+                        textAlign: 'center',
+                        py: 6,
+                    }}>
                         <Calendar size={64} color="#CBD5E1" variant="TwoTone" />
                         <Typography sx={{ color: '#94A3B8', mt: 2, fontWeight: 500 }}>
                             {t('no_leave_data', 'ไม่พบข้อมูลการลา')}
@@ -309,7 +352,7 @@ export default function ChartsPage() {
                     </Card>
                 ) : (
                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                        {leaveStats.map((stat) => {
+                        {leaveStats.map((stat, index) => {
                             const config = getConfig(stat.code);
                             const IconComponent = config.icon;
                             const remaining = stat.max !== null ? Math.max(0, stat.max - stat.used) : null;
@@ -318,31 +361,62 @@ export default function ChartsPage() {
                                 <Card
                                     key={stat.code}
                                     sx={{
-                                        borderRadius: 1,
-                                        bgcolor: 'white',
-                                        boxShadow: '0 2px 12px rgba(0,0,0,0.06)',
-                                        border: '1px solid #F1F5F9',
-                                        overflow: 'visible',
+                                        ...liquidGlassCard,
+                                        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                                        animation: `fadeIn 0.4s ease-out ${0.05 * index}s both`,
+                                        '@keyframes fadeIn': {
+                                            from: { opacity: 0, transform: 'translateY(10px)' },
+                                            to: { opacity: 1, transform: 'translateY(0)' },
+                                        },
+                                        '&:hover': {
+                                            transform: 'translateY(-1px) scale(1)',
+                                            boxShadow: `
+                                                0 2px 4px rgba(0, 0, 0, 0.03),
+                                                0 8px 16px rgba(0, 0, 0, 0.04),
+                                                0 16px 32px rgba(0, 0, 0, 0.04),
+                                                inset 0 1px 0 rgba(255, 255, 255, 0.9),
+                                                inset 0 -1px 0 rgba(255, 255, 255, 0.3)
+                                            `,
+                                            bgcolor: 'rgba(255, 255, 255, 0.75)',
+                                        },
+                                        '&:active': {
+                                            transform: 'translateY(0) scale(0.995)',
+                                        },
                                     }}
                                 >
-                                    <CardContent sx={{ p: 2.5, '&:last-child': { pb: 2.5 } }}>
+                                    <CardContent sx={{ p: 2.5, '&:last-child': { pb: 2.5 }, position: 'relative', zIndex: 1 }}>
                                         {/* Header Row */}
                                         <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', mb: 1 }}>
                                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                                                {/* Icon */}
+                                                {/* Icon with Liquid Glass Effect */}
                                                 <Box
                                                     sx={{
-                                                        width: 40,
-                                                        height: 40,
+                                                        width: 44,
+                                                        height: 44,
                                                         borderRadius: 2,
-                                                        bgcolor: config.bgColor,
+                                                        background: config.gradient,
                                                         display: 'flex',
                                                         alignItems: 'center',
                                                         justifyContent: 'center',
                                                         flexShrink: 0,
+                                                        boxShadow: `
+                                                            0 4px 12px rgba(0, 0, 0, 0.15),
+                                                            inset 0 1px 0 rgba(255, 255, 255, 0.3)
+                                                        `,
+                                                        position: 'relative',
+                                                        '&::before': {
+                                                            content: '""',
+                                                            position: 'absolute',
+                                                            top: 0,
+                                                            left: 0,
+                                                            right: 0,
+                                                            height: '50%',
+                                                            background: 'linear-gradient(180deg, rgba(255, 255, 255, 0.3) 0%, rgba(255, 255, 255, 0) 100%)',
+                                                            borderRadius: 'inherit',
+                                                        },
                                                     }}
                                                 >
-                                                    <IconComponent size={20} color={config.color} variant="Bold" />
+                                                    <IconComponent size={22} color="white" variant="Bold" />
                                                 </Box>
 
                                                 {/* Title */}
@@ -350,57 +424,104 @@ export default function ChartsPage() {
                                                     sx={{
                                                         fontWeight: 600,
                                                         color: '#1E293B',
-                                                        fontSize: '0.95rem',
+                                                        fontSize: '1rem',
                                                     }}
                                                 >
                                                     {stat.name}
                                                 </Typography>
                                             </Box>
 
-                                            {/* More Button */}
-                                            <IconButton size="small" sx={{ color: '#94A3B8', mt: -0.5, mr: -1 }}>
-                                                <More size={18} />
-                                            </IconButton>
+                                            {/* Percentage Badge - Liquid Glass Style */}
+                                            <Box
+                                                sx={{
+                                                    px: 1.75,
+                                                    py: 0.6,
+                                                    borderRadius: 1.5,
+                                                    bgcolor: 'rgba(220, 38, 38, 0.12)',
+                                                    backdropFilter: 'blur(8px)',
+                                                    border: '1px solid rgba(220, 38, 38, 0.2)',
+                                                }}
+                                            >
+                                                <Typography
+                                                    sx={{
+                                                        fontWeight: 700,
+                                                        color: '#DC2626',
+                                                        fontSize: '1rem',
+                                                    }}
+                                                >
+                                                    {Math.round(stat.displayPercentage)}%
+                                                </Typography>
+                                            </Box>
                                         </Box>
 
                                         {/* Stats Row */}
-                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2, ml: 6.5 }}>
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2, ml: 7 }}>
                                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                                <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: '#DC2626' }} />
-                                                <Typography sx={{ fontSize: '0.8rem', color: '#64748B' }}>
+                                                <Box sx={{
+                                                    width: 6,
+                                                    height: 6,
+                                                    borderRadius: '50%',
+                                                    bgcolor: '#DC2626',
+                                                    boxShadow: '0 0 4px rgba(220, 38, 38, 0.4)',
+                                                }} />
+                                                <Typography sx={{ fontSize: '0.875rem', color: '#64748B' }}>
                                                     {t('chart_used_label', 'ใช้ไป')}: <strong style={{ color: '#DC2626' }}>{stat.used}</strong> {t('days', 'วัน')}
                                                 </Typography>
                                             </Box>
                                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                                <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: '#94A3B8' }} />
-                                                <Typography sx={{ fontSize: '0.8rem', color: '#64748B' }}>
+                                                <Box sx={{
+                                                    width: 6,
+                                                    height: 6,
+                                                    borderRadius: '50%',
+                                                    bgcolor: '#94A3B8',
+                                                    boxShadow: '0 0 4px rgba(148, 163, 184, 0.4)',
+                                                }} />
+                                                <Typography sx={{ fontSize: '0.875rem', color: '#64748B' }}>
                                                     {t('chart_max_label', 'สิทธิ์')}: <strong style={{ color: '#1E293B' }}>{stat.max !== null ? stat.max : '∞'}</strong> {t('days', 'วัน')}
                                                 </Typography>
                                             </Box>
                                         </Box>
 
-                                        {/* Progress Bar */}
+                                        {/* Progress Bar - Enhanced Liquid Glass Style */}
                                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                                             <Box sx={{ flex: 1, position: 'relative' }}>
-                                                {/* Background */}
+                                                {/* Background Track */}
                                                 <Box
                                                     sx={{
-                                                        height: 8,
-                                                        borderRadius: 4,
-                                                        bgcolor: '#F1F5F9',
+                                                        height: 12,
+                                                        borderRadius: 6,
+                                                        bgcolor: 'rgba(0, 0, 0, 0.04)',
                                                         overflow: 'hidden',
+                                                        boxShadow: `
+                                                            inset 0 2px 4px rgba(0, 0, 0, 0.06),
+                                                            inset 0 -1px 0 rgba(255, 255, 255, 0.8),
+                                                            0 1px 0 rgba(255, 255, 255, 0.5)
+                                                        `,
+                                                        border: '1px solid rgba(0, 0, 0, 0.03)',
                                                     }}
                                                 >
-                                                    {/* Fill */}
+                                                    {/* Fill Bar */}
                                                     <Box
                                                         sx={{
                                                             width: `${Math.min(stat.percentage, 100)}%`,
                                                             height: '100%',
-                                                            borderRadius: 4,
-                                                            background: stat.isOverLimit
-                                                                ? 'linear-gradient(90deg, #DC2626 0%, #991B1B 100%)'
-                                                                : 'linear-gradient(90deg, #FCA5A5 0%, #EF4444 50%, #DC2626 100%)',
-                                                            transition: 'width 0.8s cubic-bezier(0.4, 0, 0.2, 1)',
+                                                            borderRadius: 6,
+                                                            background: 'linear-gradient(90deg, #EF4444 0%, #DC2626 50%, #B91C1C 100%)',
+                                                            transition: 'width 1s cubic-bezier(0.4, 0, 0.2, 1)',
+                                                            position: 'relative',
+                                                            boxShadow: '0 0 12px rgba(239, 68, 68, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.3)',
+                                                            overflow: 'hidden',
+                                                            // Inner highlight
+                                                            '&::before': {
+                                                                content: '""',
+                                                                position: 'absolute',
+                                                                top: 0,
+                                                                left: 0,
+                                                                right: 0,
+                                                                height: '50%',
+                                                                background: 'linear-gradient(180deg, rgba(255, 255, 255, 0.5) 0%, rgba(255, 255, 255, 0.1) 100%)',
+                                                                borderRadius: 'inherit',
+                                                            },
                                                         }}
                                                     />
                                                 </Box>
@@ -423,9 +544,10 @@ export default function ChartsPage() {
                                                                 height: 16,
                                                                 bgcolor: '#6366F1',
                                                                 borderRadius: 1,
+                                                                boxShadow: '0 0 4px rgba(99, 102, 241, 0.5)',
                                                             }}
                                                         />
-                                                        {/* MAX Tooltip */}
+                                                        {/* MAX Tooltip - Liquid Glass Style */}
                                                         <Box
                                                             sx={{
                                                                 position: 'absolute',
@@ -433,7 +555,8 @@ export default function ChartsPage() {
                                                                 left: '50%',
                                                                 transform: 'translateX(-50%)',
                                                                 mb: 0.5,
-                                                                bgcolor: '#6366F1',
+                                                                bgcolor: 'rgba(99, 102, 241, 0.9)',
+                                                                backdropFilter: 'blur(8px)',
                                                                 color: 'white',
                                                                 fontSize: '0.6rem',
                                                                 fontWeight: 700,
@@ -441,7 +564,11 @@ export default function ChartsPage() {
                                                                 py: 0.3,
                                                                 borderRadius: 1,
                                                                 whiteSpace: 'nowrap',
-                                                                boxShadow: '0 2px 6px rgba(99, 102, 241, 0.3)',
+                                                                boxShadow: `
+                                                                    0 2px 8px rgba(99, 102, 241, 0.4),
+                                                                    inset 0 1px 0 rgba(255, 255, 255, 0.2)
+                                                                `,
+                                                                border: '1px solid rgba(255, 255, 255, 0.2)',
                                                                 '&::after': {
                                                                     content: '""',
                                                                     position: 'absolute',
@@ -449,7 +576,7 @@ export default function ChartsPage() {
                                                                     left: '50%',
                                                                     transform: 'translateX(-50%)',
                                                                     border: '4px solid transparent',
-                                                                    borderTopColor: '#6366F1',
+                                                                    borderTopColor: 'rgba(99, 102, 241, 0.9)',
                                                                 },
                                                             }}
                                                         >
@@ -458,24 +585,11 @@ export default function ChartsPage() {
                                                     </Box>
                                                 )}
                                             </Box>
-
-                                            {/* Percentage */}
-                                            <Typography
-                                                sx={{
-                                                    fontWeight: 700,
-                                                    color: stat.isOverLimit ? '#991B1B' : '#DC2626',
-                                                    fontSize: '0.95rem',
-                                                    minWidth: 50,
-                                                    textAlign: 'right',
-                                                }}
-                                            >
-                                                {Math.round(stat.displayPercentage)}%
-                                            </Typography>
                                         </Box>
 
                                         {/* Footer */}
-                                        <Box sx={{ mt: 2, pt: 1.5, borderTop: '1px solid #F1F5F9' }}>
-                                            <Typography sx={{ fontSize: '0.75rem', color: '#94A3B8' }}>
+                                        <Box sx={{ mt: 2, pt: 1.5, borderTop: '1px solid rgba(0, 0, 0, 0.05)' }}>
+                                            <Typography sx={{ fontSize: '0.85rem', color: '#94A3B8' }}>
                                                 {remaining !== null && remaining > 0 ? (
                                                     <>
                                                         {t('chart_remaining', 'คงเหลือ')}: <strong style={{ color: '#16A34A' }}>{remaining}</strong> {t('days', 'วัน')}

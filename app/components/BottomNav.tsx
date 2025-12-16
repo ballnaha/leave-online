@@ -242,8 +242,8 @@ const BottomNav: React.FC<BottomNavProps> = ({ activePage = 'home' }) => {
                                             sx={{
                                                 display: 'flex',
                                                 alignItems: 'center',
-                                                gap: 1,
-                                                p: 1,
+                                                gap: 1.25,
+                                                p: 1.25,
                                                 borderRadius: 2.5,
                                                 cursor: 'pointer',
                                                 background: 'rgba(255, 255, 255, 0.98)',
@@ -299,8 +299,8 @@ const BottomNav: React.FC<BottomNavProps> = ({ activePage = 'home' }) => {
                                         >
                                             <Box
                                                 sx={{
-                                                    width: 32,
-                                                    height: 32,
+                                                    width: 38,
+                                                    height: 38,
                                                     borderRadius: 2,
                                                     background: config.gradient,
                                                     display: 'flex',
@@ -335,14 +335,14 @@ const BottomNav: React.FC<BottomNavProps> = ({ activePage = 'home' }) => {
                                                     },
                                                 }}
                                             >
-                                                <Icon size={18} color="white" />
+                                                <Icon size={20} color="white" />
                                             </Box>
                                             <Typography
                                                 variant="body2"
                                                 sx={{
                                                     fontWeight: 600,
                                                     color: 'text.primary',
-                                                    fontSize: '0.8rem',
+                                                    fontSize: '0.875rem',
                                                     animation: openMenu
                                                         ? `textFade-${index} 0.4s ease ${delay + 0.15}s both`
                                                         : animatingOut

@@ -391,11 +391,15 @@ export default function LeavePage() {
     const filteredLeaves = useMemo(() => {
         let filtered = myLeaves;
 
-        // Filter by selected calendar date - show leaves that START on this date
+        // Filter by selected calendar date - show leaves that INCLUDE this date in their range
         if (selectedCalendarDate) {
             filtered = filtered.filter(leave => {
-                const startDate = dayjs(leave.startDate).format('YYYY-MM-DD');
-                return startDate === selectedCalendarDate;
+                const startDate = dayjs(leave.startDate).startOf('day');
+                const endDate = dayjs(leave.endDate).startOf('day');
+                const selectedDate = dayjs(selectedCalendarDate).startOf('day');
+                // Check if selectedDate is within the leave date range (inclusive)
+                return (selectedDate.isSame(startDate, 'day') || selectedDate.isAfter(startDate, 'day')) &&
+                    (selectedDate.isSame(endDate, 'day') || selectedDate.isBefore(endDate, 'day'));
             });
         }
 
