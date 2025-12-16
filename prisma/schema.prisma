@@ -304,15 +304,16 @@ model Banner {
 }
 
 model Holiday {
-  id          Int      @id @default(autoincrement())
-  date        DateTime @db.Date
-  name        String   @db.VarChar(200)  // Translation key, e.g. "new_year_day"
-  type        String   @default("company") // company
-  companyId   Int?     // null = apply to all companies
-  company     Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id                    Int      @id @default(autoincrement())
+  date                  DateTime @db.Date
+  name                  String   @db.VarChar(200)  // Translation key, e.g. "new_year_day"
+  type                  String   @default("company") // company
+  companyId             Int?     // null = apply to all companies
+  company               Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  deductFromAnnualLeave Boolean  @default(false)  // บังคับพักร้อน - หักจากวันลาพักร้อน
+  isActive              Boolean  @default(true)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
 
   @@unique([date, companyId])
   @@index([date])

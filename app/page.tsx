@@ -76,8 +76,19 @@ export default function Home() {
   const [mounted, setMounted] = useState(false);
   const [leaveTypes, setLeaveTypes] = useState<LeaveType[]>([]);
 
-  // Filter leave types based on gender
+  // คำนวณอายุงานเป็นปี
+  const getYearsOfService = (startDate: string | null | undefined): number => {
+    if (!startDate) return 0;
+    const start = new Date(startDate);
+    const now = new Date();
+    const years = (now.getTime() - start.getTime()) / (1000 * 60 * 60 * 24 * 365.25);
+    return years;
+  };
+
+  // Filter leave types based on gender and years of service
   const filteredLeaveTypes = useMemo(() => {
+    const yearsOfService = getYearsOfService(user?.startDate);
+
     return leaveTypes.filter(leave => {
       // ถ้าเป็นเพศชาย ไม่แสดงลาคลอด (maternity)
       if (user?.gender === 'male' && leave.code === 'maternity') {
@@ -87,9 +98,13 @@ export default function Home() {
       if (user?.gender === 'female' && leave.code === 'ordination') {
         return false;
       }
+      // ลาบวช ต้องมีอายุงาน >= 1 ปี
+      if (leave.code === 'ordination' && yearsOfService < 1) {
+        return false;
+      }
       return true;
     });
-  }, [leaveTypes, user?.gender]);
+  }, [leaveTypes, user?.gender, user?.startDate]);
 
   const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>([]);
   const [selectedLeave, setSelectedLeave] = useState<LeaveRequest | null>(null);
@@ -316,11 +331,11 @@ export default function Home() {
         {user?.role && user.role !== 'employee' && (
           <Card
             sx={{
-              
+
               mx: 2.5,
-              mb: 1 ,
-              maxWidth: {xs: 330, md: 600},
-              margin:'-1rem auto 0 auto',
+              mb: 1,
+              maxWidth: { xs: 330, sm: 600, md: 800 },
+              margin: { xs: '-1rem auto 0 auto', sm: '-2rem auto 0 auto', md: '-2rem auto 0 auto' },
               borderRadius: '20px',
               boxShadow: '0 8px 32px rgba(0,0,0,0.08)',
               background: 'rgba(255, 255, 255, 0.7)',
@@ -342,7 +357,7 @@ export default function Home() {
               },
             }}
           >
-            <CardActionArea onClick={() => router.push('/approval')} sx={{ p: 0}}>
+            <CardActionArea onClick={() => router.push('/approval')} sx={{ p: 0 }}>
               <CardContent sx={{ py: 2.5, px: 2.5, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, zIndex: 1 }}>
                   <Box
@@ -375,7 +390,7 @@ export default function Home() {
         )}
       </Box>
 
-      <Container maxWidth={false} sx={{ maxWidth: 1200, px: { xs: 2.5, sm: 3, md: 4  } }}>
+      <Container maxWidth={false} sx={{ maxWidth: 1200, px: { xs: 2.5, sm: 3, md: 4 } }}>
         {/* Quick Actions Section */}
         <Box sx={{ mt: 3, mb: 3 }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5 }}>

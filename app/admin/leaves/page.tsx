@@ -36,6 +36,7 @@ import {
   Tabs,
   Tab,
   useMediaQuery,
+  Collapse,
 } from '@mui/material';
 
 // Swiper
@@ -62,6 +63,9 @@ import {
   ArrowRight2,
   Image as ImageIconsax,
   DocumentDownload,
+  ArrowDown2,
+  ArrowUp2,
+  Filter,
 } from 'iconsax-react';
 import { useToastr } from '@/app/components/Toastr';
 
@@ -107,6 +111,7 @@ interface Approval {
   approvedAt?: string;
   comment?: string;
   approver: Approver;
+  actedBy?: Approver;
 }
 
 interface Attachment {
@@ -299,6 +304,8 @@ function TableSkeleton() {
 export default function AdminLeavesPage() {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const isTablet = useMediaQuery(theme.breakpoints.between('sm', 'lg'));
+  const isDesktop = useMediaQuery(theme.breakpoints.up('lg'));
   const toastr = useToastr();
   const [loading, setLoading] = useState(true);
   const [leaves, setLeaves] = useState<LeaveRequest[]>([]);
@@ -364,6 +371,15 @@ export default function AdminLeavesPage() {
   // Image modal
   const [imageModalOpen, setImageModalOpen] = useState(false);
   const [initialSlide, setInitialSlide] = useState(0);
+
+  // Approval dialog
+  const [approvalDialogOpen, setApprovalDialogOpen] = useState(false);
+  const [approvalAction, setApprovalAction] = useState<'approve' | 'reject' | null>(null);
+  const [approvalComment, setApprovalComment] = useState('');
+  const [approvalLoading, setApprovalLoading] = useState(false);
+
+  // Filter collapse state for mobile
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
 
   // Helper to check if file is an image
   const isImageFile = (mimeType: string) => {
@@ -500,11 +516,70 @@ export default function AdminLeavesPage() {
     return formatThaiDateTime(date);
   };
 
+  // Approval handlers
+  const handleOpenApprovalDialog = (action: 'approve' | 'reject') => {
+    setApprovalAction(action);
+    setApprovalComment('');
+    setApprovalDialogOpen(true);
+  };
+
+  const handleCloseApprovalDialog = () => {
+    setApprovalDialogOpen(false);
+    setApprovalAction(null);
+    setApprovalComment('');
+  };
+
+  const handleSubmitApproval = async () => {
+    if (!selectedLeave || !approvalAction) return;
+
+    try {
+      setApprovalLoading(true);
+      const response = await fetch(`/api/leaves/${selectedLeave.id}/approve`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: approvalAction,
+          comment: approvalComment || undefined,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to process approval');
+      }
+
+      toastr.success(
+        approvalAction === 'approve'
+          ? 'อนุมัติใบลาเรียบร้อยแล้ว'
+          : 'ปฏิเสธใบลาเรียบร้อยแล้ว'
+      );
+
+      handleCloseApprovalDialog();
+      setDetailDialogOpen(false);
+      fetchLeaves(); // Refresh data
+    } catch (error: any) {
+      console.error('Approval error:', error);
+      toastr.error(error.message || 'เกิดข้อผิดพลาดในการดำเนินการ');
+    } finally {
+      setApprovalLoading(false);
+    }
+  };
+
+  const isPendingLeave = selectedLeave && ['pending', 'in_progress'].includes(selectedLeave.status);
+
   return (
     <Box>
       {/* Header */}
       <Box sx={{ mb: 4 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+        <Box sx={{
+          display: 'flex',
+          flexDirection: { xs: 'column', sm: 'row' },
+          alignItems: { xs: 'flex-start', sm: 'center' },
+          justifyContent: 'space-between',
+          gap: 2,
+          mb: 2
+        }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
             <Box
               sx={{
@@ -520,32 +595,52 @@ export default function AdminLeavesPage() {
               <DocumentText size={24} variant="Bulk" color={theme.palette.primary.main} />
             </Box>
             <Box>
-              <Typography variant="h4" component="h1" fontWeight={700}>
+              <Typography variant={isMobile ? 'h5' : 'h4'} component="h1" fontWeight={700}>
                 จัดการใบลา
               </Typography>
-              <Typography variant="body2" color="text.secondary">
-                ภาพรวมและประวัติการลางานทั้งหมด
-              </Typography>
+              {!isMobile && (
+                <Typography variant="body2" color="text.secondary">
+                  ภาพรวมและประวัติการลางานทั้งหมด
+                </Typography>
+              )}
             </Box>
           </Box>
-          <Button
-            variant="outlined"
-            startIcon={<Refresh2 size={18} color={theme.palette.primary.main} />}
-            onClick={fetchLeaves}
-            disabled={loading}
-            sx={{
-              borderRadius: 1,
-              textTransform: 'none',
-              borderColor: 'divider',
-              color: 'text.primary',
-              '&:hover': {
-                borderColor: 'primary.main',
-                bgcolor: alpha(theme.palette.primary.main, 0.04)
-              }
-            }}
-          >
-            รีเฟรช
-          </Button>
+          {isMobile ? (
+            <IconButton
+              onClick={fetchLeaves}
+              disabled={loading}
+              sx={{
+                borderRadius: 1,
+                border: '1px solid',
+                borderColor: 'divider',
+                '&:hover': {
+                  borderColor: 'primary.main',
+                  bgcolor: alpha(theme.palette.primary.main, 0.04)
+                }
+              }}
+            >
+              <Refresh2 size={20} color={theme.palette.primary.main} />
+            </IconButton>
+          ) : (
+            <Button
+              variant="outlined"
+              startIcon={<Refresh2 size={18} color={theme.palette.primary.main} />}
+              onClick={fetchLeaves}
+              disabled={loading}
+              sx={{
+                borderRadius: 1,
+                textTransform: 'none',
+                borderColor: 'divider',
+                color: 'text.primary',
+                '&:hover': {
+                  borderColor: 'primary.main',
+                  bgcolor: alpha(theme.palette.primary.main, 0.04)
+                }
+              }}
+            >
+              รีเฟรช
+            </Button>
+          )}
         </Box>
       </Box>
 
@@ -553,8 +648,8 @@ export default function AdminLeavesPage() {
       <Box
         sx={{
           display: 'grid',
-          gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(5, 1fr)' },
-          gap: 2,
+          gridTemplateColumns: { xs: 'repeat(2, 1fr)', sm: 'repeat(3, 1fr)', md: 'repeat(5, 1fr)', lg: 'repeat(5, 1fr)' },
+          gap: { xs: 1.5, sm: 2 },
           mb: 4,
         }}
       >
@@ -604,7 +699,7 @@ export default function AdminLeavesPage() {
       <Paper
         elevation={0}
         sx={{
-          p: 2.5,
+          p: { xs: 2, sm: 2.5 },
           mb: 3,
           borderRadius: 1,
           border: '1px solid',
@@ -612,20 +707,39 @@ export default function AdminLeavesPage() {
           bgcolor: 'background.paper',
         }}
       >
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2.5 }}>
-          <SearchNormal1 size={18} color={theme.palette.text.secondary} />
-          <Typography variant="subtitle1" fontWeight={600}>
-            ตัวกรองข้อมูล
-          </Typography>
+        {/* Filter Header */}
+        <Box sx={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          mb: { xs: 1.5, sm: 2.5 }
+        }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Filter size={18} color={theme.palette.primary.main} variant="Bold" />
+            <Typography variant="subtitle1" fontWeight={600}>
+              ตัวกรองข้อมูล
+            </Typography>
+          </Box>
+          {/* Show toggle button on mobile only */}
+          {isMobile && (
+            <Button
+              size="small"
+              onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+              endIcon={showAdvancedFilters ? <ArrowUp2 size={16} /> : <ArrowDown2 size={16} />}
+              sx={{ textTransform: 'none', color: 'text.secondary' }}
+            >
+              {showAdvancedFilters ? 'ซ่อนตัวกรอง' : 'ตัวกรองเพิ่มเติม'}
+            </Button>
+          )}
         </Box>
 
-        {/* Top Filters: Date & Search */}
+        {/* Search & Date Filters - Always visible */}
         <Box
           sx={{
             display: 'grid',
-            gridTemplateColumns: { xs: '1fr', md: '2fr 1fr 1fr' },
-            gap: 2,
-            mb: 2,
+            gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: '2fr 1fr 1fr' },
+            gap: { xs: 1.5, sm: 2 },
+            mb: { xs: 1.5, sm: 2 },
           }}
         >
           <TextField
@@ -683,85 +797,164 @@ export default function AdminLeavesPage() {
           </FormControl>
         </Box>
 
-        <Divider sx={{ mb: 2, borderStyle: 'dashed' }} />
-
-        {/* Detailed Filters */}
-        <Box
-          sx={{
-            display: 'grid',
-            gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: 'repeat(4, 1fr)' },
-            gap: 2,
-          }}
-        >
-          <FormControl size="small" fullWidth>
-            <InputLabel>ประเภทลา</InputLabel>
-            <Select
-              value={leaveTypeFilter}
-              onChange={(e) => setLeaveTypeFilter(e.target.value)}
-              label="ประเภทลา"
-              sx={{ borderRadius: 1 }}
+        {/* Advanced Filters - Collapsible on mobile */}
+        {isMobile ? (
+          <Collapse in={showAdvancedFilters}>
+            <Divider sx={{ my: 1.5, borderStyle: 'dashed' }} />
+            <Box
+              sx={{
+                display: 'grid',
+                gridTemplateColumns: '1fr',
+                gap: 1.5,
+              }}
             >
-              <MenuItem value="all">ทั้งหมด</MenuItem>
-              {leaveTypes.map((lt) => (
-                <MenuItem key={lt.code} value={lt.code}>{lt.name}</MenuItem>
-              ))}
-            </Select>
-          </FormControl>
+              <FormControl size="small" fullWidth>
+                <InputLabel>ประเภทลา</InputLabel>
+                <Select
+                  value={leaveTypeFilter}
+                  onChange={(e) => setLeaveTypeFilter(e.target.value)}
+                  label="ประเภทลา"
+                  sx={{ borderRadius: 1 }}
+                >
+                  <MenuItem value="all">ทั้งหมด</MenuItem>
+                  {leaveTypes.map((lt) => (
+                    <MenuItem key={lt.code} value={lt.code}>{lt.name}</MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
 
-          <FormControl size="small" fullWidth>
-            <InputLabel>บริษัท</InputLabel>
-            <Select
-              value={companyFilter}
-              onChange={(e) => handleCompanyChange(e.target.value)}
-              label="บริษัท"
-              sx={{ borderRadius: 1 }}
-            >
-              <MenuItem value="all">ทั้งหมด</MenuItem>
-              {companies.map((company) => (
-                <MenuItem key={company.code} value={company.code}>{company.name}</MenuItem>
-              ))}
-            </Select>
-          </FormControl>
+              <FormControl size="small" fullWidth>
+                <InputLabel>บริษัท</InputLabel>
+                <Select
+                  value={companyFilter}
+                  onChange={(e) => handleCompanyChange(e.target.value)}
+                  label="บริษัท"
+                  sx={{ borderRadius: 1 }}
+                >
+                  <MenuItem value="all">ทั้งหมด</MenuItem>
+                  {companies.map((company) => (
+                    <MenuItem key={company.code} value={company.code}>{company.name}</MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
 
-          <FormControl size="small" fullWidth>
-            <InputLabel>ฝ่าย</InputLabel>
-            <Select
-              value={departmentFilter}
-              onChange={(e) => handleDepartmentChange(e.target.value)}
-              label="ฝ่าย"
-              sx={{ borderRadius: 1 }}
-            >
-              <MenuItem value="all">ทั้งหมด</MenuItem>
-              {filteredDepartments.map((dept) => (
-                <MenuItem key={dept.code} value={dept.code}>{dept.name}</MenuItem>
-              ))}
-            </Select>
-          </FormControl>
+              <FormControl size="small" fullWidth>
+                <InputLabel>ฝ่าย</InputLabel>
+                <Select
+                  value={departmentFilter}
+                  onChange={(e) => handleDepartmentChange(e.target.value)}
+                  label="ฝ่าย"
+                  sx={{ borderRadius: 1 }}
+                >
+                  <MenuItem value="all">ทั้งหมด</MenuItem>
+                  {filteredDepartments.map((dept) => (
+                    <MenuItem key={dept.code} value={dept.code}>{dept.name}</MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
 
-          <FormControl size="small" fullWidth>
-            <InputLabel>แผนก</InputLabel>
-            <Select
-              value={sectionFilter}
-              onChange={(e) => setSectionFilter(e.target.value)}
-              label="แผนก"
-              sx={{ borderRadius: 1 }}
+              <FormControl size="small" fullWidth>
+                <InputLabel>แผนก</InputLabel>
+                <Select
+                  value={sectionFilter}
+                  onChange={(e) => setSectionFilter(e.target.value)}
+                  label="แผนก"
+                  sx={{ borderRadius: 1 }}
+                >
+                  <MenuItem value="all">ทั้งหมด</MenuItem>
+                  {filteredSections.map((section) => (
+                    <MenuItem key={section.code} value={section.code}>{section.name}</MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Box>
+          </Collapse>
+        ) : (
+          <>
+            <Divider sx={{ mb: 2, borderStyle: 'dashed' }} />
+            {/* Tablet & Desktop - Always visible */}
+            <Box
+              sx={{
+                display: 'grid',
+                gridTemplateColumns: { sm: '1fr 1fr', md: 'repeat(4, 1fr)' },
+                gap: 2,
+              }}
             >
-              <MenuItem value="all">ทั้งหมด</MenuItem>
-              {filteredSections.map((section) => (
-                <MenuItem key={section.code} value={section.code}>{section.name}</MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-        </Box>
+              <FormControl size="small" fullWidth>
+                <InputLabel>ประเภทลา</InputLabel>
+                <Select
+                  value={leaveTypeFilter}
+                  onChange={(e) => setLeaveTypeFilter(e.target.value)}
+                  label="ประเภทลา"
+                  sx={{ borderRadius: 1 }}
+                >
+                  <MenuItem value="all">ทั้งหมด</MenuItem>
+                  {leaveTypes.map((lt) => (
+                    <MenuItem key={lt.code} value={lt.code}>{lt.name}</MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+
+              <FormControl size="small" fullWidth>
+                <InputLabel>บริษัท</InputLabel>
+                <Select
+                  value={companyFilter}
+                  onChange={(e) => handleCompanyChange(e.target.value)}
+                  label="บริษัท"
+                  sx={{ borderRadius: 1 }}
+                >
+                  <MenuItem value="all">ทั้งหมด</MenuItem>
+                  {companies.map((company) => (
+                    <MenuItem key={company.code} value={company.code}>{company.name}</MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+
+              <FormControl size="small" fullWidth>
+                <InputLabel>ฝ่าย</InputLabel>
+                <Select
+                  value={departmentFilter}
+                  onChange={(e) => handleDepartmentChange(e.target.value)}
+                  label="ฝ่าย"
+                  sx={{ borderRadius: 1 }}
+                >
+                  <MenuItem value="all">ทั้งหมด</MenuItem>
+                  {filteredDepartments.map((dept) => (
+                    <MenuItem key={dept.code} value={dept.code}>{dept.name}</MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+
+              <FormControl size="small" fullWidth>
+                <InputLabel>แผนก</InputLabel>
+                <Select
+                  value={sectionFilter}
+                  onChange={(e) => setSectionFilter(e.target.value)}
+                  label="แผนก"
+                  sx={{ borderRadius: 1 }}
+                >
+                  <MenuItem value="all">ทั้งหมด</MenuItem>
+                  {filteredSections.map((section) => (
+                    <MenuItem key={section.code} value={section.code}>{section.name}</MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Box>
+          </>
+        )}
       </Paper>
-      {/* Mobile Card View (Visible on xs, sm) */}
-      <Box sx={{ display: { xs: 'flex', md: 'none' }, flexDirection: 'column', gap: 2 }}>
+      {/* Mobile & Tablet Card View (Visible on xs, sm, md) */}
+      <Box sx={{
+        display: { xs: 'grid', lg: 'none' },
+        gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: '1fr 1fr' },
+        gap: 2
+      }}>
         {loading ? (
-          Array.from({ length: 3 }).map((_, i) => (
-            <Skeleton key={i} variant="rounded" height={200} sx={{ borderRadius: 1 }} />
+          Array.from({ length: 4 }).map((_, i) => (
+            <Skeleton key={i} variant="rounded" height={220} sx={{ borderRadius: 1 }} />
           ))
         ) : leaves.length === 0 ? (
-          <Paper sx={{ p: 4, textAlign: 'center', borderRadius: 1, bgcolor: alpha(theme.palette.primary.main, 0.04) }}>
+          <Paper sx={{ p: 4, textAlign: 'center', borderRadius: 1, bgcolor: alpha(theme.palette.primary.main, 0.04), gridColumn: '1 / -1' }}>
             <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
               <Avatar sx={{ width: 60, height: 60, bgcolor: alpha(theme.palette.text.secondary, 0.1), color: 'text.secondary' }}>
                 <DocumentText size={30} variant="Outline" />
@@ -875,12 +1068,12 @@ export default function AdminLeavesPage() {
       </Box>
 
       {/* Desktop Table View */}
-      {/* Desktop Table View */}
+      {/* Desktop Table View (lg and above) */}
       <TableContainer
         component={Paper}
         elevation={0}
         sx={{
-          display: { xs: 'none', md: 'block' },
+          display: { xs: 'none', lg: 'block' },
           borderRadius: 1,
           border: '1px solid',
           borderColor: 'divider',
@@ -1399,11 +1592,20 @@ export default function AdminLeavesPage() {
                             <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', mb: 0.5 }}>
                               <Box>
                                 <Typography variant="subtitle2" fontWeight={700} sx={{ color: 'text.primary', lineHeight: 1.3 }}>
-                                  {approval.approver.firstName} {approval.approver.lastName}
+                                  {approval.actedBy
+                                    ? `${approval.actedBy.firstName} ${approval.actedBy.lastName}`
+                                    : `${approval.approver.firstName} ${approval.approver.lastName}`}
                                 </Typography>
                                 <Typography variant="caption" color="text.secondary">
-                                  {roleLabels[approval.approver.role] || approval.approver.role}
+                                  {approval.actedBy
+                                    ? `${roleLabels[approval.actedBy.role] || approval.actedBy.role}`
+                                    : `${roleLabels[approval.approver.role] || approval.approver.role}`}
                                 </Typography>
+                                {approval.actedBy && approval.approver && (
+                                  <Typography variant="caption" sx={{ display: 'block', color: 'text.secondary', fontStyle: 'italic' }}>
+                                    (แทน {approval.approver.firstName} {approval.approver.lastName})
+                                  </Typography>
+                                )}
                               </Box>
                               <Chip
                                 label={`ขั้นที่ ${approval.level}`}
@@ -1527,8 +1729,59 @@ export default function AdminLeavesPage() {
           )}
         </DialogContent>
 
-        <DialogActions sx={{ px: isMobile ? 2 : 3, py: 2, borderTop: '1px solid', borderColor: 'divider' }}>
-          <Button onClick={() => setDetailDialogOpen(false)} sx={{ borderRadius: 1 }}>
+        <DialogActions sx={{ px: isMobile ? 2 : 3, py: 2, borderTop: '1px solid', borderColor: 'divider', flexDirection: 'column', gap: 1.5 }}>
+          {isPendingLeave && (
+            <Box sx={{ display: 'flex', gap: 1.5, width: '100%' }}>
+              <Button
+                variant="contained"
+                onClick={() => handleOpenApprovalDialog('reject')}
+                startIcon={<CloseCircle size={20} variant="Bold" color="white" />}
+                sx={{
+                  flex: 1,
+                  borderRadius: 1,
+                  textTransform: 'none',
+                  py: 1.5,
+                  fontWeight: 700,
+                  fontSize: '0.95rem',
+                  bgcolor: '#D32F2F',
+                  boxShadow: '0 4px 12px rgba(211, 47, 47, 0.25)',
+                  '&:hover': {
+                    bgcolor: '#B71C1C',
+                    boxShadow: '0 6px 16px rgba(211, 47, 47, 0.35)',
+                  }
+                }}
+              >
+                ปฏิเสธแทน
+              </Button>
+              <Button
+                variant="contained"
+                onClick={() => handleOpenApprovalDialog('approve')}
+                startIcon={<TickCircle size={20} variant="Bold" color="white" />}
+                sx={{
+                  flex: 1,
+                  borderRadius: 1,
+                  textTransform: 'none',
+                  py: 1.5,
+                  fontWeight: 700,
+                  fontSize: '0.95rem',
+                  bgcolor: '#2E7D32',
+                  boxShadow: '0 4px 12px rgba(46, 125, 50, 0.25)',
+                  '&:hover': {
+                    bgcolor: '#1B5E20',
+                    boxShadow: '0 6px 16px rgba(46, 125, 50, 0.35)',
+                  }
+                }}
+              >
+                อนุมัติแทน
+              </Button>
+            </Box>
+          )}
+          <Button
+            fullWidth
+            variant="outlined"
+            onClick={() => setDetailDialogOpen(false)}
+            sx={{ borderRadius: 1, py: 1, borderColor: 'grey.300', color: 'text.primary' }}
+          >
             ปิด
           </Button>
         </DialogActions>
@@ -1587,6 +1840,233 @@ export default function AdminLeavesPage() {
             ))}
           </Swiper>
         </Box>
+      </Dialog>
+
+      {/* Approval Confirmation Dialog - Styled like approval page */}
+      <Dialog
+        open={approvalDialogOpen}
+        onClose={handleCloseApprovalDialog}
+        maxWidth="sm"
+        fullWidth
+        fullScreen={isMobile}
+        PaperProps={{
+          sx: {
+            borderRadius: isMobile ? 0 : 1,
+            display: 'flex',
+            flexDirection: 'column',
+            minHeight: isMobile ? '100vh' : 'auto',
+          }
+        }}
+      >
+        {/* Close button */}
+        <IconButton
+          onClick={handleCloseApprovalDialog}
+          sx={{ position: 'absolute', top: 8, right: 8, zIndex: 1 }}
+        >
+          <CloseCircle size={28} color="#9CA3AF" />
+        </IconButton>
+
+        <DialogTitle sx={{ textAlign: 'center', pt: 4, pb: 2 }}>
+          {/* Action Toggle Switch */}
+          <Box sx={{ mb: 3 }}>
+            <Box
+              sx={{
+                bgcolor: '#F1F5F9',
+                p: 0.5,
+                borderRadius: 3,
+                display: 'flex',
+                position: 'relative',
+                isolation: 'isolate',
+                width: '100%',
+                maxWidth: 300,
+                mx: 'auto'
+              }}
+            >
+              <Box
+                sx={{
+                  position: 'absolute',
+                  top: 4,
+                  bottom: 4,
+                  left: 4,
+                  width: 'calc(50% - 4px)',
+                  bgcolor: 'white',
+                  borderRadius: 2.5,
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.06)',
+                  transition: 'transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)',
+                  transform: approvalAction === 'approve' ? 'translateX(0)' : 'translateX(100%)',
+                  zIndex: 0
+                }}
+              />
+
+              <Box
+                onClick={() => setApprovalAction('approve')}
+                sx={{
+                  flex: 1,
+                  py: 1.25,
+                  borderRadius: 2.5,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 1,
+                  position: 'relative',
+                  zIndex: 1,
+                  transition: 'color 0.2s',
+                  color: approvalAction === 'approve' ? '#2E7D32' : '#64748B',
+                }}
+              >
+                <TickCircle
+                  size={20}
+                  variant={approvalAction === 'approve' ? 'Bold' : 'Linear'}
+                  color={approvalAction === 'approve' ? '#2E7D32' : '#64748B'}
+                />
+                <Typography fontWeight={approvalAction === 'approve' ? 700 : 500} fontSize="0.95rem">
+                  อนุมัติ
+                </Typography>
+              </Box>
+
+              <Box
+                onClick={() => setApprovalAction('reject')}
+                sx={{
+                  flex: 1,
+                  py: 1.25,
+                  borderRadius: 2.5,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 1,
+                  position: 'relative',
+                  zIndex: 1,
+                  transition: 'color 0.2s',
+                  color: approvalAction === 'reject' ? '#D32F2F' : '#64748B',
+                }}
+              >
+                <CloseCircle
+                  size={20}
+                  variant={approvalAction === 'reject' ? 'Bold' : 'Linear'}
+                  color={approvalAction === 'reject' ? '#D32F2F' : '#64748B'}
+                />
+                <Typography fontWeight={approvalAction === 'reject' ? 700 : 500} fontSize="0.95rem">
+                  ปฏิเสธ
+                </Typography>
+              </Box>
+            </Box>
+          </Box>
+
+          {/* Icon */}
+          <Box sx={{
+            width: 60,
+            height: 60,
+            borderRadius: '50%',
+            bgcolor: approvalAction === 'approve' ? '#E8F5E9' : '#FFEBEE',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            mx: 'auto',
+            mb: 2
+          }}>
+            {approvalAction === 'approve'
+              ? <TickCircle size={40} variant="Bold" color="#4CAF50" />
+              : <CloseCircle size={40} variant="Bold" color="#F44336" />}
+          </Box>
+          <Typography variant="h6" component="span" fontWeight={700} sx={{ display: 'block' }}>
+            {approvalAction === 'approve' ? 'ยืนยันการอนุมัติแทน' : 'ยืนยันการปฏิเสธแทน'}
+          </Typography>
+        </DialogTitle>
+
+        <DialogContent sx={{ flex: 1, display: 'flex', flexDirection: 'column', px: 3 }}>
+          <Typography variant="body1" color="text.secondary" textAlign="center" sx={{ mb: 3 }}>
+            {approvalAction === 'approve'
+              ? 'คุณต้องการอนุมัติคำขอลาแทนผู้อนุมัติเดิมใช่หรือไม่?'
+              : 'คุณต้องการปฏิเสธคำขอลาแทนผู้อนุมัติเดิมใช่หรือไม่?'}
+          </Typography>
+
+          {/* Leave Summary */}
+          {selectedLeave && (
+            <Box sx={{ mb: 3, bgcolor: '#F8FAFC', p: 2.5, borderRadius: 1, border: '1px solid', borderColor: 'grey.200' }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1.5 }}>
+                <Typography variant="body2" color="text.secondary">พนักงาน</Typography>
+                <Typography variant="body2" fontWeight={600}>{selectedLeave.user.firstName} {selectedLeave.user.lastName}</Typography>
+              </Box>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1.5 }}>
+                <Typography variant="body2" color="text.secondary">รหัสพนักงาน</Typography>
+                <Typography variant="body2" fontWeight={600}>{selectedLeave.user.employeeId}</Typography>
+              </Box>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1.5, alignItems: 'flex-start' }}>
+                <Typography variant="body2" color="text.secondary">ประเภท</Typography>
+                <Box sx={{ textAlign: 'right' }}>
+                  <Typography variant="body2" fontWeight={600}>{selectedLeave.leaveTypeName}</Typography>
+                  {selectedLeave.leaveCode && (
+                    <Typography variant="caption" sx={{ color: '#64748B', fontFamily: 'monospace', display: 'block' }}>
+                      #{selectedLeave.leaveCode}
+                    </Typography>
+                  )}
+                </Box>
+              </Box>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1.5 }}>
+                <Typography variant="body2" color="text.secondary">ตั้งแต่วันที่</Typography>
+                <Typography variant="body2" fontWeight={600}>{formatDate(selectedLeave.startDate)}</Typography>
+              </Box>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1.5 }}>
+                <Typography variant="body2" color="text.secondary">ถึงวันที่</Typography>
+                <Typography variant="body2" fontWeight={600}>{formatDate(selectedLeave.endDate)}</Typography>
+              </Box>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                <Typography variant="body2" color="text.secondary">จำนวนวัน</Typography>
+                <Typography variant="body2" fontWeight={600}>{selectedLeave.totalDays} วัน</Typography>
+              </Box>
+            </Box>
+          )}
+
+          <TextField
+            label={approvalAction === 'approve' ? 'ความคิดเห็นเพิ่มเติม (ถ้ามี)' : 'เหตุผลในการปฏิเสธ *'}
+            multiline
+            rows={4}
+            fullWidth
+            value={approvalComment}
+            onChange={(e) => setApprovalComment(e.target.value)}
+            placeholder={approvalAction === 'approve' ? 'ระบุความคิดเห็น...' : 'กรุณาระบุเหตุผล...'}
+            sx={{
+              '& .MuiOutlinedInput-root': { borderRadius: 1 }
+            }}
+          />
+
+          {/* Spacer to push buttons to bottom */}
+          <Box sx={{ flex: 1 }} />
+        </DialogContent>
+
+        <DialogActions sx={{ p: 3, gap: 1.5, flexDirection: 'column' }}>
+          <Box sx={{ display: 'flex', gap: 1.5, width: '100%' }}>
+            <Button
+              variant="outlined"
+              onClick={handleCloseApprovalDialog}
+              disabled={approvalLoading}
+              size="large"
+              sx={{ flex: 1, borderRadius: 1, py: 1.25, borderColor: 'grey.300', color: 'text.primary' }}
+            >
+              ยกเลิก
+            </Button>
+            <Button
+              variant="contained"
+              onClick={handleSubmitApproval}
+              disabled={approvalLoading || (approvalAction === 'reject' && !approvalComment.trim())}
+              size="large"
+              sx={{
+                flex: 1,
+                borderRadius: 1,
+                py: 1.25,
+                bgcolor: approvalAction === 'approve' ? '#4CAF50' : '#F44336',
+                boxShadow: approvalAction === 'approve' ? '0 4px 12px rgba(76, 175, 80, 0.3)' : '0 4px 12px rgba(244, 67, 54, 0.3)',
+                '&:hover': {
+                  bgcolor: approvalAction === 'approve' ? '#43A047' : '#D32F2F',
+                }
+              }}
+            >
+              {approvalLoading ? 'กำลังดำเนินการ...' : 'ยืนยัน'}
+            </Button>
+          </Box>
+        </DialogActions>
       </Dialog>
     </Box >
   );

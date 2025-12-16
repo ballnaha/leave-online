@@ -170,6 +170,14 @@ export async function POST(request: Request) {
             const usedDays = usedVacationDays._sum.totalDays || 0;
             const remainingDays = maxVacationDays - usedDays;
 
+            // ตรวจสอบว่าวันพักร้อนหมดแล้วหรือไม่
+            if (remainingDays <= 0) {
+                return NextResponse.json(
+                    { error: `คุณไม่มีวันพักร้อนคงเหลือในปีนี้ (ใช้ไปแล้ว ${usedDays} วัน จากทั้งหมด ${maxVacationDays} วัน)` },
+                    { status: 400 }
+                );
+            }
+
             if (Number(totalDays) > remainingDays) {
                 return NextResponse.json(
                     { error: `สิทธิ์ลาพักร้อนไม่เพียงพอ (ขอลา ${totalDays} วัน แต่เหลือ ${remainingDays} วัน จากทั้งหมด ${maxVacationDays} วัน)` },

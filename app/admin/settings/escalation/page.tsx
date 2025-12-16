@@ -207,13 +207,23 @@ export default function EscalationSettingsPage() {
             const res = await fetch(`/api/leaves/${leaveId}`);
             if (!res.ok) throw new Error('Failed to fetch detail');
             const data = await res.json();
-            setSelectedLeave(data);
+            // Map approvalHistory to approvals for backward compatibility
+            setSelectedLeave({
+                ...data,
+                approvals: data.approvalHistory || data.approvals || [],
+            });
         } catch (error) {
             toastr.error('ไม่สามารถโหลดข้อมูลใบลาได้');
             setDetailModalOpen(false);
         } finally {
             setLoadingDetail(false);
         }
+    };
+
+    const handleCloseDetailModal = () => {
+        setDetailModalOpen(false);
+        // Refresh data to update pending list if leave was approved
+        fetchData();
     };
 
     const fetchData = async () => {
@@ -736,7 +746,7 @@ export default function EscalationSettingsPage() {
             {/* Leave Detail Modal */}
             <Dialog
                 open={detailModalOpen}
-                onClose={() => setDetailModalOpen(false)}
+                onClose={handleCloseDetailModal}
                 maxWidth="md"
                 fullWidth
                 PaperProps={{ sx: { borderRadius: 1 } }}
@@ -762,7 +772,7 @@ export default function EscalationSettingsPage() {
                             </Typography>
                         </Box>
                     </Box>
-                    <IconButton size="small" onClick={() => setDetailModalOpen(false)}>
+                    <IconButton size="small" onClick={handleCloseDetailModal}>
                         <CloseSquare size={32} variant="Outline" color="#9E9E9E" />
                     </IconButton>
                 </DialogTitle>
@@ -919,11 +929,20 @@ export default function EscalationSettingsPage() {
                                                         <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', mb: 0.5 }}>
                                                             <Box>
                                                                 <Typography variant="subtitle2" fontWeight={700}>
-                                                                    {approval.approver?.firstName} {approval.approver?.lastName}
+                                                                    {approval.actedBy
+                                                                        ? `${approval.actedBy.firstName} ${approval.actedBy.lastName}`
+                                                                        : `${approval.approver?.firstName} ${approval.approver?.lastName}`}
                                                                 </Typography>
                                                                 <Typography variant="caption" color="text.secondary">
-                                                                    {roleLabels[approval.approver?.role] || approval.approver?.role}
+                                                                    {approval.actedBy
+                                                                        ? (roleLabels[approval.actedBy.role] || approval.actedBy.role)
+                                                                        : (roleLabels[approval.approver?.role] || approval.approver?.role)}
                                                                 </Typography>
+                                                                {approval.actedBy && approval.approver && (
+                                                                    <Typography variant="caption" sx={{ display: 'block', color: 'text.secondary', fontStyle: 'italic' }}>
+                                                                        (แทน {approval.approver.firstName} {approval.approver.lastName})
+                                                                    </Typography>
+                                                                )}
                                                             </Box>
                                                             <Chip label={`ขั้นที่ ${approval.level}`} size="small" sx={{ height: 22, fontSize: '0.7rem', bgcolor: alpha(getIconBgColor(), 0.15), color: getIconBgColor() }} />
                                                         </Box>
@@ -970,7 +989,7 @@ export default function EscalationSettingsPage() {
                     )}
                 </DialogContent>
                 <DialogActions sx={{ borderTop: '1px solid', borderColor: 'divider', pt: 2, pb: 2, px: 3 }}>
-                    <Button onClick={() => setDetailModalOpen(false)}>ปิดหน้าต่าง</Button>
+                    <Button onClick={handleCloseDetailModal}>ปิดหน้าต่าง</Button>
                 </DialogActions>
             </Dialog>
 

@@ -20,6 +20,9 @@ import {
   useTheme,
   useMediaQuery,
   Autocomplete,
+  Switch,
+  FormControlLabel,
+  Alert,
 } from '@mui/material';
 import { Calendar, CloseCircle } from 'iconsax-react';
 import { useToastr } from '@/app/components/Toastr';
@@ -36,6 +39,7 @@ interface Holiday {
   name: string;
   type: string;
   companyId?: number | null;
+  deductFromAnnualLeave?: boolean;
   isActive: boolean;
 }
 
@@ -93,6 +97,7 @@ export default function HolidayDialog({
     name: '',
     type: 'company',
     companyId: '',
+    deductFromAnnualLeave: false,
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -126,6 +131,7 @@ export default function HolidayDialog({
           name: holiday.name,
           type: holiday.type,
           companyId: holiday.companyId?.toString() || '',
+          deductFromAnnualLeave: holiday.deductFromAnnualLeave || false,
         });
         setDateValue(dayjs(holiday.date));
       } else {
@@ -134,6 +140,7 @@ export default function HolidayDialog({
           name: '',
           type: 'company',
           companyId: '',
+          deductFromAnnualLeave: false,
         });
         setDateValue(null);
       }
@@ -141,8 +148,11 @@ export default function HolidayDialog({
     }
   }, [open, holiday]);
 
-  const handleChange = (field: string, value: string) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
+  const handleChange = (field: string, value: string | boolean) => {
+    const processedValue = field === 'deductFromAnnualLeave'
+      ? (value === 'true' || value === true)
+      : value;
+    setFormData((prev) => ({ ...prev, [field]: processedValue }));
     if (errors[field]) {
       setErrors((prev) => ({ ...prev, [field]: '' }));
     }
@@ -174,6 +184,7 @@ export default function HolidayDialog({
           name: formData.name.trim(),
           type: formData.type,
           companyId: formData.companyId ? parseInt(formData.companyId) : null,
+          deductFromAnnualLeave: formData.deductFromAnnualLeave,
         }),
       });
 
@@ -321,6 +332,31 @@ export default function HolidayDialog({
                   เลือก &quot;ทุกบริษัท&quot; หากต้องการให้ใช้กับทุกบริษัท
                 </Typography>
               </FormControl>
+            )}
+
+            {/* บังคับพักร้อน */}
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={formData.deductFromAnnualLeave}
+                  onChange={(e) => handleChange('deductFromAnnualLeave', e.target.checked ? 'true' : 'false')}
+                  color="warning"
+                />
+              }
+              label={
+                <Typography variant="body2" fontWeight={500}>
+                  บังคับพักร้อน (หักจากวันลาพักร้อน)
+                </Typography>
+              }
+              sx={{ mt: 1 }}
+            />
+
+            {formData.deductFromAnnualLeave && (
+              <Alert severity="warning" sx={{ mt: 1 }}>
+                <Typography variant="body2">
+                  ระบบจะสร้างใบลาพักร้อนอัตโนมัติสำหรับพนักงานทุกคน{formData.companyId ? ' ในบริษัทที่เลือก' : ''} และหักจากโควตาวันลาพักร้อน
+                </Typography>
+              </Alert>
             )}
           </Box>
         </DialogContent>

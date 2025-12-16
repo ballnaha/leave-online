@@ -23,6 +23,7 @@ export async function GET(
             name: holiday.name,
             type: holiday.type,
             companyId: holiday.companyId,
+            deductFromAnnualLeave: holiday.deductFromAnnualLeave,
             isActive: holiday.isActive,
         });
     } catch (error) {
@@ -39,7 +40,7 @@ export async function PUT(
     try {
         const { id } = await params;
         const body = await request.json();
-        const { date, name, type, companyId, isActive } = body;
+        const { date, name, type, companyId, deductFromAnnualLeave, isActive } = body;
 
         const holiday = await prisma.holiday.update({
             where: { id: parseInt(id) },
@@ -48,6 +49,7 @@ export async function PUT(
                 ...(name && { name }),
                 ...(type && { type }),
                 ...(companyId !== undefined && { companyId: companyId ? parseInt(companyId) : null }),
+                ...(deductFromAnnualLeave !== undefined && { deductFromAnnualLeave }),
                 ...(isActive !== undefined && { isActive }),
             },
         });
@@ -58,6 +60,7 @@ export async function PUT(
             name: holiday.name,
             type: holiday.type,
             companyId: holiday.companyId,
+            deductFromAnnualLeave: holiday.deductFromAnnualLeave,
             isActive: holiday.isActive,
         });
     } catch (error: any) {
@@ -79,7 +82,7 @@ export async function DELETE(
 ) {
     try {
         const { id } = await params;
-        
+
         await prisma.holiday.delete({
             where: { id: parseInt(id) },
         });

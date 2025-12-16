@@ -52,6 +52,7 @@ export async function GET(request: NextRequest) {
             name: h.name,
             type: h.type,
             companyId: h.companyId,
+            deductFromAnnualLeave: h.deductFromAnnualLeave,
             ...(includeCompany && { company: (h as any).company }),
         }));
 

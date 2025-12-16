@@ -120,6 +120,7 @@ interface HolidayData {
     name: string;
     type: string;
     companyId: number | null;
+    deductFromAnnualLeave?: boolean;
 }
 
 interface UploadedAttachmentMeta {
@@ -161,6 +162,7 @@ export default function LeaveFormPage() {
     const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
     const [leaveType, setLeaveType] = useState<LeaveTypeData | null>(null);
     const [holidays, setHolidays] = useState<HolidayData[]>([]); // วันหยุดจาก database
+    const [forcedLeaveDays, setForcedLeaveDays] = useState<number>(0); // จำนวนวันบังคับพักร้อน
     const [shiftType, setShiftType] = useState<'day' | 'night'>('day'); // กะทำงาน: day = กะเช้า, night = กะดึก
     const [worksOnSunday, setWorksOnSunday] = useState<boolean>(false); // ทำงานวันอาทิตย์หรือไม่
     const [backdateWarning, setBackdateWarning] = useState<{
@@ -596,6 +598,13 @@ export default function LeaveFormPage() {
                 if (holidaysCurrentRes.ok) {
                     const currentYearHolidays = await holidaysCurrentRes.json();
                     holidaysData.push(...currentYearHolidays);
+
+                    // คำนวณจำนวนวันบังคับพักร้อนในปีปัจจุบัน
+                    const forcedHolidays = currentYearHolidays.filter((h: HolidayData) => h.deductFromAnnualLeave);
+                    console.log('[DEBUG] Current Year:', currentYear);
+                    console.log('[DEBUG] Total holidays:', currentYearHolidays.length);
+                    console.log('[DEBUG] Forced holidays:', forcedHolidays);
+                    setForcedLeaveDays(forcedHolidays.length);
                 }
                 if (holidaysNextRes.ok) {
                     const nextYearHolidays = await holidaysNextRes.json();
@@ -1147,6 +1156,24 @@ export default function LeaveFormPage() {
                                             fontSize: '0.65rem',
                                         }}
                                     />
+                                    {/* แสดง Chip บังคับพักร้อน เฉพาะลาพักร้อนและมีวันบังคับ */}
+                                    {leaveType.code === 'vacation' && forcedLeaveDays > 0 && (
+                                        <Chip
+                                            size="small"
+                                            icon={<CalendarRemove size={12} color="#E65100" variant="Bold" />}
+                                            label={t('forced_annual_leave_days', 'บังคับพักร้อน {{days}} วัน').replace('{{days}}', String(forcedLeaveDays))}
+                                            sx={{
+                                                bgcolor: 'rgba(230, 81, 0, 0.12)',
+                                                color: '#E65100',
+                                                fontWeight: 600,
+                                                fontSize: '0.65rem',
+                                                '& .MuiChip-icon': {
+                                                    marginLeft: '4px',
+                                                    marginRight: '-2px',
+                                                }
+                                            }}
+                                        />
+                                    )}
                                 </Box>
                             )}
                         </Box>

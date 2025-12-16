@@ -41,6 +41,7 @@ import {
   Building,
   Global,
 } from 'iconsax-react';
+import { Wallet2 } from 'iconsax-react';
 import HolidayDialog from './HolidayDialog';
 import ConfirmDialog from '../components/ConfirmDialog';
 import { useToastr } from '@/app/components/Toastr';
@@ -54,6 +55,7 @@ interface Holiday {
   name: string;
   type: string;
   companyId?: number | null;
+  deductFromAnnualLeave?: boolean;
   isActive: boolean;
 }
 
@@ -469,6 +471,23 @@ export default function HolidaysPage() {
                   </Box>
                 </Box>
 
+                {/* Forced Annual Leave Badge */}
+                {holiday.deductFromAnnualLeave && (
+                  <Chip
+                    icon={<Wallet2 size={14} color="#D32F2F" />}
+                    label="บังคับพักร้อน (หักจากวันลา)"
+                    size="small"
+                    color="error"
+                    variant="outlined"
+                    sx={{
+                      mt: 1,
+                      height: 24,
+                      fontWeight: 500,
+                      '& .MuiChip-icon': { color: 'inherit' }
+                    }}
+                  />
+                )}
+
                 {/* Actions */}
                 <Box sx={{ display: 'flex', gap: 1, pt: 1 }}>
                   <Button
@@ -517,6 +536,7 @@ export default function HolidaysPage() {
                 <TableCell sx={{ fontWeight: 600 }}>ชื่อวันหยุด</TableCell>
                 <TableCell sx={{ fontWeight: 600 }}>ประเภท</TableCell>
                 <TableCell sx={{ fontWeight: 600 }}>ขอบเขต</TableCell>
+                <TableCell sx={{ fontWeight: 600 }}>หักพักร้อน</TableCell>
                 <TableCell align="right" sx={{ fontWeight: 600 }}>จัดการ</TableCell>
               </TableRow>
             </TableHead>
@@ -526,7 +546,7 @@ export default function HolidaysPage() {
               <TableBody>
                 {filteredHolidays.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={5} align="center" sx={{ py: 8 }}>
+                    <TableCell colSpan={6} align="center" sx={{ py: 8 }}>
                       <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
                         <Calendar size={48} color={theme.palette.text.disabled} variant="Bulk" />
                         <Typography color="text.secondary" sx={{ mt: 2 }}>
@@ -617,6 +637,20 @@ export default function HolidaysPage() {
                               variant="outlined"
                               sx={{ '& .MuiChip-icon': { color: 'inherit' } }}
                             />
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {holiday.deductFromAnnualLeave ? (
+                            <Chip
+                              icon={<Wallet2 size={14} color="#D32F2F" />}
+                              label="หักพักร้อน"
+                              size="small"
+                              color="error"
+                              variant="outlined"
+                              sx={{ fontWeight: 500, '& .MuiChip-icon': { color: 'inherit' } }}
+                            />
+                          ) : (
+                            <Typography variant="body2" color="text.disabled">-</Typography>
                           )}
                         </TableCell>
                         <TableCell align="right">

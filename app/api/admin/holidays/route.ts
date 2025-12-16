@@ -29,6 +29,7 @@ export async function GET(request: NextRequest) {
             name: h.name,
             type: h.type,
             companyId: h.companyId,
+            deductFromAnnualLeave: h.deductFromAnnualLeave,
             isActive: h.isActive,
         }));
 
@@ -43,7 +44,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
     try {
         const body = await request.json();
-        const { date, name, type, companyId } = body;
+        const { date, name, type, companyId, deductFromAnnualLeave } = body;
 
         if (!date || !name) {
             return NextResponse.json(
@@ -52,14 +53,23 @@ export async function POST(request: NextRequest) {
             );
         }
 
+        const holidayDate = new Date(date);
+        const parsedCompanyId = companyId ? parseInt(companyId) : null;
+
         const holiday = await prisma.holiday.create({
             data: {
-                date: new Date(date),
+                date: holidayDate,
                 name,
                 type: type || 'company',
-                companyId: companyId ? parseInt(companyId) : null,
+                companyId: parsedCompanyId,
+                deductFromAnnualLeave: deductFromAnnualLeave || false,
             },
         });
+
+        // ถ้าเป็นบังคับพักร้อน ให้สร้าง LeaveRequest อัตโนมัติสำหรับพนักงานที่เกี่ยวข้อง
+        if (deductFromAnnualLeave) {
+            await createForcedAnnualLeaveRequests(holidayDate, parsedCompanyId, holiday.name);
+        }
 
         return NextResponse.json({
             id: holiday.id,
@@ -67,6 +77,7 @@ export async function POST(request: NextRequest) {
             name: holiday.name,
             type: holiday.type,
             companyId: holiday.companyId,
+            deductFromAnnualLeave: holiday.deductFromAnnualLeave,
             isActive: holiday.isActive,
         });
     } catch (error: any) {
@@ -80,3 +91,79 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Failed to create holiday' }, { status: 500 });
     }
 }
+
+// Helper function: สร้าง LeaveRequest อัตโนมัติสำหรับบังคับพักร้อน
+async function createForcedAnnualLeaveRequests(
+    holidayDate: Date,
+    companyId: number | null,
+    holidayName: string
+) {
+    try {
+        // ดึงพนักงานที่เกี่ยวข้อง (ตามบริษัท หรือทุกคนถ้า companyId = null)
+        const whereClause: any = {
+            isActive: true,
+            role: 'employee', // เฉพาะพนักงานทั่วไป
+        };
+
+        if (companyId) {
+            // ดึง company code จาก companyId
+            const company = await prisma.company.findUnique({
+                where: { id: companyId },
+                select: { code: true }
+            });
+            if (company) {
+                whereClause.company = company.code;
+            }
+        }
+
+        const employees = await prisma.user.findMany({
+            where: whereClause,
+            select: { id: true, employeeId: true }
+        });
+
+        // สร้าง leave code prefix
+        const year = String(holidayDate.getFullYear()).slice(-2);
+        const month = String(holidayDate.getMonth() + 1).padStart(2, '0');
+        const prefix = `FL${year}${month}`; // FL = Forced Leave
+
+        // หา running number ล่าสุด
+        const lastLeave = await prisma.leaveRequest.findFirst({
+            where: { leaveCode: { startsWith: prefix } },
+            orderBy: { leaveCode: 'desc' },
+            select: { leaveCode: true }
+        });
+
+        let runningNumber = 1;
+        if (lastLeave?.leaveCode) {
+            const lastNumber = parseInt(lastLeave.leaveCode.slice(-3), 10);
+            if (!isNaN(lastNumber)) runningNumber = lastNumber + 1;
+        }
+
+        // สร้าง LeaveRequest สำหรับแต่ละพนักงาน
+        for (const employee of employees) {
+            const leaveCode = `${prefix}${String(runningNumber).padStart(3, '0')}`;
+            runningNumber++;
+
+            await prisma.leaveRequest.create({
+                data: {
+                    userId: employee.id,
+                    leaveCode,
+                    leaveType: 'vacation', // หักจากลาพักร้อน
+                    startDate: holidayDate,
+                    endDate: holidayDate,
+                    totalDays: 1,
+                    reason: `บังคับพักร้อน: ${holidayName}`,
+                    status: 'approved', // อนุมัติอัตโนมัติ
+                    currentLevel: 0,
+                    isEscalated: false,
+                }
+            });
+        }
+
+        console.log(`Created ${employees.length} forced annual leave requests for ${holidayDate.toISOString().split('T')[0]}`);
+    } catch (error) {
+        console.error('Error creating forced annual leave requests:', error);
+        // ไม่ throw error เพื่อไม่ให้กระทบการสร้าง holiday
+    }
+}
+
