@@ -165,7 +165,7 @@ function LoginPageContent() {
                 >
                     <Box
                         component="img"
-                        src="/images/psc1.png"
+                        src="/images/PSC1.png"
                         alt="PSC Logo"
                         sx={{
                             width: 100,
@@ -175,7 +175,7 @@ function LoginPageContent() {
                     />
                     <Box
                         component="img"
-                        src="/images/ps1.png"
+                        src="/images/PS1.png"
                         alt="PS Logo"
                         sx={{
                             width: 100,
