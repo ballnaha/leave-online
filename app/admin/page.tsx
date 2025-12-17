@@ -183,7 +183,7 @@ export default function AdminDashboardPage() {
     };
 
     return (
-        <Box sx={{ maxWidth: 1400, mx: 'auto', p: { xs: 1, sm: 1 } }}>
+        <Box>
             {/* Header */}
             <Box sx={{ mb: 4, display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, justifyContent: 'space-between', alignItems: { xs: 'flex-start', sm: 'center' }, gap: 2 }}>
                 <Box>

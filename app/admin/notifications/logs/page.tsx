@@ -135,7 +135,7 @@ export default function NotificationLogsPage() {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(20);
   const [total, setTotal] = useState(0);
-  
+
   // Filters
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -143,7 +143,7 @@ export default function NotificationLogsPage() {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [showFilters, setShowFilters] = useState(false);
-  
+
   // Filter options
   const [types, setTypes] = useState<string[]>([]);
   const statuses = ['sent', 'delivered', 'opened', 'dismissed', 'failed'];
@@ -158,7 +158,7 @@ export default function NotificationLogsPage() {
         page: (page + 1).toString(),
         limit: rowsPerPage.toString(),
       });
-      
+
       if (search) params.append('search', search);
       if (statusFilter !== 'all') params.append('status', statusFilter);
       if (typeFilter !== 'all') params.append('type', typeFilter);
@@ -167,7 +167,7 @@ export default function NotificationLogsPage() {
 
       const res = await fetch(`/api/admin/notifications/logs?${params}`);
       const data = await res.json();
-      
+
       setLogs(data.logs || []);
       setTotal(data.pagination?.total || 0);
       if (data.filters?.types) {
@@ -213,7 +213,7 @@ export default function NotificationLogsPage() {
   const hasFilters = search || statusFilter !== 'all' || typeFilter !== 'all' || startDate || endDate;
 
   return (
-    <Box sx={{ p: { xs: 2, md: 3 } }}>
+    <Box>
       {/* Header */}
       <Box sx={{ mb: 4, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 2 }}>
         <Box>
@@ -239,10 +239,10 @@ export default function NotificationLogsPage() {
           </Box>
         </Box>
         <Tooltip title="รีเฟรช">
-          <IconButton 
-            onClick={fetchLogs} 
+          <IconButton
+            onClick={fetchLogs}
             disabled={loading}
-            sx={{ 
+            sx={{
               bgcolor: alpha(theme.palette.primary.main, 0.1),
               '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.2) }
             }}
@@ -310,7 +310,7 @@ export default function NotificationLogsPage() {
               </Button>
             )}
           </Box>
-          
+
           {/* Advanced Filters */}
           <Collapse in={showFilters}>
             <Box sx={{ mt: 2, pt: 2, borderTop: '1px solid', borderColor: 'divider', display: 'flex', gap: 2, flexWrap: 'wrap' }}>

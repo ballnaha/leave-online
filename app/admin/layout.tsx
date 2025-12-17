@@ -144,18 +144,6 @@ const menuGroups: MenuGroup[] = [
     },
 
     {
-        groupLabel: 'Banner',
-        items: [
-            {
-                text: 'Banner',
-                icon: Gallery,
-                iconColor: '#6C63FF',
-                path: '/admin/banners',
-            },
-
-        ],
-    },
-    {
         groupLabel: 'รายงาน',
         items: [
             {

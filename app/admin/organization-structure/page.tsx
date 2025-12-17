@@ -257,12 +257,12 @@ export default function OrganizationStructurePage() {
 
       const response = await fetch(`/api/admin/organization-structure?${params}`);
       if (!response.ok) throw new Error('Failed to fetch');
-      
+
       const result = await response.json();
       setData(result.data || []);
       setStats(result.stats || null);
       setFilters(result.filters || { companies: [], departments: [], sections: [], shifts: [] });
-      
+
       // Expand all by default
       if (result.grouped) {
         setExpandedCompanies(new Set(result.grouped.map((g: { company: string }) => g.company)));
@@ -366,7 +366,7 @@ export default function OrganizationStructurePage() {
   const filteredSubordinates = useMemo(() => {
     if (!selectedUser) return [];
     if (!subordinateSearch) return selectedUser.subordinates;
-    
+
     const query = subordinateSearch.toLowerCase();
     return selectedUser.subordinates.filter(
       sub =>
@@ -465,7 +465,7 @@ export default function OrganizationStructurePage() {
               >
                 <MenuItem value="all">ทั้งหมด</MenuItem>
                 {filters.departments.map(d => (
-                  <MenuItem key={d.code} value={d.code}>{d.name}</MenuItem>
+                  <MenuItem key={d.code} value={d.code}>{d.code} - {d.name}</MenuItem>
                 ))}
               </Select>
             </FormControl>
@@ -481,7 +481,7 @@ export default function OrganizationStructurePage() {
               >
                 <MenuItem value="all">ทั้งหมด</MenuItem>
                 {filters.sections.map(s => (
-                  <MenuItem key={s.code} value={s.code}>{s.name}</MenuItem>
+                  <MenuItem key={s.code} value={s.code}>{s.code} - {s.name}</MenuItem>
                 ))}
               </Select>
             </FormControl>
@@ -607,14 +607,14 @@ export default function OrganizationStructurePage() {
                     <AccordionDetails sx={{ p: 0 }}>
                       {/* Mobile Card Layout - แสดงเสมอบน mobile */}
                       <Box sx={{ display: { xs: 'block', md: viewMode === 'card' ? 'block' : 'none' }, p: { xs: 1.5, sm: 2 } }}>
-                        <Box sx={{ 
-                          display: 'grid', 
-                          gridTemplateColumns: { 
-                            xs: '1fr', 
-                            sm: 'repeat(2, 1fr)', 
-                            lg: viewMode === 'card' ? 'repeat(3, 1fr)' : 'repeat(2, 1fr)' 
-                          }, 
-                          gap: { xs: 1.5, sm: 2 } 
+                        <Box sx={{
+                          display: 'grid',
+                          gridTemplateColumns: {
+                            xs: '1fr',
+                            sm: 'repeat(2, 1fr)',
+                            lg: viewMode === 'card' ? 'repeat(3, 1fr)' : 'repeat(2, 1fr)'
+                          },
+                          gap: { xs: 1.5, sm: 2 }
                         }}>
                           {deptGroup.users.map(user => (
                             <Card
@@ -744,100 +744,100 @@ export default function OrganizationStructurePage() {
                               <TableCell sx={{ fontWeight: 600 }}>ลูกน้อง</TableCell>
                             </TableRow>
                           </TableHead>
-                            <TableBody>
-                              {deptGroup.users.map(user => (
-                                <TableRow key={user.id} hover>
-                                  <TableCell sx={{ pl: 4 }}>
-                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                                      <Avatar
-                                        src={user.avatar || undefined}
-                                        sx={{ width: 36, height: 36, bgcolor: PRIMARY_COLOR }}
-                                      >
-                                        {user.firstName?.[0]}
-                                      </Avatar>
-                                      <Box>
-                                        <Typography variant="body2" fontWeight={600}>
-                                          {user.fullName}
-                                        </Typography>
-                                        <Typography variant="caption" color="text.secondary">
-                                          {user.employeeId}
-                                        </Typography>
-                                      </Box>
+                          <TableBody>
+                            {deptGroup.users.map(user => (
+                              <TableRow key={user.id} hover>
+                                <TableCell sx={{ pl: 4 }}>
+                                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                                    <Avatar
+                                      src={user.avatar || undefined}
+                                      sx={{ width: 36, height: 36, bgcolor: PRIMARY_COLOR }}
+                                    >
+                                      {user.firstName?.[0]}
+                                    </Avatar>
+                                    <Box>
+                                      <Typography variant="body2" fontWeight={600}>
+                                        {user.fullName}
+                                      </Typography>
+                                      <Typography variant="caption" color="text.secondary">
+                                        {user.employeeId}
+                                      </Typography>
                                     </Box>
-                                  </TableCell>
-                                  <TableCell>
-                                    <Typography variant="body2">{user.position || '-'}</Typography>
-                                  </TableCell>
-                                  <TableCell>
-                                    <Typography variant="body2">{user.sectionName || '-'}</Typography>
-                                  </TableCell>
-                                  <TableCell>
-                                    <Typography variant="body2">{user.shift || '-'}</Typography>
-                                  </TableCell>
-                                  <TableCell>
+                                  </Box>
+                                </TableCell>
+                                <TableCell>
+                                  <Typography variant="body2">{user.position || '-'}</Typography>
+                                </TableCell>
+                                <TableCell>
+                                  <Typography variant="body2">{user.sectionName || '-'}</Typography>
+                                </TableCell>
+                                <TableCell>
+                                  <Typography variant="body2">{user.shift || '-'}</Typography>
+                                </TableCell>
+                                <TableCell>
+                                  <Chip
+                                    label={user.roleName}
+                                    size="small"
+                                    sx={{
+                                      bgcolor: roleColors[user.role]?.bg || '#F5F5F5',
+                                      color: roleColors[user.role]?.color || '#616161',
+                                      fontWeight: 600,
+                                      fontSize: '0.7rem',
+                                      height: 24,
+                                    }}
+                                  />
+                                </TableCell>
+                                <TableCell>
+                                  {user.hasApprover ? (
+                                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                                      {user.approvers.map(a => (
+                                        <Box key={a.level} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                          <Avatar
+                                            src={a.approver.avatar || undefined}
+                                            sx={{ width: 24, height: 24, fontSize: '0.7rem', bgcolor: PRIMARY_COLOR }}
+                                          >
+                                            {a.approver.firstName?.[0]}
+                                          </Avatar>
+                                          <Tooltip title={`${a.approver.position || ''} (${a.approver.roleName})`}>
+                                            <Typography variant="body2" sx={{ cursor: 'help' }}>
+                                              {a.approver.fullName}
+                                            </Typography>
+                                          </Tooltip>
+                                        </Box>
+                                      ))}
+                                    </Box>
+                                  ) : (
+                                    <Typography variant="body2" color="text.secondary">
+                                      -
+                                    </Typography>
+                                  )}
+                                </TableCell>
+                                <TableCell>
+                                  {user.subordinateCount > 0 ? (
                                     <Chip
-                                      label={user.roleName}
+                                      icon={<People size={14} />}
+                                      label={`${user.subordinateCount} คน`}
                                       size="small"
+                                      onClick={() => handleOpenSubordinates(user)}
                                       sx={{
-                                        bgcolor: roleColors[user.role]?.bg || '#F5F5F5',
-                                        color: roleColors[user.role]?.color || '#616161',
+                                        bgcolor: '#E8F5E9',
+                                        color: '#2E7D32',
                                         fontWeight: 600,
-                                        fontSize: '0.7rem',
-                                        height: 24,
+                                        cursor: 'pointer',
+                                        '&:hover': { bgcolor: '#C8E6C9' },
                                       }}
                                     />
-                                  </TableCell>
-                                  <TableCell>
-                                    {user.hasApprover ? (
-                                      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-                                        {user.approvers.map(a => (
-                                          <Box key={a.level} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                            <Avatar
-                                              src={a.approver.avatar || undefined}
-                                              sx={{ width: 24, height: 24, fontSize: '0.7rem', bgcolor: PRIMARY_COLOR }}
-                                            >
-                                              {a.approver.firstName?.[0]}
-                                            </Avatar>
-                                            <Tooltip title={`${a.approver.position || ''} (${a.approver.roleName})`}>
-                                              <Typography variant="body2" sx={{ cursor: 'help' }}>
-                                                {a.approver.fullName}
-                                              </Typography>
-                                            </Tooltip>
-                                          </Box>
-                                        ))}
-                                      </Box>
-                                    ) : (
-                                      <Typography variant="body2" color="text.secondary">
-                                        -
-                                      </Typography>
-                                    )}
-                                  </TableCell>
-                                  <TableCell>
-                                    {user.subordinateCount > 0 ? (
-                                      <Chip
-                                        icon={<People size={14} />}
-                                        label={`${user.subordinateCount} คน`}
-                                        size="small"
-                                        onClick={() => handleOpenSubordinates(user)}
-                                        sx={{
-                                          bgcolor: '#E8F5E9',
-                                          color: '#2E7D32',
-                                          fontWeight: 600,
-                                          cursor: 'pointer',
-                                          '&:hover': { bgcolor: '#C8E6C9' },
-                                        }}
-                                      />
-                                    ) : (
-                                      <Typography variant="body2" color="text.secondary">
-                                        -
-                                      </Typography>
-                                    )}
-                                  </TableCell>
-                                </TableRow>
-                              ))}
-                            </TableBody>
-                          </Table>
-                        </TableContainer>
+                                  ) : (
+                                    <Typography variant="body2" color="text.secondary">
+                                      -
+                                    </Typography>
+                                  )}
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </TableContainer>
                     </AccordionDetails>
                   </Accordion>
                 ))}
@@ -890,9 +890,9 @@ export default function OrganizationStructurePage() {
             {selectedUser && (
               <Box sx={{ display: 'flex', flexDirection: 'column', height: '85vh' }}>
                 {/* Vaul Handle */}
-                <Box sx={{ 
-                  display: 'flex', 
-                  justifyContent: 'center', 
+                <Box sx={{
+                  display: 'flex',
+                  justifyContent: 'center',
                   pt: 1.5,
                   pb: 1,
                   bgcolor: 'white',
@@ -910,19 +910,19 @@ export default function OrganizationStructurePage() {
                 </Box>
 
                 {/* Header */}
-                <Box sx={{ 
+                <Box sx={{
                   bgcolor: 'white',
-                  px: 2.5, 
+                  px: 2.5,
                   pb: 2,
                   borderBottom: '1px solid #F1F5F9',
                 }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
                     <Avatar
                       src={selectedUser.avatar || undefined}
-                      sx={{ 
-                        width: 56, 
-                        height: 56, 
-                        fontSize: '1.5rem', 
+                      sx={{
+                        width: 56,
+                        height: 56,
+                        fontSize: '1.5rem',
                         bgcolor: PRIMARY_COLOR,
                         boxShadow: '0 4px 12px rgba(108, 99, 255, 0.3)',
                       }}
@@ -941,13 +941,13 @@ export default function OrganizationStructurePage() {
                         </Typography>
                       </VaulDrawer.Description>
                     </Box>
-                    <IconButton 
+                    <IconButton
                       onClick={() => {
                         setSubordinatesDialogOpen(false);
                         setSelectedUser(null);
                         setSubordinateSearch('');
                       }}
-                      sx={{ 
+                      sx={{
                         bgcolor: '#F1F5F9',
                         '&:hover': { bgcolor: '#E2E8F0' }
                       }}
@@ -1108,12 +1108,12 @@ export default function OrganizationStructurePage() {
                       </TableContainer>
                     </>
                   ) : (
-                    <Box sx={{ 
-                      display: 'flex', 
-                      flexDirection: 'column', 
-                      alignItems: 'center', 
+                    <Box sx={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
                       justifyContent: 'center',
-                      textAlign: 'center', 
+                      textAlign: 'center',
                       py: 6,
                       minHeight: 200,
                     }}>

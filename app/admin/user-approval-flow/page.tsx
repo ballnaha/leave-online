@@ -743,7 +743,7 @@ export default function UserApprovalFlowPage() {
           >
             <MenuItem value="all">ทั้งหมด</MenuItem>
             {filteredDepartments.map((dept) => (
-              <MenuItem key={dept.code} value={dept.code}>{dept.name}</MenuItem>
+              <MenuItem key={dept.code} value={dept.code}>{dept.code} - {dept.name}</MenuItem>
             ))}
           </Select>
         </FormControl>
@@ -763,7 +763,7 @@ export default function UserApprovalFlowPage() {
           >
             <MenuItem value="all">ทั้งหมด</MenuItem>
             {filteredSections.map((section) => (
-              <MenuItem key={section.code} value={section.code}>{section.name}</MenuItem>
+              <MenuItem key={section.code} value={section.code}>{section.code} - {section.name}</MenuItem>
             ))}
           </Select>
         </FormControl>

@@ -393,7 +393,7 @@ export default function AdminLeaveReportsPage() {
       const header = ['ลำดับ', 'รหัสพนักงาน', 'ชื่อพนักงาน', 'ตำแหน่ง', 'ฝ่าย', 'แผนก', 'วันที่หยุด', 'จำนวนวัน', 'ประเภท', 'เหตุผลการลา', 'สถานะ', 'หมายเหตุ'];
       const data = exportRows.map((r, i) => [i + 1, r.employeeId, r.employeeName, r.position, r.department, r.section, r.leaveDate, r.totalDays, r.leaveTypeName, r.reason, r.statusLabel, r.note]);
       const sheet = XLSX.utils.aoa_to_sheet([header, ...data]);
-      
+
       // Set column widths
       sheet['!cols'] = [
         { wch: 6 },  // ลำดับ
@@ -409,7 +409,7 @@ export default function AdminLeaveReportsPage() {
         { wch: 12 }, // สถานะ
         { wch: 30 }, // หมายเหตุ
       ];
-      
+
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, sheet, 'LeaveReport');
       const today = new Date().toISOString().slice(0, 10);
@@ -461,11 +461,11 @@ export default function AdminLeaveReportsPage() {
               ${bodyRows.map((row, rowIdx) => `
                 <tr style="background-color: ${rowIdx % 2 === 0 ? '#ffffff' : '#f5f5f5'};">
                   ${row.map((cell, idx) => {
-                    // idx 9 = เหตุผลการลา, idx 11 = หมายเหตุ - allow wrap
-                    const isWrapColumn = idx === 9 || idx === 11;
-                    const isCenterColumn = idx === 0 || idx === 7;
-                    return `<td style="border: 1px solid #444; padding: 5px 4px; color: #000000; font-size: 7.5pt; ${isCenterColumn ? 'text-align: center;' : ''} ${isWrapColumn ? 'max-width: 140px; word-wrap: break-word; white-space: normal;' : 'white-space: nowrap;'}">${cell}</td>`;
-                  }).join('')}
+        // idx 9 = เหตุผลการลา, idx 11 = หมายเหตุ - allow wrap
+        const isWrapColumn = idx === 9 || idx === 11;
+        const isCenterColumn = idx === 0 || idx === 7;
+        return `<td style="border: 1px solid #444; padding: 5px 4px; color: #000000; font-size: 7.5pt; ${isCenterColumn ? 'text-align: center;' : ''} ${isWrapColumn ? 'max-width: 140px; word-wrap: break-word; white-space: normal;' : 'white-space: nowrap;'}">${cell}</td>`;
+      }).join('')}
                 </tr>
               `).join('')}
             </tbody>
@@ -494,12 +494,12 @@ export default function AdminLeaveReportsPage() {
           const totalPages = pdf.internal.getNumberOfPages();
           const pageWidth = pdf.internal.pageSize.getWidth();
           const pageHeight = pdf.internal.pageSize.getHeight();
-          
+
           for (let i = 1; i <= totalPages; i++) {
             pdf.setPage(i);
             pdf.setFontSize(8);
             pdf.setTextColor(80, 80, 80);
-            
+
             // Bottom right: page number (English to avoid Thai font issue)
             pdf.text(`${i} / ${totalPages}`, pageWidth - 10, pageHeight - 5, { align: 'right' });
           }
@@ -663,7 +663,7 @@ export default function AdminLeaveReportsPage() {
             >
               <MenuItem value="all">ทุกฝ่าย</MenuItem>
               {filteredDepartments.map((d) => (
-                <MenuItem key={d.code} value={d.code}>{d.name}</MenuItem>
+                <MenuItem key={d.code} value={d.code}>{d.code} - {d.name}</MenuItem>
               ))}
             </Select>
           </FormControl>
@@ -674,7 +674,7 @@ export default function AdminLeaveReportsPage() {
             <Select value={sectionFilter} label="แผนก" onChange={(e) => setSectionFilter(String(e.target.value))} sx={{ borderRadius: 1 }}>
               <MenuItem value="all">ทุกแผนก</MenuItem>
               {filteredSections.map((s) => (
-                <MenuItem key={s.code} value={s.code}>{s.name}</MenuItem>
+                <MenuItem key={s.code} value={s.code}>{s.code} - {s.name}</MenuItem>
               ))}
             </Select>
           </FormControl>
@@ -695,7 +695,7 @@ export default function AdminLeaveReportsPage() {
       {(debouncedSearch || month !== 0 || companyFilter !== 'all' || departmentFilter !== 'all' || sectionFilter !== 'all' || status !== 'all') && (
         <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2, alignItems: 'center' }}>
           <Typography variant="body2" color="text.secondary" sx={{ mr: 1 }}>ตัวกรอง:</Typography>
-          
+
           {debouncedSearch && (
             <Chip
               size="small"
@@ -704,7 +704,7 @@ export default function AdminLeaveReportsPage() {
               sx={{ borderRadius: 1 }}
             />
           )}
-          
+
           {month !== 0 && (
             <Chip
               size="small"
@@ -713,7 +713,7 @@ export default function AdminLeaveReportsPage() {
               sx={{ borderRadius: 1 }}
             />
           )}
-          
+
           {companyFilter !== 'all' && (
             <Chip
               size="small"
@@ -722,7 +722,7 @@ export default function AdminLeaveReportsPage() {
               sx={{ borderRadius: 1 }}
             />
           )}
-          
+
           {departmentFilter !== 'all' && (
             <Chip
               size="small"
@@ -731,7 +731,7 @@ export default function AdminLeaveReportsPage() {
               sx={{ borderRadius: 1 }}
             />
           )}
-          
+
           {sectionFilter !== 'all' && (
             <Chip
               size="small"
@@ -740,7 +740,7 @@ export default function AdminLeaveReportsPage() {
               sx={{ borderRadius: 1 }}
             />
           )}
-          
+
           {status !== 'all' && (
             <Chip
               size="small"
@@ -749,7 +749,7 @@ export default function AdminLeaveReportsPage() {
               sx={{ borderRadius: 1 }}
             />
           )}
-          
+
           <Button
             size="small"
             variant="text"

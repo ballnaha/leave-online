@@ -397,7 +397,7 @@ export default function ProfilePage() {
         {
             title: t('help_info', 'ช่วยเหลือและข้อมูล'),
             items: [
-                { icon: MessageQuestion, label: t('terms_and_conditions', 'ข้อกำหนดและเงื่อนไข'), color: '#00ACC1', link: '#' },
+                { icon: MessageQuestion, label: t('terms_and_conditions', 'ข้อกำหนดและเงื่อนไข'), color: '#00ACC1', link: '/profile/terms' },
                 ...(!isStandalone ? [{
                     icon: Mobile,
                     label: t('install_app', 'ติดตั้งแอปพลิเคชัน'),

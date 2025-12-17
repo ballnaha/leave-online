@@ -208,7 +208,7 @@ export default function NotificationsPage() {
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<NotificationStats | null>(null);
   const [days, setDays] = useState(30);
-  
+
   // OneSignal stats
   const [onesignalStats, setOnesignalStats] = useState<OneSignalStats | null>(null);
   const [onesignalLoading, setOnesignalLoading] = useState(false);
@@ -309,7 +309,7 @@ export default function NotificationsPage() {
   }
 
   return (
-    <Box sx={{ p: { xs: 2, md: 3 } }}>
+    <Box>
       {/* Header */}
       <Box sx={{ mb: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 2 }}>
         <Box>
@@ -423,40 +423,40 @@ export default function NotificationsPage() {
                 anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
                 transformOrigin={{ vertical: 'top', horizontal: 'right' }}
               >
-                <MenuItem 
-                  onClick={() => { 
-                    setSyncMenuAnchor(null); 
-                    syncWithOneSignal('validate'); 
+                <MenuItem
+                  onClick={() => {
+                    setSyncMenuAnchor(null);
+                    syncWithOneSignal('validate');
                   }}
                 >
                   <ListItemIcon><CheckSquare size={18} /></ListItemIcon>
-                  <ListItemText 
-                    primary="ตรวจสอบ Devices" 
+                  <ListItemText
+                    primary="ตรวจสอบ Devices"
                     secondary="ตรวจสอบว่า devices ยังอยู่ใน OneSignal"
                   />
                 </MenuItem>
-                <MenuItem 
-                  onClick={() => { 
-                    setSyncMenuAnchor(null); 
-                    syncWithOneSignal('import'); 
+                <MenuItem
+                  onClick={() => {
+                    setSyncMenuAnchor(null);
+                    syncWithOneSignal('import');
                   }}
                 >
                   <ListItemIcon><Download size={18} /></ListItemIcon>
-                  <ListItemText 
-                    primary="นำเข้าจาก OneSignal" 
+                  <ListItemText
+                    primary="นำเข้าจาก OneSignal"
                     secondary="ดึง players ใหม่จาก OneSignal มา DB"
                   />
                 </MenuItem>
                 <Divider />
-                <MenuItem 
-                  onClick={() => { 
-                    setSyncMenuAnchor(null); 
-                    syncWithOneSignal('full'); 
+                <MenuItem
+                  onClick={() => {
+                    setSyncMenuAnchor(null);
+                    syncWithOneSignal('full');
                   }}
                 >
                   <ListItemIcon><RefreshCcw size={18} /></ListItemIcon>
-                  <ListItemText 
-                    primary="Full Sync" 
+                  <ListItemText
+                    primary="Full Sync"
                     secondary="ตรวจสอบ + นำเข้าทั้งหมด"
                   />
                 </MenuItem>
@@ -494,11 +494,11 @@ export default function NotificationsPage() {
                   sx={{
                     p: 2,
                     borderRadius: 1,
-                    bgcolor: onesignalStats?.error 
+                    bgcolor: onesignalStats?.error
                       ? alpha(theme.palette.warning.main, 0.05)
                       : alpha(theme.palette.info.main, 0.05),
                     border: '1px solid',
-                    borderColor: onesignalStats?.error 
+                    borderColor: onesignalStats?.error
                       ? alpha(theme.palette.warning.main, 0.2)
                       : alpha(theme.palette.info.main, 0.2),
                   }}
