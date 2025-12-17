@@ -31,6 +31,7 @@ export default function NotificationRequiredModal({ skipOnPaths = [] }: Notifica
     const [loading, setLoading] = useState(false);
     const [showBlockedHelp, setShowBlockedHelp] = useState(false);
     const [currentPath, setCurrentPath] = useState('');
+    const [blockedDismissed, setBlockedDismissed] = useState(false);
 
     useEffect(() => {
         if (typeof window !== 'undefined') {
@@ -68,12 +69,15 @@ export default function NotificationRequiredModal({ skipOnPaths = [] }: Notifica
         return null;
     }
 
-    // Blocked state drawer
-    if (isBlocked && status === 'authenticated' && isInitialized && !shouldSkip) {
+    // Blocked state drawer - แจ้งเตือนแต่ปิดได้
+    if (isBlocked && status === 'authenticated' && isInitialized && !shouldSkip && !blockedDismissed) {
         return (
             <Drawer.Root
                 open={true}
-                dismissible={false}
+                onOpenChange={(open) => {
+                    if (!open) setBlockedDismissed(true);
+                }}
+                dismissible={true}
                 shouldScaleBackground={false}
             >
                 <Drawer.Portal>
@@ -159,31 +163,31 @@ export default function NotificationRequiredModal({ skipOnPaths = [] }: Notifica
                                         px: 1,
                                     }}
                                 >
-                                    {t('notif_blocked_simple_desc', 'กรุณาเปิดการแจ้งเตือนในการตั้งค่าเบราว์เซอร์ แล้วกดปุ่มด้านล่างเพื่อรีเฟรช')}
+                                    {t('notif_blocked_simple_desc', 'กรุณาเปิดการแจ้งเตือนในการตั้งค่าเบราว์เซอร์')}
                                 </Typography>
                             </Drawer.Description>
 
-                            {/* Refresh Button */}
+                            {/* Close Button */}
                             <Button
                                 fullWidth
                                 variant="contained"
-                                onClick={() => window.location.reload()}
+                                onClick={() => setBlockedDismissed(true)}
                                 sx={{
                                     py: 1.75,
                                     borderRadius: 50,
-                                    background: 'linear-gradient(135deg, #3B82F6 0%, #2563EB 100%)',
+                                    background: 'linear-gradient(135deg, #64748B 0%, #475569 100%)',
                                     fontWeight: 600,
                                     fontSize: '0.9rem',
-                                    textTransform: 'uppercase',
-                                    letterSpacing: 1,
-                                    boxShadow: '0 4px 14px rgba(59, 130, 246, 0.4)',
+                                    textTransform: 'none',
+                                    letterSpacing: 0.5,
+                                    boxShadow: '0 4px 14px rgba(100, 116, 139, 0.3)',
                                     '&:hover': {
-                                        background: 'linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)',
-                                        boxShadow: '0 6px 20px rgba(59, 130, 246, 0.5)',
+                                        background: 'linear-gradient(135deg, #475569 0%, #334155 100%)',
+                                        boxShadow: '0 6px 20px rgba(100, 116, 139, 0.4)',
                                     },
                                 }}
                             >
-                                {t('notif_refresh_page', 'รีเฟรชหน้านี้')}
+                                {t('btn_close', 'ปิด')}
                             </Button>
                         </Box>
                     </Drawer.Content>

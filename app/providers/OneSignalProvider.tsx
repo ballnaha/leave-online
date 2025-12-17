@@ -35,16 +35,11 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
   const [permission, setPermission] = useState<NotificationPermission | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
 
-  // Initialize OneSignal
+  // Initialize OneSignal - รอจนกว่าจะ authenticated ก่อน
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    if (!ONESIGNAL_APP_ID) {
-      console.warn('🔔 OneSignal App ID not configured');
-      setIsInitialized(true); // Mark as initialized so UI isn't stuck
-      return;
-    }
 
-    // Check basic requirements
+    // ตรวจสอบ browser support ก่อน (เพื่อให้ isSupported มีค่าถูกต้อง)
     const checkSupport = () => {
       // Service Worker is required
       if (!('serviceWorker' in navigator)) {
@@ -62,16 +57,34 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
       return true;
     };
 
-    if (!checkSupport()) {
+    const browserSupported = checkSupport();
+    setIsSupported(browserSupported);
+
+    if ('Notification' in window) {
+      setPermission(Notification.permission);
+    }
+
+    // ถ้า browser ไม่รองรับ ไม่ต้อง init เลย
+    if (!browserSupported) {
       console.warn('🔔 Push notifications not supported on this browser');
-      setIsSupported(false);
+      setIsInitialized(true);
+      return;
+    }
+
+    // รอจนกว่า session status จะ load เสร็จ
+    if (status === 'loading') return;
+
+    // ไม่ init OneSignal ถ้ายังไม่ได้ login (เพื่อไม่ให้แสดง prompt บนหน้า login)
+    if (status !== 'authenticated') {
+      console.log('🔔 OneSignal: Waiting for authentication...');
       setIsInitialized(true); // Mark as initialized so UI isn't stuck
       return;
     }
 
-    setIsSupported(true);
-    if ('Notification' in window) {
-      setPermission(Notification.permission);
+    if (!ONESIGNAL_APP_ID) {
+      console.warn('🔔 OneSignal App ID not configured');
+      setIsInitialized(true); // Mark as initialized so UI isn't stuck
+      return;
     }
 
     // Timeout fallback: if SDK doesn't initialize in 10 seconds, mark as initialized anyway
@@ -100,7 +113,7 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
     return () => {
       clearTimeout(initTimeout);
     };
-  }, []);
+  }, [status]);
 
   const initOneSignal = async () => {
     if (!window.OneSignal) {
