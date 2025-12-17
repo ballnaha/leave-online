@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { Box, Typography, Button, IconButton, Stack, Dialog, DialogContent, DialogTitle } from '@mui/material';
 import { X, Share, PlusSquare } from 'lucide-react';
 import { usePWA } from '../providers/PWAProvider';
+import { useOneSignal } from '../providers/OneSignalProvider';
 
 const GooglePlayIcon = () => (
     <svg viewBox="0 0 24 24" width="20" height="20">
@@ -18,9 +19,13 @@ const AppleIcon = () => (
 
 export default function PWAInstallPrompt() {
     const { isInstallPromptVisible, isStandalone, installPWA, hideInstallPrompt, isIOS } = usePWA();
+    const { isSubscribed, isInitialized, isSupported, permission } = useOneSignal();
     const [openIOSInstructions, setOpenIOSInstructions] = useState(false);
 
-    if (!isInstallPromptVisible || isStandalone) return null;
+    // ถ้ายังไม่ได้ subscribe notification (และ notification ยังแสดง drawer อยู่) ให้ซ่อน install prompt ก่อน
+    const isNotificationDrawerActive = isInitialized && isSupported && !isSubscribed && permission !== 'denied';
+
+    if (!isInstallPromptVisible || isStandalone || isNotificationDrawerActive) return null;
 
     const handleIOSClick = () => {
         setOpenIOSInstructions(true);
@@ -61,8 +66,8 @@ export default function PWAInstallPrompt() {
                             เพื่อประสบการณ์การใช้งานที่ดียิ่งขึ้น
                         </Typography>
                     </Box>
-                    <IconButton 
-                        size="small" 
+                    <IconButton
+                        size="small"
                         onClick={hideInstallPrompt}
                         sx={{ color: '#999' }}
                     >
@@ -137,8 +142,8 @@ export default function PWAInstallPrompt() {
             </Box>
 
             {/* iOS Instructions Dialog */}
-            <Dialog 
-                open={openIOSInstructions} 
+            <Dialog
+                open={openIOSInstructions}
                 onClose={() => setOpenIOSInstructions(false)}
                 PaperProps={{
                     sx: { borderRadius: 1, maxWidth: 340, mx: 2 }
@@ -150,9 +155,9 @@ export default function PWAInstallPrompt() {
                 <DialogContent>
                     <Stack spacing={2.5}>
                         <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2 }}>
-                            <Box sx={{ 
-                                p: 1.5, 
-                                bgcolor: '#007AFF15', 
+                            <Box sx={{
+                                p: 1.5,
+                                bgcolor: '#007AFF15',
                                 borderRadius: 1,
                                 display: 'flex',
                                 alignItems: 'center',
@@ -171,9 +176,9 @@ export default function PWAInstallPrompt() {
                             </Box>
                         </Box>
                         <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2 }}>
-                            <Box sx={{ 
-                                p: 1.5, 
-                                bgcolor: '#34C75915', 
+                            <Box sx={{
+                                p: 1.5,
+                                bgcolor: '#34C75915',
                                 borderRadius: 2,
                                 display: 'flex',
                                 alignItems: 'center',
@@ -192,9 +197,9 @@ export default function PWAInstallPrompt() {
                             </Box>
                         </Box>
                         <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2 }}>
-                            <Box sx={{ 
-                                p: 1.5, 
-                                bgcolor: '#FF950015', 
+                            <Box sx={{
+                                p: 1.5,
+                                bgcolor: '#FF950015',
                                 borderRadius: 2,
                                 display: 'flex',
                                 alignItems: 'center',
@@ -218,9 +223,9 @@ export default function PWAInstallPrompt() {
                     </Typography>
                 </DialogContent>
                 <Box sx={{ p: 2, pt: 0 }}>
-                    <Button 
-                        fullWidth 
-                        variant="contained" 
+                    <Button
+                        fullWidth
+                        variant="contained"
                         onClick={() => setOpenIOSInstructions(false)}
                         sx={{ borderRadius: 2, bgcolor: '#007AFF', py: 1.2 }}
                     >
