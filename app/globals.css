@@ -18,8 +18,9 @@ body {
   overscroll-behavior-y: none;
   -webkit-overflow-scrolling: touch;
   min-height: 100dvh;
-  /* Safe area insets for iOS notch/Dynamic Island */
-  padding-top: env(safe-area-inset-top, 0px);
+  /* Safe area insets for iOS notch/Dynamic Island - ลดลงเล็กน้อย */
+  padding-top: calc(env(safe-area-inset-top, 0px) - 15px);
+  padding-top: max(0px, calc(env(safe-area-inset-top, 0px) - 15px));
 }
 
 body {
