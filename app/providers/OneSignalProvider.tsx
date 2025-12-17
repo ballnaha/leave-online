@@ -35,7 +35,7 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
   const [permission, setPermission] = useState<NotificationPermission | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
 
-  // Initialize OneSignal - รอจนกว่าจะ authenticated ก่อน
+  // Initialize OneSignal - init ทันทีไม่ต้องรอ authenticated
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
@@ -71,16 +71,6 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    // รอจนกว่า session status จะ load เสร็จ
-    if (status === 'loading') return;
-
-    // ไม่ init OneSignal ถ้ายังไม่ได้ login (เพื่อไม่ให้แสดง prompt บนหน้า login)
-    if (status !== 'authenticated') {
-      console.log('🔔 OneSignal: Waiting for authentication...');
-      setIsInitialized(true); // Mark as initialized so UI isn't stuck
-      return;
-    }
-
     if (!ONESIGNAL_APP_ID) {
       console.warn('🔔 OneSignal App ID not configured');
       setIsInitialized(true); // Mark as initialized so UI isn't stuck
@@ -113,7 +103,7 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
     return () => {
       clearTimeout(initTimeout);
     };
-  }, [status]);
+  }, []);
 
   const initOneSignal = async () => {
     if (!window.OneSignal) {

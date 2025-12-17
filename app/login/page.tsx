@@ -18,12 +18,14 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { getSession, signIn, useSession } from 'next-auth/react';
 import { useToastr } from '@/app/components/Toastr';
 import { APP_VERSION } from '@/lib/version';
+import { useOneSignal } from '@/app/providers/OneSignalProvider';
 
 function LoginPageContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const toastr = useToastr();
     const { data: session, status } = useSession();
+    const { isSupported, isInitialized, permission, requestPermission } = useOneSignal();
 
     const [showPassword, setShowPassword] = useState(false);
     const [username, setUsername] = useState('');
@@ -31,6 +33,21 @@ function LoginPageContent() {
     const [rememberMe, setRememberMe] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [accountDisabledMessage, setAccountDisabledMessage] = useState('');
+
+    // Request notification permission on login page (ให้ user เลือกก่อน login)
+    useEffect(() => {
+        // รอจนกว่า OneSignal จะ init เสร็จ
+        if (!isInitialized || !isSupported) return;
+
+        // ถ้า permission ยังเป็น default (ยังไม่เคยถาม) ให้ขอ permission
+        if (permission === 'default') {
+            // Delay เล็กน้อยเพื่อให้ UI โหลดก่อน
+            const timer = setTimeout(() => {
+                requestPermission();
+            }, 1500);
+            return () => clearTimeout(timer);
+        }
+    }, [isInitialized, isSupported, permission, requestPermission]);
 
     // Check for reason parameter (account disabled)
     useEffect(() => {
