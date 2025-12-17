@@ -103,6 +103,7 @@ import {
 import BottomNav from '../components/BottomNav';
 import Sidebar from '../components/Sidebar';
 import { useLocale } from '@/app/providers/LocaleProvider';
+import { useToastr } from '@/app/components/Toastr';
 import { Drawer as VaulDrawer } from 'vaul';
 
 // สีหลักของระบบ (ตาม theme.ts)
@@ -202,6 +203,7 @@ export default function ApprovalPage() {
   const theme = useTheme();
   const isMobileDevice = useMediaQuery(theme.breakpoints.down('md'));
   const router = useRouter();
+  const toastr = useToastr();
 
   // Roles that can access approval page
   const allowedRoles = ['admin', 'hr_manager', 'hr', 'dept_manager', 'shift_supervisor', 'section_head'];
@@ -443,7 +445,7 @@ export default function ApprovalPage() {
       }
       employeeMap[item.user.id].totalDays += item.totalDays;
       employeeMap[item.user.id].leaveCount += 1;
-      employeeMap[item.user.id].byType[item.leaveType] = 
+      employeeMap[item.user.id].byType[item.leaveType] =
         (employeeMap[item.user.id].byType[item.leaveType] || 0) + item.totalDays;
     });
 
@@ -777,13 +779,22 @@ export default function ApprovalPage() {
       if (!response.ok) {
         const data = await response.json().catch(() => ({ error: t('error_occurred', 'เกิดข้อผิดพลาด') }));
         setError(data.error || t('error_occurred', 'เกิดข้อผิดพลาด'));
+        toastr.error(data.error || t('error_occurred', 'เกิดข้อผิดพลาด'));
         return;
+      }
+
+      // แสดง snackbar สำเร็จ
+      if (actionType === 'approve') {
+        toastr.success(t('approval_success', 'อนุมัติใบลาสำเร็จ'));
+      } else {
+        toastr.success(t('rejection_success', 'ปฏิเสธใบลาสำเร็จ'));
       }
 
       setDialogOpen(false);
       fetchApprovals();
     } catch (error) {
       setError(t('connection_error', 'เกิดข้อผิดพลาดในการเชื่อมต่อ'));
+      toastr.error(t('connection_error', 'เกิดข้อผิดพลาดในการเชื่อมต่อ'));
     } finally {
       setSubmitting(false);
     }
@@ -1902,7 +1913,7 @@ export default function ApprovalPage() {
                 <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1.5, color: '#1E293B' }}>
                   {t('team_summary', 'สรุปการลาของทีม')} ({filterYear + 543})
                 </Typography>
-                
+
                 {/* Status Summary */}
                 <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mb: 2 }}>
                   {[
@@ -1942,59 +1953,59 @@ export default function ApprovalPage() {
                       </Box>
                       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                         {filteredEmployeeSummary.map((item, index) => (
-                        <Box 
-                          key={item.user.id} 
-                          onClick={() => {
-                            setSelectedEmployee(item);
-                            setEmployeeDetailOpen(true);
-                          }}
-                          sx={{ 
-                            display: 'flex', 
-                            alignItems: 'center', 
-                            gap: 1.5,
-                            p: 1,
-                            mx: -1,
-                            borderRadius: 1,
-                            cursor: 'pointer',
-                            transition: 'all 0.2s',
-                            '&:hover': {
-                              bgcolor: '#F8FAFC',
-                            },
-                            '&:active': {
-                              bgcolor: '#F1F5F9',
-                            }
-                          }}
-                        >
-                          <Typography sx={{ fontSize: '0.75rem', color: '#94A3B8', fontWeight: 600, width: 20 }}>
-                            #{index + 1}
-                          </Typography>
-                          <Avatar
-                            src={item.user.avatar}
-                            sx={{ width: 32, height: 32, fontSize: '0.75rem', bgcolor: PRIMARY_COLOR }}
+                          <Box
+                            key={item.user.id}
+                            onClick={() => {
+                              setSelectedEmployee(item);
+                              setEmployeeDetailOpen(true);
+                            }}
+                            sx={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 1.5,
+                              p: 1,
+                              mx: -1,
+                              borderRadius: 1,
+                              cursor: 'pointer',
+                              transition: 'all 0.2s',
+                              '&:hover': {
+                                bgcolor: '#F8FAFC',
+                              },
+                              '&:active': {
+                                bgcolor: '#F1F5F9',
+                              }
+                            }}
                           >
-                            {item.user.firstName?.[0]}
-                          </Avatar>
-                          <Box sx={{ flex: 1, minWidth: 0 }}>
-                            <Typography sx={{ fontSize: '0.85rem', fontWeight: 600, color: '#1E293B' }} noWrap>
-                              {item.user.firstName} {item.user.lastName}
+                            <Typography sx={{ fontSize: '0.75rem', color: '#94A3B8', fontWeight: 600, width: 20 }}>
+                              #{index + 1}
                             </Typography>
-                            <Typography sx={{ fontSize: '0.7rem', color: '#64748B' }} noWrap>
-                              {item.user.department}
-                            </Typography>
-                          </Box>
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <Box sx={{ textAlign: 'right' }}>
-                              <Typography sx={{ fontSize: '0.85rem', fontWeight: 700, color: PRIMARY_COLOR }}>
-                                {item.totalDays} {t('days_unit', 'วัน')}
+                            <Avatar
+                              src={item.user.avatar}
+                              sx={{ width: 32, height: 32, fontSize: '0.75rem', bgcolor: PRIMARY_COLOR }}
+                            >
+                              {item.user.firstName?.[0]}
+                            </Avatar>
+                            <Box sx={{ flex: 1, minWidth: 0 }}>
+                              <Typography sx={{ fontSize: '0.85rem', fontWeight: 600, color: '#1E293B' }} noWrap>
+                                {item.user.firstName} {item.user.lastName}
                               </Typography>
-                              <Typography sx={{ fontSize: '0.65rem', color: '#94A3B8' }}>
-                                {item.leaveCount} {t('times_unit', 'ครั้ง')}
+                              <Typography sx={{ fontSize: '0.7rem', color: '#64748B' }} noWrap>
+                                {item.user.department}
                               </Typography>
                             </Box>
-                            <ArrowRight2 size={16} color="#94A3B8" />
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                              <Box sx={{ textAlign: 'right' }}>
+                                <Typography sx={{ fontSize: '0.85rem', fontWeight: 700, color: PRIMARY_COLOR }}>
+                                  {item.totalDays} {t('days_unit', 'วัน')}
+                                </Typography>
+                                <Typography sx={{ fontSize: '0.65rem', color: '#94A3B8' }}>
+                                  {item.leaveCount} {t('times_unit', 'ครั้ง')}
+                                </Typography>
+                              </Box>
+                              <ArrowRight2 size={16} color="#94A3B8" />
+                            </Box>
                           </Box>
-                        </Box>
-                      ))}
+                        ))}
                       </Box>
                     </>
                   ) : (
@@ -2011,407 +2022,225 @@ export default function ApprovalPage() {
             </Box>
           )
         ) : (
-        /* Original List Content */
-        loading ? (
-          viewMode === 'desktop' ? (
-            /* Desktop Loading Skeleton */
-            <Paper elevation={0} sx={{ borderRadius: 1, border: '1px solid', borderColor: 'grey.200', overflow: 'hidden' }}>
-              <TableContainer>
-                <Table>
-                  <TableHead>
-                    <TableRow sx={{ bgcolor: '#F8FAFC' }}>
-                      <TableCell sx={{ fontWeight: 600, width: '25%' }}>พนักงาน</TableCell>
-                      <TableCell sx={{ fontWeight: 600, width: '15%' }}>ประเภทการลา</TableCell>
-                      <TableCell sx={{ fontWeight: 600, width: '20%' }}>วันที่</TableCell>
-                      <TableCell sx={{ fontWeight: 600, width: '10%' }}>จำนวน</TableCell>
-                      <TableCell sx={{ fontWeight: 600, width: '15%' }}>สถานะ</TableCell>
-                      <TableCell sx={{ fontWeight: 600, width: '15%' }} align="center">ดำเนินการ</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {[1, 2, 3, 4, 5].map((i) => (
-                      <TableRow key={i}>
-                        <TableCell>
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                            <Skeleton variant="circular" width={40} height={40} />
-                            <Box>
-                              <Skeleton variant="text" width={120} />
-                              <Skeleton variant="text" width={80} height={14} />
+          /* Original List Content */
+          loading ? (
+            viewMode === 'desktop' ? (
+              /* Desktop Loading Skeleton */
+              <Paper elevation={0} sx={{ borderRadius: 1, border: '1px solid', borderColor: 'grey.200', overflow: 'hidden' }}>
+                <TableContainer>
+                  <Table>
+                    <TableHead>
+                      <TableRow sx={{ bgcolor: '#F8FAFC' }}>
+                        <TableCell sx={{ fontWeight: 600, width: '25%' }}>พนักงาน</TableCell>
+                        <TableCell sx={{ fontWeight: 600, width: '15%' }}>ประเภทการลา</TableCell>
+                        <TableCell sx={{ fontWeight: 600, width: '20%' }}>วันที่</TableCell>
+                        <TableCell sx={{ fontWeight: 600, width: '10%' }}>จำนวน</TableCell>
+                        <TableCell sx={{ fontWeight: 600, width: '15%' }}>สถานะ</TableCell>
+                        <TableCell sx={{ fontWeight: 600, width: '15%' }} align="center">ดำเนินการ</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {[1, 2, 3, 4, 5].map((i) => (
+                        <TableRow key={i}>
+                          <TableCell>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                              <Skeleton variant="circular" width={40} height={40} />
+                              <Box>
+                                <Skeleton variant="text" width={120} />
+                                <Skeleton variant="text" width={80} height={14} />
+                              </Box>
                             </Box>
+                          </TableCell>
+                          <TableCell><Skeleton variant="rounded" width={80} height={24} /></TableCell>
+                          <TableCell><Skeleton variant="text" width={140} /></TableCell>
+                          <TableCell><Skeleton variant="text" width={50} /></TableCell>
+                          <TableCell><Skeleton variant="rounded" width={80} height={24} /></TableCell>
+                          <TableCell><Skeleton variant="rounded" width={100} height={32} /></TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              </Paper>
+            ) : (
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                {[1, 2, 3].map((i) => (
+                  <Paper
+                    key={i}
+                    elevation={0}
+                    sx={{
+                      p: 2,
+                      borderRadius: 1,
+                      border: '1px solid',
+                      borderColor: 'grey.200',
+                      bgcolor: 'white',
+                    }}
+                  >
+                    {/* Row 1: Avatar + Name + Status */}
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1 }}>
+                      <Skeleton variant="circular" width={40} height={40} />
+                      <Box sx={{ flex: 1 }}>
+                        <Skeleton variant="text" width="50%" height={20} sx={{ mb: 0.5 }} />
+                        <Skeleton variant="text" width="30%" height={16} />
+                      </Box>
+                      <Skeleton variant="rounded" width={70} height={24} sx={{ borderRadius: 1 }} />
+                      <Skeleton variant="circular" width={20} height={20} />
+                    </Box>
+
+                    {/* Row 2: Department */}
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 1 }}>
+                      <Skeleton variant="circular" width={14} height={14} />
+                      <Skeleton variant="text" width="40%" height={16} />
+                    </Box>
+
+                    {/* Row 3: Leave Type and Days Chips */}
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 }}>
+                      <Skeleton variant="rounded" width={90} height={24} sx={{ borderRadius: 1 }} />
+                      <Skeleton variant="rounded" width={50} height={24} sx={{ borderRadius: 1 }} />
+                    </Box>
+
+                    {/* Row 4: Date Box */}
+                    <Skeleton
+                      variant="rounded"
+                      width="100%"
+                      height={48}
+                      sx={{ borderRadius: 1 }}
+                    />
+                  </Paper>
+                ))}
+              </Box>
+            )
+          ) : filteredApprovals.length === 0 ? (
+            viewMode === 'desktop' ? (
+              /* Desktop Empty State with Table Header */
+              <Paper elevation={0} sx={{ borderRadius: 1, border: '1px solid', borderColor: 'grey.200', overflow: 'hidden' }}>
+                <TableContainer>
+                  <Table>
+                    <TableHead>
+                      <TableRow sx={{ bgcolor: '#F8FAFC' }}>
+                        <TableCell sx={{ fontWeight: 600, width: '25%' }}>พนักงาน</TableCell>
+                        <TableCell sx={{ fontWeight: 600, width: '15%' }}>ประเภทการลา</TableCell>
+                        <TableCell sx={{ fontWeight: 600, width: '20%' }}>วันที่</TableCell>
+                        <TableCell sx={{ fontWeight: 600, width: '10%' }}>จำนวน</TableCell>
+                        <TableCell sx={{ fontWeight: 600, width: '15%' }}>สถานะ</TableCell>
+                        <TableCell sx={{ fontWeight: 600, width: '15%' }} align="center">ดำเนินการ</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      <TableRow>
+                        <TableCell colSpan={6}>
+                          <Box sx={{ textAlign: 'center', py: 8, opacity: 0.7 }}>
+                            <Box sx={{
+                              bgcolor: '#f5f5f5',
+                              width: 80,
+                              height: 80,
+                              borderRadius: '50%',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              mx: 'auto',
+                              mb: 2
+                            }}>
+                              {tabValue === 0 ? <Clock size={40} color="#9e9e9e" variant="Bulk" /> :
+                                tabValue === 1 ? <TickCircle size={40} color="#9e9e9e" variant="Bulk" /> :
+                                  tabValue === 2 ? <CloseCircle size={40} color="#9e9e9e" variant="Bulk" /> :
+                                    <Forbidden2 size={40} color="#9e9e9e" variant="Bulk" />}
+                            </Box>
+                            <Typography variant="subtitle1" color="text.secondary" fontWeight={600} gutterBottom>
+                              {tabValue === 0 ? t('no_pending_items', 'ไม่มีรายการรออนุมัติ') :
+                                tabValue === 1 ? t('no_approved_items', 'ยังไม่มีรายการที่อนุมัติ') :
+                                  tabValue === 2 ? t('no_rejected_items', 'ไม่มีรายการที่ถูกปฏิเสธ') :
+                                    t('no_cancelled_items', 'ไม่มีรายการที่ยกเลิก')}
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary">
+                              {tabValue === 0 ? t('all_items_handled', 'คุณจัดการรายการทั้งหมดเรียบร้อยแล้ว') : t('items_will_show_here', 'รายการจะแสดงที่นี่เมื่อมีการดำเนินการ')}
+                            </Typography>
                           </Box>
                         </TableCell>
-                        <TableCell><Skeleton variant="rounded" width={80} height={24} /></TableCell>
-                        <TableCell><Skeleton variant="text" width={140} /></TableCell>
-                        <TableCell><Skeleton variant="text" width={50} /></TableCell>
-                        <TableCell><Skeleton variant="rounded" width={80} height={24} /></TableCell>
-                        <TableCell><Skeleton variant="rounded" width={100} height={32} /></TableCell>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-            </Paper>
-          ) : (
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-              {[1, 2, 3].map((i) => (
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              </Paper>
+            ) : (
+              /* Mobile Empty State */
+              <Box sx={{ textAlign: 'center', py: 10, opacity: 0.7 }}>
+                <Box sx={{
+                  bgcolor: '#f5f5f5',
+                  width: 100,
+                  height: 100,
+                  borderRadius: '50%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  mx: 'auto',
+                  mb: 3
+                }}>
+                  {tabValue === 0 ? <Clock size={48} color="#9e9e9e" variant="Bulk" /> :
+                    tabValue === 1 ? <TickCircle size={48} color="#9e9e9e" variant="Bulk" /> :
+                      tabValue === 2 ? <CloseCircle size={48} color="#9e9e9e" variant="Bulk" /> :
+                        <Forbidden2 size={48} color="#9e9e9e" variant="Bulk" />}
+                </Box>
+                <Typography variant="h6" color="text.secondary" fontWeight={600} gutterBottom>
+                  {tabValue === 0 ? t('no_pending_items', 'ไม่มีรายการรออนุมัติ') :
+                    tabValue === 1 ? t('no_approved_items', 'ยังไม่มีรายการที่อนุมัติ') :
+                      tabValue === 2 ? t('no_rejected_items', 'ไม่มีรายการที่ถูกปฏิเสธ') :
+                        t('no_cancelled_items', 'ไม่มีรายการที่ยกเลิก')}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  {tabValue === 0 ? t('all_items_handled', 'คุณจัดการรายการทั้งหมดเรียบร้อยแล้ว') : t('items_will_show_here', 'รายการจะแสดงที่นี่เมื่อมีการดำเนินการ')}
+                </Typography>
+              </Box>
+            )
+          ) : isHrManager && groupViewMode === 'group' && tabValue === 0 ? (
+            /* ========== GROUP BY DEPARTMENT VIEW (HR Manager Only) ========== */
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+              {groupedApprovals.map(([department, deptApprovals]) => (
                 <Paper
-                  key={i}
+                  key={department}
                   elevation={0}
                   sx={{
-                    p: 2,
                     borderRadius: 1,
                     border: '1px solid',
                     borderColor: 'grey.200',
-                    bgcolor: 'white',
+                    overflow: 'hidden'
                   }}
                 >
-                  {/* Row 1: Avatar + Name + Status */}
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1 }}>
-                    <Skeleton variant="circular" width={40} height={40} />
-                    <Box sx={{ flex: 1 }}>
-                      <Skeleton variant="text" width="50%" height={20} sx={{ mb: 0.5 }} />
-                      <Skeleton variant="text" width="30%" height={16} />
-                    </Box>
-                    <Skeleton variant="rounded" width={70} height={24} sx={{ borderRadius: 1 }} />
-                    <Skeleton variant="circular" width={20} height={20} />
-                  </Box>
-
-                  {/* Row 2: Department */}
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 1 }}>
-                    <Skeleton variant="circular" width={14} height={14} />
-                    <Skeleton variant="text" width="40%" height={16} />
-                  </Box>
-
-                  {/* Row 3: Leave Type and Days Chips */}
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 }}>
-                    <Skeleton variant="rounded" width={90} height={24} sx={{ borderRadius: 1 }} />
-                    <Skeleton variant="rounded" width={50} height={24} sx={{ borderRadius: 1 }} />
-                  </Box>
-
-                  {/* Row 4: Date Box */}
-                  <Skeleton
-                    variant="rounded"
-                    width="100%"
-                    height={48}
-                    sx={{ borderRadius: 1 }}
-                  />
-                </Paper>
-              ))}
-            </Box>
-          )
-        ) : filteredApprovals.length === 0 ? (
-          viewMode === 'desktop' ? (
-            /* Desktop Empty State with Table Header */
-            <Paper elevation={0} sx={{ borderRadius: 1, border: '1px solid', borderColor: 'grey.200', overflow: 'hidden' }}>
-              <TableContainer>
-                <Table>
-                  <TableHead>
-                    <TableRow sx={{ bgcolor: '#F8FAFC' }}>
-                      <TableCell sx={{ fontWeight: 600, width: '25%' }}>พนักงาน</TableCell>
-                      <TableCell sx={{ fontWeight: 600, width: '15%' }}>ประเภทการลา</TableCell>
-                      <TableCell sx={{ fontWeight: 600, width: '20%' }}>วันที่</TableCell>
-                      <TableCell sx={{ fontWeight: 600, width: '10%' }}>จำนวน</TableCell>
-                      <TableCell sx={{ fontWeight: 600, width: '15%' }}>สถานะ</TableCell>
-                      <TableCell sx={{ fontWeight: 600, width: '15%' }} align="center">ดำเนินการ</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    <TableRow>
-                      <TableCell colSpan={6}>
-                        <Box sx={{ textAlign: 'center', py: 8, opacity: 0.7 }}>
-                          <Box sx={{
-                            bgcolor: '#f5f5f5',
-                            width: 80,
-                            height: 80,
-                            borderRadius: '50%',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            mx: 'auto',
-                            mb: 2
-                          }}>
-                            {tabValue === 0 ? <Clock size={40} color="#9e9e9e" variant="Bulk" /> :
-                              tabValue === 1 ? <TickCircle size={40} color="#9e9e9e" variant="Bulk" /> :
-                                tabValue === 2 ? <CloseCircle size={40} color="#9e9e9e" variant="Bulk" /> :
-                                  <Forbidden2 size={40} color="#9e9e9e" variant="Bulk" />}
-                          </Box>
-                          <Typography variant="subtitle1" color="text.secondary" fontWeight={600} gutterBottom>
-                            {tabValue === 0 ? t('no_pending_items', 'ไม่มีรายการรออนุมัติ') :
-                              tabValue === 1 ? t('no_approved_items', 'ยังไม่มีรายการที่อนุมัติ') :
-                                tabValue === 2 ? t('no_rejected_items', 'ไม่มีรายการที่ถูกปฏิเสธ') :
-                                  t('no_cancelled_items', 'ไม่มีรายการที่ยกเลิก')}
-                          </Typography>
-                          <Typography variant="body2" color="text.secondary">
-                            {tabValue === 0 ? t('all_items_handled', 'คุณจัดการรายการทั้งหมดเรียบร้อยแล้ว') : t('items_will_show_here', 'รายการจะแสดงที่นี่เมื่อมีการดำเนินการ')}
-                          </Typography>
-                        </Box>
-                      </TableCell>
-                    </TableRow>
-                  </TableBody>
-                </Table>
-              </TableContainer>
-            </Paper>
-          ) : (
-            /* Mobile Empty State */
-            <Box sx={{ textAlign: 'center', py: 10, opacity: 0.7 }}>
-              <Box sx={{
-                bgcolor: '#f5f5f5',
-                width: 100,
-                height: 100,
-                borderRadius: '50%',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                mx: 'auto',
-                mb: 3
-              }}>
-                {tabValue === 0 ? <Clock size={48} color="#9e9e9e" variant="Bulk" /> :
-                  tabValue === 1 ? <TickCircle size={48} color="#9e9e9e" variant="Bulk" /> :
-                    tabValue === 2 ? <CloseCircle size={48} color="#9e9e9e" variant="Bulk" /> :
-                      <Forbidden2 size={48} color="#9e9e9e" variant="Bulk" />}
-              </Box>
-              <Typography variant="h6" color="text.secondary" fontWeight={600} gutterBottom>
-                {tabValue === 0 ? t('no_pending_items', 'ไม่มีรายการรออนุมัติ') :
-                  tabValue === 1 ? t('no_approved_items', 'ยังไม่มีรายการที่อนุมัติ') :
-                    tabValue === 2 ? t('no_rejected_items', 'ไม่มีรายการที่ถูกปฏิเสธ') :
-                      t('no_cancelled_items', 'ไม่มีรายการที่ยกเลิก')}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                {tabValue === 0 ? t('all_items_handled', 'คุณจัดการรายการทั้งหมดเรียบร้อยแล้ว') : t('items_will_show_here', 'รายการจะแสดงที่นี่เมื่อมีการดำเนินการ')}
-              </Typography>
-            </Box>
-          )
-        ) : isHrManager && groupViewMode === 'group' && tabValue === 0 ? (
-          /* ========== GROUP BY DEPARTMENT VIEW (HR Manager Only) ========== */
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-            {groupedApprovals.map(([department, deptApprovals]) => (
-              <Paper
-                key={department}
-                elevation={0}
-                sx={{
-                  borderRadius: 1,
-                  border: '1px solid',
-                  borderColor: 'grey.200',
-                  overflow: 'hidden'
-                }}
-              >
-                {/* Department Header */}
-                <Box sx={{
-                  bgcolor: PRIMARY_COLOR,
-                  px: 2.5,
-                  py: 1.5,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                    <Box sx={{
-                      bgcolor: 'rgba(255,255,255,0.2)',
-                      borderRadius: 1,
-                      p: 0.75,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center'
-                    }}>
-                      <Building size={20} color="white" variant="Bold" />
-                    </Box>
-                    <Typography sx={{ fontWeight: 700, fontSize: '1rem', color: 'white' }}>
-                      {department}
-                    </Typography>
-                  </Box>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Chip
-                      label={`${deptApprovals.length} รายการ`}
-                      size="small"
-                      sx={{
+                  {/* Department Header */}
+                  <Box sx={{
+                    bgcolor: PRIMARY_COLOR,
+                    px: 2.5,
+                    py: 1.5,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                  }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                      <Box sx={{
                         bgcolor: 'rgba(255,255,255,0.2)',
-                        color: 'white',
-                        fontWeight: 600,
-                        fontSize: '0.8rem',
-                      }}
-                    />
-                    <Button
-                      size="small"
-                      onClick={() => {
-                        setFilterDepartment(department);
-                        setGroupViewMode('list');
-                        setPage(1);
-                      }}
-                      sx={{
-                        color: 'white',
-                        fontSize: '0.75rem',
-                        minWidth: 'auto',
-                        '&:hover': { bgcolor: 'rgba(255,255,255,0.1)' }
-                      }}
-                      endIcon={<ArrowRight2 size={14} color="white" />}
-                    >
-                      ดูทั้งหมด
-                    </Button>
-                  </Box>
-                </Box>
-
-                {/* Department Approvals List */}
-                <Box sx={{ p: 2 }}>
-                  {viewMode === 'desktop' ? (
-                    <TableContainer>
-                      <Table size="small">
-                        <TableHead>
-                          <TableRow sx={{ bgcolor: '#F8FAFC' }}>
-                            <TableCell sx={{ fontWeight: 600, fontSize: '0.85rem' }}>พนักงาน</TableCell>
-                            <TableCell sx={{ fontWeight: 600, fontSize: '0.85rem' }}>แผนก</TableCell>
-                            <TableCell sx={{ fontWeight: 600, fontSize: '0.85rem' }}>ประเภทการลา</TableCell>
-                            <TableCell sx={{ fontWeight: 600, fontSize: '0.85rem' }}>วันที่</TableCell>
-                            <TableCell sx={{ fontWeight: 600, fontSize: '0.85rem' }} align="center">ดำเนินการ</TableCell>
-                          </TableRow>
-                        </TableHead>
-                        <TableBody>
-                          {deptApprovals.slice(0, 5).map((approval) => {
-                            const config = leaveTypeConfig[approval.leaveRequest.leaveType] || leaveTypeConfig.default;
-                            const LeaveIcon = config.icon;
-                            const isPending = approval.status === 'pending' && (approval.leaveRequest.status === 'pending' || approval.leaveRequest.status === 'in_progress');
-
-                            return (
-                              <TableRow key={approval.approvalId} hover>
-                                <TableCell>
-                                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                    <Avatar
-                                      src={approval.leaveRequest.user.avatar}
-                                      sx={{ width: 32, height: 32, bgcolor: config.lightColor, color: config.color, fontSize: '0.8rem' }}
-                                    >
-                                      {approval.leaveRequest.user.firstName[0]}
-                                    </Avatar>
-                                    <Box>
-                                      <Typography sx={{ fontWeight: 600, fontSize: '0.85rem' }}>
-                                        {approval.leaveRequest.user.firstName} {approval.leaveRequest.user.lastName}
-                                      </Typography>
-                                      <Typography sx={{ fontSize: '0.75rem', color: '#64748B' }}>
-                                        {approval.leaveRequest.user.position || '-'}
-                                      </Typography>
-                                    </Box>
-                                  </Box>
-                                </TableCell>
-                                <TableCell>
-                                  <Typography sx={{ fontSize: '0.85rem', color: '#475569' }}>
-                                    {approval.leaveRequest.user.section || '-'}
-                                  </Typography>
-                                </TableCell>
-                                <TableCell>
-                                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-                                    <Chip
-                                      label={`${t(`leave_${approval.leaveRequest.leaveType}`, approval.leaveRequest.leaveType)} (${approval.leaveRequest.totalDays} วัน)`}
-                                      size="small"
-                                      icon={<LeaveIcon size={12} color={config.color} variant="Bold" />}
-                                      sx={{ bgcolor: config.lightColor, color: config.color, fontWeight: 600, fontSize: '0.75rem', height: 24, width: 'fit-content' }}
-                                    />
-                                    {approval.leaveRequest.leaveCode && (
-                                      <Typography sx={{ fontSize: '0.7rem', color: '#64748B', fontFamily: 'monospace' }}>
-                                        {approval.leaveRequest.leaveCode}
-                                      </Typography>
-                                    )}
-                                  </Box>
-                                </TableCell>
-                                <TableCell>
-                                  <Typography sx={{ fontSize: '0.85rem' }}>
-                                    {new Date(approval.leaveRequest.startDate).toLocaleDateString('th-TH', { day: 'numeric', month: 'short' })}
-                                    {approval.leaveRequest.startDate !== approval.leaveRequest.endDate &&
-                                      ` → ${new Date(approval.leaveRequest.endDate).toLocaleDateString('th-TH', { day: 'numeric', month: 'short' })}`
-                                    }
-                                  </Typography>
-                                </TableCell>
-                                <TableCell align="center">
-                                  <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'center' }}>
-                                    <Tooltip title="ดูรายละเอียด">
-                                      <IconButton size="small" onClick={() => toggleCard(approval.approvalId)} sx={{ bgcolor: '#F1F5F9', width: 28, height: 28 }}>
-                                        <Eye size={16} color="#64748B" />
-                                      </IconButton>
-                                    </Tooltip>
-                                    {isPending && (
-                                      <>
-                                        <Tooltip title="อนุมัติ">
-                                          <IconButton size="small" onClick={() => handleOpenDialog(approval, 'approve')} sx={{ bgcolor: '#E8F5E9', width: 28, height: 28 }}>
-                                            <TickCircle size={16} color="#2E7D32" variant="Bold" />
-                                          </IconButton>
-                                        </Tooltip>
-                                        <Tooltip title="ปฏิเสธ">
-                                          <IconButton size="small" onClick={() => handleOpenDialog(approval, 'reject')} sx={{ bgcolor: '#FFEBEE', width: 28, height: 28 }}>
-                                            <CloseCircle size={16} color="#D32F2F" variant="Bold" />
-                                          </IconButton>
-                                        </Tooltip>
-                                      </>
-                                    )}
-                                  </Box>
-                                </TableCell>
-                              </TableRow>
-                            );
-                          })}
-                        </TableBody>
-                      </Table>
-                    </TableContainer>
-                  ) : (
-                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-                      {deptApprovals.slice(0, 5).map((approval) => {
-                        const config = leaveTypeConfig[approval.leaveRequest.leaveType] || leaveTypeConfig.default;
-                        const LeaveIcon = config.icon;
-                        const isPending = approval.status === 'pending' && (approval.leaveRequest.status === 'pending' || approval.leaveRequest.status === 'in_progress');
-
-                        return (
-                          <Box
-                            key={approval.approvalId}
-                            sx={{
-                              p: 1.5,
-                              bgcolor: '#F8FAFC',
-                              borderRadius: 1,
-                              border: '1px solid #E2E8F0',
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: 1.5,
-                            }}
-                          >
-                            <Avatar
-                              src={approval.leaveRequest.user.avatar}
-                              sx={{ width: 36, height: 36, bgcolor: config.lightColor, color: config.color, fontSize: '0.85rem' }}
-                            >
-                              {approval.leaveRequest.user.firstName[0]}
-                            </Avatar>
-                            <Box sx={{ flex: 1, minWidth: 0 }}>
-                              <Typography sx={{ fontWeight: 600, fontSize: '0.9rem', lineHeight: 1.2 }}>
-                                {approval.leaveRequest.user.firstName} {approval.leaveRequest.user.lastName}
-                              </Typography>
-                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5, flexWrap: 'wrap' }}>
-                                <Chip
-                                  label={t(`leave_${approval.leaveRequest.leaveType}`, approval.leaveRequest.leaveType)}
-                                  size="small"
-                                  icon={<LeaveIcon size={12} color={config.color} variant="Bold" />}
-                                  sx={{ bgcolor: config.lightColor, color: config.color, fontWeight: 600, fontSize: '0.7rem', height: 20 }}
-                                />
-                                {approval.leaveRequest.leaveCode && (
-                                  <Typography sx={{ fontSize: '0.75rem', color: '#64748B', bgcolor: '#F1F5F9', px: 0.5, borderRadius: 0.5, fontFamily: 'monospace' }}>
-                                    {approval.leaveRequest.leaveCode}
-                                  </Typography>
-                                )}
-                                <Typography sx={{ fontSize: '0.75rem', color: '#64748B' }}>
-                                  {approval.leaveRequest.totalDays} วัน • {new Date(approval.leaveRequest.startDate).toLocaleDateString('th-TH', { day: 'numeric', month: 'short' })}
-                                </Typography>
-                              </Box>
-                            </Box>
-                            {isPending && (
-                              <Box sx={{ display: 'flex', gap: 0.5 }}>
-                                <IconButton size="small" onClick={() => handleOpenDialog(approval, 'approve')} sx={{ bgcolor: '#E8F5E9', width: 32, height: 32 }}>
-                                  <TickCircle size={18} color="#2E7D32" variant="Bold" />
-                                </IconButton>
-                                <IconButton size="small" onClick={() => handleOpenDialog(approval, 'reject')} sx={{ bgcolor: '#FFEBEE', width: 32, height: 32 }}>
-                                  <CloseCircle size={18} color="#D32F2F" variant="Bold" />
-                                </IconButton>
-                              </Box>
-                            )}
-                          </Box>
-                        );
-                      })}
+                        borderRadius: 1,
+                        p: 0.75,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}>
+                        <Building size={20} color="white" variant="Bold" />
+                      </Box>
+                      <Typography sx={{ fontWeight: 700, fontSize: '1rem', color: 'white' }}>
+                        {department}
+                      </Typography>
                     </Box>
-                  )}
-
-                  {deptApprovals.length > 5 && (
-                    <Box sx={{ textAlign: 'center', mt: 2, pt: 2, borderTop: '1px dashed #E2E8F0' }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Chip
+                        label={`${deptApprovals.length} รายการ`}
+                        size="small"
+                        sx={{
+                          bgcolor: 'rgba(255,255,255,0.2)',
+                          color: 'white',
+                          fontWeight: 600,
+                          fontSize: '0.8rem',
+                        }}
+                      />
                       <Button
                         size="small"
                         onClick={() => {
@@ -2419,1255 +2248,1437 @@ export default function ApprovalPage() {
                           setGroupViewMode('list');
                           setPage(1);
                         }}
-                        sx={{ color: PRIMARY_COLOR }}
-                        endIcon={<ArrowRight2 size={16} />}
+                        sx={{
+                          color: 'white',
+                          fontSize: '0.75rem',
+                          minWidth: 'auto',
+                          '&:hover': { bgcolor: 'rgba(255,255,255,0.1)' }
+                        }}
+                        endIcon={<ArrowRight2 size={14} color="white" />}
                       >
-                        ดูทั้งหมด {deptApprovals.length} รายการ
+                        ดูทั้งหมด
                       </Button>
                     </Box>
-                  )}
-                </Box>
-              </Paper>
-            ))}
-          </Box>
-        ) : viewMode === 'desktop' ? (
-          /* ========== DESKTOP TABLE VIEW ========== */
-          <Paper elevation={0} sx={{ borderRadius: 1, border: '1px solid', borderColor: 'grey.200', overflow: 'hidden' }}>
-            <TableContainer>
-              <Table sx={{ minWidth: 900 }}>
-                <TableHead>
-                  <TableRow sx={{ bgcolor: '#F8FAFC' }}>
-                    <TableCell sx={{ fontWeight: 700, color: '#475569', fontSize: '0.9rem', width: '20%' }}>พนักงาน</TableCell>
-                    <TableCell sx={{ fontWeight: 700, color: '#475569', fontSize: '0.9rem', width: '12%' }}>การลา</TableCell>
-                    <TableCell sx={{ fontWeight: 700, color: '#475569', fontSize: '0.9rem', width: '12%' }}>วันที่ส่ง</TableCell>
-                    <TableCell sx={{ fontWeight: 700, color: '#475569', fontSize: '0.9rem', width: '14%' }}>วันที่ลา</TableCell>
-                    <TableCell sx={{ fontWeight: 700, color: '#475569', fontSize: '0.9rem', width: '20%' }}>เหตุผล</TableCell>
-                    <TableCell sx={{ fontWeight: 700, color: '#475569', fontSize: '0.9rem', width: '8%' }} align="center">แนบ</TableCell>
-                    <TableCell sx={{ fontWeight: 700, color: '#475569', fontSize: '0.9rem', width: '9%' }}>สถานะ</TableCell>
-                    <TableCell sx={{ fontWeight: 700, color: '#475569', fontSize: '0.9rem', width: '13%' }} align="center">ดำเนินการ</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {paginatedApprovals.map((approval) => {
+                  </Box>
+
+                  {/* Department Approvals List */}
+                  <Box sx={{ p: 2 }}>
+                    {viewMode === 'desktop' ? (
+                      <TableContainer>
+                        <Table size="small">
+                          <TableHead>
+                            <TableRow sx={{ bgcolor: '#F8FAFC' }}>
+                              <TableCell sx={{ fontWeight: 600, fontSize: '0.85rem' }}>พนักงาน</TableCell>
+                              <TableCell sx={{ fontWeight: 600, fontSize: '0.85rem' }}>แผนก</TableCell>
+                              <TableCell sx={{ fontWeight: 600, fontSize: '0.85rem' }}>ประเภทการลา</TableCell>
+                              <TableCell sx={{ fontWeight: 600, fontSize: '0.85rem' }}>วันที่</TableCell>
+                              <TableCell sx={{ fontWeight: 600, fontSize: '0.85rem' }} align="center">ดำเนินการ</TableCell>
+                            </TableRow>
+                          </TableHead>
+                          <TableBody>
+                            {deptApprovals.slice(0, 5).map((approval) => {
+                              const config = leaveTypeConfig[approval.leaveRequest.leaveType] || leaveTypeConfig.default;
+                              const LeaveIcon = config.icon;
+                              const isPending = approval.status === 'pending' && (approval.leaveRequest.status === 'pending' || approval.leaveRequest.status === 'in_progress');
+
+                              return (
+                                <TableRow key={approval.approvalId} hover>
+                                  <TableCell>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                      <Avatar
+                                        src={approval.leaveRequest.user.avatar}
+                                        sx={{ width: 32, height: 32, bgcolor: config.lightColor, color: config.color, fontSize: '0.8rem' }}
+                                      >
+                                        {approval.leaveRequest.user.firstName[0]}
+                                      </Avatar>
+                                      <Box>
+                                        <Typography sx={{ fontWeight: 600, fontSize: '0.85rem' }}>
+                                          {approval.leaveRequest.user.firstName} {approval.leaveRequest.user.lastName}
+                                        </Typography>
+                                        <Typography sx={{ fontSize: '0.75rem', color: '#64748B' }}>
+                                          {approval.leaveRequest.user.position || '-'}
+                                        </Typography>
+                                      </Box>
+                                    </Box>
+                                  </TableCell>
+                                  <TableCell>
+                                    <Typography sx={{ fontSize: '0.85rem', color: '#475569' }}>
+                                      {approval.leaveRequest.user.section || '-'}
+                                    </Typography>
+                                  </TableCell>
+                                  <TableCell>
+                                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                                      <Chip
+                                        label={`${t(`leave_${approval.leaveRequest.leaveType}`, approval.leaveRequest.leaveType)} (${approval.leaveRequest.totalDays} วัน)`}
+                                        size="small"
+                                        icon={<LeaveIcon size={12} color={config.color} variant="Bold" />}
+                                        sx={{ bgcolor: config.lightColor, color: config.color, fontWeight: 600, fontSize: '0.75rem', height: 24, width: 'fit-content' }}
+                                      />
+                                      {approval.leaveRequest.leaveCode && (
+                                        <Typography sx={{ fontSize: '0.7rem', color: '#64748B', fontFamily: 'monospace' }}>
+                                          {approval.leaveRequest.leaveCode}
+                                        </Typography>
+                                      )}
+                                    </Box>
+                                  </TableCell>
+                                  <TableCell>
+                                    <Typography sx={{ fontSize: '0.85rem' }}>
+                                      {new Date(approval.leaveRequest.startDate).toLocaleDateString('th-TH', { day: 'numeric', month: 'short' })}
+                                      {approval.leaveRequest.startDate !== approval.leaveRequest.endDate &&
+                                        ` → ${new Date(approval.leaveRequest.endDate).toLocaleDateString('th-TH', { day: 'numeric', month: 'short' })}`
+                                      }
+                                    </Typography>
+                                  </TableCell>
+                                  <TableCell align="center">
+                                    <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'center' }}>
+                                      <Tooltip title="ดูรายละเอียด">
+                                        <IconButton size="small" onClick={() => toggleCard(approval.approvalId)} sx={{ bgcolor: '#F1F5F9', width: 28, height: 28 }}>
+                                          <Eye size={16} color="#64748B" />
+                                        </IconButton>
+                                      </Tooltip>
+                                      {isPending && (
+                                        <>
+                                          <Tooltip title="อนุมัติ">
+                                            <IconButton size="small" onClick={() => handleOpenDialog(approval, 'approve')} sx={{ bgcolor: '#E8F5E9', width: 28, height: 28 }}>
+                                              <TickCircle size={16} color="#2E7D32" variant="Bold" />
+                                            </IconButton>
+                                          </Tooltip>
+                                          <Tooltip title="ปฏิเสธ">
+                                            <IconButton size="small" onClick={() => handleOpenDialog(approval, 'reject')} sx={{ bgcolor: '#FFEBEE', width: 28, height: 28 }}>
+                                              <CloseCircle size={16} color="#D32F2F" variant="Bold" />
+                                            </IconButton>
+                                          </Tooltip>
+                                        </>
+                                      )}
+                                    </Box>
+                                  </TableCell>
+                                </TableRow>
+                              );
+                            })}
+                          </TableBody>
+                        </Table>
+                      </TableContainer>
+                    ) : (
+                      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                        {deptApprovals.slice(0, 5).map((approval) => {
+                          const config = leaveTypeConfig[approval.leaveRequest.leaveType] || leaveTypeConfig.default;
+                          const LeaveIcon = config.icon;
+                          const isPending = approval.status === 'pending' && (approval.leaveRequest.status === 'pending' || approval.leaveRequest.status === 'in_progress');
+
+                          return (
+                            <Box
+                              key={approval.approvalId}
+                              sx={{
+                                p: 1.5,
+                                bgcolor: '#F8FAFC',
+                                borderRadius: 1,
+                                border: '1px solid #E2E8F0',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 1.5,
+                              }}
+                            >
+                              <Avatar
+                                src={approval.leaveRequest.user.avatar}
+                                sx={{ width: 36, height: 36, bgcolor: config.lightColor, color: config.color, fontSize: '0.85rem' }}
+                              >
+                                {approval.leaveRequest.user.firstName[0]}
+                              </Avatar>
+                              <Box sx={{ flex: 1, minWidth: 0 }}>
+                                <Typography sx={{ fontWeight: 600, fontSize: '0.9rem', lineHeight: 1.2 }}>
+                                  {approval.leaveRequest.user.firstName} {approval.leaveRequest.user.lastName}
+                                </Typography>
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5, flexWrap: 'wrap' }}>
+                                  <Chip
+                                    label={t(`leave_${approval.leaveRequest.leaveType}`, approval.leaveRequest.leaveType)}
+                                    size="small"
+                                    icon={<LeaveIcon size={12} color={config.color} variant="Bold" />}
+                                    sx={{ bgcolor: config.lightColor, color: config.color, fontWeight: 600, fontSize: '0.7rem', height: 20 }}
+                                  />
+                                  {approval.leaveRequest.leaveCode && (
+                                    <Typography sx={{ fontSize: '0.75rem', color: '#64748B', bgcolor: '#F1F5F9', px: 0.5, borderRadius: 0.5, fontFamily: 'monospace' }}>
+                                      {approval.leaveRequest.leaveCode}
+                                    </Typography>
+                                  )}
+                                  <Typography sx={{ fontSize: '0.75rem', color: '#64748B' }}>
+                                    {approval.leaveRequest.totalDays} วัน • {new Date(approval.leaveRequest.startDate).toLocaleDateString('th-TH', { day: 'numeric', month: 'short' })}
+                                  </Typography>
+                                </Box>
+                              </Box>
+                              {isPending && (
+                                <Box sx={{ display: 'flex', gap: 0.5 }}>
+                                  <IconButton size="small" onClick={() => handleOpenDialog(approval, 'approve')} sx={{ bgcolor: '#E8F5E9', width: 32, height: 32 }}>
+                                    <TickCircle size={18} color="#2E7D32" variant="Bold" />
+                                  </IconButton>
+                                  <IconButton size="small" onClick={() => handleOpenDialog(approval, 'reject')} sx={{ bgcolor: '#FFEBEE', width: 32, height: 32 }}>
+                                    <CloseCircle size={18} color="#D32F2F" variant="Bold" />
+                                  </IconButton>
+                                </Box>
+                              )}
+                            </Box>
+                          );
+                        })}
+                      </Box>
+                    )}
+
+                    {deptApprovals.length > 5 && (
+                      <Box sx={{ textAlign: 'center', mt: 2, pt: 2, borderTop: '1px dashed #E2E8F0' }}>
+                        <Button
+                          size="small"
+                          onClick={() => {
+                            setFilterDepartment(department);
+                            setGroupViewMode('list');
+                            setPage(1);
+                          }}
+                          sx={{ color: PRIMARY_COLOR }}
+                          endIcon={<ArrowRight2 size={16} />}
+                        >
+                          ดูทั้งหมด {deptApprovals.length} รายการ
+                        </Button>
+                      </Box>
+                    )}
+                  </Box>
+                </Paper>
+              ))}
+            </Box>
+          ) : viewMode === 'desktop' ? (
+            /* ========== DESKTOP TABLE VIEW ========== */
+            <Paper elevation={0} sx={{ borderRadius: 1, border: '1px solid', borderColor: 'grey.200', overflow: 'hidden' }}>
+              <TableContainer>
+                <Table sx={{ minWidth: 900 }}>
+                  <TableHead>
+                    <TableRow sx={{ bgcolor: '#F8FAFC' }}>
+                      <TableCell sx={{ fontWeight: 700, color: '#475569', fontSize: '0.9rem', width: '20%' }}>พนักงาน</TableCell>
+                      <TableCell sx={{ fontWeight: 700, color: '#475569', fontSize: '0.9rem', width: '12%' }}>การลา</TableCell>
+                      <TableCell sx={{ fontWeight: 700, color: '#475569', fontSize: '0.9rem', width: '12%' }}>วันที่ส่ง</TableCell>
+                      <TableCell sx={{ fontWeight: 700, color: '#475569', fontSize: '0.9rem', width: '14%' }}>วันที่ลา</TableCell>
+                      <TableCell sx={{ fontWeight: 700, color: '#475569', fontSize: '0.9rem', width: '20%' }}>เหตุผล</TableCell>
+                      <TableCell sx={{ fontWeight: 700, color: '#475569', fontSize: '0.9rem', width: '8%' }} align="center">แนบ</TableCell>
+                      <TableCell sx={{ fontWeight: 700, color: '#475569', fontSize: '0.9rem', width: '9%' }}>สถานะ</TableCell>
+                      <TableCell sx={{ fontWeight: 700, color: '#475569', fontSize: '0.9rem', width: '13%' }} align="center">ดำเนินการ</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {paginatedApprovals.map((approval) => {
+                      const isPending = approval.status === 'pending' && (approval.leaveRequest.status === 'pending' || approval.leaveRequest.status === 'in_progress');
+                      const config = leaveTypeConfig[approval.leaveRequest.leaveType] || leaveTypeConfig.default;
+                      const LeaveIcon = config.icon;
+                      const statusInfo = statusConfig[approval.leaveRequest.status] || statusConfig[approval.status] || statusConfig.pending;
+                      const StatusIcon = statusInfo.icon;
+                      const hasAttachments = approval.leaveRequest.attachments && approval.leaveRequest.attachments.length > 0;
+
+                      return (
+                        <TableRow
+                          key={approval.approvalId}
+                          sx={{
+                            '&:hover': { bgcolor: '#F8FAFC' },
+                            bgcolor: approval.leaveRequest.isEscalated ? '#FFF8E1' : 'white',
+                            cursor: 'pointer',
+                          }}
+                          onClick={() => toggleCard(approval.approvalId)}
+                        >
+                          {/* Employee Info - Combined name, position, department */}
+                          <TableCell>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                              <Avatar
+                                src={approval.leaveRequest.user.avatar}
+                                sx={{
+                                  width: 42,
+                                  height: 42,
+                                  bgcolor: config.lightColor,
+                                  color: config.color,
+                                  fontSize: '0.95rem',
+                                  fontWeight: 600,
+                                }}
+                              >
+                                {approval.leaveRequest.user.firstName[0]}
+                              </Avatar>
+                              <Box sx={{ minWidth: 0 }}>
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                  <Typography sx={{ fontWeight: 600, fontSize: '0.9rem', color: '#1E293B', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                    {approval.leaveRequest.user.firstName} {approval.leaveRequest.user.lastName}
+                                  </Typography>
+                                  {approval.leaveRequest.isEscalated && (
+                                    <Chip
+                                      label="ส่งต่อ (Escalated)"
+                                      size="small"
+                                      icon={<InfoCircle size={14} color="#E65100" variant="Bold" />}
+                                      sx={{
+                                        height: 20,
+                                        fontSize: '0.7rem',
+                                        bgcolor: '#FFF3E0',
+                                        color: '#E65100',
+                                        border: '1px solid #FFCC80',
+                                        '& .MuiChip-icon': { color: '#E65100', ml: 0.5 }
+                                      }}
+                                    />
+                                  )}
+                                </Box>
+                                <Typography sx={{ fontSize: '0.8rem', color: '#64748B', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                  {approval.leaveRequest.user.department || '-'} {approval.leaveRequest.user.section ? `• ${approval.leaveRequest.user.section}` : ''}
+                                </Typography>
+                              </Box>
+                            </Box>
+                          </TableCell>
+
+                          {/* Leave Type + Days Combined */}
+                          <TableCell>
+                            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                              <Chip
+                                label={t(`leave_${approval.leaveRequest.leaveType}`, approval.leaveRequest.leaveType)}
+                                size="small"
+                                icon={<LeaveIcon size={14} color={config.color} variant="Bold" />}
+                                sx={{
+                                  bgcolor: config.lightColor,
+                                  color: config.color,
+                                  fontWeight: 600,
+                                  fontSize: '0.8rem',
+                                  height: 26,
+                                  width: 'fit-content',
+                                  '& .MuiChip-icon': { ml: 0.3 }
+                                }}
+                              />
+                              {approval.leaveRequest.leaveCode && (
+                                <Typography sx={{ fontSize: '0.75rem', color: '#64748B', fontFamily: 'monospace' }}>
+                                  {approval.leaveRequest.leaveCode}
+                                </Typography>
+                              )}
+                              <Typography sx={{ fontSize: '0.85rem', color: '#475569', fontWeight: 600 }}>
+                                {approval.leaveRequest.totalDays} วัน
+                              </Typography>
+                            </Box>
+                          </TableCell>
+
+                          {/* Submission Date */}
+                          <TableCell>
+                            <Box>
+                              <Typography sx={{ fontSize: '0.875rem', color: '#334155', fontWeight: 500 }}>
+                                {new Date(approval.leaveRequest.createdAt).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' })}
+                              </Typography>
+                              <Typography sx={{ fontSize: '0.8rem', color: '#64748B' }}>
+                                {new Date(approval.leaveRequest.createdAt).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })} น.
+                              </Typography>
+                            </Box>
+                          </TableCell>
+
+                          {/* Date */}
+                          <TableCell>
+                            {approval.leaveRequest.startDate === approval.leaveRequest.endDate ? (
+                              <Box>
+                                <Typography sx={{ fontSize: '0.875rem', color: '#334155', fontWeight: 500 }}>
+                                  {new Date(approval.leaveRequest.startDate).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' })}
+                                </Typography>
+                                {(approval.leaveRequest.startTime || approval.leaveRequest.endTime) && (
+                                  <Typography sx={{ fontSize: '0.8rem', color: '#64748B' }}>
+                                    {approval.leaveRequest.startTime || '08:00'} - {approval.leaveRequest.endTime || '17:00'}
+                                  </Typography>
+                                )}
+                              </Box>
+                            ) : (
+                              <Box>
+                                <Typography sx={{ fontSize: '0.875rem', color: '#334155', fontWeight: 500 }}>
+                                  {new Date(approval.leaveRequest.startDate).toLocaleDateString('th-TH', { day: 'numeric', month: 'short' })}
+                                  {' → '}
+                                  {new Date(approval.leaveRequest.endDate).toLocaleDateString('th-TH', { day: 'numeric', month: 'short' })}
+                                </Typography>
+                              </Box>
+                            )}
+                          </TableCell>
+
+                          {/* Reason - New Column */}
+                          <TableCell>
+                            <Tooltip title={approval.leaveRequest.reason || '-'} placement="top">
+                              <Typography
+                                sx={{
+                                  fontSize: '0.875rem',
+                                  color: '#475569',
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis',
+                                  display: '-webkit-box',
+                                  WebkitLineClamp: 2,
+                                  WebkitBoxOrient: 'vertical',
+                                  lineHeight: 1.5,
+                                }}
+                              >
+                                {approval.leaveRequest.reason || '-'}
+                              </Typography>
+                            </Tooltip>
+                          </TableCell>
+
+                          {/* Attachments - New Column */}
+                          <TableCell align="center">
+                            {hasAttachments ? (
+                              <Tooltip title={`${approval.leaveRequest.attachments.length} ไฟล์แนบ`}>
+                                <Box
+                                  sx={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: 0.5,
+                                    bgcolor: '#E3F2FD',
+                                    color: '#1976D2',
+                                    px: 1.5,
+                                    py: 0.75,
+                                    borderRadius: 1,
+                                    cursor: 'pointer',
+                                  }}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    // Open first image if it's an image, otherwise toggle card
+                                    const imageFile = approval.leaveRequest.attachments.find(f => isImageFile(f.fileName));
+                                    if (imageFile) {
+                                      handleFileClick(imageFile, e, approval.leaveRequest.attachments);
+                                    } else {
+                                      toggleCard(approval.approvalId);
+                                    }
+                                  }}
+                                >
+                                  <Paperclip2 size={16} variant="Bold" color="#1976D2" />
+                                  <Typography sx={{ fontSize: '0.85rem', fontWeight: 600 }}>
+                                    {approval.leaveRequest.attachments.length}
+                                  </Typography>
+                                </Box>
+                              </Tooltip>
+                            ) : (
+                              <Typography sx={{ fontSize: '0.85rem', color: '#CBD5E1' }}>-</Typography>
+                            )}
+                          </TableCell>
+
+                          {/* Status */}
+                          <TableCell>
+                            <Chip
+                              label={statusInfo.label}
+                              size="small"
+                              icon={<StatusIcon size={16} color={statusInfo.color} variant="Bold" />}
+                              sx={{
+                                bgcolor: statusInfo.bgcolor,
+                                color: statusInfo.color,
+                                fontWeight: 600,
+                                fontSize: '0.8rem',
+                                height: 28,
+                                '& .MuiChip-icon': { ml: 0.5 }
+                              }}
+                            />
+                          </TableCell>
+
+                          {/* Actions */}
+                          <TableCell align="center">
+                            <Box sx={{ display: 'flex', gap: 0.75, justifyContent: 'center' }}>
+                              <Tooltip title="ดูรายละเอียด">
+                                <IconButton
+                                  size="small"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    toggleCard(approval.approvalId);
+                                  }}
+                                  sx={{
+                                    bgcolor: '#F1F5F9',
+                                    width: 34,
+                                    height: 34,
+                                    '&:hover': { bgcolor: '#E2E8F0' }
+                                  }}
+                                >
+                                  <Eye size={20} color="#64748B" />
+                                </IconButton>
+                              </Tooltip>
+                              {isPending && (
+                                <>
+                                  <Tooltip title="อนุมัติ">
+                                    <IconButton
+                                      size="small"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleOpenDialog(approval, 'approve');
+                                      }}
+                                      sx={{
+                                        bgcolor: '#E8F5E9',
+                                        width: 34,
+                                        height: 34,
+                                        '&:hover': { bgcolor: '#C8E6C9' }
+                                      }}
+                                    >
+                                      <TickCircle size={20} color="#2E7D32" variant="Bold" />
+                                    </IconButton>
+                                  </Tooltip>
+                                  <Tooltip title="ปฏิเสธ">
+                                    <IconButton
+                                      size="small"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleOpenDialog(approval, 'reject');
+                                      }}
+                                      sx={{
+                                        bgcolor: '#FFEBEE',
+                                        width: 34,
+                                        height: 34,
+                                        '&:hover': { bgcolor: '#FFCDD2' }
+                                      }}
+                                    >
+                                      <CloseCircle size={20} color="#D32F2F" variant="Bold" />
+                                    </IconButton>
+                                  </Tooltip>
+                                  {isHrManager && approval.leaveRequest.totalDays > 1 && (
+                                    <Tooltip title="แยกใบลา">
+                                      <IconButton
+                                        size="small"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleOpenSplitDialog(approval);
+                                        }}
+                                        sx={{
+                                          bgcolor: '#EDE7F6',
+                                          width: 34,
+                                          height: 34,
+                                          '&:hover': { bgcolor: '#D1C4E9' }
+                                        }}
+                                      >
+                                        <Scissor size={20} color={PRIMARY_COLOR} variant="Bold" />
+                                      </IconButton>
+                                    </Tooltip>
+                                  )}
+                                </>
+                              )}
+                            </Box>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+
+              {/* Desktop Detail Dialog */}
+              {expandedCards.size > 0 && (
+                <Dialog
+                  open={expandedCards.size > 0}
+                  onClose={() => setExpandedCards(new Set())}
+                  maxWidth="md"
+                  fullWidth
+                  fullScreen={isMobileDevice}
+                  PaperProps={{
+                    sx: {
+                      borderRadius: isMobileDevice ? 0 : 1,
+                      maxHeight: isMobileDevice ? '100%' : 'calc(100% - 64px)',
+                      m: isMobileDevice ? 0 : 2
+                    }
+                  }}
+                >
+                  {(() => {
+                    const expandedId = Array.from(expandedCards)[0];
+                    const approval = paginatedApprovals.find(a => a.approvalId === expandedId);
+                    if (!approval) return null;
+
                     const isPending = approval.status === 'pending' && (approval.leaveRequest.status === 'pending' || approval.leaveRequest.status === 'in_progress');
                     const config = leaveTypeConfig[approval.leaveRequest.leaveType] || leaveTypeConfig.default;
                     const LeaveIcon = config.icon;
                     const statusInfo = statusConfig[approval.leaveRequest.status] || statusConfig[approval.status] || statusConfig.pending;
                     const StatusIcon = statusInfo.icon;
-                    const hasAttachments = approval.leaveRequest.attachments && approval.leaveRequest.attachments.length > 0;
 
                     return (
-                      <TableRow
-                        key={approval.approvalId}
-                        sx={{
-                          '&:hover': { bgcolor: '#F8FAFC' },
-                          bgcolor: approval.leaveRequest.isEscalated ? '#FFF8E1' : 'white',
-                          cursor: 'pointer',
-                        }}
-                        onClick={() => toggleCard(approval.approvalId)}
-                      >
-                        {/* Employee Info - Combined name, position, department */}
-                        <TableCell>
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                            <Avatar
-                              src={approval.leaveRequest.user.avatar}
-                              sx={{
-                                width: 42,
-                                height: 42,
-                                bgcolor: config.lightColor,
-                                color: config.color,
-                                fontSize: '0.95rem',
-                                fontWeight: 600,
-                              }}
-                            >
-                              {approval.leaveRequest.user.firstName[0]}
-                            </Avatar>
-                            <Box sx={{ minWidth: 0 }}>
-                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                <Typography sx={{ fontWeight: 600, fontSize: '0.9rem', color: '#1E293B', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                  {approval.leaveRequest.user.firstName} {approval.leaveRequest.user.lastName}
+                      <>
+                        <IconButton
+                          onClick={() => setExpandedCards(new Set())}
+                          sx={{
+                            position: 'absolute',
+                            top: 8,
+                            right: 8,
+                            zIndex: 1,
+                            bgcolor: 'rgba(255,255,255,0.8)', // ensure visibility over content if scrolled
+                            '&:hover': { bgcolor: 'rgba(255,255,255,0.9)' }
+                          }}
+                        >
+                          <CloseCircle size={24} color="#64748B" />
+                        </IconButton>
+                        <DialogTitle sx={{ pb: 1, pr: 6 }}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                              <Avatar
+                                src={approval.leaveRequest.user.avatar}
+                                sx={{
+                                  width: 56,
+                                  height: 56,
+                                  bgcolor: config.lightColor,
+                                  color: config.color,
+                                  fontSize: '1.2rem',
+                                  fontWeight: 600,
+                                }}
+                              >
+                                {approval.leaveRequest.user.firstName[0]}
+                              </Avatar>
+                              <Box>
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                  <Typography variant="h6" fontWeight={700}>
+                                    {approval.leaveRequest.user.firstName} {approval.leaveRequest.user.lastName}
+                                  </Typography>
+                                  {approval.leaveRequest.isEscalated && (
+                                    <Chip
+                                      label="ส่งต่อ (Escalated)"
+                                      size="small"
+                                      icon={<InfoCircle size={14} color="#E65100" variant="Bold" />}
+                                      sx={{
+                                        height: 22,
+                                        fontSize: '0.7rem',
+                                        bgcolor: '#FFF3E0',
+                                        color: '#E65100',
+                                        border: '1px solid #FFCC80',
+                                        '& .MuiChip-icon': { color: '#E65100', ml: 0.5 }
+                                      }}
+                                    />
+                                  )}
+                                </Box>
+                                <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+                                  {approval.leaveRequest.user.position || '-'} • {approval.leaveRequest.user.department || '-'}
                                 </Typography>
-                                {approval.leaveRequest.isEscalated && (
-                                  <Chip
-                                    label="ส่งต่อ (Escalated)"
-                                    size="small"
-                                    icon={<InfoCircle size={14} color="#E65100" variant="Bold" />}
-                                    sx={{
-                                      height: 20,
-                                      fontSize: '0.7rem',
-                                      bgcolor: '#FFF3E0',
-                                      color: '#E65100',
-                                      border: '1px solid #FFCC80',
-                                      '& .MuiChip-icon': { color: '#E65100', ml: 0.5 }
-                                    }}
-                                  />
-                                )}
-                              </Box>
-                              <Typography sx={{ fontSize: '0.8rem', color: '#64748B', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                {approval.leaveRequest.user.department || '-'} {approval.leaveRequest.user.section ? `• ${approval.leaveRequest.user.section}` : ''}
-                              </Typography>
-                            </Box>
-                          </Box>
-                        </TableCell>
 
-                        {/* Leave Type + Days Combined */}
-                        <TableCell>
-                          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                              </Box>
+                            </Box>
                             <Chip
-                              label={t(`leave_${approval.leaveRequest.leaveType}`, approval.leaveRequest.leaveType)}
-                              size="small"
-                              icon={<LeaveIcon size={14} color={config.color} variant="Bold" />}
+                              label={statusInfo.label}
+                              size="medium"
+                              icon={<StatusIcon size={16} color={statusInfo.color} variant="Bold" />}
                               sx={{
-                                bgcolor: config.lightColor,
-                                color: config.color,
+                                bgcolor: statusInfo.bgcolor,
+                                color: statusInfo.color,
                                 fontWeight: 600,
-                                fontSize: '0.8rem',
-                                height: 26,
-                                width: 'fit-content',
-                                '& .MuiChip-icon': { ml: 0.3 }
+                                '& .MuiChip-icon': { ml: 0.5 }
                               }}
                             />
-                            {approval.leaveRequest.leaveCode && (
-                              <Typography sx={{ fontSize: '0.75rem', color: '#64748B', fontFamily: 'monospace' }}>
-                                {approval.leaveRequest.leaveCode}
-                              </Typography>
-                            )}
-                            <Typography sx={{ fontSize: '0.85rem', color: '#475569', fontWeight: 600 }}>
-                              {approval.leaveRequest.totalDays} วัน
-                            </Typography>
                           </Box>
-                        </TableCell>
-
-                        {/* Submission Date */}
-                        <TableCell>
-                          <Box>
-                            <Typography sx={{ fontSize: '0.875rem', color: '#334155', fontWeight: 500 }}>
-                              {new Date(approval.leaveRequest.createdAt).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' })}
-                            </Typography>
-                            <Typography sx={{ fontSize: '0.8rem', color: '#64748B' }}>
-                              {new Date(approval.leaveRequest.createdAt).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })} น.
-                            </Typography>
-                          </Box>
-                        </TableCell>
-
-                        {/* Date */}
-                        <TableCell>
-                          {approval.leaveRequest.startDate === approval.leaveRequest.endDate ? (
+                        </DialogTitle>
+                        <DialogContent sx={{ pt: 2 }}>
+                          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 3 }}>
+                            {/* Left Column - Leave Info */}
                             <Box>
-                              <Typography sx={{ fontSize: '0.875rem', color: '#334155', fontWeight: 500 }}>
-                                {new Date(approval.leaveRequest.startDate).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' })}
+                              <Typography sx={{ fontWeight: 600, color: '#64748B', mb: 1.5, textTransform: 'uppercase', fontSize: '0.8rem', letterSpacing: 0.5 }}>
+                                ข้อมูลการลา
                               </Typography>
-                              {(approval.leaveRequest.startTime || approval.leaveRequest.endTime) && (
-                                <Typography sx={{ fontSize: '0.8rem', color: '#64748B' }}>
-                                  {approval.leaveRequest.startTime || '08:00'} - {approval.leaveRequest.endTime || '17:00'}
-                                </Typography>
-                              )}
-                            </Box>
-                          ) : (
-                            <Box>
-                              <Typography sx={{ fontSize: '0.875rem', color: '#334155', fontWeight: 500 }}>
-                                {new Date(approval.leaveRequest.startDate).toLocaleDateString('th-TH', { day: 'numeric', month: 'short' })}
-                                {' → '}
-                                {new Date(approval.leaveRequest.endDate).toLocaleDateString('th-TH', { day: 'numeric', month: 'short' })}
-                              </Typography>
-                            </Box>
-                          )}
-                        </TableCell>
-
-                        {/* Reason - New Column */}
-                        <TableCell>
-                          <Tooltip title={approval.leaveRequest.reason || '-'} placement="top">
-                            <Typography
-                              sx={{
-                                fontSize: '0.875rem',
-                                color: '#475569',
-                                overflow: 'hidden',
-                                textOverflow: 'ellipsis',
-                                display: '-webkit-box',
-                                WebkitLineClamp: 2,
-                                WebkitBoxOrient: 'vertical',
-                                lineHeight: 1.5,
-                              }}
-                            >
-                              {approval.leaveRequest.reason || '-'}
-                            </Typography>
-                          </Tooltip>
-                        </TableCell>
-
-                        {/* Attachments - New Column */}
-                        <TableCell align="center">
-                          {hasAttachments ? (
-                            <Tooltip title={`${approval.leaveRequest.attachments.length} ไฟล์แนบ`}>
-                              <Box
-                                sx={{
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                  gap: 0.5,
-                                  bgcolor: '#E3F2FD',
-                                  color: '#1976D2',
-                                  px: 1.5,
-                                  py: 0.75,
-                                  borderRadius: 1,
-                                  cursor: 'pointer',
-                                }}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  // Open first image if it's an image, otherwise toggle card
-                                  const imageFile = approval.leaveRequest.attachments.find(f => isImageFile(f.fileName));
-                                  if (imageFile) {
-                                    handleFileClick(imageFile, e, approval.leaveRequest.attachments);
-                                  } else {
-                                    toggleCard(approval.approvalId);
-                                  }
-                                }}
-                              >
-                                <Paperclip2 size={16} variant="Bold" color="#1976D2" />
-                                <Typography sx={{ fontSize: '0.85rem', fontWeight: 600 }}>
-                                  {approval.leaveRequest.attachments.length}
-                                </Typography>
-                              </Box>
-                            </Tooltip>
-                          ) : (
-                            <Typography sx={{ fontSize: '0.85rem', color: '#CBD5E1' }}>-</Typography>
-                          )}
-                        </TableCell>
-
-                        {/* Status */}
-                        <TableCell>
-                          <Chip
-                            label={statusInfo.label}
-                            size="small"
-                            icon={<StatusIcon size={16} color={statusInfo.color} variant="Bold" />}
-                            sx={{
-                              bgcolor: statusInfo.bgcolor,
-                              color: statusInfo.color,
-                              fontWeight: 600,
-                              fontSize: '0.8rem',
-                              height: 28,
-                              '& .MuiChip-icon': { ml: 0.5 }
-                            }}
-                          />
-                        </TableCell>
-
-                        {/* Actions */}
-                        <TableCell align="center">
-                          <Box sx={{ display: 'flex', gap: 0.75, justifyContent: 'center' }}>
-                            <Tooltip title="ดูรายละเอียด">
-                              <IconButton
-                                size="small"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  toggleCard(approval.approvalId);
-                                }}
-                                sx={{
-                                  bgcolor: '#F1F5F9',
-                                  width: 34,
-                                  height: 34,
-                                  '&:hover': { bgcolor: '#E2E8F0' }
-                                }}
-                              >
-                                <Eye size={20} color="#64748B" />
-                              </IconButton>
-                            </Tooltip>
-                            {isPending && (
-                              <>
-                                <Tooltip title="อนุมัติ">
-                                  <IconButton
-                                    size="small"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleOpenDialog(approval, 'approve');
-                                    }}
-                                    sx={{
-                                      bgcolor: '#E8F5E9',
-                                      width: 34,
-                                      height: 34,
-                                      '&:hover': { bgcolor: '#C8E6C9' }
-                                    }}
-                                  >
-                                    <TickCircle size={20} color="#2E7D32" variant="Bold" />
-                                  </IconButton>
-                                </Tooltip>
-                                <Tooltip title="ปฏิเสธ">
-                                  <IconButton
-                                    size="small"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleOpenDialog(approval, 'reject');
-                                    }}
-                                    sx={{
-                                      bgcolor: '#FFEBEE',
-                                      width: 34,
-                                      height: 34,
-                                      '&:hover': { bgcolor: '#FFCDD2' }
-                                    }}
-                                  >
-                                    <CloseCircle size={20} color="#D32F2F" variant="Bold" />
-                                  </IconButton>
-                                </Tooltip>
-                                {isHrManager && approval.leaveRequest.totalDays > 1 && (
-                                  <Tooltip title="แยกใบลา">
-                                    <IconButton
-                                      size="small"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleOpenSplitDialog(approval);
-                                      }}
-                                      sx={{
-                                        bgcolor: '#EDE7F6',
-                                        width: 34,
-                                        height: 34,
-                                        '&:hover': { bgcolor: '#D1C4E9' }
-                                      }}
-                                    >
-                                      <Scissor size={20} color={PRIMARY_COLOR} variant="Bold" />
-                                    </IconButton>
-                                  </Tooltip>
-                                )}
-                              </>
-                            )}
-                          </Box>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-            </TableContainer>
-
-            {/* Desktop Detail Dialog */}
-            {expandedCards.size > 0 && (
-              <Dialog
-                open={expandedCards.size > 0}
-                onClose={() => setExpandedCards(new Set())}
-                maxWidth="md"
-                fullWidth
-                fullScreen={isMobileDevice}
-                PaperProps={{
-                  sx: {
-                    borderRadius: isMobileDevice ? 0 : 1,
-                    maxHeight: isMobileDevice ? '100%' : 'calc(100% - 64px)',
-                    m: isMobileDevice ? 0 : 2
-                  }
-                }}
-              >
-                {(() => {
-                  const expandedId = Array.from(expandedCards)[0];
-                  const approval = paginatedApprovals.find(a => a.approvalId === expandedId);
-                  if (!approval) return null;
-
-                  const isPending = approval.status === 'pending' && (approval.leaveRequest.status === 'pending' || approval.leaveRequest.status === 'in_progress');
-                  const config = leaveTypeConfig[approval.leaveRequest.leaveType] || leaveTypeConfig.default;
-                  const LeaveIcon = config.icon;
-                  const statusInfo = statusConfig[approval.leaveRequest.status] || statusConfig[approval.status] || statusConfig.pending;
-                  const StatusIcon = statusInfo.icon;
-
-                  return (
-                    <>
-                      <IconButton
-                        onClick={() => setExpandedCards(new Set())}
-                        sx={{
-                          position: 'absolute',
-                          top: 8,
-                          right: 8,
-                          zIndex: 1,
-                          bgcolor: 'rgba(255,255,255,0.8)', // ensure visibility over content if scrolled
-                          '&:hover': { bgcolor: 'rgba(255,255,255,0.9)' }
-                        }}
-                      >
-                        <CloseCircle size={24} color="#64748B" />
-                      </IconButton>
-                      <DialogTitle sx={{ pb: 1, pr: 6 }}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                            <Avatar
-                              src={approval.leaveRequest.user.avatar}
-                              sx={{
-                                width: 56,
-                                height: 56,
-                                bgcolor: config.lightColor,
-                                color: config.color,
-                                fontSize: '1.2rem',
-                                fontWeight: 600,
-                              }}
-                            >
-                              {approval.leaveRequest.user.firstName[0]}
-                            </Avatar>
-                            <Box>
-                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                <Typography variant="h6" fontWeight={700}>
-                                  {approval.leaveRequest.user.firstName} {approval.leaveRequest.user.lastName}
-                                </Typography>
-                                {approval.leaveRequest.isEscalated && (
-                                  <Chip
-                                    label="ส่งต่อ (Escalated)"
-                                    size="small"
-                                    icon={<InfoCircle size={14} color="#E65100" variant="Bold" />}
-                                    sx={{
-                                      height: 22,
-                                      fontSize: '0.7rem',
-                                      bgcolor: '#FFF3E0',
-                                      color: '#E65100',
-                                      border: '1px solid #FFCC80',
-                                      '& .MuiChip-icon': { color: '#E65100', ml: 0.5 }
-                                    }}
-                                  />
-                                )}
-                              </Box>
-                              <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
-                                {approval.leaveRequest.user.position || '-'} • {approval.leaveRequest.user.department || '-'}
-                              </Typography>
-
-                            </Box>
-                          </Box>
-                          <Chip
-                            label={statusInfo.label}
-                            size="medium"
-                            icon={<StatusIcon size={16} color={statusInfo.color} variant="Bold" />}
-                            sx={{
-                              bgcolor: statusInfo.bgcolor,
-                              color: statusInfo.color,
-                              fontWeight: 600,
-                              '& .MuiChip-icon': { ml: 0.5 }
-                            }}
-                          />
-                        </Box>
-                      </DialogTitle>
-                      <DialogContent sx={{ pt: 2 }}>
-                        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 3 }}>
-                          {/* Left Column - Leave Info */}
-                          <Box>
-                            <Typography sx={{ fontWeight: 600, color: '#64748B', mb: 1.5, textTransform: 'uppercase', fontSize: '0.8rem', letterSpacing: 0.5 }}>
-                              ข้อมูลการลา
-                            </Typography>
-                            <Paper elevation={0} sx={{ p: 2, bgcolor: '#F8FAFC', borderRadius: 1 }}>
-                              <Box sx={{ display: 'grid', gap: 2 }}>
-                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                  <Typography sx={{ fontSize: '0.9rem', color: 'text.secondary' }}>ประเภทการลา</Typography>
-                                  <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 0.5 }}>
-                                    <Chip
-                                      label={t(`leave_${approval.leaveRequest.leaveType}`, approval.leaveRequest.leaveType)}
-                                      size="small"
-                                      icon={<LeaveIcon size={14} color={config.color} variant="Bold" />}
-                                      sx={{ bgcolor: config.lightColor, color: config.color, fontWeight: 600 }}
-                                    />
-                                    {approval.leaveRequest.leaveCode && (
-                                      <Typography sx={{ fontSize: '0.75rem', color: '#64748B', fontFamily: 'monospace' }}>
-                                        #{approval.leaveRequest.leaveCode}
-                                      </Typography>
-                                    )}
+                              <Paper elevation={0} sx={{ p: 2, bgcolor: '#F8FAFC', borderRadius: 1 }}>
+                                <Box sx={{ display: 'grid', gap: 2 }}>
+                                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <Typography sx={{ fontSize: '0.9rem', color: 'text.secondary' }}>ประเภทการลา</Typography>
+                                    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 0.5 }}>
+                                      <Chip
+                                        label={t(`leave_${approval.leaveRequest.leaveType}`, approval.leaveRequest.leaveType)}
+                                        size="small"
+                                        icon={<LeaveIcon size={14} color={config.color} variant="Bold" />}
+                                        sx={{ bgcolor: config.lightColor, color: config.color, fontWeight: 600 }}
+                                      />
+                                      {approval.leaveRequest.leaveCode && (
+                                        <Typography sx={{ fontSize: '0.75rem', color: '#64748B', fontFamily: 'monospace' }}>
+                                          #{approval.leaveRequest.leaveCode}
+                                        </Typography>
+                                      )}
+                                    </Box>
+                                  </Box>
+                                  <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                                    <Typography sx={{ fontSize: '0.9rem', color: 'text.secondary' }}>วันที่เริ่ม</Typography>
+                                    <Typography sx={{ fontSize: '0.9rem', fontWeight: 600 }}>
+                                      {new Date(approval.leaveRequest.startDate).toLocaleDateString('th-TH', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+                                      {approval.leaveRequest.startTime && ` (${approval.leaveRequest.startTime})`}
+                                    </Typography>
+                                  </Box>
+                                  <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                                    <Typography sx={{ fontSize: '0.9rem', color: 'text.secondary' }}>วันที่สิ้นสุด</Typography>
+                                    <Typography sx={{ fontSize: '0.9rem', fontWeight: 600 }}>
+                                      {new Date(approval.leaveRequest.endDate).toLocaleDateString('th-TH', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+                                      {approval.leaveRequest.endTime && ` (${approval.leaveRequest.endTime})`}
+                                    </Typography>
+                                  </Box>
+                                  <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                                    <Typography sx={{ fontSize: '0.9rem', color: 'text.secondary' }}>จำนวนวัน</Typography>
+                                    <Typography sx={{ fontSize: '0.9rem', fontWeight: 700, color: 'primary.main' }}>{approval.leaveRequest.totalDays} วัน</Typography>
+                                  </Box>
+                                  <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                                    <Typography sx={{ fontSize: '0.9rem', color: 'text.secondary' }}>วันที่ส่งใบลา</Typography>
+                                    <Typography sx={{ fontSize: '0.9rem', fontWeight: 600, color: 'text.secondary' }}>{new Date(approval.leaveRequest.createdAt).toLocaleDateString('th-TH', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</Typography>
                                   </Box>
                                 </Box>
-                                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                                  <Typography sx={{ fontSize: '0.9rem', color: 'text.secondary' }}>วันที่เริ่ม</Typography>
-                                  <Typography sx={{ fontSize: '0.9rem', fontWeight: 600 }}>
-                                    {new Date(approval.leaveRequest.startDate).toLocaleDateString('th-TH', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
-                                    {approval.leaveRequest.startTime && ` (${approval.leaveRequest.startTime})`}
-                                  </Typography>
-                                </Box>
-                                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                                  <Typography sx={{ fontSize: '0.9rem', color: 'text.secondary' }}>วันที่สิ้นสุด</Typography>
-                                  <Typography sx={{ fontSize: '0.9rem', fontWeight: 600 }}>
-                                    {new Date(approval.leaveRequest.endDate).toLocaleDateString('th-TH', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
-                                    {approval.leaveRequest.endTime && ` (${approval.leaveRequest.endTime})`}
-                                  </Typography>
-                                </Box>
-                                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                                  <Typography sx={{ fontSize: '0.9rem', color: 'text.secondary' }}>จำนวนวัน</Typography>
-                                  <Typography sx={{ fontSize: '0.9rem', fontWeight: 700, color: 'primary.main' }}>{approval.leaveRequest.totalDays} วัน</Typography>
-                                </Box>
-                                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                                  <Typography sx={{ fontSize: '0.9rem', color: 'text.secondary' }}>วันที่ส่งใบลา</Typography>
-                                  <Typography sx={{ fontSize: '0.9rem', fontWeight: 600, color: 'text.secondary' }}>{new Date(approval.leaveRequest.createdAt).toLocaleDateString('th-TH', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</Typography>
-                                </Box>
-                              </Box>
-                            </Paper>
+                              </Paper>
 
-                            <Typography sx={{ fontWeight: 600, color: '#64748B', mb: 1.5, mt: 3, textTransform: 'uppercase', fontSize: '0.8rem', letterSpacing: 0.5 }}>
-                              เหตุผลการลา
-                            </Typography>
-                            <Paper elevation={0} sx={{ p: 2, bgcolor: '#F8FAFC', borderRadius: 1 }}>
-                              <Typography sx={{ fontSize: '0.9rem', lineHeight: 1.8 }}>
-                                {approval.leaveRequest.reason || '-'}
+                              <Typography sx={{ fontWeight: 600, color: '#64748B', mb: 1.5, mt: 3, textTransform: 'uppercase', fontSize: '0.8rem', letterSpacing: 0.5 }}>
+                                เหตุผลการลา
                               </Typography>
-                            </Paper>
-
-                            {/* Attachments */}
-                            {approval.leaveRequest.attachments && approval.leaveRequest.attachments.length > 0 && (
-                              <>
-                                <Typography sx={{ fontWeight: 600, color: '#64748B', mb: 1.5, mt: 3, textTransform: 'uppercase', fontSize: '0.8rem', letterSpacing: 0.5 }}>
-                                  ไฟล์แนบ ({approval.leaveRequest.attachments.length})
+                              <Paper elevation={0} sx={{ p: 2, bgcolor: '#F8FAFC', borderRadius: 1 }}>
+                                <Typography sx={{ fontSize: '0.9rem', lineHeight: 1.8 }}>
+                                  {approval.leaveRequest.reason || '-'}
                                 </Typography>
-                                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5 }}>
-                                  {approval.leaveRequest.attachments.map((file) => (
-                                    <Box
-                                      key={file.id}
-                                      onClick={(e) => handleFileClick(file, e, approval.leaveRequest.attachments)}
-                                      sx={{
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: 1.5,
-                                        p: 1.5,
-                                        bgcolor: '#F8FAFC',
-                                        borderRadius: 1,
-                                        cursor: 'pointer',
-                                        transition: 'all 0.2s',
-                                        '&:hover': {
-                                          bgcolor: '#EDF2F7',
-                                          transform: 'translateY(-2px)',
-                                        }
-                                      }}
-                                    >
-                                      {isImageFile(file.fileName) ? (
-                                        <Box
-                                          component="img"
-                                          src={file.filePath}
-                                          sx={{ width: 48, height: 48, borderRadius: 1, objectFit: 'cover' }}
-                                        />
-                                      ) : (
-                                        <Box sx={{ width: 48, height: 48, borderRadius: 1, bgcolor: '#E2E8F0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                          <DocumentText size={24} color="#64748B" />
-                                        </Box>
-                                      )}
-                                      <Typography sx={{ fontSize: '0.9rem', color: '#334155', fontWeight: 500 }}>
-                                        {file.fileName.length > 20 ? file.fileName.substring(0, 20) + '...' : file.fileName}
-                                      </Typography>
-                                    </Box>
-                                  ))}
+                              </Paper>
+
+                              {/* Attachments */}
+                              {approval.leaveRequest.attachments && approval.leaveRequest.attachments.length > 0 && (
+                                <>
+                                  <Typography sx={{ fontWeight: 600, color: '#64748B', mb: 1.5, mt: 3, textTransform: 'uppercase', fontSize: '0.8rem', letterSpacing: 0.5 }}>
+                                    ไฟล์แนบ ({approval.leaveRequest.attachments.length})
+                                  </Typography>
+                                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5 }}>
+                                    {approval.leaveRequest.attachments.map((file) => (
+                                      <Box
+                                        key={file.id}
+                                        onClick={(e) => handleFileClick(file, e, approval.leaveRequest.attachments)}
+                                        sx={{
+                                          display: 'flex',
+                                          alignItems: 'center',
+                                          gap: 1.5,
+                                          p: 1.5,
+                                          bgcolor: '#F8FAFC',
+                                          borderRadius: 1,
+                                          cursor: 'pointer',
+                                          transition: 'all 0.2s',
+                                          '&:hover': {
+                                            bgcolor: '#EDF2F7',
+                                            transform: 'translateY(-2px)',
+                                          }
+                                        }}
+                                      >
+                                        {isImageFile(file.fileName) ? (
+                                          <Box
+                                            component="img"
+                                            src={file.filePath}
+                                            sx={{ width: 48, height: 48, borderRadius: 1, objectFit: 'cover' }}
+                                          />
+                                        ) : (
+                                          <Box sx={{ width: 48, height: 48, borderRadius: 1, bgcolor: '#E2E8F0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                            <DocumentText size={24} color="#64748B" />
+                                          </Box>
+                                        )}
+                                        <Typography sx={{ fontSize: '0.9rem', color: '#334155', fontWeight: 500 }}>
+                                          {file.fileName.length > 20 ? file.fileName.substring(0, 20) + '...' : file.fileName}
+                                        </Typography>
+                                      </Box>
+                                    ))}
+                                  </Box>
+                                </>
+                              )}
+                            </Box>
+
+                            {/* Right Column - Employee Info & History */}
+                            <Box>
+                              <Typography sx={{ fontWeight: 600, color: '#64748B', mb: 1.5, textTransform: 'uppercase', fontSize: '0.8rem', letterSpacing: 0.5 }}>
+                                ข้อมูลพนักงาน
+                              </Typography>
+                              <Paper elevation={0} sx={{ p: 2, bgcolor: '#F8FAFC', borderRadius: 1 }}>
+                                <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
+                                  <Box>
+                                    <Typography sx={{ fontSize: '0.8rem', color: 'text.secondary' }}>รหัสพนักงาน</Typography>
+                                    <Typography sx={{ fontSize: '0.9rem', fontWeight: 600 }}>{approval.leaveRequest.user.employeeId}</Typography>
+                                  </Box>
+                                  <Box>
+                                    <Typography sx={{ fontSize: '0.8rem', color: 'text.secondary' }}>ตำแหน่ง</Typography>
+                                    <Typography sx={{ fontSize: '0.9rem', fontWeight: 600 }}>{approval.leaveRequest.user.position || '-'}</Typography>
+                                  </Box>
+                                  <Box>
+                                    <Typography sx={{ fontSize: '0.8rem', color: 'text.secondary' }}>บริษัท</Typography>
+                                    <Typography sx={{ fontSize: '0.9rem', fontWeight: 600 }}>{approval.leaveRequest.user.company || '-'}</Typography>
+                                  </Box>
+                                  <Box>
+                                    <Typography sx={{ fontSize: '0.8rem', color: 'text.secondary' }}>ฝ่าย</Typography>
+                                    <Typography sx={{ fontSize: '0.9rem', fontWeight: 600 }}>{approval.leaveRequest.user.department || '-'}</Typography>
+                                  </Box>
+                                  <Box>
+                                    <Typography sx={{ fontSize: '0.8rem', color: 'text.secondary' }}>แผนก</Typography>
+                                    <Typography sx={{ fontSize: '0.9rem', fontWeight: 600 }}>{approval.leaveRequest.user.section || '-'}</Typography>
+                                  </Box>
+                                  <Box>
+                                    <Typography sx={{ fontSize: '0.8rem', color: 'text.secondary' }}>กะการทำงาน</Typography>
+                                    <Typography sx={{ fontSize: '0.9rem', fontWeight: 600 }}>{approval.leaveRequest.user.shift || '-'}</Typography>
+                                  </Box>
                                 </Box>
-                              </>
+                              </Paper>
+
+                              {/* Approval History */}
+                              {approval.leaveRequest.approvalHistory && approval.leaveRequest.approvalHistory.length > 0 && (
+                                <>
+                                  <Typography sx={{ fontWeight: 600, color: '#64748B', mb: 1.5, mt: 3, textTransform: 'uppercase', fontSize: '0.8rem', letterSpacing: 0.5 }}>
+                                    ประวัติการอนุมัติ
+                                  </Typography>
+                                  <Paper elevation={0} sx={{ p: 2, bgcolor: '#F8FAFC', borderRadius: 1 }}>
+                                    {approval.leaveRequest.approvalHistory.map((hist, idx) => (
+                                      <Box key={idx} sx={{ display: 'flex', gap: 2, mb: idx < approval.leaveRequest.approvalHistory.length - 1 ? 2 : 0 }}>
+                                        <Box sx={{
+                                          width: 28,
+                                          height: 28,
+                                          borderRadius: '50%',
+                                          bgcolor: statusConfig[hist.status]?.bgcolor || '#F1F5F9',
+                                          display: 'flex',
+                                          alignItems: 'center',
+                                          justifyContent: 'center',
+                                          flexShrink: 0
+                                        }}>
+                                          {hist.status === 'approved' && <TickCircle size={16} color={statusConfig.approved.color} variant="Bold" />}
+                                          {hist.status === 'rejected' && <CloseCircle size={16} color={statusConfig.rejected.color} variant="Bold" />}
+                                          {hist.status === 'pending' && <Clock size={16} color={statusConfig.pending.color} variant="Bold" />}
+                                          {hist.status === 'skipped' && <Clock size={16} color="#9e9e9e" variant="Bold" />}
+                                        </Box>
+                                        <Box sx={{ flex: 1 }}>
+                                          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                            <Box>
+                                              <Typography sx={{ fontSize: '0.9rem', fontWeight: 600, lineHeight: 1.2 }}>
+                                                {hist.actedBy
+                                                  ? `${hist.actedBy.firstName} ${hist.actedBy.lastName}`
+                                                  : `${hist.approver.firstName} ${hist.approver.lastName}`}
+                                                {hist.actedBy && (
+                                                  <Typography component="span" sx={{ ml: 1, fontSize: '0.8rem', color: 'text.secondary', fontWeight: 500 }}>
+                                                    ({t('approved_on_behalf', 'อนุมัติแทน')} {hist.approver.firstName} {hist.approver.lastName})
+                                                  </Typography>
+                                                )}
+                                              </Typography>
+                                              <Typography sx={{ fontSize: '0.75rem', color: '#64748B' }}>
+                                                {(hist.actedBy?.position || hist.approver.position) || '-'}
+                                              </Typography>
+                                            </Box>
+                                            <Chip
+                                              label={statusConfig[hist.status]?.label || hist.status}
+                                              size="small"
+                                              sx={{
+                                                height: 22,
+                                                fontSize: '0.75rem',
+                                                bgcolor: statusConfig[hist.status]?.bgcolor,
+                                                color: statusConfig[hist.status]?.color,
+                                                fontWeight: 600
+                                              }}
+                                            />
+                                          </Box>
+                                          {hist.comment && (
+                                            <Typography sx={{ fontSize: '0.85rem', display: 'block', mt: 0.5, color: 'text.secondary' }}>
+                                              &quot;{hist.comment}&quot;
+                                            </Typography>
+                                          )}
+                                        </Box>
+                                      </Box>
+                                    ))}
+                                  </Paper>
+                                </>
+                              )}
+                            </Box>
+                          </Box>
+                        </DialogContent>
+
+                        {isPending && (
+                          <DialogActions sx={{ p: 3, pt: 1, flexDirection: 'column', gap: 1.5 }}>
+                            {isHrManager && approval.leaveRequest.totalDays > 1 && (
+                              <Button
+                                fullWidth
+                                variant="outlined"
+                                onClick={() => {
+                                  setExpandedCards(new Set());
+                                  handleOpenSplitDialog(approval);
+                                }}
+                                startIcon={<Scissor size={18} color={PRIMARY_COLOR} variant="Bold" />}
+                                sx={{
+                                  borderColor: PRIMARY_COLOR,
+                                  color: PRIMARY_COLOR,
+                                  py: 1.25,
+                                  borderRadius: 1,
+                                  '&:hover': { bgcolor: `${PRIMARY_COLOR}10` }
+                                }}
+                              >
+                                แยกใบลา
+                              </Button>
+                            )}
+                            <Box sx={{ display: 'flex', gap: 1.5, width: '100%' }}>
+                              <Button
+                                variant="contained"
+                                onClick={() => {
+                                  setExpandedCards(new Set());
+                                  handleOpenDialog(approval, 'reject');
+                                }}
+                                startIcon={<CloseCircle size={18} color="#fff" variant="Bold" />}
+                                sx={{
+                                  flex: 1,
+                                  py: 1.25,
+                                  borderRadius: 1,
+                                  bgcolor: '#D32F2F',
+                                  '&:hover': { bgcolor: '#B71C1C' }
+                                }}
+                              >
+                                ปฏิเสธ
+                              </Button>
+                              <Button
+                                variant="contained"
+                                onClick={() => {
+                                  setExpandedCards(new Set());
+                                  handleOpenDialog(approval, 'approve');
+                                }}
+                                startIcon={<TickCircle size={18} color="#fff" variant="Bold" />}
+                                sx={{
+                                  flex: 1,
+                                  py: 1.25,
+                                  borderRadius: 1,
+                                  bgcolor: '#2E7D32',
+                                  '&:hover': { bgcolor: '#1B5E20' }
+                                }}
+                              >
+                                อนุมัติ
+                              </Button>
+                            </Box>
+                          </DialogActions>
+                        )}
+
+                        {!isPending && (
+                          <DialogActions sx={{ p: 3, pt: 1 }}>
+                            <Button
+                              variant="outlined"
+                              onClick={() => setExpandedCards(new Set())}
+                              sx={{ borderColor: 'grey.300', color: 'text.primary' }}
+                            >
+                              ปิด
+                            </Button>
+                          </DialogActions>
+                        )}
+                      </>
+                    );
+                  })()}
+                </Dialog>
+              )}
+
+              {/* Pagination for Desktop */}
+              {totalPages > 1 && (
+                <Box sx={{ display: 'flex', justifyContent: 'center', py: 3, borderTop: '1px solid', borderColor: 'grey.200' }}>
+                  <Pagination
+                    count={totalPages}
+                    page={page}
+                    onChange={(_, value) => {
+                      setPage(value);
+                      setExpandedCards(new Set());
+                    }}
+                    color="primary"
+                    shape="rounded"
+                    sx={{ '& .MuiPaginationItem-root': { fontWeight: 600 } }}
+                  />
+                </Box>
+              )}
+            </Paper>
+          ) : (
+            /* ========== MOBILE CARD VIEW ========== */
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              {paginatedApprovals.map((approval) => {
+                const isExpanded = expandedCards.has(approval.approvalId);
+                const isPending = approval.status === 'pending' && (approval.leaveRequest.status === 'pending' || approval.leaveRequest.status === 'in_progress');
+                const config = leaveTypeConfig[approval.leaveRequest.leaveType] || leaveTypeConfig.default;
+                const LeaveIcon = config.icon;
+                const statusInfo = statusConfig[approval.leaveRequest.status] || statusConfig[approval.status] || statusConfig.pending;
+                const StatusIcon = statusInfo.icon;
+
+                return (
+                  <Paper
+                    key={approval.approvalId}
+                    elevation={0}
+                    sx={{
+                      borderRadius: 1,
+                      overflow: 'hidden',
+                      border: '1px solid',
+                      borderColor: isExpanded ? PRIMARY_COLOR : 'grey.200',
+                      transition: 'all 0.2s',
+                      '&:hover': {
+                        borderColor: PRIMARY_COLOR,
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
+                      }
+                    }}
+                  >
+                    {/* Escalated banner */}
+                    {approval.leaveRequest.isEscalated && (
+                      <Box sx={{ bgcolor: '#FFF3E0', color: '#E65100', px: 2, py: 0.75, display: 'flex', alignItems: 'center', gap: 1, borderBottom: '1px dashed #FFCC80' }}>
+                        <InfoCircle size={16} variant="Bold" />
+                        <Typography sx={{ fontSize: '0.75rem', fontWeight: 600 }}>ส่งต่อจากผู้อนุมัติอื่น</Typography>
+                      </Box>
+                    )}
+
+                    {/* Header - Clickable */}
+                    <Box
+                      onClick={() => toggleCard(approval.approvalId)}
+                      sx={{
+                        p: 2,
+                        cursor: 'pointer',
+                        bgcolor: 'white',
+                      }}
+                    >
+                      {/* Row 1: Avatar + Name + Arrow */}
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1.5 }}>
+                        <Avatar
+                          src={approval.leaveRequest.user.avatar}
+                          sx={{
+                            width: 40,
+                            height: 40,
+                            bgcolor: config.lightColor,
+                            color: config.color,
+                            fontSize: '1rem',
+                            fontWeight: 600,
+                            border: `2px solid ${config.lightColor}`,
+                            flexShrink: 0
+                          }}
+                        >
+                          {approval.leaveRequest.user.firstName[0]}
+                        </Avatar>
+
+                        <Box sx={{ flex: 1, minWidth: 0 }}>
+                          <Typography sx={{
+                            fontWeight: 700,
+                            fontSize: '0.95rem',
+                            color: '#1E293B',
+                            lineHeight: 1.2,
+                            whiteSpace: 'nowrap',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis'
+                          }}>
+                            {approval.leaveRequest.user.firstName} {approval.leaveRequest.user.lastName}
+                          </Typography>
+                          <Typography sx={{
+                            fontSize: '0.75rem',
+                            color: '#64748B',
+                            lineHeight: 1.2,
+                            whiteSpace: 'nowrap',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis'
+                          }}>
+                            {approval.leaveRequest.user.position || '-'}
+                          </Typography>
+                        </Box>
+
+                        <Box sx={{ flexShrink: 0 }}>
+                          {isExpanded ?
+                            <ArrowUp2 size={20} color="#94A3B8" /> :
+                            <ArrowDown2 size={20} color="#94A3B8" />
+                          }
+                        </Box>
+                      </Box>
+
+                      {/* Row 2: Leave Type, Days and Status */}
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap', mb: 1.5 }}>
+                        <Chip
+                          label={t(`leave_${approval.leaveRequest.leaveType}`, approval.leaveRequest.leaveType)}
+                          size="small"
+                          icon={<LeaveIcon size={14} color={config.color} variant="Bold" />}
+                          sx={{
+                            bgcolor: config.lightColor,
+                            color: config.color,
+                            fontWeight: 600,
+                            fontSize: '0.75rem',
+                            height: 24,
+                            border: '1px solid',
+                            borderColor: 'transparent',
+                          }}
+                        />
+                        <Chip
+                          label={`${approval.leaveRequest.totalDays} วัน`}
+                          size="small"
+                          sx={{
+                            bgcolor: '#F1F5F9',
+                            color: '#475569',
+                            fontWeight: 600,
+                            fontSize: '0.75rem',
+                            height: 24,
+                          }}
+                        />
+                        <Chip
+                          label={statusInfo.label}
+                          size="small"
+                          icon={<StatusIcon size={14} color={statusInfo.color} variant="Bold" />}
+                          sx={{
+                            bgcolor: statusInfo.bgcolor,
+                            color: statusInfo.color,
+                            fontWeight: 600,
+                            fontSize: '0.7rem',
+                            height: 24,
+                            ml: 'auto',
+                            '& .MuiChip-icon': { ml: 0.5 }
+                          }}
+                        />
+                      </Box>
+
+                      {/* Row 4: Date/Time Display - Full width */}
+                      <Box sx={{
+                        bgcolor: '#F8FAFC',
+                        borderRadius: 1,
+                        p: 1.5,
+                        border: '1px solid #E2E8F0'
+                      }}>
+                        {/* Single Day Leave */}
+                        {approval.leaveRequest.startDate === approval.leaveRequest.endDate ? (
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <Box sx={{
+                              bgcolor: '#4CAF50',
+                              borderRadius: 1,
+                              p: 0.5,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center'
+                            }}>
+                              <Calendar size={14} color="white" variant="Bold" />
+                            </Box>
+                            <Typography sx={{ fontSize: '0.8rem', color: '#1E293B', fontWeight: 600 }}>
+                              วันที่ลา: {new Date(approval.leaveRequest.startDate).toLocaleDateString('th-TH', { weekday: 'short', day: 'numeric', month: 'short', year: '2-digit' })}
+                            </Typography>
+                            {(approval.leaveRequest.startTime || approval.leaveRequest.endTime) && (
+                              <Typography sx={{ fontSize: '0.8rem', color: '#1E293B', fontWeight: 600 }}>
+                                ({approval.leaveRequest.startTime || '08:00'} - {approval.leaveRequest.endTime || '17:00'})
+                              </Typography>
                             )}
                           </Box>
-
-                          {/* Right Column - Employee Info & History */}
-                          <Box>
-                            <Typography sx={{ fontWeight: 600, color: '#64748B', mb: 1.5, textTransform: 'uppercase', fontSize: '0.8rem', letterSpacing: 0.5 }}>
-                              ข้อมูลพนักงาน
+                        ) : (
+                          /* Multiple Days Leave - Compact inline style */
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+                            <Box sx={{
+                              bgcolor: '#4CAF50',
+                              borderRadius: 1,
+                              p: 0.5,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center'
+                            }}>
+                              <Calendar size={14} color="white" variant="Bold" />
+                            </Box>
+                            <Typography sx={{ fontSize: '0.8rem', color: '#1E293B', fontWeight: 600 }}>
+                              {new Date(approval.leaveRequest.startDate).toLocaleDateString('th-TH', { weekday: 'short', day: 'numeric', month: 'short', year: '2-digit' })}
+                              {approval.leaveRequest.startTime && ` (${approval.leaveRequest.startTime})`}
                             </Typography>
-                            <Paper elevation={0} sx={{ p: 2, bgcolor: '#F8FAFC', borderRadius: 1 }}>
-                              <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
-                                <Box>
-                                  <Typography sx={{ fontSize: '0.8rem', color: 'text.secondary' }}>รหัสพนักงาน</Typography>
-                                  <Typography sx={{ fontSize: '0.9rem', fontWeight: 600 }}>{approval.leaveRequest.user.employeeId}</Typography>
-                                </Box>
-                                <Box>
-                                  <Typography sx={{ fontSize: '0.8rem', color: 'text.secondary' }}>ตำแหน่ง</Typography>
-                                  <Typography sx={{ fontSize: '0.9rem', fontWeight: 600 }}>{approval.leaveRequest.user.position || '-'}</Typography>
-                                </Box>
-                                <Box>
-                                  <Typography sx={{ fontSize: '0.8rem', color: 'text.secondary' }}>บริษัท</Typography>
-                                  <Typography sx={{ fontSize: '0.9rem', fontWeight: 600 }}>{approval.leaveRequest.user.company || '-'}</Typography>
-                                </Box>
-                                <Box>
-                                  <Typography sx={{ fontSize: '0.8rem', color: 'text.secondary' }}>ฝ่าย</Typography>
-                                  <Typography sx={{ fontSize: '0.9rem', fontWeight: 600 }}>{approval.leaveRequest.user.department || '-'}</Typography>
-                                </Box>
-                                <Box>
-                                  <Typography sx={{ fontSize: '0.8rem', color: 'text.secondary' }}>แผนก</Typography>
-                                  <Typography sx={{ fontSize: '0.9rem', fontWeight: 600 }}>{approval.leaveRequest.user.section || '-'}</Typography>
-                                </Box>
-                                <Box>
-                                  <Typography sx={{ fontSize: '0.8rem', color: 'text.secondary' }}>กะการทำงาน</Typography>
-                                  <Typography sx={{ fontSize: '0.9rem', fontWeight: 600 }}>{approval.leaveRequest.user.shift || '-'}</Typography>
-                                </Box>
-                              </Box>
-                            </Paper>
+                            <Typography sx={{ fontSize: '0.75rem', color: '#94A3B8' }}>→</Typography>
+                            <Typography sx={{ fontSize: '0.8rem', color: '#1E293B', fontWeight: 600 }}>
+                              {new Date(approval.leaveRequest.endDate).toLocaleDateString('th-TH', { weekday: 'short', day: 'numeric', month: 'short', year: '2-digit' })}
+                              {approval.leaveRequest.endTime && ` (${approval.leaveRequest.endTime})`}
+                            </Typography>
+                          </Box>
+                        )}
+                      </Box>
+                    </Box>
 
-                            {/* Approval History */}
-                            {approval.leaveRequest.approvalHistory && approval.leaveRequest.approvalHistory.length > 0 && (
-                              <>
-                                <Typography sx={{ fontWeight: 600, color: '#64748B', mb: 1.5, mt: 3, textTransform: 'uppercase', fontSize: '0.8rem', letterSpacing: 0.5 }}>
-                                  ประวัติการอนุมัติ
-                                </Typography>
-                                <Paper elevation={0} sx={{ p: 2, bgcolor: '#F8FAFC', borderRadius: 1 }}>
-                                  {approval.leaveRequest.approvalHistory.map((hist, idx) => (
-                                    <Box key={idx} sx={{ display: 'flex', gap: 2, mb: idx < approval.leaveRequest.approvalHistory.length - 1 ? 2 : 0 }}>
-                                      <Box sx={{
-                                        width: 28,
-                                        height: 28,
-                                        borderRadius: '50%',
-                                        bgcolor: statusConfig[hist.status]?.bgcolor || '#F1F5F9',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        flexShrink: 0
-                                      }}>
-                                        {hist.status === 'approved' && <TickCircle size={16} color={statusConfig.approved.color} variant="Bold" />}
-                                        {hist.status === 'rejected' && <CloseCircle size={16} color={statusConfig.rejected.color} variant="Bold" />}
-                                        {hist.status === 'pending' && <Clock size={16} color={statusConfig.pending.color} variant="Bold" />}
-                                        {hist.status === 'skipped' && <Clock size={16} color="#9e9e9e" variant="Bold" />}
-                                      </Box>
-                                      <Box sx={{ flex: 1 }}>
-                                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                                          <Box>
-                                            <Typography sx={{ fontSize: '0.9rem', fontWeight: 600, lineHeight: 1.2 }}>
-                                              {hist.actedBy
-                                                ? `${hist.actedBy.firstName} ${hist.actedBy.lastName}`
-                                                : `${hist.approver.firstName} ${hist.approver.lastName}`}
-                                              {hist.actedBy && (
-                                                <Typography component="span" sx={{ ml: 1, fontSize: '0.8rem', color: 'text.secondary', fontWeight: 500 }}>
-                                                  ({t('approved_on_behalf', 'อนุมัติแทน')} {hist.approver.firstName} {hist.approver.lastName})
-                                                </Typography>
-                                              )}
-                                            </Typography>
-                                            <Typography sx={{ fontSize: '0.75rem', color: '#64748B' }}>
-                                              {(hist.actedBy?.position || hist.approver.position) || '-'}
-                                            </Typography>
-                                          </Box>
-                                          <Chip
-                                            label={statusConfig[hist.status]?.label || hist.status}
-                                            size="small"
-                                            sx={{
-                                              height: 22,
-                                              fontSize: '0.75rem',
-                                              bgcolor: statusConfig[hist.status]?.bgcolor,
-                                              color: statusConfig[hist.status]?.color,
-                                              fontWeight: 600
-                                            }}
-                                          />
-                                        </Box>
-                                        {hist.comment && (
-                                          <Typography sx={{ fontSize: '0.85rem', display: 'block', mt: 0.5, color: 'text.secondary' }}>
-                                            &quot;{hist.comment}&quot;
-                                          </Typography>
-                                        )}
-                                      </Box>
-                                    </Box>
-                                  ))}
-                                </Paper>
-                              </>
-                            )}
+                    {/* Expandable Content */}
+                    <Collapse in={isExpanded}>
+                      <Divider sx={{ borderStyle: 'dashed' }} />
+                      <Box sx={{ p: 2, bgcolor: '#FAFAFA' }}>
+                        {/* Submission Date - Mobile */}
+                        <Box sx={{ mb: 2, p: 1.5, bgcolor: '#F1F5F9', borderRadius: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                          <Typography sx={{ fontSize: '0.8rem', color: '#64748B', fontWeight: 600 }}>วันที่ส่งใบลา</Typography>
+                          <Typography sx={{ fontSize: '0.85rem', color: '#334155', fontWeight: 600 }}>
+                            {formatDateFull(approval.leaveRequest.createdAt, new Date(approval.leaveRequest.createdAt).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }))}
+                          </Typography>
+                        </Box>
+
+                        {/* Employee Info Grid */}
+                        <Box sx={{ mb: 2, p: 2, bgcolor: 'white', borderRadius: 1, border: '1px solid', borderColor: 'grey.100' }}>
+                          <Typography sx={{ fontSize: '0.8rem', color: '#64748B', mb: 1.5, display: 'flex', alignItems: 'center', gap: 1, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                            <User size={16} variant="Bold" color={PRIMARY_COLOR} /> ข้อมูลพนักงาน
+                          </Typography>
+                          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
+                            <Box>
+                              <Typography sx={{ fontSize: '0.75rem', color: '#94A3B8' }}>บริษัท</Typography>
+                              <Typography sx={{ fontSize: '0.9rem', color: '#334155', fontWeight: 500 }}>
+                                {approval.leaveRequest.user.company || '-'}
+                              </Typography>
+                            </Box>
+                            <Box>
+                              <Typography sx={{ fontSize: '0.75rem', color: '#94A3B8' }}>ฝ่าย</Typography>
+                              <Typography sx={{ fontSize: '0.9rem', color: '#334155', fontWeight: 500 }}>
+                                {approval.leaveRequest.user.department || '-'}
+                              </Typography>
+                            </Box>
+                            <Box>
+                              <Typography sx={{ fontSize: '0.75rem', color: '#94A3B8' }}>แผนก</Typography>
+                              <Typography sx={{ fontSize: '0.9rem', color: '#334155', fontWeight: 500 }}>
+                                {approval.leaveRequest.user.section || '-'}
+                              </Typography>
+                            </Box>
+                            <Box>
+                              <Typography sx={{ fontSize: '0.75rem', color: '#94A3B8' }}>ตำแหน่ง</Typography>
+                              <Typography sx={{ fontSize: '0.9rem', color: '#334155', fontWeight: 500 }}>
+                                {approval.leaveRequest.user.position || '-'}
+                              </Typography>
+                            </Box>
+                            <Box>
+                              <Typography sx={{ fontSize: '0.75rem', color: '#94A3B8' }}>กะการทำงาน</Typography>
+                              <Typography sx={{ fontSize: '0.9rem', color: '#334155', fontWeight: 500 }}>
+                                {approval.leaveRequest.user.shift || '-'}
+                              </Typography>
+                            </Box>
                           </Box>
                         </Box>
-                      </DialogContent>
 
+                        {/* Reason */}
+                        <Box sx={{ mb: 2 }}>
+                          <Typography sx={{ fontSize: '0.8rem', color: '#64748B', mb: 1, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <DocumentText size={16} variant="Bold" color={PRIMARY_COLOR} /> เหตุผลการลา
+                          </Typography>
+                          <Paper elevation={0} sx={{ p: 2, bgcolor: 'white', borderRadius: 1, border: '1px solid', borderColor: 'grey.200' }}>
+                            <Typography sx={{ fontSize: '0.95rem', color: '#334155', lineHeight: 1.6 }}>
+                              {approval.leaveRequest.reason}
+                            </Typography>
+                          </Paper>
+                        </Box>
+
+                        {/* Cancel Reason */}
+                        {approval.leaveRequest.status === 'cancelled' && approval.leaveRequest.cancelReason && (
+                          <Box sx={{ mb: 2 }}>
+                            <Typography sx={{ fontSize: '0.8rem', color: '#D32F2F', mb: 1, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
+                              <Forbidden2 size={16} variant="Bold" /> เหตุผลที่ยกเลิก
+                            </Typography>
+                            <Paper elevation={0} sx={{ p: 2, bgcolor: '#FFEBEE', borderRadius: 1, border: '1px solid', borderColor: '#FFCDD2' }}>
+                              <Typography sx={{ fontSize: '0.95rem', color: '#B71C1C', lineHeight: 1.6 }}>
+                                {approval.leaveRequest.cancelReason}
+                              </Typography>
+                            </Paper>
+                          </Box>
+                        )}
+
+                        {/* Attachments */}
+                        {approval.leaveRequest.attachments && approval.leaveRequest.attachments.length > 0 && (
+                          <Box sx={{ mb: 2 }}>
+                            <Typography sx={{ fontSize: '0.8rem', color: '#64748B', mb: 1, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
+                              <Paperclip2 size={16} variant="Bold" color={PRIMARY_COLOR} /> ไฟล์แนบ ({approval.leaveRequest.attachments.length})
+                            </Typography>
+                            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5 }}>
+                              {approval.leaveRequest.attachments.map((file) => (
+                                <Box
+                                  key={file.id}
+                                  onClick={(e) => handleFileClick(file, e, approval.leaveRequest.attachments)}
+                                  sx={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 1.5,
+                                    p: 1.5,
+                                    bgcolor: 'white',
+                                    borderRadius: 1,
+                                    border: '1px solid',
+                                    borderColor: 'grey.200',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.2s',
+                                    '&:hover': {
+                                      borderColor: PRIMARY_COLOR,
+                                      boxShadow: '0 2px 8px rgba(0,0,0,0.05)'
+                                    }
+                                  }}
+                                >
+                                  {isImageFile(file.fileName) ? (
+                                    <Box
+                                      component="img"
+                                      src={file.filePath}
+                                      sx={{
+                                        width: 40,
+                                        height: 40,
+                                        borderRadius: 1,
+                                        objectFit: 'cover'
+                                      }}
+                                    />
+                                  ) : (
+                                    <Box sx={{ width: 40, height: 40, borderRadius: 1, bgcolor: '#F1F5F9', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                      <DocumentText size={24} color="#64748B" />
+                                    </Box>
+                                  )}
+                                  <Box>
+                                    <Typography sx={{
+                                      fontSize: '0.85rem',
+                                      color: '#334155',
+                                      fontWeight: 500,
+                                      maxWidth: 150,
+                                      overflow: 'hidden',
+                                      textOverflow: 'ellipsis',
+                                      whiteSpace: 'nowrap'
+                                    }}>
+                                      {file.fileName}
+                                    </Typography>
+                                    <Typography sx={{ fontSize: '0.7rem', color: '#94A3B8' }}>
+                                      คลิกเพื่อดูไฟล์
+                                    </Typography>
+                                  </Box>
+                                </Box>
+                              ))}
+                            </Box>
+                          </Box>
+                        )}
+
+                        {/* Approval History */}
+                        {approval.leaveRequest.approvalHistory && approval.leaveRequest.approvalHistory.length > 0 && (
+                          <Box sx={{ mb: 2 }}>
+                            <Typography sx={{ fontSize: '0.8rem', color: '#64748B', mb: 1, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
+                              <Clock size={16} variant="Bold" color={PRIMARY_COLOR} /> ประวัติการอนุมัติ
+                            </Typography>
+                            <Box sx={{ bgcolor: 'white', borderRadius: 1, p: 2, border: '1px solid', borderColor: 'grey.200' }}>
+                              {approval.leaveRequest.approvalHistory.map((hist, idx) => (
+                                <Box key={idx} sx={{ position: 'relative', pb: idx === approval.leaveRequest.approvalHistory.length - 1 ? 0 : 2 }}>
+                                  {/* Timeline line */}
+                                  {idx !== approval.leaveRequest.approvalHistory.length - 1 && (
+                                    <Box sx={{
+                                      position: 'absolute',
+                                      left: 10,
+                                      top: 24,
+                                      bottom: 0,
+                                      width: 2,
+                                      bgcolor: '#F1F5F9'
+                                    }} />
+                                  )}
+
+                                  <Box sx={{ display: 'flex', gap: 2 }}>
+                                    <Box sx={{
+                                      width: 22,
+                                      height: 22,
+                                      borderRadius: '50%',
+                                      bgcolor: statusConfig[hist.status]?.bgcolor || '#F1F5F9',
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'center',
+                                      zIndex: 1
+                                    }}>
+                                      {hist.status === 'approved' && <TickCircle size={14} color={statusConfig.approved.color} variant="Bold" />}
+                                      {hist.status === 'rejected' && <CloseCircle size={14} color={statusConfig.rejected.color} variant="Bold" />}
+                                      {hist.status === 'pending' && <Clock size={14} color={statusConfig.pending.color} variant="Bold" />}
+                                      {hist.status === 'cancelled' && <Forbidden2 size={14} color={statusConfig.cancelled.color} variant="Bold" />}
+                                      {hist.status === 'skipped' && <Clock size={14} color="#9e9e9e" variant="Bold" />}
+                                    </Box>
+
+                                    <Box sx={{ flex: 1 }}>
+                                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
+                                        <Typography sx={{ fontSize: '0.9rem', fontWeight: 600, color: '#334155' }}>
+                                          {hist.approver.firstName} {hist.approver.lastName}
+                                        </Typography>
+                                        <Chip
+                                          label={statusConfig[hist.status]?.label || hist.status}
+                                          size="small"
+                                          sx={{
+                                            height: 20,
+                                            fontSize: '0.65rem',
+                                            bgcolor: statusConfig[hist.status]?.bgcolor,
+                                            color: statusConfig[hist.status]?.color,
+                                            fontWeight: 600
+                                          }}
+                                        />
+                                      </Box>
+                                      <Typography sx={{ fontSize: '0.75rem', color: '#94A3B8' }}>
+                                        {hist.approver.position || 'ผู้อนุมัติ'}
+                                      </Typography>
+
+                                      {hist.comment && (
+                                        <Paper elevation={0} sx={{ mt: 1, p: 1.5, bgcolor: '#F8FAFC', borderRadius: 1 }}>
+                                          <Typography sx={{ fontSize: '0.8rem', color: '#475569', fontStyle: 'italic' }}>
+                                            &quot;{hist.comment}&quot;
+                                          </Typography>
+                                        </Paper>
+                                      )}
+                                    </Box>
+                                  </Box>
+                                </Box>
+                              ))}
+                            </Box>
+                          </Box>
+                        )}
+                      </Box>
+
+                      {/* Actions - only for pending */}
                       {isPending && (
-                        <DialogActions sx={{ p: 3, pt: 1, flexDirection: 'column', gap: 1.5 }}>
+                        <Box sx={{
+                          p: 2,
+                          bgcolor: '#FAFAFA',
+                          borderTop: '1px solid',
+                          borderColor: 'grey.200',
+                        }}>
+                          {/* Split button - show only for hr_manager and if more than 1 day */}
                           {isHrManager && approval.leaveRequest.totalDays > 1 && (
                             <Button
-                              fullWidth
                               variant="outlined"
-                              onClick={() => {
-                                setExpandedCards(new Set());
+                              fullWidth
+                              onClick={(e) => {
+                                e.stopPropagation();
                                 handleOpenSplitDialog(approval);
                               }}
-                              startIcon={<Scissor size={18} color={PRIMARY_COLOR} variant="Bold" />}
                               sx={{
+                                mb: 1.5,
                                 borderColor: PRIMARY_COLOR,
-                                color: PRIMARY_COLOR,
-                                py: 1.25,
+                                color: 'white',
+                                bgcolor: PRIMARY_COLOR,
                                 borderRadius: 1,
-                                '&:hover': { bgcolor: `${PRIMARY_COLOR}10` }
+                                py: 1,
+                                fontWeight: 600,
+                                fontSize: '0.85rem',
+                                textTransform: 'none',
+                                '&:hover': {
+                                  bgcolor: '#1976D2',
+                                  borderColor: PRIMARY_COLOR,
+                                  color: 'white',
+                                }
                               }}
+                              startIcon={<Scissor size={18} color='white' variant="Bold" />}
                             >
                               แยกใบลา
                             </Button>
                           )}
-                          <Box sx={{ display: 'flex', gap: 1.5, width: '100%' }}>
+
+                          <Box sx={{ display: 'flex', gap: 1.5 }}>
                             <Button
                               variant="contained"
-                              onClick={() => {
-                                setExpandedCards(new Set());
+                              onClick={(e) => {
+                                e.stopPropagation();
                                 handleOpenDialog(approval, 'reject');
                               }}
-                              startIcon={<CloseCircle size={18} color="#fff" variant="Bold" />}
                               sx={{
                                 flex: 1,
-                                py: 1.25,
-                                borderRadius: 1,
                                 bgcolor: '#D32F2F',
-                                '&:hover': { bgcolor: '#B71C1C' }
+                                color: 'white',
+                                borderRadius: 1,
+                                py: 1.5,
+                                fontWeight: 700,
+                                fontSize: '0.95rem',
+                                textTransform: 'none',
+                                boxShadow: '0 4px 12px rgba(211, 47, 47, 0.25)',
+                                '&:hover': {
+                                  bgcolor: '#B71C1C',
+                                  boxShadow: '0 6px 16px rgba(211, 47, 47, 0.35)',
+                                }
                               }}
+                              startIcon={<CloseCircle size={20} color="#ffffff" variant="Bold" />}
                             >
                               ปฏิเสธ
                             </Button>
                             <Button
                               variant="contained"
-                              onClick={() => {
-                                setExpandedCards(new Set());
+                              onClick={(e) => {
+                                e.stopPropagation();
                                 handleOpenDialog(approval, 'approve');
                               }}
-                              startIcon={<TickCircle size={18} color="#fff" variant="Bold" />}
                               sx={{
                                 flex: 1,
-                                py: 1.25,
-                                borderRadius: 1,
                                 bgcolor: '#2E7D32',
-                                '&:hover': { bgcolor: '#1B5E20' }
+                                color: 'white',
+                                borderRadius: 1,
+                                py: 1.5,
+                                fontWeight: 700,
+                                fontSize: '0.95rem',
+                                textTransform: 'none',
+                                boxShadow: '0 4px 12px rgba(46, 125, 50, 0.25)',
+                                '&:hover': {
+                                  bgcolor: '#1B5E20',
+                                  boxShadow: '0 6px 16px rgba(46, 125, 50, 0.35)',
+                                }
                               }}
+                              startIcon={<TickCircle size={20} color="#ffffff" variant="Bold" />}
                             >
                               อนุมัติ
                             </Button>
                           </Box>
-                        </DialogActions>
+                        </Box>
                       )}
+                    </Collapse>
+                  </Paper>
+                );
+              })}
 
-                      {!isPending && (
-                        <DialogActions sx={{ p: 3, pt: 1 }}>
-                          <Button
-                            variant="outlined"
-                            onClick={() => setExpandedCards(new Set())}
-                            sx={{ borderColor: 'grey.300', color: 'text.primary' }}
-                          >
-                            ปิด
-                          </Button>
-                        </DialogActions>
-                      )}
-                    </>
-                  );
-                })()}
-              </Dialog>
-            )}
-
-            {/* Pagination for Desktop */}
-            {totalPages > 1 && (
-              <Box sx={{ display: 'flex', justifyContent: 'center', py: 3, borderTop: '1px solid', borderColor: 'grey.200' }}>
-                <Pagination
-                  count={totalPages}
-                  page={page}
-                  onChange={(_, value) => {
-                    setPage(value);
-                    setExpandedCards(new Set());
-                  }}
-                  color="primary"
-                  shape="rounded"
-                  sx={{ '& .MuiPaginationItem-root': { fontWeight: 600 } }}
-                />
-              </Box>
-            )}
-          </Paper>
-        ) : (
-          /* ========== MOBILE CARD VIEW ========== */
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            {paginatedApprovals.map((approval) => {
-              const isExpanded = expandedCards.has(approval.approvalId);
-              const isPending = approval.status === 'pending' && (approval.leaveRequest.status === 'pending' || approval.leaveRequest.status === 'in_progress');
-              const config = leaveTypeConfig[approval.leaveRequest.leaveType] || leaveTypeConfig.default;
-              const LeaveIcon = config.icon;
-              const statusInfo = statusConfig[approval.leaveRequest.status] || statusConfig[approval.status] || statusConfig.pending;
-              const StatusIcon = statusInfo.icon;
-
-              return (
-                <Paper
-                  key={approval.approvalId}
-                  elevation={0}
-                  sx={{
-                    borderRadius: 1,
-                    overflow: 'hidden',
-                    border: '1px solid',
-                    borderColor: isExpanded ? PRIMARY_COLOR : 'grey.200',
-                    transition: 'all 0.2s',
-                    '&:hover': {
-                      borderColor: PRIMARY_COLOR,
-                      boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
-                    }
-                  }}
-                >
-                  {/* Escalated banner */}
-                  {approval.leaveRequest.isEscalated && (
-                    <Box sx={{ bgcolor: '#FFF3E0', color: '#E65100', px: 2, py: 0.75, display: 'flex', alignItems: 'center', gap: 1, borderBottom: '1px dashed #FFCC80' }}>
-                      <InfoCircle size={16} variant="Bold" />
-                      <Typography sx={{ fontSize: '0.75rem', fontWeight: 600 }}>ส่งต่อจากผู้อนุมัติอื่น</Typography>
-                    </Box>
-                  )}
-
-                  {/* Header - Clickable */}
-                  <Box
-                    onClick={() => toggleCard(approval.approvalId)}
-                    sx={{
-                      p: 2,
-                      cursor: 'pointer',
-                      bgcolor: 'white',
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
+                  <Pagination
+                    count={totalPages}
+                    page={page}
+                    onChange={(_, value) => {
+                      setPage(value);
+                      setExpandedCards(new Set());
                     }}
-                  >
-                    {/* Row 1: Avatar + Name + Arrow */}
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1.5 }}>
-                      <Avatar
-                        src={approval.leaveRequest.user.avatar}
-                        sx={{
-                          width: 40,
-                          height: 40,
-                          bgcolor: config.lightColor,
-                          color: config.color,
-                          fontSize: '1rem',
-                          fontWeight: 600,
-                          border: `2px solid ${config.lightColor}`,
-                          flexShrink: 0
-                        }}
-                      >
-                        {approval.leaveRequest.user.firstName[0]}
-                      </Avatar>
-
-                      <Box sx={{ flex: 1, minWidth: 0 }}>
-                        <Typography sx={{ 
-                          fontWeight: 700, 
-                          fontSize: '0.95rem', 
-                          color: '#1E293B', 
-                          lineHeight: 1.2,
-                          whiteSpace: 'nowrap',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis'
-                        }}>
-                          {approval.leaveRequest.user.firstName} {approval.leaveRequest.user.lastName}
-                        </Typography>
-                        <Typography sx={{ 
-                          fontSize: '0.75rem', 
-                          color: '#64748B', 
-                          lineHeight: 1.2,
-                          whiteSpace: 'nowrap',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis'
-                        }}>
-                          {approval.leaveRequest.user.position || '-'}
-                        </Typography>
-                      </Box>
-
-                      <Box sx={{ flexShrink: 0 }}>
-                        {isExpanded ?
-                          <ArrowUp2 size={20} color="#94A3B8" /> :
-                          <ArrowDown2 size={20} color="#94A3B8" />
-                        }
-                      </Box>
-                    </Box>
-
-                    {/* Row 2: Leave Type, Days and Status */}
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap', mb: 1.5 }}>
-                      <Chip
-                        label={t(`leave_${approval.leaveRequest.leaveType}`, approval.leaveRequest.leaveType)}
-                        size="small"
-                        icon={<LeaveIcon size={14} color={config.color} variant="Bold" />}
-                        sx={{
-                          bgcolor: config.lightColor,
-                          color: config.color,
-                          fontWeight: 600,
-                          fontSize: '0.75rem',
-                          height: 24,
-                          border: '1px solid',
-                          borderColor: 'transparent',
-                        }}
-                      />
-                      <Chip
-                        label={`${approval.leaveRequest.totalDays} วัน`}
-                        size="small"
-                        sx={{
-                          bgcolor: '#F1F5F9',
-                          color: '#475569',
-                          fontWeight: 600,
-                          fontSize: '0.75rem',
-                          height: 24,
-                        }}
-                      />
-                      <Chip
-                        label={statusInfo.label}
-                        size="small"
-                        icon={<StatusIcon size={14} color={statusInfo.color} variant="Bold" />}
-                        sx={{
-                          bgcolor: statusInfo.bgcolor,
-                          color: statusInfo.color,
-                          fontWeight: 600,
-                          fontSize: '0.7rem',
-                          height: 24,
-                          ml: 'auto',
-                          '& .MuiChip-icon': { ml: 0.5 }
-                        }}
-                      />
-                    </Box>
-
-                    {/* Row 4: Date/Time Display - Full width */}
-                    <Box sx={{
-                      bgcolor: '#F8FAFC',
-                      borderRadius: 1,
-                      p: 1.5,
-                      border: '1px solid #E2E8F0'
-                    }}>
-                      {/* Single Day Leave */}
-                      {approval.leaveRequest.startDate === approval.leaveRequest.endDate ? (
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                          <Box sx={{
-                            bgcolor: '#4CAF50',
-                            borderRadius: 1,
-                            p: 0.5,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center'
-                          }}>
-                            <Calendar size={14} color="white" variant="Bold" />
-                          </Box>
-                          <Typography sx={{ fontSize: '0.8rem', color: '#1E293B', fontWeight: 600 }}>
-                            วันที่ลา: {new Date(approval.leaveRequest.startDate).toLocaleDateString('th-TH', { weekday: 'short', day: 'numeric', month: 'short', year: '2-digit' })}
-                          </Typography>
-                          {(approval.leaveRequest.startTime || approval.leaveRequest.endTime) && (
-                            <Typography sx={{ fontSize: '0.8rem', color: '#1E293B', fontWeight: 600 }}>
-                              ({approval.leaveRequest.startTime || '08:00'} - {approval.leaveRequest.endTime || '17:00'})
-                            </Typography>
-                          )}
-                        </Box>
-                      ) : (
-                        /* Multiple Days Leave - Compact inline style */
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
-                          <Box sx={{
-                            bgcolor: '#4CAF50',
-                            borderRadius: 1,
-                            p: 0.5,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center'
-                          }}>
-                            <Calendar size={14} color="white" variant="Bold" />
-                          </Box>
-                          <Typography sx={{ fontSize: '0.8rem', color: '#1E293B', fontWeight: 600 }}>
-                            {new Date(approval.leaveRequest.startDate).toLocaleDateString('th-TH', { weekday: 'short', day: 'numeric', month: 'short', year: '2-digit' })}
-                            {approval.leaveRequest.startTime && ` (${approval.leaveRequest.startTime})`}
-                          </Typography>
-                          <Typography sx={{ fontSize: '0.75rem', color: '#94A3B8' }}>→</Typography>
-                          <Typography sx={{ fontSize: '0.8rem', color: '#1E293B', fontWeight: 600 }}>
-                            {new Date(approval.leaveRequest.endDate).toLocaleDateString('th-TH', { weekday: 'short', day: 'numeric', month: 'short', year: '2-digit' })}
-                            {approval.leaveRequest.endTime && ` (${approval.leaveRequest.endTime})`}
-                          </Typography>
-                        </Box>
-                      )}
-                    </Box>
-                  </Box>
-
-                  {/* Expandable Content */}
-                  <Collapse in={isExpanded}>
-                    <Divider sx={{ borderStyle: 'dashed' }} />
-                    <Box sx={{ p: 2, bgcolor: '#FAFAFA' }}>
-                      {/* Submission Date - Mobile */}
-                      <Box sx={{ mb: 2, p: 1.5, bgcolor: '#F1F5F9', borderRadius: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <Typography sx={{ fontSize: '0.8rem', color: '#64748B', fontWeight: 600 }}>วันที่ส่งใบลา</Typography>
-                        <Typography sx={{ fontSize: '0.85rem', color: '#334155', fontWeight: 600 }}>
-                          {formatDateFull(approval.leaveRequest.createdAt, new Date(approval.leaveRequest.createdAt).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }))}
-                        </Typography>
-                      </Box>
-
-                      {/* Employee Info Grid */}
-                      <Box sx={{ mb: 2, p: 2, bgcolor: 'white', borderRadius: 1, border: '1px solid', borderColor: 'grey.100' }}>
-                        <Typography sx={{ fontSize: '0.8rem', color: '#64748B', mb: 1.5, display: 'flex', alignItems: 'center', gap: 1, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5 }}>
-                          <User size={16} variant="Bold" color={PRIMARY_COLOR} /> ข้อมูลพนักงาน
-                        </Typography>
-                        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
-                          <Box>
-                            <Typography sx={{ fontSize: '0.75rem', color: '#94A3B8' }}>บริษัท</Typography>
-                            <Typography sx={{ fontSize: '0.9rem', color: '#334155', fontWeight: 500 }}>
-                              {approval.leaveRequest.user.company || '-'}
-                            </Typography>
-                          </Box>
-                          <Box>
-                            <Typography sx={{ fontSize: '0.75rem', color: '#94A3B8' }}>ฝ่าย</Typography>
-                            <Typography sx={{ fontSize: '0.9rem', color: '#334155', fontWeight: 500 }}>
-                              {approval.leaveRequest.user.department || '-'}
-                            </Typography>
-                          </Box>
-                          <Box>
-                            <Typography sx={{ fontSize: '0.75rem', color: '#94A3B8' }}>แผนก</Typography>
-                            <Typography sx={{ fontSize: '0.9rem', color: '#334155', fontWeight: 500 }}>
-                              {approval.leaveRequest.user.section || '-'}
-                            </Typography>
-                          </Box>
-                          <Box>
-                            <Typography sx={{ fontSize: '0.75rem', color: '#94A3B8' }}>ตำแหน่ง</Typography>
-                            <Typography sx={{ fontSize: '0.9rem', color: '#334155', fontWeight: 500 }}>
-                              {approval.leaveRequest.user.position || '-'}
-                            </Typography>
-                          </Box>
-                          <Box>
-                            <Typography sx={{ fontSize: '0.75rem', color: '#94A3B8' }}>กะการทำงาน</Typography>
-                            <Typography sx={{ fontSize: '0.9rem', color: '#334155', fontWeight: 500 }}>
-                              {approval.leaveRequest.user.shift || '-'}
-                            </Typography>
-                          </Box>
-                        </Box>
-                      </Box>
-
-                      {/* Reason */}
-                      <Box sx={{ mb: 2 }}>
-                        <Typography sx={{ fontSize: '0.8rem', color: '#64748B', mb: 1, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
-                          <DocumentText size={16} variant="Bold" color={PRIMARY_COLOR} /> เหตุผลการลา
-                        </Typography>
-                        <Paper elevation={0} sx={{ p: 2, bgcolor: 'white', borderRadius: 1, border: '1px solid', borderColor: 'grey.200' }}>
-                          <Typography sx={{ fontSize: '0.95rem', color: '#334155', lineHeight: 1.6 }}>
-                            {approval.leaveRequest.reason}
-                          </Typography>
-                        </Paper>
-                      </Box>
-
-                      {/* Cancel Reason */}
-                      {approval.leaveRequest.status === 'cancelled' && approval.leaveRequest.cancelReason && (
-                        <Box sx={{ mb: 2 }}>
-                          <Typography sx={{ fontSize: '0.8rem', color: '#D32F2F', mb: 1, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <Forbidden2 size={16} variant="Bold" /> เหตุผลที่ยกเลิก
-                          </Typography>
-                          <Paper elevation={0} sx={{ p: 2, bgcolor: '#FFEBEE', borderRadius: 1, border: '1px solid', borderColor: '#FFCDD2' }}>
-                            <Typography sx={{ fontSize: '0.95rem', color: '#B71C1C', lineHeight: 1.6 }}>
-                              {approval.leaveRequest.cancelReason}
-                            </Typography>
-                          </Paper>
-                        </Box>
-                      )}
-
-                      {/* Attachments */}
-                      {approval.leaveRequest.attachments && approval.leaveRequest.attachments.length > 0 && (
-                        <Box sx={{ mb: 2 }}>
-                          <Typography sx={{ fontSize: '0.8rem', color: '#64748B', mb: 1, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <Paperclip2 size={16} variant="Bold" color={PRIMARY_COLOR} /> ไฟล์แนบ ({approval.leaveRequest.attachments.length})
-                          </Typography>
-                          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5 }}>
-                            {approval.leaveRequest.attachments.map((file) => (
-                              <Box
-                                key={file.id}
-                                onClick={(e) => handleFileClick(file, e, approval.leaveRequest.attachments)}
-                                sx={{
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  gap: 1.5,
-                                  p: 1.5,
-                                  bgcolor: 'white',
-                                  borderRadius: 1,
-                                  border: '1px solid',
-                                  borderColor: 'grey.200',
-                                  cursor: 'pointer',
-                                  transition: 'all 0.2s',
-                                  '&:hover': {
-                                    borderColor: PRIMARY_COLOR,
-                                    boxShadow: '0 2px 8px rgba(0,0,0,0.05)'
-                                  }
-                                }}
-                              >
-                                {isImageFile(file.fileName) ? (
-                                  <Box
-                                    component="img"
-                                    src={file.filePath}
-                                    sx={{
-                                      width: 40,
-                                      height: 40,
-                                      borderRadius: 1,
-                                      objectFit: 'cover'
-                                    }}
-                                  />
-                                ) : (
-                                  <Box sx={{ width: 40, height: 40, borderRadius: 1, bgcolor: '#F1F5F9', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                    <DocumentText size={24} color="#64748B" />
-                                  </Box>
-                                )}
-                                <Box>
-                                  <Typography sx={{
-                                    fontSize: '0.85rem',
-                                    color: '#334155',
-                                    fontWeight: 500,
-                                    maxWidth: 150,
-                                    overflow: 'hidden',
-                                    textOverflow: 'ellipsis',
-                                    whiteSpace: 'nowrap'
-                                  }}>
-                                    {file.fileName}
-                                  </Typography>
-                                  <Typography sx={{ fontSize: '0.7rem', color: '#94A3B8' }}>
-                                    คลิกเพื่อดูไฟล์
-                                  </Typography>
-                                </Box>
-                              </Box>
-                            ))}
-                          </Box>
-                        </Box>
-                      )}
-
-                      {/* Approval History */}
-                      {approval.leaveRequest.approvalHistory && approval.leaveRequest.approvalHistory.length > 0 && (
-                        <Box sx={{ mb: 2 }}>
-                          <Typography sx={{ fontSize: '0.8rem', color: '#64748B', mb: 1, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <Clock size={16} variant="Bold" color={PRIMARY_COLOR} /> ประวัติการอนุมัติ
-                          </Typography>
-                          <Box sx={{ bgcolor: 'white', borderRadius: 1, p: 2, border: '1px solid', borderColor: 'grey.200' }}>
-                            {approval.leaveRequest.approvalHistory.map((hist, idx) => (
-                              <Box key={idx} sx={{ position: 'relative', pb: idx === approval.leaveRequest.approvalHistory.length - 1 ? 0 : 2 }}>
-                                {/* Timeline line */}
-                                {idx !== approval.leaveRequest.approvalHistory.length - 1 && (
-                                  <Box sx={{
-                                    position: 'absolute',
-                                    left: 10,
-                                    top: 24,
-                                    bottom: 0,
-                                    width: 2,
-                                    bgcolor: '#F1F5F9'
-                                  }} />
-                                )}
-
-                                <Box sx={{ display: 'flex', gap: 2 }}>
-                                  <Box sx={{
-                                    width: 22,
-                                    height: 22,
-                                    borderRadius: '50%',
-                                    bgcolor: statusConfig[hist.status]?.bgcolor || '#F1F5F9',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    zIndex: 1
-                                  }}>
-                                    {hist.status === 'approved' && <TickCircle size={14} color={statusConfig.approved.color} variant="Bold" />}
-                                    {hist.status === 'rejected' && <CloseCircle size={14} color={statusConfig.rejected.color} variant="Bold" />}
-                                    {hist.status === 'pending' && <Clock size={14} color={statusConfig.pending.color} variant="Bold" />}
-                                    {hist.status === 'cancelled' && <Forbidden2 size={14} color={statusConfig.cancelled.color} variant="Bold" />}
-                                    {hist.status === 'skipped' && <Clock size={14} color="#9e9e9e" variant="Bold" />}
-                                  </Box>
-
-                                  <Box sx={{ flex: 1 }}>
-                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
-                                      <Typography sx={{ fontSize: '0.9rem', fontWeight: 600, color: '#334155' }}>
-                                        {hist.approver.firstName} {hist.approver.lastName}
-                                      </Typography>
-                                      <Chip
-                                        label={statusConfig[hist.status]?.label || hist.status}
-                                        size="small"
-                                        sx={{
-                                          height: 20,
-                                          fontSize: '0.65rem',
-                                          bgcolor: statusConfig[hist.status]?.bgcolor,
-                                          color: statusConfig[hist.status]?.color,
-                                          fontWeight: 600
-                                        }}
-                                      />
-                                    </Box>
-                                    <Typography sx={{ fontSize: '0.75rem', color: '#94A3B8' }}>
-                                      {hist.approver.position || 'ผู้อนุมัติ'}
-                                    </Typography>
-
-                                    {hist.comment && (
-                                      <Paper elevation={0} sx={{ mt: 1, p: 1.5, bgcolor: '#F8FAFC', borderRadius: 1 }}>
-                                        <Typography sx={{ fontSize: '0.8rem', color: '#475569', fontStyle: 'italic' }}>
-                                          &quot;{hist.comment}&quot;
-                                        </Typography>
-                                      </Paper>
-                                    )}
-                                  </Box>
-                                </Box>
-                              </Box>
-                            ))}
-                          </Box>
-                        </Box>
-                      )}
-                    </Box>
-
-                    {/* Actions - only for pending */}
-                    {isPending && (
-                      <Box sx={{
-                        p: 2,
-                        bgcolor: '#FAFAFA',
-                        borderTop: '1px solid',
-                        borderColor: 'grey.200',
-                      }}>
-                        {/* Split button - show only for hr_manager and if more than 1 day */}
-                        {isHrManager && approval.leaveRequest.totalDays > 1 && (
-                          <Button
-                            variant="outlined"
-                            fullWidth
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleOpenSplitDialog(approval);
-                            }}
-                            sx={{
-                              mb: 1.5,
-                              borderColor: PRIMARY_COLOR,
-                              color: 'white',
-                              bgcolor: PRIMARY_COLOR,
-                              borderRadius: 1,
-                              py: 1,
-                              fontWeight: 600,
-                              fontSize: '0.85rem',
-                              textTransform: 'none',
-                              '&:hover': {
-                                bgcolor: '#1976D2',
-                                borderColor: PRIMARY_COLOR,
-                                color: 'white',
-                              }
-                            }}
-                            startIcon={<Scissor size={18} color='white' variant="Bold" />}
-                          >
-                            แยกใบลา
-                          </Button>
-                        )}
-
-                        <Box sx={{ display: 'flex', gap: 1.5 }}>
-                          <Button
-                            variant="contained"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleOpenDialog(approval, 'reject');
-                            }}
-                            sx={{
-                              flex: 1,
-                              bgcolor: '#D32F2F',
-                              color: 'white',
-                              borderRadius: 1,
-                              py: 1.5,
-                              fontWeight: 700,
-                              fontSize: '0.95rem',
-                              textTransform: 'none',
-                              boxShadow: '0 4px 12px rgba(211, 47, 47, 0.25)',
-                              '&:hover': {
-                                bgcolor: '#B71C1C',
-                                boxShadow: '0 6px 16px rgba(211, 47, 47, 0.35)',
-                              }
-                            }}
-                            startIcon={<CloseCircle size={20} color="#ffffff" variant="Bold" />}
-                          >
-                            ปฏิเสธ
-                          </Button>
-                          <Button
-                            variant="contained"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleOpenDialog(approval, 'approve');
-                            }}
-                            sx={{
-                              flex: 1,
-                              bgcolor: '#2E7D32',
-                              color: 'white',
-                              borderRadius: 1,
-                              py: 1.5,
-                              fontWeight: 700,
-                              fontSize: '0.95rem',
-                              textTransform: 'none',
-                              boxShadow: '0 4px 12px rgba(46, 125, 50, 0.25)',
-                              '&:hover': {
-                                bgcolor: '#1B5E20',
-                                boxShadow: '0 6px 16px rgba(46, 125, 50, 0.35)',
-                              }
-                            }}
-                            startIcon={<TickCircle size={20} color="#ffffff" variant="Bold" />}
-                          >
-                            อนุมัติ
-                          </Button>
-                        </Box>
-                      </Box>
-                    )}
-                  </Collapse>
-                </Paper>
-              );
-            })}
-
-            {/* Pagination */}
-            {totalPages > 1 && (
-              <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
-                <Pagination
-                  count={totalPages}
-                  page={page}
-                  onChange={(_, value) => {
-                    setPage(value);
-                    setExpandedCards(new Set());
-                  }}
-                  color="primary"
-                  shape="rounded"
-                  sx={{
-                    '& .MuiPaginationItem-root': {
-                      fontWeight: 600,
-                    }
-                  }}
-                />
-              </Box>
-            )}
-          </Box>
-        )
+                    color="primary"
+                    shape="rounded"
+                    sx={{
+                      '& .MuiPaginationItem-root': {
+                        fontWeight: 600,
+                      }
+                    }}
+                  />
+                </Box>
+              )}
+            </Box>
+          )
         )}
       </Container>
 
@@ -4689,343 +4700,343 @@ export default function ApprovalPage() {
               boxShadow: '0 -10px 50px rgba(0,0,0,0.15)',
             }}
           >
-        {selectedEmployee && (
-          <Box sx={{ display: 'flex', flexDirection: 'column', height: '90vh' }}>
-            {/* Vaul Handle - Drag indicator */}
-            <Box sx={{ 
-              display: 'flex', 
-              justifyContent: 'center', 
-              pt: 1.5,
-              pb: 1,
-              bgcolor: 'white',
-              borderTopLeftRadius: 24,
-              borderTopRightRadius: 24,
-            }}>
-              <VaulDrawer.Handle
-                style={{
-                  width: 48,
-                  height: 5,
-                  borderRadius: 3,
-                  backgroundColor: '#E2E8F0',
-                }}
-              />
-            </Box>
-
-            {/* Fixed Header */}
-            <Box sx={{ 
-              bgcolor: 'white',
-              px: 2.5, 
-              pb: 2,
-              borderBottom: '1px solid #F1F5F9',
-            }}>
-              {/* Employee Info */}
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
-                <Avatar
-                  src={selectedEmployee.user.avatar}
-                  sx={{ 
-                    width: 60, 
-                    height: 60, 
-                    fontSize: '1.5rem', 
-                    bgcolor: PRIMARY_COLOR,
-                    boxShadow: '0 4px 12px rgba(108, 99, 255, 0.3)',
-                  }}
-                >
-                  {selectedEmployee.user.firstName?.[0]}
-                </Avatar>
-                <Box sx={{ flex: 1 }}>
-                  <VaulDrawer.Title asChild>
-                    <Typography sx={{ fontSize: '1.15rem', fontWeight: 700, color: '#1E293B' }}>
-                      {selectedEmployee.user.firstName} {selectedEmployee.user.lastName}
-                    </Typography>
-                  </VaulDrawer.Title>
-                  <VaulDrawer.Description asChild>
-                    <Typography sx={{ fontSize: '0.85rem', color: '#64748B' }}>
-                      {selectedEmployee.user.position || selectedEmployee.user.department}
-                    </Typography>
-                  </VaulDrawer.Description>
-                  {selectedEmployee.user.section && (
-                    <Typography sx={{ fontSize: '0.75rem', color: '#94A3B8' }}>
-                      {selectedEmployee.user.department} • {selectedEmployee.user.section}
-                    </Typography>
-                  )}
+            {selectedEmployee && (
+              <Box sx={{ display: 'flex', flexDirection: 'column', height: '90vh' }}>
+                {/* Vaul Handle - Drag indicator */}
+                <Box sx={{
+                  display: 'flex',
+                  justifyContent: 'center',
+                  pt: 1.5,
+                  pb: 1,
+                  bgcolor: 'white',
+                  borderTopLeftRadius: 24,
+                  borderTopRightRadius: 24,
+                }}>
+                  <VaulDrawer.Handle
+                    style={{
+                      width: 48,
+                      height: 5,
+                      borderRadius: 3,
+                      backgroundColor: '#E2E8F0',
+                    }}
+                  />
                 </Box>
-                <IconButton 
-                  onClick={() => {
-                    setEmployeeDetailOpen(false);
-                    setSelectedEmployee(null);
-                  }}
-                  sx={{ 
-                    bgcolor: '#F1F5F9',
-                    '&:hover': { bgcolor: '#E2E8F0' }
-                  }}
-                >
-                  <CloseCircle size={22} color="#64748B" />
-                </IconButton>
-              </Box>
 
-              {/* Summary Stats */}
-              <Box sx={{ 
-                display: 'flex', 
-                gap: 1.5,
-              }}>
-                <Paper elevation={0} sx={{ 
-                  flex: 1, 
-                  p: 1.5, 
-                  borderRadius: 2, 
-                  bgcolor: PRIMARY_LIGHT,
-                  textAlign: 'center',
+                {/* Fixed Header */}
+                <Box sx={{
+                  bgcolor: 'white',
+                  px: 2.5,
+                  pb: 2,
+                  borderBottom: '1px solid #F1F5F9',
                 }}>
-                  <Typography sx={{ fontSize: '1.75rem', fontWeight: 800, color: PRIMARY_COLOR, lineHeight: 1 }}>
-                    {selectedEmployee.totalDays}
-                  </Typography>
-                  <Typography sx={{ fontSize: '0.7rem', color: '#64748B', mt: 0.5 }}>
-                    {t('total_days_leave', 'วันลารวม')}
-                  </Typography>
-                </Paper>
-                <Paper elevation={0} sx={{ 
-                  flex: 1, 
-                  p: 1.5, 
-                  borderRadius: 2, 
-                  bgcolor: '#FFF3E0',
-                  textAlign: 'center',
-                }}>
-                  <Typography sx={{ fontSize: '1.75rem', fontWeight: 800, color: '#E65100', lineHeight: 1 }}>
-                    {selectedEmployee.leaveCount}
-                  </Typography>
-                  <Typography sx={{ fontSize: '0.7rem', color: '#64748B', mt: 0.5 }}>
-                    {t('total_leave_times', 'จำนวนครั้ง')}
-                  </Typography>
-                </Paper>
-                <Paper elevation={0} sx={{ 
-                  flex: 1, 
-                  p: 1.5, 
-                  borderRadius: 2, 
-                  bgcolor: '#E8F5E9',
-                  textAlign: 'center',
-                }}>
-                  <Typography sx={{ fontSize: '1.75rem', fontWeight: 800, color: '#2E7D32', lineHeight: 1 }}>
-                    {Object.keys(selectedEmployee.byType || {}).length}
-                  </Typography>
-                  <Typography sx={{ fontSize: '0.7rem', color: '#64748B', mt: 0.5 }}>
-                    {t('leave_types_count', 'ประเภทลา')}
-                  </Typography>
-                </Paper>
-              </Box>
-            </Box>
-
-            {/* Scrollable Content */}
-            <Box sx={{ 
-              flex: 1, 
-              overflow: 'auto',
-              px: 2.5,
-              py: 2,
-            }}>
-              {/* Leave by Type Summary */}
-              <Typography sx={{ fontSize: '0.8rem', fontWeight: 700, color: '#1E293B', mb: 1.5, textTransform: 'uppercase', letterSpacing: 0.5 }}>
-                {t('leave_breakdown', 'รายละเอียดการลาแต่ละประเภท')} ({filterYear + 543})
-              </Typography>
-              
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, mb: 3 }}>
-                {selectedEmployee.byType && Object.entries(selectedEmployee.byType).map(([leaveType, days]) => {
-                  const config = leaveTypeConfig[leaveType] || leaveTypeConfig.default;
-                  const LeaveIcon = config.icon;
-                  const leaveTypeName = teamHistorySummary.find(s => s.code === leaveType)?.name || leaveType;
-
-                  return (
-                    <Paper
-                      key={leaveType}
-                      elevation={0}
+                  {/* Employee Info */}
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+                    <Avatar
+                      src={selectedEmployee.user.avatar}
                       sx={{
-                        p: 1.5,
-                        borderRadius: 2,
-                        bgcolor: 'white',
-                        border: '1px solid #F1F5F9',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 1.5,
+                        width: 60,
+                        height: 60,
+                        fontSize: '1.5rem',
+                        bgcolor: PRIMARY_COLOR,
+                        boxShadow: '0 4px 12px rgba(108, 99, 255, 0.3)',
                       }}
                     >
-                      <Box sx={{
-                        width: 44,
-                        height: 44,
-                        borderRadius: 2,
-                        bgcolor: config.lightColor,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                      }}>
-                        <LeaveIcon size={24} color={config.color} variant="Bold" />
-                      </Box>
-                      <Box sx={{ flex: 1 }}>
-                        <Typography sx={{ fontSize: '0.9rem', fontWeight: 600, color: '#1E293B' }}>
-                          {leaveTypeName}
+                      {selectedEmployee.user.firstName?.[0]}
+                    </Avatar>
+                    <Box sx={{ flex: 1 }}>
+                      <VaulDrawer.Title asChild>
+                        <Typography sx={{ fontSize: '1.15rem', fontWeight: 700, color: '#1E293B' }}>
+                          {selectedEmployee.user.firstName} {selectedEmployee.user.lastName}
                         </Typography>
-                      </Box>
-                      <Box sx={{
-                        bgcolor: config.lightColor,
-                        px: 1.5,
-                        py: 0.5,
-                        borderRadius: 2,
-                      }}>
-                        <Typography sx={{ fontSize: '1rem', fontWeight: 700, color: config.color }}>
-                          {days} {t('days_unit', 'วัน')}
+                      </VaulDrawer.Title>
+                      <VaulDrawer.Description asChild>
+                        <Typography sx={{ fontSize: '0.85rem', color: '#64748B' }}>
+                          {selectedEmployee.user.position || selectedEmployee.user.department}
                         </Typography>
-                      </Box>
-                    </Paper>
-                  );
-                })}
-              </Box>
-
-              {/* Leave History List */}
-              {selectedEmployee && (
-                <>
-                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1.5 }}>
-                    <Typography sx={{ fontSize: '0.8rem', fontWeight: 700, color: '#1E293B', textTransform: 'uppercase', letterSpacing: 0.5 }}>
-                      {t('leave_history_detail', 'ประวัติการลา')}
-                    </Typography>
-                    <Chip
-                      size="small"
-                      label={teamHistoryFilterStatus === 'all' ? t('filter_all', 'ทั้งหมด') : teamHistoryFilterStatus === 'approved' ? t('status_approved', 'อนุมัติ') : teamHistoryFilterStatus === 'pending' ? t('status_pending', 'รออนุมัติ') : teamHistoryFilterStatus === 'rejected' ? t('status_rejected', 'ปฏิเสธ') : t('status_cancelled', 'ยกเลิก')}
-                      sx={{
-                        height: 22,
-                        fontSize: '0.7rem',
-                        fontWeight: 600,
-                        bgcolor: teamHistoryFilterStatus === 'approved' ? '#E8F5E9' : teamHistoryFilterStatus === 'pending' ? '#FFF3E0' : teamHistoryFilterStatus === 'rejected' ? '#FFEBEE' : teamHistoryFilterStatus === 'cancelled' ? '#ECEFF1' : '#F1F5F9',
-                        color: teamHistoryFilterStatus === 'approved' ? '#2E7D32' : teamHistoryFilterStatus === 'pending' ? '#E65100' : teamHistoryFilterStatus === 'rejected' ? '#D32F2F' : teamHistoryFilterStatus === 'cancelled' ? '#757575' : '#64748B',
+                      </VaulDrawer.Description>
+                      {selectedEmployee.user.section && (
+                        <Typography sx={{ fontSize: '0.75rem', color: '#94A3B8' }}>
+                          {selectedEmployee.user.department} • {selectedEmployee.user.section}
+                        </Typography>
+                      )}
+                    </Box>
+                    <IconButton
+                      onClick={() => {
+                        setEmployeeDetailOpen(false);
+                        setSelectedEmployee(null);
                       }}
-                    />
+                      sx={{
+                        bgcolor: '#F1F5F9',
+                        '&:hover': { bgcolor: '#E2E8F0' }
+                      }}
+                    >
+                      <CloseCircle size={22} color="#64748B" />
+                    </IconButton>
                   </Box>
-                  
-                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-                    {filteredTeamHistory
-                      .filter(leave => leave.user.id === selectedEmployee.user.id)
-                      .map((leave) => {
-                        const config = leaveTypeConfig[leave.leaveType] || leaveTypeConfig.default;
-                        const LeaveIcon = config.icon;
-                        const statusInfo = statusConfig[leave.status] || statusConfig.pending;
-                        const StatusIcon = statusInfo.icon;
 
-                        return (
-                          <Paper
-                            key={leave.id}
-                            elevation={0}
-                            sx={{
-                              p: 2,
-                              borderRadius: 1,
-                              bgcolor: 'white',
-                              border: '1px solid #F1F5F9',
-                            }}
-                          >
-                            {/* Header: Leave Type + Status */}
-                            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1.5 }}>
-                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  {/* Summary Stats */}
+                  <Box sx={{
+                    display: 'flex',
+                    gap: 1.5,
+                  }}>
+                    <Paper elevation={0} sx={{
+                      flex: 1,
+                      p: 1.5,
+                      borderRadius: 2,
+                      bgcolor: PRIMARY_LIGHT,
+                      textAlign: 'center',
+                    }}>
+                      <Typography sx={{ fontSize: '1.75rem', fontWeight: 800, color: PRIMARY_COLOR, lineHeight: 1 }}>
+                        {selectedEmployee.totalDays}
+                      </Typography>
+                      <Typography sx={{ fontSize: '0.7rem', color: '#64748B', mt: 0.5 }}>
+                        {t('total_days_leave', 'วันลารวม')}
+                      </Typography>
+                    </Paper>
+                    <Paper elevation={0} sx={{
+                      flex: 1,
+                      p: 1.5,
+                      borderRadius: 2,
+                      bgcolor: '#FFF3E0',
+                      textAlign: 'center',
+                    }}>
+                      <Typography sx={{ fontSize: '1.75rem', fontWeight: 800, color: '#E65100', lineHeight: 1 }}>
+                        {selectedEmployee.leaveCount}
+                      </Typography>
+                      <Typography sx={{ fontSize: '0.7rem', color: '#64748B', mt: 0.5 }}>
+                        {t('total_leave_times', 'จำนวนครั้ง')}
+                      </Typography>
+                    </Paper>
+                    <Paper elevation={0} sx={{
+                      flex: 1,
+                      p: 1.5,
+                      borderRadius: 2,
+                      bgcolor: '#E8F5E9',
+                      textAlign: 'center',
+                    }}>
+                      <Typography sx={{ fontSize: '1.75rem', fontWeight: 800, color: '#2E7D32', lineHeight: 1 }}>
+                        {Object.keys(selectedEmployee.byType || {}).length}
+                      </Typography>
+                      <Typography sx={{ fontSize: '0.7rem', color: '#64748B', mt: 0.5 }}>
+                        {t('leave_types_count', 'ประเภทลา')}
+                      </Typography>
+                    </Paper>
+                  </Box>
+                </Box>
+
+                {/* Scrollable Content */}
+                <Box sx={{
+                  flex: 1,
+                  overflow: 'auto',
+                  px: 2.5,
+                  py: 2,
+                }}>
+                  {/* Leave by Type Summary */}
+                  <Typography sx={{ fontSize: '0.8rem', fontWeight: 700, color: '#1E293B', mb: 1.5, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                    {t('leave_breakdown', 'รายละเอียดการลาแต่ละประเภท')} ({filterYear + 543})
+                  </Typography>
+
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, mb: 3 }}>
+                    {selectedEmployee.byType && Object.entries(selectedEmployee.byType).map(([leaveType, days]) => {
+                      const config = leaveTypeConfig[leaveType] || leaveTypeConfig.default;
+                      const LeaveIcon = config.icon;
+                      const leaveTypeName = teamHistorySummary.find(s => s.code === leaveType)?.name || leaveType;
+
+                      return (
+                        <Paper
+                          key={leaveType}
+                          elevation={0}
+                          sx={{
+                            p: 1.5,
+                            borderRadius: 2,
+                            bgcolor: 'white',
+                            border: '1px solid #F1F5F9',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 1.5,
+                          }}
+                        >
+                          <Box sx={{
+                            width: 44,
+                            height: 44,
+                            borderRadius: 2,
+                            bgcolor: config.lightColor,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                          }}>
+                            <LeaveIcon size={24} color={config.color} variant="Bold" />
+                          </Box>
+                          <Box sx={{ flex: 1 }}>
+                            <Typography sx={{ fontSize: '0.9rem', fontWeight: 600, color: '#1E293B' }}>
+                              {leaveTypeName}
+                            </Typography>
+                          </Box>
+                          <Box sx={{
+                            bgcolor: config.lightColor,
+                            px: 1.5,
+                            py: 0.5,
+                            borderRadius: 2,
+                          }}>
+                            <Typography sx={{ fontSize: '1rem', fontWeight: 700, color: config.color }}>
+                              {days} {t('days_unit', 'วัน')}
+                            </Typography>
+                          </Box>
+                        </Paper>
+                      );
+                    })}
+                  </Box>
+
+                  {/* Leave History List */}
+                  {selectedEmployee && (
+                    <>
+                      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1.5 }}>
+                        <Typography sx={{ fontSize: '0.8rem', fontWeight: 700, color: '#1E293B', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                          {t('leave_history_detail', 'ประวัติการลา')}
+                        </Typography>
+                        <Chip
+                          size="small"
+                          label={teamHistoryFilterStatus === 'all' ? t('filter_all', 'ทั้งหมด') : teamHistoryFilterStatus === 'approved' ? t('status_approved', 'อนุมัติ') : teamHistoryFilterStatus === 'pending' ? t('status_pending', 'รออนุมัติ') : teamHistoryFilterStatus === 'rejected' ? t('status_rejected', 'ปฏิเสธ') : t('status_cancelled', 'ยกเลิก')}
+                          sx={{
+                            height: 22,
+                            fontSize: '0.7rem',
+                            fontWeight: 600,
+                            bgcolor: teamHistoryFilterStatus === 'approved' ? '#E8F5E9' : teamHistoryFilterStatus === 'pending' ? '#FFF3E0' : teamHistoryFilterStatus === 'rejected' ? '#FFEBEE' : teamHistoryFilterStatus === 'cancelled' ? '#ECEFF1' : '#F1F5F9',
+                            color: teamHistoryFilterStatus === 'approved' ? '#2E7D32' : teamHistoryFilterStatus === 'pending' ? '#E65100' : teamHistoryFilterStatus === 'rejected' ? '#D32F2F' : teamHistoryFilterStatus === 'cancelled' ? '#757575' : '#64748B',
+                          }}
+                        />
+                      </Box>
+
+                      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                        {filteredTeamHistory
+                          .filter(leave => leave.user.id === selectedEmployee.user.id)
+                          .map((leave) => {
+                            const config = leaveTypeConfig[leave.leaveType] || leaveTypeConfig.default;
+                            const LeaveIcon = config.icon;
+                            const statusInfo = statusConfig[leave.status] || statusConfig.pending;
+                            const StatusIcon = statusInfo.icon;
+
+                            return (
+                              <Paper
+                                key={leave.id}
+                                elevation={0}
+                                sx={{
+                                  p: 2,
+                                  borderRadius: 1,
+                                  bgcolor: 'white',
+                                  border: '1px solid #F1F5F9',
+                                }}
+                              >
+                                {/* Header: Leave Type + Status */}
+                                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1.5 }}>
+                                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                    <Box sx={{
+                                      width: 32,
+                                      height: 32,
+                                      borderRadius: 1.5,
+                                      bgcolor: config.lightColor,
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'center',
+                                    }}>
+                                      <LeaveIcon size={18} color={config.color} variant="Bold" />
+                                    </Box>
+                                    <Box>
+                                      <Typography sx={{ fontSize: '0.9rem', fontWeight: 600, color: '#1E293B' }}>
+                                        {leave.leaveTypeName}
+                                      </Typography>
+                                      {leave.leaveCode && (
+                                        <Typography sx={{ fontSize: '0.7rem', color: '#94A3B8' }}>
+                                          {leave.leaveCode}
+                                        </Typography>
+                                      )}
+                                    </Box>
+                                  </Box>
+                                  <Chip
+                                    icon={<StatusIcon size={12} variant="Bold" />}
+                                    label={statusInfo.label}
+                                    size="small"
+                                    sx={{
+                                      height: 24,
+                                      bgcolor: statusInfo.bgcolor,
+                                      color: statusInfo.color,
+                                      fontWeight: 600,
+                                      fontSize: '0.7rem',
+                                      '& .MuiChip-icon': { color: statusInfo.color },
+                                    }}
+                                  />
+                                </Box>
+
+                                {/* Date & Days */}
                                 <Box sx={{
-                                  width: 32,
-                                  height: 32,
-                                  borderRadius: 1.5,
-                                  bgcolor: config.lightColor,
                                   display: 'flex',
                                   alignItems: 'center',
-                                  justifyContent: 'center',
+                                  gap: 2,
+                                  bgcolor: '#F8FAFC',
+                                  borderRadius: 1.5,
+                                  px: 1.5,
+                                  py: 1,
                                 }}>
-                                  <LeaveIcon size={18} color={config.color} variant="Bold" />
-                                </Box>
-                                <Box>
-                                  <Typography sx={{ fontSize: '0.9rem', fontWeight: 600, color: '#1E293B' }}>
-                                    {leave.leaveTypeName}
-                                  </Typography>
-                                  {leave.leaveCode && (
-                                    <Typography sx={{ fontSize: '0.7rem', color: '#94A3B8' }}>
-                                      {leave.leaveCode}
+                                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flex: 1 }}>
+                                    <Calendar size={16} color="#64748B" />
+                                    <Typography sx={{ fontSize: '0.8rem', color: '#475569' }}>
+                                      {formatDate(leave.startDate)}
+                                      {leave.startDate !== leave.endDate && ` - ${formatDate(leave.endDate)}`}
                                     </Typography>
-                                  )}
+                                  </Box>
+                                  <Chip
+                                    label={`${leave.totalDays} ${t('days_unit', 'วัน')}`}
+                                    size="small"
+                                    sx={{
+                                      height: 24,
+                                      bgcolor: config.lightColor,
+                                      color: config.color,
+                                      fontWeight: 700,
+                                      fontSize: '0.75rem',
+                                    }}
+                                  />
                                 </Box>
-                              </Box>
-                              <Chip
-                                icon={<StatusIcon size={12} variant="Bold" />}
-                                label={statusInfo.label}
-                                size="small"
-                                sx={{
-                                  height: 24,
-                                  bgcolor: statusInfo.bgcolor,
-                                  color: statusInfo.color,
-                                  fontWeight: 600,
-                                  fontSize: '0.7rem',
-                                  '& .MuiChip-icon': { color: statusInfo.color },
-                                }}
-                              />
-                            </Box>
 
-                            {/* Date & Days */}
-                            <Box sx={{ 
-                              display: 'flex', 
-                              alignItems: 'center', 
-                              gap: 2,
-                              bgcolor: '#F8FAFC',
-                              borderRadius: 1.5,
-                              px: 1.5,
-                              py: 1,
-                            }}>
-                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flex: 1 }}>
-                                <Calendar size={16} color="#64748B" />
-                                <Typography sx={{ fontSize: '0.8rem', color: '#475569' }}>
-                                  {formatDate(leave.startDate)}
-                                  {leave.startDate !== leave.endDate && ` - ${formatDate(leave.endDate)}`}
-                                </Typography>
-                              </Box>
-                              <Chip
-                                label={`${leave.totalDays} ${t('days_unit', 'วัน')}`}
-                                size="small"
-                                sx={{
-                                  height: 24,
-                                  bgcolor: config.lightColor,
-                                  color: config.color,
-                                  fontWeight: 700,
-                                  fontSize: '0.75rem',
-                                }}
-                              />
-                            </Box>
+                                {/* Reason */}
+                                {leave.reason && (
+                                  <Typography sx={{
+                                    fontSize: '0.8rem',
+                                    color: '#64748B',
+                                    mt: 1.5,
+                                    fontStyle: 'italic',
+                                    borderLeft: '3px solid #E2E8F0',
+                                    pl: 1.5,
+                                  }}>
+                                    {leave.reason}
+                                  </Typography>
+                                )}
+                              </Paper>
+                            );
+                          })}
+                      </Box>
 
-                            {/* Reason */}
-                            {leave.reason && (
-                              <Typography sx={{ 
-                                fontSize: '0.8rem', 
-                                color: '#64748B', 
-                                mt: 1.5,
-                                fontStyle: 'italic',
-                                borderLeft: '3px solid #E2E8F0',
-                                pl: 1.5,
-                              }}>
-                                {leave.reason}
-                              </Typography>
-                            )}
-                          </Paper>
-                        );
-                      })}
-                  </Box>
+                      {/* No history for this employee */}
+                      {filteredTeamHistory.filter(leave => leave.user.id === selectedEmployee.user.id).length === 0 && (
+                        <Box sx={{ textAlign: 'center', py: 4 }}>
+                          <Typography color="text.secondary">
+                            {t('no_leave_history_for_status', 'ไม่พบประวัติการลาสำหรับสถานะที่เลือก')}
+                          </Typography>
+                        </Box>
+                      )}
+                    </>
+                  )}
 
-                  {/* No history for this employee */}
-                  {filteredTeamHistory.filter(leave => leave.user.id === selectedEmployee.user.id).length === 0 && (
+                  {/* No leave data */}
+                  {(!selectedEmployee.byType || Object.keys(selectedEmployee.byType).length === 0) && (
                     <Box sx={{ textAlign: 'center', py: 4 }}>
                       <Typography color="text.secondary">
-                        {t('no_leave_history_for_status', 'ไม่พบประวัติการลาสำหรับสถานะที่เลือก')}
+                        {t('no_leave_data', 'ไม่มีข้อมูลการลา')}
                       </Typography>
                     </Box>
                   )}
-                </>
-              )}
-
-              {/* No leave data */}
-              {(!selectedEmployee.byType || Object.keys(selectedEmployee.byType).length === 0) && (
-                <Box sx={{ textAlign: 'center', py: 4 }}>
-                  <Typography color="text.secondary">
-                    {t('no_leave_data', 'ไม่มีข้อมูลการลา')}
-                  </Typography>
                 </Box>
-              )}
-            </Box>
-          </Box>
-        )}
+              </Box>
+            )}
           </VaulDrawer.Content>
         </VaulDrawer.Portal>
       </VaulDrawer.Root>
