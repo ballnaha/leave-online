@@ -326,6 +326,7 @@ export default function Home() {
           leaveRequests={leaveRequests}
           year={year}
           onYearChange={setYear}
+          loading={showLoading}
         />
 
         {/* Manage Leave Card - Show only for approvers (not employee) */}

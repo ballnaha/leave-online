@@ -1347,11 +1347,11 @@ export default function LeaveFormPage() {
                         {/* Options Group: Shift & Sunday (Mobile Friendly) */}
                         <Box sx={{ mb: 3 }}>
                             {/* Row 1: Shift & Sunday */}
-                            <Box sx={{ display: 'flex', gap: 2, flexDirection: { xs: 'column', sm: 'row' } }}>
+                            <Box sx={{ display: 'flex', gap: 2, flexDirection: 'column' }}>
                                 {/* Shift Type */}
                                 <Box sx={{ flex: 1 }}>
-                                    <Typography variant="caption" sx={{ mb: 1, display: 'block', color: 'text.secondary', fontWeight: 600 }}>
-                                        {t('shift_type', 'กะทำงาน')}
+                                    <Typography variant="subtitle2" sx={{ mb: 1, display: 'block', fontWeight: 600 }}>
+                                        {t('shift_type', 'ประเภทกะ')}
                                     </Typography>
                                     <Box sx={{ display: 'flex', bgcolor: 'transparent', gap: 1 }}>
                                         <Box onClick={() => handleShiftChange('day')}
@@ -1359,33 +1359,49 @@ export default function LeaveFormPage() {
                                                 flex: 1, py: 1, borderRadius: 1.5, cursor: 'pointer', textAlign: 'center',
                                                 bgcolor: shiftType === 'day' ? '#FFF3E0' : 'white',
                                                 color: shiftType === 'day' ? '#E65100' : 'text.secondary',
-                                                border: shiftType === 'day' ? '1px solid #E65100' : '1px solid #E2E8F0',
+                                                border: shiftType === 'day' ? '2px solid #E65100' : '1px solid #E2E8F0',
                                                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5,
-                                                transition: 'all 0.2s',
-                                                boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
+                                                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                                                transform: shiftType === 'day' ? 'scale(1.02)' : 'scale(1)',
+                                                boxShadow: shiftType === 'day' ? '0 4px 12px rgba(230, 81, 0, 0.25)' : '0 1px 2px rgba(0,0,0,0.05)',
+                                                '&:hover': {
+                                                    transform: 'scale(1.02)',
+                                                    boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                                                },
+                                                '&:active': {
+                                                    transform: 'scale(0.98)',
+                                                }
                                             }}>
-                                            <Sun1 size={20} color={shiftType === 'day' ? '#E65100' : '#94A3B8'} variant={shiftType === 'day' ? 'Bold' : 'Linear'} />
-                                            <Typography variant="button" sx={{ textTransform: 'none', fontSize: '0.85rem', fontWeight: 600 }}>{t('leave_shift_day', 'กะเช้า')}</Typography>
+                                            <Sun1 size={20} color={shiftType === 'day' ? '#E65100' : '#94A3B8'} variant={shiftType === 'day' ? 'Bold' : 'Linear'} style={{ transition: 'all 0.3s ease' }} />
+                                            <Typography variant="button" sx={{ textTransform: 'none', fontSize: '0.85rem', fontWeight: 600, transition: 'color 0.3s ease' }}>{t('leave_shift_day', 'กะเช้า')}</Typography>
                                         </Box>
                                         <Box onClick={() => handleShiftChange('night')}
                                             sx={{
                                                 flex: 1, py: 1, borderRadius: 1.5, cursor: 'pointer', textAlign: 'center',
                                                 bgcolor: shiftType === 'night' ? '#E8EAF6' : 'white',
                                                 color: shiftType === 'night' ? '#3949AB' : 'text.secondary',
-                                                border: shiftType === 'night' ? '1px solid #3949AB' : '1px solid #E2E8F0',
+                                                border: shiftType === 'night' ? '2px solid #3949AB' : '1px solid #E2E8F0',
                                                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5,
-                                                transition: 'all 0.2s',
-                                                boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
+                                                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                                                transform: shiftType === 'night' ? 'scale(1.02)' : 'scale(1)',
+                                                boxShadow: shiftType === 'night' ? '0 4px 12px rgba(57, 73, 171, 0.25)' : '0 1px 2px rgba(0,0,0,0.05)',
+                                                '&:hover': {
+                                                    transform: 'scale(1.02)',
+                                                    boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                                                },
+                                                '&:active': {
+                                                    transform: 'scale(0.98)',
+                                                }
                                             }}>
-                                            <Moon size={20} color={shiftType === 'night' ? '#3949AB' : '#94A3B8'} variant={shiftType === 'night' ? 'Bold' : 'Linear'} />
-                                            <Typography variant="button" sx={{ textTransform: 'none', fontSize: '0.85rem', fontWeight: 600 }}>{t('leave_shift_night', 'กะดึก')}</Typography>
+                                            <Moon size={20} color={shiftType === 'night' ? '#3949AB' : '#94A3B8'} variant={shiftType === 'night' ? 'Bold' : 'Linear'} style={{ transition: 'all 0.3s ease' }} />
+                                            <Typography variant="button" sx={{ textTransform: 'none', fontSize: '0.85rem', fontWeight: 600, transition: 'color 0.3s ease' }}>{t('leave_shift_night', 'กะดึก')}</Typography>
                                         </Box>
                                     </Box>
                                 </Box>
 
                                 {/* Work on Sunday */}
                                 <Box sx={{ flex: 1 }}>
-                                    <Typography variant="caption" sx={{ mb: 1, display: 'block', color: 'text.secondary', fontWeight: 600 }}>
+                                    <Typography variant="subtitle2" sx={{ mb: 1, display: 'block', fontWeight: 600 }}>
                                         {t('works_on_sunday', 'ทำงานวันอาทิตย์')}
                                     </Typography>
                                     <Box sx={{ display: 'flex', bgcolor: 'transparent', gap: 1 }}>
@@ -1394,26 +1410,42 @@ export default function LeaveFormPage() {
                                                 flex: 1, py: 1, borderRadius: 1.5, cursor: 'pointer', textAlign: 'center',
                                                 bgcolor: !worksOnSunday ? '#FFEBEE' : 'white',
                                                 color: !worksOnSunday ? '#D32F2F' : 'text.secondary',
-                                                border: !worksOnSunday ? '1px solid #D32F2F' : '1px solid #E2E8F0',
+                                                border: !worksOnSunday ? '2px solid #D32F2F' : '1px solid #E2E8F0',
                                                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5,
-                                                transition: 'all 0.2s',
-                                                boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
+                                                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                                                transform: !worksOnSunday ? 'scale(1.02)' : 'scale(1)',
+                                                boxShadow: !worksOnSunday ? '0 4px 12px rgba(211, 47, 47, 0.25)' : '0 1px 2px rgba(0,0,0,0.05)',
+                                                '&:hover': {
+                                                    transform: 'scale(1.02)',
+                                                    boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                                                },
+                                                '&:active': {
+                                                    transform: 'scale(0.98)',
+                                                }
                                             }}>
-                                            <CalendarRemove size={20} color={!worksOnSunday ? '#D32F2F' : '#94A3B8'} variant={!worksOnSunday ? 'Bold' : 'Linear'} />
-                                            <Typography variant="button" sx={{ textTransform: 'none', fontSize: '0.85rem', fontWeight: 600 }}>{t('sunday_off', 'หยุด')}</Typography>
+                                            <CalendarRemove size={20} color={!worksOnSunday ? '#D32F2F' : '#94A3B8'} variant={!worksOnSunday ? 'Bold' : 'Linear'} style={{ transition: 'all 0.3s ease' }} />
+                                            <Typography variant="button" sx={{ textTransform: 'none', fontSize: '0.85rem', fontWeight: 600, transition: 'color 0.3s ease' }}>{t('sunday_off', 'หยุด')}</Typography>
                                         </Box>
                                         <Box onClick={() => handleWorksOnSundayChange(true)}
                                             sx={{
                                                 flex: 1, py: 1, borderRadius: 1.5, cursor: 'pointer', textAlign: 'center',
                                                 bgcolor: worksOnSunday ? '#E8F5E9' : 'white',
                                                 color: worksOnSunday ? '#2E7D32' : 'text.secondary',
-                                                border: worksOnSunday ? '1px solid #2E7D32' : '1px solid #E2E8F0',
+                                                border: worksOnSunday ? '2px solid #2E7D32' : '1px solid #E2E8F0',
                                                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5,
-                                                transition: 'all 0.2s',
-                                                boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
+                                                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                                                transform: worksOnSunday ? 'scale(1.02)' : 'scale(1)',
+                                                boxShadow: worksOnSunday ? '0 4px 12px rgba(46, 125, 50, 0.25)' : '0 1px 2px rgba(0,0,0,0.05)',
+                                                '&:hover': {
+                                                    transform: 'scale(1.02)',
+                                                    boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                                                },
+                                                '&:active': {
+                                                    transform: 'scale(0.98)',
+                                                }
                                             }}>
-                                            <TickCircle size={20} color={worksOnSunday ? '#2E7D32' : '#94A3B8'} variant={worksOnSunday ? 'Bold' : 'Linear'} />
-                                            <Typography variant="button" sx={{ textTransform: 'none', fontSize: '0.85rem', fontWeight: 600 }}>{t('sunday_work', 'ทำ')}</Typography>
+                                            <TickCircle size={20} color={worksOnSunday ? '#2E7D32' : '#94A3B8'} variant={worksOnSunday ? 'Bold' : 'Linear'} style={{ transition: 'all 0.3s ease' }} />
+                                            <Typography variant="button" sx={{ textTransform: 'none', fontSize: '0.85rem', fontWeight: 600, transition: 'color 0.3s ease' }}>{t('sunday_work', 'ทำ')}</Typography>
                                         </Box>
                                     </Box>
                                 </Box>
@@ -1428,7 +1460,7 @@ export default function LeaveFormPage() {
 
                         {/* ส่วนเริ่มลา */}
                         <Box sx={{ mb: 3 }}>
-                            <Typography variant="subtitle2" sx={{ mb: 1.5, color: 'text.secondary', display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <Typography variant="subtitle2" sx={{ mb: 1.5, display: 'flex', alignItems: 'center', gap: 1 }}>
                                 <Box component="span" sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: '#4caf50', boxShadow: '0 0 0 2px rgba(76, 175, 80, 0.2)' }} />
                                 {t('leave_start_section', 'เริ่มลา')}
                             </Typography>
@@ -1536,10 +1568,18 @@ export default function LeaveFormPage() {
                                                         flex: 1, py: 0.75, borderRadius: 1, cursor: 'pointer', textAlign: 'center',
                                                         bgcolor: isSelected ? config.lightColor : 'white',
                                                         color: isSelected ? config.color : 'text.secondary',
-                                                        border: isSelected ? `1px solid ${config.color}` : '1px solid #E2E8F0',
-                                                        transition: 'all 0.2s',
+                                                        border: isSelected ? `2px solid ${config.color}` : '1px solid #E2E8F0',
+                                                        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                                                        transform: isSelected ? 'scale(1.02)' : 'scale(1)',
                                                         fontSize: '0.85rem', fontWeight: 600,
-                                                        boxShadow: isSelected ? '0 1px 2px rgba(0,0,0,0.05)' : 'none'
+                                                        boxShadow: isSelected ? `0 4px 12px ${config.color}40` : 'none',
+                                                        '&:hover': {
+                                                            transform: 'scale(1.02)',
+                                                            boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                                                        },
+                                                        '&:active': {
+                                                            transform: 'scale(0.98)',
+                                                        }
                                                     }}
                                                 >
                                                     {label}
@@ -1553,7 +1593,7 @@ export default function LeaveFormPage() {
 
                         {/* ส่วนสิ้นสุด (แสดงเสมอเพื่อให้เลือกวันสิ้นสุดและช่วงเวลา) */}
                         <Box sx={{ mb: 1 }}>
-                            <Typography variant="subtitle2" sx={{ mb: 1.5, color: 'text.secondary', display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <Typography variant="subtitle2" sx={{ mb: 1.5, display: 'flex', alignItems: 'center', gap: 1 }}>
                                 <Box component="span" sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: '#ef5350', boxShadow: '0 0 0 2px rgba(239, 83, 80, 0.2)' }} />
                                 {t('leave_end_section', 'ถึงวันที่')}
                             </Typography>
@@ -1669,10 +1709,18 @@ export default function LeaveFormPage() {
                                                             flex: 1, py: 0.75, borderRadius: 1, cursor: 'pointer', textAlign: 'center',
                                                             bgcolor: isSelected ? config.lightColor : 'white',
                                                             color: isSelected ? config.color : 'text.secondary',
-                                                            border: isSelected ? `1px solid ${config.color}` : '1px solid #E2E8F0',
-                                                            transition: 'all 0.2s',
+                                                            border: isSelected ? `2px solid ${config.color}` : '1px solid #E2E8F0',
+                                                            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                                                            transform: isSelected ? 'scale(1.02)' : 'scale(1)',
                                                             fontSize: '0.85rem', fontWeight: 600,
-                                                            boxShadow: isSelected ? '0 1px 2px rgba(0,0,0,0.05)' : 'none'
+                                                            boxShadow: isSelected ? `0 4px 12px ${config.color}40` : 'none',
+                                                            '&:hover': {
+                                                                transform: 'scale(1.02)',
+                                                                boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                                                            },
+                                                            '&:active': {
+                                                                transform: 'scale(0.98)',
+                                                            }
                                                         }}
                                                     >
                                                         {label}

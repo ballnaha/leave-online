@@ -7,6 +7,7 @@ import { ToastrProvider } from "../components/Toastr";
 import { UserProvider } from "./UserProvider";
 import { OneSignalProvider } from "./OneSignalProvider";
 import PWAProvider from "./PWAProvider";
+import NotificationRequiredModal from "../components/NotificationRequiredModal";
 
 export default function AppProviders({ children, initialLocale }: { children: React.ReactNode; initialLocale?: "th" | "en" | "my" }) {
   return (
@@ -16,7 +17,13 @@ export default function AppProviders({ children, initialLocale }: { children: Re
           <OneSignalProvider>
             <LocaleProvider initialLocale={initialLocale}>
               <ThemeRegistry>
-                <ToastrProvider>{children}</ToastrProvider>
+                <ToastrProvider>
+                  {children}
+                  {/* Modal บังคับเปิดการแจ้งเตือน - ยกเว้นหน้า admin และ login */}
+                  <NotificationRequiredModal
+                    skipOnPaths={['/admin', '/login', '/register', '/api']}
+                  />
+                </ToastrProvider>
               </ThemeRegistry>
             </LocaleProvider>
           </OneSignalProvider>

@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
-import { Box, Typography, Paper, IconButton, Select, MenuItem, Divider, Chip, Tooltip as MuiTooltip, ClickAwayListener } from '@mui/material';
+import { Box, Typography, Paper, IconButton, Select, MenuItem, Divider, Chip, Tooltip as MuiTooltip, ClickAwayListener, Skeleton } from '@mui/material';
 import { Drawer } from 'vaul';
 import { Health, Briefcase, Sun1, ArrowRight, DocumentText, Calendar, Clock, Archive, Building4, Lovely, Car, MessageQuestion, Shield, Heart, People, Profile2User, CloseCircle, TickCircle, Timer, Forbidden2, MoneySend } from 'iconsax-react';
 import { useLocale } from '../providers/LocaleProvider';
@@ -30,6 +30,7 @@ interface DashboardCardProps {
     leaveRequests: LeaveRequest[];
     year: number;
     onYearChange: (year: number) => void;
+    loading?: boolean;
 }
 
 // Config for icons and colors (copied from page.tsx or shared)
@@ -53,7 +54,7 @@ const leaveTypeConfig: Record<string, { icon: any; color: string }> = {
     default: { icon: MessageQuestion, color: '#8898AA' },
 };
 
-const DashboardCard: React.FC<DashboardCardProps> = ({ leaveTypes, leaveRequests, year, onYearChange }) => {
+const DashboardCard: React.FC<DashboardCardProps> = ({ leaveTypes, leaveRequests, year, onYearChange, loading = false }) => {
     const { t, locale } = useLocale();
     const [selectedCode, setSelectedCode] = useState<string>('');
     const [drilldownOpen, setDrilldownOpen] = useState(false);
@@ -346,6 +347,165 @@ const DashboardCard: React.FC<DashboardCardProps> = ({ leaveTypes, leaveRequests
         },
         spacing: 4,
     }), []);
+
+    // Skeleton Loading UI
+    if (loading) {
+        return (
+            <Box sx={{ mb: { xs: 0, sm: 3 }, maxWidth: 1200, mx: 'auto' }}>
+                <Paper
+                    elevation={0}
+                    sx={{
+                        backgroundImage: {
+                            xs: 'url(/images/bg_psc3.webp)',
+                            sm: 'url(/images/bg_psc1.webp)',
+                            md: 'url(/images/bg_psc1.webp)',
+                        },
+                        backgroundSize: 'cover',
+                        backgroundPosition: 'center center',
+                        backgroundRepeat: 'no-repeat',
+                        borderRadius: { xs: 0, sm: 1 },
+                        p: { xs: 2.5, sm: 3 },
+                        color: 'white',
+                        position: 'relative',
+                        overflow: 'hidden',
+                        boxShadow: { xs: 'none', sm: '0 10px 30px rgba(108, 99, 255, 0.25)' },
+                        '&::before': {
+                            content: '""',
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            right: 0,
+                            bottom: 0,
+                            background: 'linear-gradient(135deg, rgba(108, 99, 255, 0.75) 0%, rgba(60, 50, 150, 0.9) 100%)',
+                            zIndex: 1,
+                        },
+                        '& > *': {
+                            position: 'relative',
+                            zIndex: 2,
+                        },
+                    }}
+                >
+                    {/* Decorative Circles */}
+                    <Box sx={{
+                        position: 'absolute',
+                        top: -25,
+                        right: -25,
+                        width: 140,
+                        height: 140,
+                        borderRadius: '50%',
+                        background: 'rgba(255, 255, 255, 0.1)',
+                        pointerEvents: 'none',
+                        zIndex: 3,
+                    }} />
+                    <Box sx={{
+                        position: 'absolute',
+                        bottom: -45,
+                        left: -45,
+                        width: 180,
+                        height: 180,
+                        borderRadius: '50%',
+                        background: 'rgba(255, 255, 255, 0.05)',
+                        pointerEvents: 'none',
+                        zIndex: 3,
+                    }} />
+
+                    {/* Skeleton Header */}
+                    <Box sx={{ mb: 2 }}>
+                        <Skeleton
+                            variant="text"
+                            width={120}
+                            height={24}
+                            sx={{
+                                bgcolor: 'rgba(255, 255, 255, 0.2)',
+                                borderRadius: 1
+                            }}
+                        />
+                    </Box>
+
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2.5 }}>
+                        {/* Left Side: Skeleton Circular Progress */}
+                        <Box sx={{ width: '45%', display: 'flex', justifyContent: 'center' }}>
+                            <Skeleton
+                                variant="circular"
+                                width={160}
+                                height={160}
+                                sx={{
+                                    bgcolor: 'rgba(255, 255, 255, 0.15)',
+                                }}
+                            />
+                        </Box>
+
+                        {/* Right Side: Skeleton Stats */}
+                        <Box sx={{ width: '55%' }}>
+                            {/* Skeleton Quota Bar */}
+                            <Box sx={{
+                                display: 'flex',
+                                flexDirection: 'column',
+                                gap: 0.5,
+                                mb: 1.5,
+                                py: 0.625,
+                                px: 2,
+                                background: 'linear-gradient(135deg, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0.08) 100%)',
+                                borderRadius: 1,
+                                border: '1px solid rgba(255,255,255,0.12)',
+                            }}>
+                                <Skeleton variant="text" width="80%" height={18} sx={{ bgcolor: 'rgba(255, 255, 255, 0.2)' }} />
+                                <Skeleton variant="rounded" width="100%" height={4} sx={{ bgcolor: 'rgba(255, 255, 255, 0.15)', borderRadius: 2 }} />
+                            </Box>
+
+                            {/* Skeleton Status Lines */}
+                            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                                {[1, 2, 3, 4, 5].map((i) => (
+                                    <Box key={i} sx={{ display: 'flex', alignItems: 'center', gap: 1.25, py: 0.375 }}>
+                                        <Skeleton
+                                            variant="circular"
+                                            width={10}
+                                            height={10}
+                                            sx={{ bgcolor: 'rgba(255, 255, 255, 0.3)', flexShrink: 0 }}
+                                        />
+                                        <Skeleton
+                                            variant="text"
+                                            width={`${60 + Math.random() * 30}%`}
+                                            height={16}
+                                            sx={{ bgcolor: 'rgba(255, 255, 255, 0.2)', flex: 1 }}
+                                        />
+                                    </Box>
+                                ))}
+                            </Box>
+                        </Box>
+                    </Box>
+
+                    {/* Skeleton Leave Types */}
+                    <Box sx={{ mt: 2.5 }}>
+                        <Skeleton
+                            variant="text"
+                            width={100}
+                            height={20}
+                            sx={{ bgcolor: 'rgba(255, 255, 255, 0.2)', mb: 1.5 }}
+                        />
+                        <Box sx={{ display: 'flex', gap: 2, overflowX: 'hidden', pb: 0.5 }}>
+                            {[1, 2, 3, 4, 5].map((i) => (
+                                <Box key={i} sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.75, minWidth: 56 }}>
+                                    <Skeleton
+                                        variant="rounded"
+                                        width={38}
+                                        height={38}
+                                        sx={{ bgcolor: 'rgba(255, 255, 255, 0.2)', borderRadius: '11px' }}
+                                    />
+                                    <Skeleton
+                                        variant="text"
+                                        width={40}
+                                        height={14}
+                                        sx={{ bgcolor: 'rgba(255, 255, 255, 0.15)' }}
+                                    />
+                                </Box>
+                            ))}
+                        </Box>
+                    </Box>
+                </Paper>
+            </Box>
+        );
+    }
 
     return (
         <Box sx={{ mb: { xs: 0, sm: 3 }, maxWidth: 1200, mx: 'auto' }}>
