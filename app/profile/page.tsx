@@ -348,8 +348,8 @@ export default function ProfilePage() {
         if (!pushSupported) return t('browser_not_supported', 'เบราว์เซอร์ไม่รองรับ');
         if (!pushInitialized) return t('status_loading', 'กำลังโหลด...');
         if (pushPermission === 'denied') return t('blocked_notifications', 'ถูกบล็อก - กรุณาเปิดในการตั้งค่าเบราว์เซอร์');
-        if (pushSubscribed) return t('status_enabled', 'เปิดใช้งาน');
-        return t('status_disabled', 'ปิดอยู่');
+        if (pushSubscribed) return t('notif_mandatory_enabled', 'เปิดใช้งาน (บังคับใช้)');
+        return t('notif_mandatory_required', 'จำเป็นต้องเปิด');
     };
 
     const settingsSections: SettingsSection[] = [
@@ -363,14 +363,16 @@ export default function ProfilePage() {
         {
             title: t('notifications', 'การแจ้งเตือน'),
             items: [
+                // ถ้า subscribe แล้ว แสดงแค่ข้อมูล (ไม่มี toggle)
+                // ถ้ายังไม่ได้ subscribe แสดง toggle ให้เปิดได้
                 {
                     id: 'notifications',
                     icon: Notification,
                     label: t('notifications', 'การแจ้งเตือน'),
                     color: '#FFD93D',
-                    toggle: true,
+                    toggle: !pushSubscribed && pushSupported && pushPermission !== 'denied', // toggle เฉพาะตอนยังไม่ได้ subscribe
                     value: pushSubscribed,
-                    onChange: handlePushToggle,
+                    onChange: pushSubscribed ? () => { } : handlePushToggle, // ถ้า subscribe แล้วไม่ให้เปลี่ยน
                     subtitle: getPushSubtitle(),
                 } as SettingsItemWithToggle,
                 // Always show reset option when supported (helps fix stuck states)
@@ -907,7 +909,8 @@ export default function ProfilePage() {
                                                             </Box>
                                                         )
                                                     ) : (
-                                                        <ArrowRight2 size={20} variant="Bold" color="#999" />
+                                                        // ไม่แสดงลูกศรสำหรับ notifications item เมื่อ subscribe แล้ว
+                                                        item.id !== 'notifications' && <ArrowRight2 size={20} variant="Bold" color="#999" />
                                                     )}
                                                 </Box>
                                                 {itemIndex < section.items.length - 1 && <Divider sx={{ mx: 2 }} />}

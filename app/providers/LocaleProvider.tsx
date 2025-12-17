@@ -621,7 +621,9 @@ const messages: Record<LocaleCode, Record<string, string>> = {
     notif_stay_updated: "ไม่พลาดทุกการอัปเดต!",
     notif_simple_desc: "เปิดการแจ้งเตือนเพื่อรับข้อมูลสถานะใบลาและการอนุมัติแบบเรียลไทม์",
     notif_enable_notifications: "เปิดการแจ้งเตือน",
-    notif_blocked_simple_desc: "กรุณาเปิดการแจ้งเตือนในการตั้งค่าเบราว์เซอร์ แล้วกดปุ่มด้านล่างเพื่อรีเฟรช",
+    notif_blocked_simple_desc: "กรุณาเปิดการแจ้งเตือนในการตั้งค่าเบราว์เซอร์",
+    notif_mandatory_enabled: "เปิดใช้งาน (บังคับใช้)",
+    notif_mandatory_required: "จำเป็นต้องเปิด",
 
     // Profile - Version & Reset
     reset_notification_subtitle: "ล้างข้อมูลและเริ่มใหม่",
@@ -1279,7 +1281,9 @@ const messages: Record<LocaleCode, Record<string, string>> = {
     notif_stay_updated: "Stay up-to-date!",
     notif_simple_desc: "Enable notifications to receive real-time leave status and approval updates",
     notif_enable_notifications: "Enable Notifications",
-    notif_blocked_simple_desc: "Please enable notifications in browser settings, then press the button below to refresh",
+    notif_blocked_simple_desc: "Please enable notifications in browser settings",
+    notif_mandatory_enabled: "Enabled (Required)",
+    notif_mandatory_required: "Required to enable",
 
     // Profile - Version & Reset
     reset_notification_subtitle: "Clear data and restart",
@@ -1934,7 +1938,9 @@ const messages: Record<LocaleCode, Record<string, string>> = {
     notif_stay_updated: "နောက်ဆုံးသတင်းများ လက်ခံပါ!",
     notif_simple_desc: "ခွင့်အခြေအနေနှင့် အတည်ပြုချက်များကို ချက်ချင်းလက်ခံရန် အသိပေးချက်များ ဖွင့်ပါ",
     notif_enable_notifications: "အသိပေးချက်များ ဖွင့်ရန်",
-    notif_blocked_simple_desc: "ဘရောက်ဆာဆက်တင်တွင် အသိပေးချက်များ ဖွင့်ပြီး အောက်ကခလုတ်ကို နှိပ်ပါ",
+    notif_blocked_simple_desc: "ဘရောက်ဆာဆက်တင်တွင် အသိပေးချက်များ ဖွင့်ပါ",
+    notif_mandatory_enabled: "ဖွင့်ထားသည် (လိုအပ်သည်)",
+    notif_mandatory_required: "ဖွင့်ရန် လိုအပ်သည်",
 
     // Profile - Version & Reset
     reset_notification_subtitle: "ဒေတာရှင်းပြီး ပြန်စတင်ပါ",
