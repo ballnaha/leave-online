@@ -743,13 +743,18 @@ export default function ApprovalPage() {
 
       if (!response.ok) {
         setError(data.error || t('error_occurred', 'เกิดข้อผิดพลาด'));
+        toastr.error(data.error || t('error_occurred', 'เกิดข้อผิดพลาด'));
         return;
       }
+
+      // แสดง snackbar สำเร็จ
+      toastr.success(t('split_success', 'แยกใบลาสำเร็จ'));
 
       setSplitDialogOpen(false);
       fetchApprovals();
     } catch (err) {
       setError(t('connection_error', 'เกิดข้อผิดพลาดในการเชื่อมต่อ'));
+      toastr.error(t('connection_error', 'เกิดข้อผิดพลาดในการเชื่อมต่อ'));
     } finally {
       setSubmitting(false);
     }

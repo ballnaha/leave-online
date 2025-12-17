@@ -908,15 +908,15 @@ export default function ApprovalWorkflowsPage() {
                                 .map((step, index) => (
                                   <React.Fragment key={step.id}>
                                     {index > 0 && (
-                                      <ArrowRight2 size={14} color={theme.palette.text.disabled} style={{ flexShrink: 0 }} />
+                                      <ArrowRight2 size={14} color="white" style={{ flexShrink: 0 }} />
                                     )}
                                     <Chip
                                       label={getStepLabel(step)}
                                       size="small"
                                       variant="filled"
                                       sx={{
-                                        bgcolor: alpha(theme.palette.primary.main, 0.1),
-                                        color: 'primary.main',
+                                        bgcolor: alpha('#000000', 0.1),
+                                        color: 'white',
                                         fontWeight: 500,
                                       }}
                                     />

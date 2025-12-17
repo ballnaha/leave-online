@@ -46,6 +46,7 @@ import {
     HambergerMenu,
     SecuritySafe,
     ShieldSearch,
+    PlayCircle,
 } from 'iconsax-react';
 import { ChevronDown, ChevronUp, Bell, History, Users, Send, Timer, FileText } from 'lucide-react';
 import { signOut } from 'next-auth/react';
@@ -132,6 +133,12 @@ const menuGroups: MenuGroup[] = [
                 icon: People,
                 iconColor: '#6C63FF',
                 path: '/admin/organization-structure',
+            },
+            {
+                text: 'ทดสอบ Workflow',
+                icon: PlayCircle,
+                iconColor: '#22C55E',
+                path: '/admin/workflow-test',
             },
         ],
     },

@@ -78,7 +78,7 @@ const messages: Record<LocaleCode, Record<string, string>> = {
     browser_not_supported: "เบราว์เซอร์ไม่รองรับ",
     blocked_notifications: "ถูกบล็อก - กรุณาเปิดในการตั้งค่า",
     select_language: "เลือกภาษา",
-
+    submit_deadline: "วันสุดท้ายที่ให้ยื่นใบลา",
     // Unauthorized Page
     access_denied: "ไม่มีสิทธิ์เข้าถึง",
     access_denied_desc: "ขออภัย คุณไม่มีสิทธิ์เข้าถึงหน้านี้ กรุณาติดต่อผู้ดูแลระบบหากคุณคิดว่านี่เป็นข้อผิดพลาด",
@@ -232,6 +232,9 @@ const messages: Record<LocaleCode, Record<string, string>> = {
     backdate_warning: "การลาย้อนหลัง",
     backdate_overdue: "ลาย้อนหลังเกินกำหนด",
     backdate_deadline: "กำหนดส่งภายใน",
+    backdate_overdue_title: "ลาย้อนหลังเกินกำหนด",
+    submit_date: "วันที่ยื่น",
+    backdate_overdue_msg: "ไม่สามารถยื่นใบลาได้ เนื่องจากเกินกำหนด",
     max_files: "สามารถแนบไฟล์ได้สูงสุด {{max}} ไฟล์",
     file_too_large: "ไฟล์มีขนาดเกิน {{size}}",
     processing_files: "กำลังประมวลผลไฟล์...",
@@ -722,6 +725,7 @@ const messages: Record<LocaleCode, Record<string, string>> = {
     leave_end_time: "End Time",
     dashboard_quota_short: "Quota",
     reset_notification_title: "Reset Notification",
+    submit_deadline: "Submit Deadline",
     // Profile & Settings
     edit_profile: "Edit Profile",
     account: "Account",
@@ -841,6 +845,9 @@ const messages: Record<LocaleCode, Record<string, string>> = {
     backdate_warning: "Backdated Leave",
     backdate_overdue: "Backdate deadline exceeded",
     backdate_deadline: "Deadline",
+    backdate_overdue_title: "Backdated Leave Overdue",
+    submit_date: "Submission Date",
+    backdate_overdue_msg: "Cannot submit leave request as it exceeds the deadline",
     half_day: "Half Day",
     full_day: "Full Day",
 
@@ -1431,7 +1438,7 @@ const messages: Record<LocaleCode, Record<string, string>> = {
     at_top_right: "ညာဘက်အပေါ်ထောင့်တွင်",
     ios_note_safari: "မှတ်ချက်: Safari တွင်သာ ဖွင့်ရမည်",
     understood: "နားလည်ပါပြီ",
-
+    submit_deadline: "နောက်ဆုံးနေ့ တင်သွင်းပါ။",
     // Leave History
     leave_history_title: "ခွင့်မှတ်တမ်း",
     leave_legend: "အရောင်အညွှန်း",
@@ -1490,6 +1497,9 @@ const messages: Record<LocaleCode, Record<string, string>> = {
     backdate_warning: "ခွင့်ပြန်ကြည့်ခြင်း",
     backdate_overdue: "ခွင့်ပြန်ကြည့်ရက်ကျော်လွန်သွားပြီ",
     backdate_deadline: "သတ်မှတ်ရက်",
+    backdate_overdue_title: "ခွင့်ပြန်ကြည့်ရက် ကျော်လွန်သွားပြီ",
+    submit_date: "တင်သွင်းသည့်နေ့",
+    backdate_overdue_msg: "သတ်မှတ်ရက်ကျော်လွန်သွားသောကြောင့် ခွင့်တောင်းခံချက်တင်သွင်း၍မရပါ",
     half_day: "တစ်ဝက်ရက်",
     full_day: "တစ်ရက်လုံး",
 

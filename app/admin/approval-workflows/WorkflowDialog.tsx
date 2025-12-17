@@ -587,7 +587,7 @@ export default function WorkflowDialog({ open, onClose, onSave, workflow }: Work
               >
                 <MenuItem value=""><em>ทั้งหมด</em></MenuItem>
                 {filteredDepartments.map((d) => (
-                  <MenuItem key={d.id} value={d.code}>{d.name}</MenuItem>
+                  <MenuItem key={d.id} value={d.code}>{d.code} - {d.name}</MenuItem>
                 ))}
               </Select>
             </FormControl>
@@ -600,7 +600,7 @@ export default function WorkflowDialog({ open, onClose, onSave, workflow }: Work
               >
                 <MenuItem value=""><em>ทั้งหมด</em></MenuItem>
                 {filteredSections.map((s) => (
-                  <MenuItem key={s.id} value={s.code}>{s.name}</MenuItem>
+                  <MenuItem key={s.id} value={s.code}>{s.code} - {s.name}</MenuItem>
                 ))}
               </Select>
             </FormControl>

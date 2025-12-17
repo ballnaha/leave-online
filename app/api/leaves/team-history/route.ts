@@ -27,8 +27,8 @@ export async function GET(request: NextRequest) {
       prisma.company.findMany({ select: { code: true, name: true } }),
       prisma.leaveType.findMany({ select: { code: true, name: true } }),
     ]);
-    const deptMap = new Map(departments.map(d => [d.code, d.name]));
-    const sectMap = new Map(sections.map(s => [s.code, s.name]));
+    const deptMap = new Map(departments.map(d => [d.code, `${d.code} - ${d.name}`]));
+    const sectMap = new Map(sections.map(s => [s.code, `${s.code} - ${s.name}`]));
     const companyMap = new Map(companies.map(c => [c.code, c.name]));
     const leaveTypeMap = new Map(leaveTypes.map(lt => [lt.code, lt.name]));
 
@@ -255,19 +255,19 @@ export async function GET(request: NextRequest) {
 
     // คำนวณจาก result ที่ filter ตาม status แล้ว (ไม่ใช่เฉพาะ approved)
     result.forEach(r => {
-        if (!employeeSummaryMap[r.user.id]) {
-          employeeSummaryMap[r.user.id] = {
-            user: r.user,
-            totalDays: 0,
-            leaveCount: 0,
-            byType: {},
-          };
-        }
-        employeeSummaryMap[r.user.id].totalDays += r.totalDays;
-        employeeSummaryMap[r.user.id].leaveCount += 1;
-        employeeSummaryMap[r.user.id].byType[r.leaveType] = 
-          (employeeSummaryMap[r.user.id].byType[r.leaveType] || 0) + r.totalDays;
-      });
+      if (!employeeSummaryMap[r.user.id]) {
+        employeeSummaryMap[r.user.id] = {
+          user: r.user,
+          totalDays: 0,
+          leaveCount: 0,
+          byType: {},
+        };
+      }
+      employeeSummaryMap[r.user.id].totalDays += r.totalDays;
+      employeeSummaryMap[r.user.id].leaveCount += 1;
+      employeeSummaryMap[r.user.id].byType[r.leaveType] =
+        (employeeSummaryMap[r.user.id].byType[r.leaveType] || 0) + r.totalDays;
+    });
 
     const employeeSummary = Object.values(employeeSummaryMap)
       .sort((a, b) => b.totalDays - a.totalDays);

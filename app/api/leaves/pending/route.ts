@@ -30,8 +30,8 @@ export async function GET(request: NextRequest) {
         prisma.section.findMany({ select: { code: true, name: true } }),
         prisma.company.findMany({ select: { code: true, name: true } }),
       ]);
-      const deptMap = new Map(departments.map(d => [d.code, d.name]));
-      const sectMap = new Map(sections.map(s => [s.code, s.name]));
+      const deptMap = new Map(departments.map(d => [d.code, `${d.code} - ${d.name}`]));
+      const sectMap = new Map(sections.map(s => [s.code, `${s.code} - ${s.name}`]));
       const companyMap = new Map(companies.map(c => [c.code, c.name]));
 
       const leaveRequests = await prisma.leaveRequest.findMany({
@@ -151,8 +151,8 @@ export async function GET(request: NextRequest) {
       prisma.section.findMany({ select: { code: true, name: true } }),
       prisma.company.findMany({ select: { code: true, name: true } }),
     ]);
-    const deptMap = new Map(departments.map(d => [d.code, d.name]));
-    const sectMap = new Map(sections.map(s => [s.code, s.name]));
+    const deptMap = new Map(departments.map(d => [d.code, `${d.code} - ${d.name}`]));
+    const sectMap = new Map(sections.map(s => [s.code, `${s.code} - ${s.name}`]));
     const companyMap = new Map(companies.map(c => [c.code, c.name]));
 
     // ดึง leaveRequestIds ที่ยังมีอยู่ก่อน

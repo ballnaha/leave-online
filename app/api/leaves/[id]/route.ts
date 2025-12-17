@@ -28,8 +28,8 @@ export async function GET(
       prisma.department.findMany({ select: { code: true, name: true } }),
       prisma.section.findMany({ select: { code: true, name: true } }),
     ]);
-    const deptMap = new Map(departments.map(d => [d.code, d.name]));
-    const sectMap = new Map(sections.map(s => [s.code, s.name]));
+    const deptMap = new Map(departments.map(d => [d.code, `${d.code} - ${d.name}`]));
+    const sectMap = new Map(sections.map(s => [s.code, `${s.code} - ${s.name}`]));
 
     // ดึงข้อมูลใบลา
     const leaveRequest = await prisma.leaveRequest.findUnique({

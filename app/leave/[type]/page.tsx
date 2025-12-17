@@ -196,33 +196,42 @@ export default function LeaveFormPage() {
     const [showConfirmDialog, setShowConfirmDialog] = useState(false);
 
     // ค่าคงที่สำหรับลาย้อนหลัง
-    const MAX_BACKDATE_DAYS = 3; // จำนวนวันทำการที่อนุญาตให้ลาย้อนหลัง (นับจากวันกลับมาทำงาน)
+    const MAX_BACKDATE_DAYS = 3; // จำนวนวันทำการที่อนุญาตให้ลาย้อนหลัง (นับจากวันถัดจากวันสิ้นสุดลา)
 
     /**
      * คำนวณวันสุดท้ายที่สามารถยื่นใบลาย้อนหลังได้
-     * กฎ: ลาย้อนหลังได้ 3 วันทำการ นับจากวันที่กลับมาทำงาน
-     * - วันกลับมาทำงาน = วันถัดจากวันสิ้นสุดการลา (นับเป็นวันที่ 1)
+     * กฎ: ลาย้อนหลังได้ 3 วันทำการ นับจากวันถัดจากวันสิ้นสุดการลา
+     * - วันที่ 1 = วันถัดจากวันสิ้นสุดลา (ถ้าเป็นวันทำการ)
      * - วันที่ 3 = วันสุดท้ายที่ยื่นใบลาได้
+     * - ข้ามวันอาทิตย์ (ถ้าไม่ทำงานวันอาทิตย์) และวันหยุดจาก holiday table
      * 
-     * ตัวอย่าง: ลาวันที่ 4 ธค. 
-     * - กลับมาทำงานวันที่ 5 ธค. (นับ 1)
-     * - วันที่ 6 ธค. (นับ 2) 
-     * - วันที่ 7 ธค. (นับ 3) = deadline
+     * ตัวอย่าง: ลาวันที่ 4 ธค. (พุธ)
+     * - วันที่ 5 ธค. (พฤหัส) → นับ 1
+     * - วันที่ 6 ธค. (ศุกร์) → นับ 2
+     * - วันที่ 7 ธค. (เสาร์) → นับ 3 = deadline
+     * (ถ้าวันที่ 5 เป็นวันหยุด จะข้ามไปนับวันที่ 6 แทน)
      * 
      * @param leaveEndDate - วันที่สิ้นสุดการลา
      * @param worksOnSun - ทำงานวันอาทิตย์หรือไม่
+     * @param holidayList - รายการวันหยุด
      * @returns วันสุดท้ายที่ยื่นได้
      */
-    const calculateBackdateDeadline = (leaveEndDate: Dayjs, worksOnSun: boolean): Dayjs => {
+    const calculateBackdateDeadline = (leaveEndDate: Dayjs, worksOnSun: boolean, holidayList: HolidayData[]): Dayjs => {
         let currentDate = leaveEndDate.clone();
         let workingDaysCounted = 0;
 
-        // นับวันทำการ เริ่มจากวันถัดจากวันลา (วันกลับมาทำงาน = วันที่ 1)
+        // นับวันทำการ เริ่มจากวันถัดจากวันลา
         while (workingDaysCounted < MAX_BACKDATE_DAYS) {
             currentDate = currentDate.add(1, 'day');
 
             // ถ้าไม่ทำงานวันอาทิตย์ และวันนี้เป็นวันอาทิตย์ → ข้าม
             if (!worksOnSun && currentDate.day() === 0) {
+                continue;
+            }
+
+            // ถ้าเป็นวันหยุด → ข้าม
+            const dateStr = currentDate.format('YYYY-MM-DD');
+            if (holidayList.some(h => h.date === dateStr)) {
                 continue;
             }
 
@@ -234,9 +243,13 @@ export default function LeaveFormPage() {
 
     /**
      * ตรวจสอบว่าลาย้อนหลังเกิน deadline หรือไม่
+     * กฎ: วันที่เขียนใบลา (วันนี้) ต้องไม่เกิน deadline
+     * - ถ้าวันสิ้นสุดลา >= วันนี้ → ลาล่วงหน้า → ไม่ต้อง warning
+     * - ถ้าวันสิ้นสุดลา < วันนี้ → ลาย้อนหลัง → ตรวจสอบว่าวันนี้เกิน deadline หรือไม่
+     * 
      * @param leaveStartDate - วันที่เริ่มลา
-     * @param leaveEndDate - วันที่สิ้นสุดลา (ถ้าไม่ระบุจะใช้ startDate)
      * @param worksOnSun - ทำงานวันอาทิตย์หรือไม่
+     * @param leaveEndDate - วันที่สิ้นสุดลา (ถ้าไม่ระบุจะใช้ startDate)
      */
     const checkBackdateWarning = (leaveStartDate: string, worksOnSun: boolean, leaveEndDate?: string) => {
         if (!leaveStartDate) {
@@ -254,20 +267,16 @@ export default function LeaveFormPage() {
             return;
         }
 
-        // คำนวณ deadline สำหรับลาย้อนหลัง (นับจากวันสิ้นสุดการลา)
-        const deadline = calculateBackdateDeadline(leaveEnd, worksOnSun);
-        const isOverdue = today.isAfter(deadline);
+        // คำนวณ deadline สำหรับลาย้อนหลัง (นับจากวันสิ้นสุดการลา ข้ามวันหยุด)
+        const deadline = calculateBackdateDeadline(leaveEnd, worksOnSun, holidays);
 
-        // หาวันกลับมาทำงาน (วันแรกหลังลา ที่เป็นวันทำการ)
-        let firstWorkDay = leaveEnd.clone();
-        do {
-            firstWorkDay = firstWorkDay.add(1, 'day');
-        } while (!worksOnSun && firstWorkDay.day() === 0);
+        // วันที่เขียนใบลา = วันนี้ ต้องไม่เกิน deadline
+        const isOverdue = today.isAfter(deadline);
 
         setBackdateWarning({
             show: true,
-            leaveDate: leaveStart.locale(locale).format('DD MMMM') + ' ' + (locale === 'th' ? leaveStart.year() + 543 : leaveStart.year()),
-            deadline: deadline.locale(locale).format('DD MMMM') + ' ' + (locale === 'th' ? deadline.year() + 543 : deadline.year()),
+            leaveDate: leaveStart.locale(locale).format('DD MMM') + ' ' + (locale === 'th' ? leaveStart.year() + 543 : leaveStart.year()),
+            deadline: deadline.locale(locale).format('DD MMM') + ' ' + (locale === 'th' ? deadline.year() + 543 : deadline.year()),
             isOverdue,
         });
     };
@@ -1777,7 +1786,7 @@ export default function LeaveFormPage() {
                                     </Box>
                                     <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                                         <Typography variant="body2" color="text.secondary">
-                                            {t('submit_deadline', 'ยื่นได้ถึง')}
+                                            {t('submit_deadline', 'วันสุดท้ายที่ให้ยื่นใบลา')}
                                         </Typography>
                                         <Typography
                                             variant="body2"
@@ -1797,7 +1806,7 @@ export default function LeaveFormPage() {
                                                 fontWeight={600}
                                                 sx={{ color: '#DC2626' }}
                                             >
-                                                {dayjs().locale(locale).format('DD MMMM')} {locale === 'th' ? (dayjs().year() + 543).toString() : dayjs().year()}
+                                                {dayjs().locale(locale).format('DD MMM')} {locale === 'th' ? (dayjs().year() + 543).toString() : dayjs().year()}
                                             </Typography>
                                             <CloseCircle size={16} variant="Bold" color="#DC2626" />
                                         </Box>
