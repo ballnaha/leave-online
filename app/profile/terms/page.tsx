@@ -309,11 +309,11 @@ export default function TermsAndConditionsPage() {
 
     // Leave types data (defined first for use in search)
     const leaveTypes = [
-        { code: 'sick', name: t('leave_sick', 'ลาป่วย'), maxDays: 30, isPaid: true, description: t('desc_sick', 'ลาเมื่อเจ็บป่วยไม่สามารถมาทำงานได้'), condition: locale === 'th' ? 'ลา 3 วันขึ้นไป ต้องแนบใบรับรองแพทย์' : '3+ days requires medical certificate' },
-        { code: 'personal', name: t('leave_personal', 'ลากิจ'), maxDays: 3, isPaid: true, description: t('desc_personal', 'ลาเพื่อทำธุระส่วนตัวที่จำเป็น'), condition: locale === 'th' ? 'ต้องแนบหลักฐานประกอบทุกครั้ง' : 'Supporting documents required' },
-        { code: 'vacation', name: t('leave_vacation', 'ลาพักร้อน'), maxDays: 6, isPaid: true, description: t('desc_vacation', 'ลาพักผ่อนประจำปี'), condition: locale === 'th' ? 'ปีแรก: 1 วัน/2 เดือน • หลังครบ 1 ปี: 6 วัน/ปี' : 'Year 1: 1 day/2 months • After 1 year: 6 days/year' },
-        { code: 'maternity', name: t('leave_maternity', 'ลาคลอด'), maxDays: 120, isPaid: true, description: t('desc_maternity', 'ลาคลอดบุตร'), condition: locale === 'th' ? 'พนักงานหญิง ได้รับค่าจ้าง 60 วัน' : 'Female only, 60 days paid' },
-        { code: 'ordination', name: t('leave_ordination', 'ลาบวช'), maxDays: 30, isPaid: false, description: t('desc_ordination', 'ลาอุปสมบท'), condition: locale === 'th' ? 'เพศชาย และต้องมีอายุงาน 1 ปีขึ้นไป' : 'Male only, requires 1+ year of service' },
+        { code: 'sick', name: t('leave_sick', 'ลาป่วย'), maxDays: 30, isPaid: true, description: t('desc_sick', 'ลาเมื่อเจ็บป่วยไม่สามารถมาทำงานได้'), condition: t('terms_sick_condition', 'ลา 3 วันขึ้นไป ต้องแนบใบรับรองแพทย์') },
+        { code: 'personal', name: t('leave_personal', 'ลากิจ'), maxDays: 3, isPaid: true, description: t('desc_personal', 'ลาเพื่อทำธุระส่วนตัวที่จำเป็น'), condition: t('terms_personal_condition', 'ต้องแนบหลักฐานประกอบทุกครั้ง') },
+        { code: 'vacation', name: t('leave_vacation', 'ลาพักร้อน'), maxDays: 6, isPaid: true, description: t('desc_vacation', 'ลาพักผ่อนประจำปี'), condition: t('terms_vacation_condition', 'ปีแรก: 1 วัน/2 เดือน • หลังครบ 1 ปี: 6 วัน/ปี') },
+        { code: 'maternity', name: t('leave_maternity', 'ลาคลอด'), maxDays: 120, isPaid: true, description: t('desc_maternity', 'ลาคลอดบุตร'), condition: t('terms_maternity_condition', 'พนักงานหญิง ได้รับค่าจ้าง 60 วัน') },
+        { code: 'ordination', name: t('leave_ordination', 'ลาบวช'), maxDays: 30, isPaid: false, description: t('desc_ordination', 'ลาอุปสมบท'), condition: t('terms_ordination_condition', 'ต้องมีอายุงาน 1 ปีขึ้นไป') },
         { code: 'unpaid', name: t('leave_unpaid', 'ลาไม่รับค่าจ้าง'), maxDays: null, isPaid: false, description: t('desc_unpaid', 'ลาโดยไม่ได้รับค่าจ้าง'), condition: null },
         { code: 'other', name: t('leave_other', 'ลาอื่นๆ'), maxDays: null, isPaid: false, description: t('desc_other', 'ลาอื่นๆ'), condition: null },
     ];
@@ -340,16 +340,14 @@ export default function TermsAndConditionsPage() {
     const noSearchResults = searchQuery.trim() && filteredLeaveTypes.length === 0;
 
     // General note for all leave types
-    const generalLeaveNote = locale === 'th'
-        ? 'ยื่นใบลาย้อนหลังได้ไม่เกิน 3 วัน นับจากวันกลับมาทำงาน'
-        : 'Backdated requests allowed up to 3 days from return';
+    const generalLeaveNote = t('terms_backdated_note', 'ยื่นใบลาย้อนหลังได้ไม่เกิน 3 วัน นับจากวันกลับมาทำงาน');
 
     // Approval steps
     const approvalSteps = [
-        { step: 1, title: locale === 'th' ? 'หัวหน้ากะ' : 'Shift Supervisor', desc: locale === 'th' ? 'ตรวจสอบและอนุมัติเบื้องต้น' : 'Initial review' },
-        { step: 2, title: locale === 'th' ? 'หัวหน้าแผนก' : 'Section Head', desc: locale === 'th' ? 'อนุมัติระดับแผนก' : 'Section approval' },
-        { step: 3, title: locale === 'th' ? 'ผู้จัดการฝ่าย/ส่วน' : 'Dept. Manager', desc: locale === 'th' ? 'อนุมัติระดับฝ่าย' : 'Department approval' },
-        { step: 4, title: locale === 'th' ? 'ผู้จัดการ HR' : 'HR Manager', desc: locale === 'th' ? 'อนุมัติขั้นสุดท้าย' : 'Final approval' },
+        { step: 1, title: t('terms_step_shift_supervisor', 'หัวหน้ากะ'), desc: t('terms_step_1_desc', 'ตรวจสอบและอนุมัติเบื้องต้น') },
+        { step: 2, title: t('terms_step_section_head', 'หัวหน้าแผนก'), desc: t('terms_step_2_desc', 'อนุมัติระดับแผนก') },
+        { step: 3, title: t('terms_step_dept_manager', 'ผู้จัดการฝ่าย/ส่วน'), desc: t('terms_step_3_desc', 'อนุมัติระดับฝ่าย') },
+        { step: 4, title: t('terms_step_hr_manager', 'ผู้จัดการ HR'), desc: t('terms_step_4_desc', 'อนุมัติขั้นสุดท้าย') },
     ];
 
     return (
@@ -398,7 +396,7 @@ export default function TermsAndConditionsPage() {
                 >
                     <SearchNormal1 size={20} color="#9CA3AF" />
                     <InputBase
-                        placeholder={locale === 'th' ? 'ค้นหา...' : 'Search...'}
+                        placeholder={t('terms_search_placeholder', 'ค้นหา...')}
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         sx={{
@@ -416,7 +414,7 @@ export default function TermsAndConditionsPage() {
                 {hasSearchResults && (
                     <Box sx={{ mb: 1.5, px: 0.5 }}>
                         <Typography variant="caption" sx={{ color: THEME_COLOR, fontWeight: 600 }}>
-                            {locale === 'th' ? `พบ ${filteredLeaveTypes.length} รายการ` : `Found ${filteredLeaveTypes.length} items`}
+                            {t('terms_found_items', 'พบ {{count}} รายการ').replace('{{count}}', String(filteredLeaveTypes.length))}
                         </Typography>
                     </Box>
                 )}
@@ -424,17 +422,17 @@ export default function TermsAndConditionsPage() {
                 {noSearchResults && (
                     <Box sx={{ textAlign: 'center', py: 4, mb: 2, bgcolor: 'white', borderRadius: 2 }}>
                         <Typography variant="body2" sx={{ color: '#9CA3AF' }}>
-                            {locale === 'th' ? 'ไม่พบผลการค้นหา' : 'No results found'}
+                            {t('terms_no_results', 'ไม่พบผลการค้นหา')}
                         </Typography>
                     </Box>
                 )}
 
                 {/* Section 1: สิทธิ์การลา */}
                 <AccordionSection
-                    title={locale === 'th' ? 'สิทธิ์การลา' : 'Leave Rights'}
+                    title={t('terms_leave_rights', 'สิทธิ์การลา')}
                     subtitle={searchQuery.trim()
-                        ? (locale === 'th' ? `พบ ${filteredLeaveTypes.length} รายการ` : `${filteredLeaveTypes.length} found`)
-                        : (locale === 'th' ? `${leaveTypes.length} ประเภท` : `${leaveTypes.length} types`)}
+                        ? t('terms_found_items', 'พบ {{count}} รายการ').replace('{{count}}', String(filteredLeaveTypes.length))
+                        : t('terms_leave_types_count', '{{count}} ประเภท').replace('{{count}}', String(leaveTypes.length))}
                     icon={<Calendar size={14} color="white" variant="Bold" />}
                     isOpen={openSections['leave-rights'] || searchQuery.trim().length > 0}
                     onClick={() => toggleSection('leave-rights')}
@@ -450,10 +448,10 @@ export default function TermsAndConditionsPage() {
                                 icon={<IconComponent size={16} color={config.color} variant="Bold" />}
                                 iconBgColor={highlighted ? `${THEME_COLOR}20` : `${config.color}15`}
                                 title={leave.name}
-                                subtitle={leave.maxDays ? `${leave.maxDays} ${locale === 'th' ? 'วัน/ปี' : 'days/year'}` : (locale === 'th' ? 'ไม่จำกัด' : 'Unlimited')}
+                                subtitle={leave.maxDays ? `${leave.maxDays} ${t('terms_days_per_year', 'วัน/ปี')}` : t('terms_unlimited', 'ไม่จำกัด')}
                                 condition={leave.condition}
                                 chips={[{
-                                    label: leave.isPaid ? (locale === 'th' ? 'ได้ค่าจ้าง' : 'Paid') : (locale === 'th' ? 'ไม่ได้ค่าจ้าง' : 'Unpaid'),
+                                    label: leave.isPaid ? t('terms_paid', 'ได้ค่าจ้าง') : t('terms_unpaid', 'ไม่ได้ค่าจ้าง'),
                                     color: leave.isPaid ? '#059669' : '#DC2626',
                                     bgcolor: leave.isPaid ? '#D1FAE5' : '#FEE2E2',
                                 }]}
@@ -481,15 +479,15 @@ export default function TermsAndConditionsPage() {
 
                 {/* Section 2: กระบวนการขอลาและอนุมัติ */}
                 <AccordionSection
-                    title={locale === 'th' ? 'กระบวนการขอลาและอนุมัติ' : 'Leave Request & Approval'}
-                    subtitle={locale === 'th' ? '4 ขั้นตอนการอนุมัติ' : '4-step approval'}
+                    title={t('terms_approval_process', 'กระบวนการขอลาและอนุมัติ')}
+                    subtitle={t('terms_approval_steps', '{{count}} ขั้นตอนการอนุมัติ').replace('{{count}}', '4')}
                     icon={<DocumentText size={14} color="white" variant="Bold" />}
                     isOpen={openSections['approval-process']}
                     onClick={() => toggleSection('approval-process')}
                 >
                     {/* Approval Flow */}
                     <Typography variant="caption" sx={{ color: '#6B7280', fontWeight: 600, display: 'block', mb: 1, ml: 0.5 }}>
-                        {locale === 'th' ? 'ลำดับการอนุมัติ' : 'Approval Flow'}
+                        {t('terms_approval_flow', 'ลำดับการอนุมัติ')}
                     </Typography>
                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, mb: 2 }}>
                         {approvalSteps.map((item, index) => (
@@ -546,9 +544,7 @@ export default function TermsAndConditionsPage() {
                     }}>
                         <InfoCircle size={14} color="#3B82F6" style={{ flexShrink: 0, marginTop: 2 }} />
                         <Typography variant="caption" sx={{ color: '#1E40AF', fontSize: '0.75rem', lineHeight: 1.5 }}>
-                            {locale === 'th'
-                                ? 'ลำดับการอนุมัติอาจแตกต่างกันในแต่ละฝ่าย/แผนก ขึ้นอยู่กับนโยบายของหน่วยงาน'
-                                : 'Approval workflow may vary by department based on organizational policy'}
+                            {t('terms_approval_note', 'ลำดับการอนุมัติอาจแตกต่างกันในแต่ละฝ่าย/แผนก ขึ้นอยู่กับนโยบายของหน่วยงาน')}
                         </Typography>
                     </Box>
 
@@ -556,25 +552,25 @@ export default function TermsAndConditionsPage() {
                     <ListItem
                         icon={<Folder2 size={16} color="#8B5CF6" variant="Bold" />}
                         iconBgColor="rgba(139, 92, 246, 0.1)"
-                        title={locale === 'th' ? 'ขั้นตอนการยื่นใบลา' : 'How to submit leave'}
-                        subtitle={locale === 'th' ? '5 ขั้นตอน' : '5 steps'}
+                        title={t('terms_submit_steps', 'ขั้นตอนการยื่นใบลา')}
+                        subtitle={t('terms_submit_steps_count', '5 ขั้นตอน')}
                         isOpen={openItems['submit-steps']}
                         onClick={() => toggleItem('submit-steps')}
                     >
-                        <Box component="ol" sx={{ m: 0, pl: 2, color: '#6B7280', fontSize: '0.8rem' }}>
-                            <li>- {locale === 'th' ? 'เลือกประเภทการลา' : 'Select leave type'}</li>
-                            <li>- {locale === 'th' ? 'กำหนดวันที่ลา' : 'Set leave dates'}</li>
-                            <li>- {locale === 'th' ? 'ระบุเหตุผล' : 'Enter reason'}</li>
-                            <li>- {locale === 'th' ? 'แนบเอกสาร (ถ้ามี)' : 'Attach docs (if any)'}</li>
-                            <li>- {locale === 'th' ? 'ส่งใบลา' : 'Submit'}</li>
+                        <Box component="ol" sx={{ m: 0, pl: 2, color: '#6B7280', fontSize: '0.875rem', lineHeight: 2 }}>
+                            <li>- {t('terms_submit_step_1', 'เลือกประเภทการลา')}</li>
+                            <li>- {t('terms_submit_step_2', 'กำหนดวันที่ลา')}</li>
+                            <li>- {t('terms_submit_step_3', 'ระบุเหตุผล')}</li>
+                            <li>- {t('terms_submit_step_4', 'แนบเอกสาร (ถ้ามี)')}</li>
+                            <li>- {t('terms_submit_step_5', 'ส่งใบลา')}</li>
                         </Box>
                     </ListItem>
 
                     <ListItem
                         icon={<Folder2 size={16} color="#EC4899" variant="Bold" />}
                         iconBgColor="rgba(236, 72, 153, 0.1)"
-                        title={locale === 'th' ? 'การยกเลิกใบลา' : 'Cancel leave'}
-                        subtitle={locale === 'th' ? 'ยกเลิกได้เฉพาะกรณีที่ยังไม่มีการอนุมัติหรือปฏิเสธ' : 'Only if not yet approved or rejected'}
+                        title={t('terms_cancel_leave', 'การยกเลิกใบลา')}
+                        subtitle={t('terms_cancel_condition', 'ยกเลิกได้เฉพาะกรณีที่ยังไม่มีการอนุมัติหรือปฏิเสธ')}
                     />
                 </AccordionSection>
 
