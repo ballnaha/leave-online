@@ -5,6 +5,7 @@ import { Box, Fab, Paper, Typography } from '@mui/material';
 import { useLocale } from '../providers/LocaleProvider';
 import { useUser } from '../providers/UserProvider';
 import { usePWA } from '../providers/PWAProvider';
+import { useOneSignal } from '../providers/OneSignalProvider';
 import {
     Home2,
     Message,
@@ -73,12 +74,17 @@ const BottomNav: React.FC<BottomNavProps> = ({ activePage = 'home' }) => {
     const router = useRouter();
     const { t } = useLocale();
     const { user } = useUser();
-    const { isInstallPromptVisible } = usePWA();
+    const { isInstallPromptVisible, isStandalone } = usePWA();
+    const { isSubscribed, isInitialized, isSupported, permission } = useOneSignal();
     const [openMenu, setOpenMenu] = useState(false);
     const [animatingOut, setAnimatingOut] = useState(false);
     const [renderMenu, setRenderMenu] = useState(false);
     const [leaveTypes, setLeaveTypes] = useState<LeaveType[]>(cachedLeaveTypes || []);
     const closeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    // ตรวจสอบว่า install prompt แสดงจริงไหม (ใช้ logic เดียวกับ PWAInstallPrompt)
+    const isNotificationDrawerActive = isInitialized && isSupported && !isSubscribed && permission !== 'denied';
+    const shouldShowInstallPrompt = isInstallPromptVisible && !isStandalone && !isNotificationDrawerActive;
 
     // คำนวณอายุงานเป็นปี
     const getYearsOfService = (startDate: string | null | undefined): number => {
@@ -208,7 +214,7 @@ const BottomNav: React.FC<BottomNavProps> = ({ activePage = 'home' }) => {
             )}
             <Box sx={{
                 position: 'fixed',
-                bottom: isInstallPromptVisible ? 'calc(80px + env(safe-area-inset-bottom, 20px))' : 0,
+                bottom: shouldShowInstallPrompt ? 'calc(80px + env(safe-area-inset-bottom, 20px))' : 0,
                 left: '50%',
                 transform: 'translateX(-50%)',
                 pointerEvents: 'none',

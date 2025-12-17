@@ -54,10 +54,10 @@ export default function RootLayout({
   return (
     <html lang="en" style={{ overscrollBehavior: 'none' }}>
       <head>
-        <link rel="apple-touch-icon" href="/images/apple-touch-icon.png" />
-        <link rel="apple-touch-icon" sizes="152x152" href="/images/apple-touch-icon-152.png" />
-        <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-180.png" />
-        <link rel="apple-touch-icon" sizes="167x167" href="/images/apple-touch-icon-167.png" />
+        <link rel="apple-touch-icon" href="/images/psc-logo.png" />
+        <link rel="apple-touch-icon" sizes="152x152" href="/images/psc-logo.png" />
+        <link rel="apple-touch-icon" sizes="180x180" href="/images/psc-logo.png" />
+        <link rel="apple-touch-icon" sizes="167x167" href="/images/psc-logo.png" />
       </head>
       <body className={`${comfortaa.variable} ${sarabun.variable} pre-locale`} style={{ overscrollBehavior: 'none' }}>
         {/* Prevent language flicker and fade-in once locale applied */}
