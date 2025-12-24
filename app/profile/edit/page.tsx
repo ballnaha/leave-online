@@ -936,7 +936,7 @@ export default function EditProfilePage() {
                     boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
                 }}
             >
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'relative', zIndex: 1 }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'relative', zIndex: 1, maxWidth: 1200, mx: 'auto', width: '100%', px: { xs: 0.5, sm: 1, md: 2 } }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                         <IconButton
                             onClick={() => router.push('/profile')}
@@ -956,7 +956,7 @@ export default function EditProfilePage() {
             </Box>
 
             {/* Content */}
-            <Box sx={{ p: 2, pb: 'calc(env(safe-area-inset-bottom, 0px) + 96px)' }}>
+            <Box sx={{ px: { xs: 2.5, sm: 3, md: 4 }, py: 2, pb: 'calc(env(safe-area-inset-bottom, 0px) + 96px)', maxWidth: 1200, mx: 'auto' }}>
                 {showLoading ? (
                     <>
                         {/* Avatar Skeleton */}

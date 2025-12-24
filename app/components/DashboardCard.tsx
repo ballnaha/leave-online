@@ -698,7 +698,7 @@ const DashboardCard: React.FC<DashboardCardProps> = ({ leaveTypes, leaveRequests
                                                     {isOverLimit ? t('dashboard_exceeded_title', 'เกินสิทธิ์') : t('dashboard_remaining_title', 'คงเหลือ')}
                                                 </Typography>
                                                 <Typography sx={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.9)' }}>
-                                                    {isOverLimit ? Math.abs(currentBalance.remaining) : currentBalance.remaining} {t('days', 'วัน')} ({Math.round(calculatePercentage.remaining)}%)
+                                                    {isOverLimit ? Math.abs(currentBalance.remaining) : (isUnlimited ? '∞' : currentBalance.remaining)} {t('days', 'วัน')} ({Math.round(calculatePercentage.remaining)}%)
                                                 </Typography>
                                             </Box>
                                         }
@@ -826,7 +826,7 @@ const DashboardCard: React.FC<DashboardCardProps> = ({ leaveTypes, leaveRequests
                                     )
                                 }
                             </Typography>
-                            {!isUnlimited && !isNoEntitlement && (
+                            {(!isNoEntitlement) && (
                                 <Box sx={{
                                     width: '100%',
                                     height: 4,
@@ -835,20 +835,19 @@ const DashboardCard: React.FC<DashboardCardProps> = ({ leaveTypes, leaveRequests
                                     overflow: 'hidden',
                                     position: 'relative',
                                     boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.1)',
-
                                 }}>
                                     <Box sx={{
                                         position: 'absolute',
                                         left: 0,
                                         top: 0,
                                         height: '100%',
-                                        width: `${Math.min(((currentBalance.approved + currentBalance.pending) / currentBalance.total) * 100, 100)}%`,
-                                        background: currentBalance.remaining > 0
+                                        width: `${isUnlimited ? Math.min((currentBalance.approved + currentBalance.pending), 100) : Math.min(((currentBalance.approved + currentBalance.pending) / (currentBalance.total || 1)) * 100, 100)}%`,
+                                        background: (isUnlimited || currentBalance.remaining > 0)
                                             ? 'linear-gradient(90deg, #2ECC71 0%, #27AE60 100%)'
                                             : 'linear-gradient(90deg, #E74C3C 0%, #C0392B 100%)',
                                         borderRadius: 2,
                                         transition: 'width 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
-                                        boxShadow: currentBalance.remaining > 0
+                                        boxShadow: (isUnlimited || currentBalance.remaining > 0)
                                             ? '0 0 8px rgba(46, 204, 113, 0.6)'
                                             : '0 0 8px rgba(231, 76, 60, 0.6)'
                                     }} />

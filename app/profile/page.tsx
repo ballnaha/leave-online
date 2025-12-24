@@ -453,7 +453,18 @@ export default function ProfilePage() {
                     },
                 }}
             >
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3, position: 'relative', zIndex: 1 }}>
+                <Box sx={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    mb: 3,
+                    position: 'relative',
+                    zIndex: 1,
+                    maxWidth: 1200,
+                    mx: 'auto',
+                    width: '100%',
+                    px: { xs: 0.5, sm: 1, md: 2 }
+                }}>
                     <Typography variant="h5" sx={{ color: 'white', fontWeight: 700 }}>
                         {t('common_profile', 'โปรไฟล์')}
                     </Typography>
@@ -477,7 +488,14 @@ export default function ProfilePage() {
             </Box>
 
             {/* Profile Card */}
-            <Box sx={{ px: 2, mt: -5, position: 'relative', zIndex: 2 }}>
+            <Box sx={{
+                px: { xs: 2.5, sm: 3, md: 4 },
+                mt: -5,
+                position: 'relative',
+                zIndex: 2,
+                maxWidth: 1200,
+                mx: 'auto'
+            }}>
                 <Paper
                     elevation={0}
                     sx={{
@@ -990,23 +1008,68 @@ export default function ProfilePage() {
                 </Box>
             </Box>
 
-            {/* Language Selector Dialog */}
-            <Dialog open={openLanguage} onClose={() => setOpenLanguage(false)} fullWidth maxWidth="xs">
-                <DialogTitle>{t('select_language', 'เลือกภาษา')}</DialogTitle>
-                <List>
-                    {languageOptions.map((opt) => (
-                        <ListItemButton
-                            key={opt.code}
-                            selected={locale === opt.code}
-                            onClick={() => {
-                                setLocale(opt.code as any);
-                                setOpenLanguage(false);
-                            }}
-                        >
-                            <ListItemText primary={opt.label} />
-                        </ListItemButton>
-                    ))}
-                </List>
+            {/* Language Selection Dialog */}
+            <Dialog
+                open={openLanguage}
+                onClose={() => setOpenLanguage(false)}
+                PaperProps={{
+                    sx: {
+                        borderRadius: 1,
+                        width: '100%',
+                        maxWidth: 320,
+                        m: 2
+                    }
+                }}
+            >
+                <DialogTitle sx={{ pb: 1, textAlign: 'center', fontWeight: 'bold' }}>
+                    {t('select_language', 'เลือกภาษา')}
+                </DialogTitle>
+                <DialogContent>
+                    <List sx={{ pt: 0 }}>
+                        {languageOptions.map((option) => (
+                            <ListItemButton
+                                key={option.code}
+                                onClick={() => {
+                                    setLocale(option.code as any);
+                                    setOpenLanguage(false);
+                                }}
+                                sx={{
+                                    borderRadius: 2,
+                                    mb: 1,
+                                    bgcolor: locale === option.code ? 'primary.soft' : 'transparent',
+                                    border: locale === option.code ? '1px solid' : '1px solid transparent',
+                                    borderColor: locale === option.code ? 'primary.main' : 'transparent',
+                                    color: locale === option.code ? 'primary.main' : 'text.primary',
+                                    '&:hover': {
+                                        bgcolor: locale === option.code ? 'primary.soft' : 'action.hover',
+                                    }
+                                }}
+                            >
+                                <Box sx={{ mr: 2, display: 'flex', alignItems: 'center', fontSize: '1.5rem' }}>
+                                    {option.code === 'th' ? '🇹🇭' : option.code === 'en' ? '🇺🇸' : '🇲🇲'}
+                                </Box>
+                                <ListItemText
+                                    primary={option.label}
+                                    primaryTypographyProps={{
+                                        fontWeight: locale === option.code ? 600 : 400,
+                                    }}
+                                />
+                                {locale === option.code && (
+                                    <Box
+                                        component="span"
+                                        sx={{
+                                            width: 8,
+                                            height: 8,
+                                            borderRadius: '50%',
+                                            bgcolor: 'primary.main',
+                                            ml: 1
+                                        }}
+                                    />
+                                )}
+                            </ListItemButton>
+                        ))}
+                    </List>
+                </DialogContent>
             </Dialog>
 
             {/* iOS Instructions Dialog */}

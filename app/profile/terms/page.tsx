@@ -367,49 +367,51 @@ export default function TermsAndConditionsPage() {
                 <Box sx={{ position: 'absolute', top: -30, right: -30, width: 100, height: 100, borderRadius: '50%', background: 'rgba(255, 255, 255, 0.1)' }} />
                 <Box sx={{ position: 'absolute', bottom: -20, left: 20, width: 60, height: 60, borderRadius: '50%', background: 'rgba(255, 255, 255, 0.08)' }} />
 
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, position: 'relative', zIndex: 1, mb: 2 }}>
-                    <IconButton onClick={() => router.back()}
-                        sx={{
-                            bgcolor: 'rgba(255, 255, 255, 0.2)',
-                            color: 'white',
-                            '&:hover': { bgcolor: 'rgba(255, 255, 255, 0.3)' },
-                        }}>
-                        <ArrowLeft2 size={20} color="white" />
-                    </IconButton>
-                    <Typography variant="h6" sx={{ color: 'white', fontWeight: 600, fontSize: '1.1rem' }}>
-                        {t('terms_and_conditions', 'ข้อกำหนดและเงื่อนไข')}
-                    </Typography>
-                </Box>
+                <Box sx={{ maxWidth: 1200, mx: 'auto', width: '100%', position: 'relative', zIndex: 1, px: { xs: 0.5, sm: 1, md: 2 } }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
+                        <IconButton onClick={() => router.back()}
+                            sx={{
+                                bgcolor: 'rgba(255, 255, 255, 0.2)',
+                                color: 'white',
+                                '&:hover': { bgcolor: 'rgba(255, 255, 255, 0.3)' },
+                            }}>
+                            <ArrowLeft2 size={20} color="white" />
+                        </IconButton>
+                        <Typography variant="h6" sx={{ color: 'white', fontWeight: 600, fontSize: '1.1rem' }}>
+                            {t('terms_and_conditions', 'ข้อกำหนดและเงื่อนไข')}
+                        </Typography>
+                    </Box>
 
-                {/* Search Box */}
-                <Box
-                    sx={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        bgcolor: 'white',
-                        borderRadius: 2,
-                        px: 2,
-                        py: 1,
-                        gap: 1.5,
-                        boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-                    }}
-                >
-                    <SearchNormal1 size={20} color="#9CA3AF" />
-                    <InputBase
-                        placeholder={t('terms_search_placeholder', 'ค้นหา...')}
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
+                    {/* Search Box */}
+                    <Box
                         sx={{
-                            flex: 1,
-                            fontSize: '0.9rem',
-                            '& input::placeholder': { color: '#9CA3AF', opacity: 1 },
+                            display: 'flex',
+                            alignItems: 'center',
+                            bgcolor: 'white',
+                            borderRadius: 2,
+                            px: 2,
+                            py: 1,
+                            gap: 1.5,
+                            boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
                         }}
-                    />
+                    >
+                        <SearchNormal1 size={20} color="#9CA3AF" />
+                        <InputBase
+                            placeholder={t('terms_search_placeholder', 'ค้นหา...')}
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            sx={{
+                                flex: 1,
+                                fontSize: '0.9rem',
+                                '& input::placeholder': { color: '#9CA3AF', opacity: 1 },
+                            }}
+                        />
+                    </Box>
                 </Box>
             </Box>
 
             {/* Content */}
-            <Box sx={{ p: 2 }}>
+            <Box sx={{ px: { xs: 2.5, sm: 3, md: 4 }, py: 2, maxWidth: 1200, mx: 'auto' }}>
                 {/* Search Results Count */}
                 {hasSearchResults && (
                     <Box sx={{ mb: 1.5, px: 0.5 }}>
