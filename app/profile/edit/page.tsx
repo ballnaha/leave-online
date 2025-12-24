@@ -463,7 +463,7 @@ export default function EditProfilePage() {
             const img = new Image();
             img.onload = () => {
                 const outputSize = 200; // Final output size
-                const cropRadius = 140; // Same as SVG circle radius in preview
+                const previewCropSize = 280; // Size of the circular crop overlay in the preview
 
                 canvas.width = outputSize;
                 canvas.height = outputSize;
@@ -493,45 +493,49 @@ export default function EditProfilePage() {
                 const containerAspect = previewWidth / previewHeight;
 
                 // Calculate how image is displayed with object-fit: contain
-                let displayWidth, displayHeight;
+                // Note: The image has maxWidth: 100%, maxHeight: 100%
+                // It scales down to fit, but does not scale up if smaller than container
+                let fitWidth, fitHeight;
                 if (imgAspect > containerAspect) {
-                    displayWidth = previewWidth;
-                    displayHeight = previewWidth / imgAspect;
+                    fitWidth = previewWidth;
+                    fitHeight = previewWidth / imgAspect;
                 } else {
-                    displayHeight = previewHeight;
-                    displayWidth = previewHeight * imgAspect;
+                    fitHeight = previewHeight;
+                    fitWidth = previewHeight * imgAspect;
                 }
 
-                // Scale factor: from preview crop circle diameter to output size
-                const cropDiameter = cropRadius * 2; // 280px in preview
-                const scale = outputSize / cropDiameter;
+                const displayWidth = Math.min(fitWidth, img.width);
+                const displayHeight = Math.min(fitHeight, img.height);
 
-                // Move to center of canvas
-                ctx.translate(outputSize / 2, outputSize / 2);
+                // Scale factor: from preview crop circle to output canvas
+                const scale = outputSize / previewCropSize;
+
+                // Calculate image dimensions in canvas pixels (unzoomed)
+                const baseWidth = displayWidth * scale;
+                const baseHeight = displayHeight * scale;
+
+                // Calculate center position in canvas pixels
+                // The image center is at (outputSize/2, outputSize/2) + (position * scale)
+                // This translation must be applied BEFORE rotation and zoom
+                const centerX = outputSize / 2 + (position.x * scale);
+                const centerY = outputSize / 2 + (position.y * scale);
+
+                // Move to the calculated center
+                ctx.translate(centerX, centerY);
 
                 // Apply rotation
                 ctx.rotate((rotation * Math.PI) / 180);
 
-                // The CSS transform order is: translate3d(x, y, 0) scale(zoom) rotate(deg)
-                // This means: first translate, then scale, then rotate
-                // In canvas we need to reverse: first rotate (done above), then scale, then translate
+                // Apply zoom scale
+                ctx.scale(zoom, zoom);
 
-                // Calculate scaled image dimensions
-                const scaledWidth = displayWidth * zoom * scale;
-                const scaledHeight = displayHeight * zoom * scale;
-
-                // Position offset: CSS does translate then scale
-                // So position.x pixels in screen space = position.x * zoom in image space
-                // Then we scale by 'scale' to fit canvas
-                const offsetX = position.x * zoom * scale;
-                const offsetY = position.y * zoom * scale;
-
+                // Draw image centered at (0,0) in the transformed context
                 ctx.drawImage(
                     img,
-                    -scaledWidth / 2 + offsetX,
-                    -scaledHeight / 2 + offsetY,
-                    scaledWidth,
-                    scaledHeight
+                    -baseWidth / 2,
+                    -baseHeight / 2,
+                    baseWidth,
+                    baseHeight
                 );
 
                 // Restore context
