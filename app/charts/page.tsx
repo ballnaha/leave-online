@@ -500,28 +500,14 @@ export default function ChartsPage() {
                                                         border: '1px solid rgba(0, 0, 0, 0.03)',
                                                     }}
                                                 >
-                                                    {/* Fill Bar */}
+                                                    {/* Fill Bar - Minimal Red */}
                                                     <Box
                                                         sx={{
                                                             width: `${Math.min(stat.percentage, 100)}%`,
                                                             height: '100%',
                                                             borderRadius: 6,
-                                                            background: 'linear-gradient(90deg, #EF4444 0%, #DC2626 50%, #B91C1C 100%)',
+                                                            bgcolor: '#DC2626',
                                                             transition: 'width 1s cubic-bezier(0.4, 0, 0.2, 1)',
-                                                            position: 'relative',
-                                                            boxShadow: '0 0 12px rgba(239, 68, 68, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.3)',
-                                                            overflow: 'hidden',
-                                                            // Inner highlight
-                                                            '&::before': {
-                                                                content: '""',
-                                                                position: 'absolute',
-                                                                top: 0,
-                                                                left: 0,
-                                                                right: 0,
-                                                                height: '50%',
-                                                                background: 'linear-gradient(180deg, rgba(255, 255, 255, 0.5) 0%, rgba(255, 255, 255, 0.1) 100%)',
-                                                                borderRadius: 'inherit',
-                                                            },
                                                         }}
                                                     />
                                                 </Box>

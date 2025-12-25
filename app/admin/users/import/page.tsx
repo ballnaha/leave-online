@@ -1,0 +1,756 @@
+'use client';
+
+import React, { useState, useCallback, useRef, useEffect } from 'react';
+import {
+    Box,
+    Typography,
+    Button,
+    Paper,
+    Table,
+    TableBody,
+    TableCell,
+    TableContainer,
+    TableHead,
+    TableRow,
+    Alert,
+    AlertTitle,
+    Avatar,
+    alpha,
+    useTheme,
+    Chip,
+    CircularProgress,
+    Card,
+    CardContent,
+    Divider,
+    LinearProgress,
+    IconButton,
+    Tooltip,
+    FormControl,
+    InputLabel,
+    Select,
+    MenuItem,
+} from '@mui/material';
+import {
+    DocumentUpload,
+    DocumentDownload,
+    CloseCircle,
+    TickCircle,
+    ArrowLeft,
+    Refresh2,
+    Trash,
+    People,
+    InfoCircle,
+    Warning2,
+    Building,
+} from 'iconsax-react';
+import { useRouter } from 'next/navigation';
+import { useToastr } from '@/app/components/Toastr';
+import * as XLSX from 'xlsx';
+
+interface PreviewUser {
+    rowNumber: number;
+    employeeId: string;
+    firstName: string;
+    lastName: string;
+    position: string;
+    startDate: string;
+    startDateFormatted: string;
+    originalYear: number;
+    convertedYear: number;
+    department: string;
+    isValid: boolean;
+    errors: string[];
+}
+
+interface ImportResult {
+    success: number;
+    failed: number;
+    errors: { row: number; message: string }[];
+}
+
+interface Company {
+    id: number;
+    code: string;
+    name: string;
+}
+
+export default function ImportUsersPage() {
+    const theme = useTheme();
+    const router = useRouter();
+    const toastr = useToastr();
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
+    const [file, setFile] = useState<File | null>(null);
+    const [previewData, setPreviewData] = useState<PreviewUser[]>([]);
+    const [companies, setCompanies] = useState<Company[]>([]);
+    const [selectedCompany, setSelectedCompany] = useState<string>('');
+    const [loading, setLoading] = useState(false);
+    const [importing, setImporting] = useState(false);
+    const [importResult, setImportResult] = useState<ImportResult | null>(null);
+    const [dragOver, setDragOver] = useState(false);
+
+    // Fetch companies on mount
+    useEffect(() => {
+        const fetchCompanies = async () => {
+            try {
+                const res = await fetch('/api/admin/companies');
+                if (res.ok) {
+                    const data = await res.json();
+                    setCompanies(data);
+                    // Auto-select first company if available
+                    if (data.length > 0) {
+                        setSelectedCompany(data[0].code);
+                    }
+                }
+            } catch (error) {
+                console.error('Failed to fetch companies:', error);
+            }
+        };
+        fetchCompanies();
+    }, []);
+
+    // Parse name to extract employeeId, firstName, lastName
+    const parseName = (name: string): { employeeId: string; firstName: string; lastName: string } => {
+        // Name format: "200039 นายฐิติณัฏฐ์ ศรีรัตน์" 
+        // หรือ "200141 น.ส.ชมาพร บุญครอง"
+        const trimmed = name?.trim() || '';
+        const match = trimmed.match(/^(\d+)\s+(.+)$/);
+
+        if (match) {
+            const employeeId = match[1];
+            const fullName = match[2].trim();
+
+            // Split fullName to firstName and lastName
+            // Handle prefixes like นาย, นาง, นางสาว, น.ส., น.ส, ว่าที่ ร.ต.
+            const prefixes = ['ว่าที่ ร.ต.', 'ว่าที่ร.ต.', 'นางสาว', 'น.ส.', 'น.ส', 'นาย', 'นาง'];
+            let firstName = '';
+            let lastName = '';
+            let remainingName = fullName;
+
+            for (const prefix of prefixes) {
+                if (fullName.startsWith(prefix)) {
+                    remainingName = fullName.substring(prefix.length).trim();
+                    break;
+                }
+            }
+
+            // Split by space
+            const nameParts = remainingName.split(/\s+/);
+            if (nameParts.length >= 2) {
+                firstName = nameParts[0];
+                lastName = nameParts.slice(1).join(' ');
+            } else {
+                firstName = remainingName;
+                lastName = '';
+            }
+
+            return { employeeId, firstName, lastName };
+        }
+
+        return { employeeId: '', firstName: trimmed, lastName: '' };
+    };
+
+    // Convert Buddhist year to Christian year
+    const convertBEtoAD = (dateStr: string): { formatted: string; originalYear: number; convertedYear: number; isValid: boolean } => {
+        // Date format: DD/MM/YYYY (BE)
+        // e.g., "15/10/2533" -> "1990-10-15"
+        const match = dateStr?.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+
+        if (match) {
+            const day = parseInt(match[1], 10);
+            const month = parseInt(match[2], 10);
+            const yearBE = parseInt(match[3], 10);
+            const yearAD = yearBE - 543;
+
+            // Validate
+            if (yearAD > 1900 && yearAD <= new Date().getFullYear() && month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+                const formatted = `${yearAD}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
+                return { formatted, originalYear: yearBE, convertedYear: yearAD, isValid: true };
+            }
+        }
+
+        return { formatted: '', originalYear: 0, convertedYear: 0, isValid: false };
+    };
+
+    // Extract department from header (first row might have department name)
+    const extractDepartment = (value: unknown): string => {
+        if (typeof value === 'string' && value.startsWith('ฝ่าย')) {
+            return value;
+        }
+        return '';
+    };
+
+    // Process Excel file
+    const processFile = useCallback(async (selectedFile: File) => {
+        setLoading(true);
+        setPreviewData([]);
+        setImportResult(null);
+
+        try {
+            const arrayBuffer = await selectedFile.arrayBuffer();
+            const workbook = XLSX.read(arrayBuffer, { type: 'buffer' });
+
+            // Get first sheet
+            const sheetName = workbook.SheetNames[0];
+            const sheet = workbook.Sheets[sheetName];
+
+            // Convert to JSON
+            const rawData = XLSX.utils.sheet_to_json(sheet, { header: 1 }) as unknown[][];
+
+            if (rawData.length < 2) {
+                toastr.error('ไฟล์ไม่มีข้อมูล');
+                setLoading(false);
+                return;
+            }
+
+            // Find header row (look for 'ชื่อ' column)
+            let headerRowIndex = 0;
+            let currentDepartment = '';
+
+            for (let i = 0; i < rawData.length; i++) {
+                const row = rawData[i];
+                if (row && Array.isArray(row)) {
+                    // Check if this row is a department header
+                    const firstCell = String(row[0] || '');
+                    if (firstCell.startsWith('ฝ่าย')) {
+                        currentDepartment = firstCell;
+                    }
+                    // Check if this is the header row
+                    if (row.some(cell => String(cell).includes('ชื่อ'))) {
+                        headerRowIndex = i;
+                        break;
+                    }
+                }
+            }
+
+            const headers = rawData[headerRowIndex] as string[];
+            const nameIndex = headers.findIndex(h => String(h).includes('ชื่อ'));
+            const positionIndex = headers.findIndex(h => String(h).includes('ตำแหน่ง'));
+            const dateIndex = headers.findIndex(h => String(h).includes('วันที่เข้างาน'));
+
+            if (nameIndex === -1 || dateIndex === -1) {
+                toastr.error('ไม่พบคอลัมน์ชื่อหรือวันที่เข้างาน');
+                setLoading(false);
+                return;
+            }
+
+            const preview: PreviewUser[] = [];
+            let departmentFromData = currentDepartment;
+
+            for (let i = headerRowIndex + 1; i < rawData.length; i++) {
+                const row = rawData[i] as unknown[];
+                if (!row || row.length === 0) continue;
+
+                // Check if this row is a department header
+                const firstCell = String(row[0] || '');
+                if (firstCell.startsWith('ฝ่าย')) {
+                    departmentFromData = firstCell;
+                    continue;
+                }
+
+                const nameValue = String(row[nameIndex] || '').trim();
+                const positionValue = String(row[positionIndex] || '').trim();
+                const dateValue = String(row[dateIndex] || '').trim();
+
+                if (!nameValue || !nameValue.match(/^\d/)) continue; // Skip if no employee ID
+
+                const { employeeId, firstName, lastName } = parseName(nameValue);
+                const dateResult = convertBEtoAD(dateValue);
+
+                const errors: string[] = [];
+
+                if (!employeeId) errors.push('ไม่พบรหัสพนักงาน');
+                if (!firstName) errors.push('ไม่พบชื่อ');
+                if (!dateResult.isValid) errors.push('รูปแบบวันที่ไม่ถูกต้อง');
+
+                preview.push({
+                    rowNumber: i + 1,
+                    employeeId,
+                    firstName,
+                    lastName,
+                    position: positionValue,
+                    startDate: dateResult.formatted,
+                    startDateFormatted: dateResult.isValid
+                        ? `${dateValue} → ${dateResult.formatted}`
+                        : dateValue,
+                    originalYear: dateResult.originalYear,
+                    convertedYear: dateResult.convertedYear,
+                    department: departmentFromData,
+                    isValid: errors.length === 0,
+                    errors,
+                });
+            }
+
+            setPreviewData(preview);
+
+            if (preview.length === 0) {
+                toastr.warning('ไม่พบข้อมูลที่สามารถนำเข้าได้');
+            } else {
+                const validCount = preview.filter(p => p.isValid).length;
+                toastr.success(`พบข้อมูล ${preview.length} รายการ (สามารถนำเข้าได้ ${validCount} รายการ)`);
+            }
+        } catch (error) {
+            console.error('Error processing file:', error);
+            toastr.error('เกิดข้อผิดพลาดในการอ่านไฟล์');
+        } finally {
+            setLoading(false);
+        }
+    }, [toastr]);
+
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const selectedFile = e.target.files?.[0];
+        if (selectedFile) {
+            setFile(selectedFile);
+            processFile(selectedFile);
+        }
+    };
+
+    const handleDragOver = (e: React.DragEvent) => {
+        e.preventDefault();
+        setDragOver(true);
+    };
+
+    const handleDragLeave = (e: React.DragEvent) => {
+        e.preventDefault();
+        setDragOver(false);
+    };
+
+    const handleDrop = (e: React.DragEvent) => {
+        e.preventDefault();
+        setDragOver(false);
+
+        const droppedFile = e.dataTransfer.files[0];
+        if (droppedFile && (droppedFile.name.endsWith('.xlsx') || droppedFile.name.endsWith('.xls'))) {
+            setFile(droppedFile);
+            processFile(droppedFile);
+        } else {
+            toastr.error('กรุณาเลือกไฟล์ Excel (.xlsx หรือ .xls)');
+        }
+    };
+
+    const handleClear = () => {
+        setFile(null);
+        setPreviewData([]);
+        setImportResult(null);
+        if (fileInputRef.current) {
+            fileInputRef.current.value = '';
+        }
+    };
+
+    const handleImport = async () => {
+        const validData = previewData.filter(p => p.isValid);
+
+        if (validData.length === 0) {
+            toastr.error('ไม่มีข้อมูลที่สามารถนำเข้าได้');
+            return;
+        }
+
+        if (!selectedCompany) {
+            toastr.error('กรุณาเลือกบริษัท');
+            return;
+        }
+
+        setImporting(true);
+
+        try {
+            const response = await fetch('/api/admin/users/import', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ users: validData, company: selectedCompany }),
+            });
+
+            const result = await response.json();
+
+            if (!response.ok) {
+                throw new Error(result.error || 'เกิดข้อผิดพลาดในการนำเข้าข้อมูล');
+            }
+
+            setImportResult(result);
+
+            if (result.success > 0) {
+                toastr.success(`นำเข้าข้อมูลสำเร็จ ${result.success} รายการ`);
+            }
+
+            if (result.failed > 0) {
+                toastr.warning(`นำเข้าไม่สำเร็จ ${result.failed} รายการ`);
+            }
+        } catch (error: any) {
+            console.error('Import error:', error);
+            toastr.error(error.message || 'เกิดข้อผิดพลาดในการนำเข้าข้อมูล');
+        } finally {
+            setImporting(false);
+        }
+    };
+
+    const validCount = previewData.filter(p => p.isValid).length;
+    const invalidCount = previewData.filter(p => !p.isValid).length;
+
+    return (
+        <Box>
+            {/* Header */}
+            <Box sx={{ mb: 4, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 2 }}>
+                <Box>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1 }}>
+                        <IconButton
+                            onClick={() => router.push('/admin/users')}
+                            sx={{
+                                bgcolor: alpha(theme.palette.primary.main, 0.1),
+                                '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.2) }
+                            }}
+                        >
+                            <ArrowLeft size={20} color={theme.palette.primary.main} />
+                        </IconButton>
+                        <Avatar
+                            sx={{
+                                width: 48,
+                                height: 48,
+                                bgcolor: alpha(theme.palette.success.main, 0.1),
+                                color: 'success.main',
+                            }}
+                        >
+                            <DocumentUpload size={24} color={theme.palette.success.main} variant="Bold" />
+                        </Avatar>
+                        <Box>
+                            <Typography variant="h4" component="h1" fontWeight={700}>
+                                นำเข้าผู้ใช้งานจาก Excel
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary">
+                                อัปโหลดไฟล์ Excel เพื่อนำเข้าข้อมูลพนักงานจำนวนมาก
+                            </Typography>
+                        </Box>
+                    </Box>
+                </Box>
+                <Button
+                    variant="outlined"
+                    startIcon={<DocumentDownload size={18} />}
+                    onClick={() => window.open('/api/admin/users/import/template', '_blank')}
+                    sx={{
+                        borderRadius: 1,
+                        px: 3,
+                        py: 1.25,
+                    }}
+                >
+                    ดาวน์โหลด Template
+                </Button>
+            </Box>
+
+            {/* Info Card */}
+            <Alert
+                severity="info"
+                icon={<InfoCircle size={24} color={theme.palette.info.main} variant="Bold" />}
+                sx={{ mb: 3, borderRadius: 1 }}
+            >
+                <AlertTitle sx={{ fontWeight: 600 }}>รูปแบบไฟล์ Excel ที่รองรับ</AlertTitle>
+                <Box component="ul" sx={{ m: 0, pl: 2 }}>
+                    <li><strong>ชื่อ:</strong> รหัสพนักงาน + ชื่อ-นามสกุล (เช่น &quot;200039 นายฐิติณัฏฐ์ ศรีรัตน์&quot;)</li>
+                    <li><strong>ตำแหน่ง:</strong> ตำแหน่งงาน (เช่น &quot;STAFF วางแผนการผลิต&quot;)</li>
+                    <li><strong>วันที่เข้างาน:</strong> DD/MM/YYYY (พ.ศ.) - ระบบจะแปลงเป็น ค.ศ. อัตโนมัติ</li>
+                </Box>
+            </Alert>
+
+            {/* Company Selector */}
+            <Paper
+                sx={{
+                    p: 3,
+                    mb: 3,
+                    borderRadius: 1,
+                    border: '1px solid',
+                    borderColor: 'divider',
+                }}
+            >
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+                    <Avatar
+                        sx={{
+                            width: 40,
+                            height: 40,
+                            bgcolor: alpha(theme.palette.primary.main, 0.1),
+                        }}
+                    >
+                        <Building size={20} color={theme.palette.primary.main} variant="Bold" />
+                    </Avatar>
+                    <Box>
+                        <Typography variant="subtitle1" fontWeight={600}>
+                            เลือกบริษัท
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                            เลือกบริษัทที่ต้องการนำเข้าข้อมูลพนักงาน
+                        </Typography>
+                    </Box>
+                </Box>
+                <FormControl fullWidth size="small">
+                    <InputLabel>บริษัท</InputLabel>
+                    <Select
+                        value={selectedCompany}
+                        onChange={(e) => setSelectedCompany(e.target.value)}
+                        label="บริษัท"
+                        sx={{ borderRadius: 1 }}
+                    >
+                        {companies.map((company) => (
+                            <MenuItem key={company.id} value={company.code}>
+                                {company.code} - {company.name}
+                            </MenuItem>
+                        ))}
+                    </Select>
+                </FormControl>
+            </Paper>
+
+            {/* Upload Area */}
+            <Paper
+                sx={{
+                    p: 4,
+                    mb: 3,
+                    borderRadius: 1,
+                    border: '2px dashed',
+                    borderColor: dragOver ? 'primary.main' : 'divider',
+                    bgcolor: dragOver ? alpha(theme.palette.primary.main, 0.05) : 'background.paper',
+                    transition: 'all 0.3s ease',
+                    cursor: 'pointer',
+                    textAlign: 'center',
+                }}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+                onClick={() => fileInputRef.current?.click()}
+            >
+                <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".xlsx,.xls"
+                    style={{ display: 'none' }}
+                    onChange={handleFileChange}
+                />
+
+                <Avatar
+                    sx={{
+                        width: 80,
+                        height: 80,
+                        bgcolor: alpha(theme.palette.primary.main, 0.1),
+                        mx: 'auto',
+                        mb: 2,
+                    }}
+                >
+                    <DocumentUpload size={40} color={theme.palette.primary.main} variant="Bold" />
+                </Avatar>
+
+                <Typography variant="h6" fontWeight={600} gutterBottom>
+                    ลากไฟล์มาวางที่นี่ หรือคลิกเพื่อเลือกไฟล์
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                    รองรับไฟล์ .xlsx และ .xls
+                </Typography>
+
+                {file && (
+                    <Chip
+                        icon={<TickCircle size={16} color="#fff" variant="Bold" />}
+                        label={file.name}
+                        color="success"
+                        sx={{ mt: 2 }}
+                        onDelete={handleClear}
+                        deleteIcon={<CloseCircle size={16} color={theme.palette.error.main} />}
+                    />
+                )}
+
+                {loading && (
+                    <Box sx={{ mt: 2 }}>
+                        <CircularProgress size={24} />
+                        <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                            กำลังอ่านไฟล์...
+                        </Typography>
+                    </Box>
+                )}
+            </Paper>
+
+            {/* Preview Data */}
+            {previewData.length > 0 && (
+                <>
+                    {/* Summary Cards */}
+                    <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)' }, gap: 2, mb: 3 }}>
+                        <Card sx={{ borderRadius: 1, border: '1px solid', borderColor: 'divider' }}>
+                            <CardContent sx={{ textAlign: 'center' }}>
+                                <Avatar sx={{ width: 56, height: 56, bgcolor: alpha(theme.palette.primary.main, 0.1), mx: 'auto', mb: 1 }}>
+                                    <People size={28} color={theme.palette.primary.main} variant="Bold" />
+                                </Avatar>
+                                <Typography variant="h4" fontWeight={700} color="primary.main">
+                                    {previewData.length}
+                                </Typography>
+                                <Typography variant="body2" color="text.secondary">
+                                    ข้อมูลทั้งหมด
+                                </Typography>
+                            </CardContent>
+                        </Card>
+
+                        <Card sx={{ borderRadius: 1, border: '1px solid', borderColor: 'divider' }}>
+                            <CardContent sx={{ textAlign: 'center' }}>
+                                <Avatar sx={{ width: 56, height: 56, bgcolor: alpha(theme.palette.success.main, 0.1), mx: 'auto', mb: 1 }}>
+                                    <TickCircle size={28} color={theme.palette.success.main} variant="Bold" />
+                                </Avatar>
+                                <Typography variant="h4" fontWeight={700} color="success.main">
+                                    {validCount}
+                                </Typography>
+                                <Typography variant="body2" color="text.secondary">
+                                    พร้อมนำเข้า
+                                </Typography>
+                            </CardContent>
+                        </Card>
+
+                        <Card sx={{ borderRadius: 1, border: '1px solid', borderColor: 'divider' }}>
+                            <CardContent sx={{ textAlign: 'center' }}>
+                                <Avatar sx={{ width: 56, height: 56, bgcolor: alpha(theme.palette.error.main, 0.1), mx: 'auto', mb: 1 }}>
+                                    <Warning2 size={28} color={theme.palette.error.main} variant="Bold" />
+                                </Avatar>
+                                <Typography variant="h4" fontWeight={700} color="error.main">
+                                    {invalidCount}
+                                </Typography>
+                                <Typography variant="body2" color="text.secondary">
+                                    มีปัญหา
+                                </Typography>
+                            </CardContent>
+                        </Card>
+                    </Box>
+
+                    {/* Import Actions */}
+                    <Box sx={{ display: 'flex', gap: 2, mb: 3, justifyContent: 'flex-end' }}>
+                        <Button
+                            variant="outlined"
+                            startIcon={<Trash size={18} color={theme.palette.error.main} />}
+                            onClick={handleClear}
+                            disabled={importing}
+                        >
+                            ล้างข้อมูล
+                        </Button>
+                        <Button
+                            variant="contained"
+                            startIcon={importing ? <CircularProgress size={18} color="inherit" /> : <DocumentUpload size={18} color="#fff" />}
+                            onClick={handleImport}
+                            disabled={importing || validCount === 0}
+                            sx={{
+                                boxShadow: `0 4px 14px ${alpha(theme.palette.primary.main, 0.4)}`,
+                            }}
+                        >
+                            {importing ? 'กำลังนำเข้า...' : `นำเข้า ${validCount} รายการ`}
+                        </Button>
+                    </Box>
+
+                    {/* Progress */}
+                    {importing && (
+                        <Box sx={{ mb: 3 }}>
+                            <LinearProgress />
+                        </Box>
+                    )}
+
+                    {/* Import Result */}
+                    {importResult && (
+                        <Alert
+                            severity={importResult.failed === 0 ? 'success' : 'warning'}
+                            sx={{ mb: 3, borderRadius: 1 }}
+                        >
+                            <AlertTitle>ผลการนำเข้าข้อมูล</AlertTitle>
+                            <Typography>
+                                นำเข้าสำเร็จ: <strong>{importResult.success}</strong> รายการ |
+                                ไม่สำเร็จ: <strong>{importResult.failed}</strong> รายการ
+                            </Typography>
+                            {importResult.errors.length > 0 && (
+                                <Box component="ul" sx={{ m: 0, mt: 1, pl: 2 }}>
+                                    {importResult.errors.slice(0, 5).map((err, idx) => (
+                                        <li key={idx}>แถวที่ {err.row}: {err.message}</li>
+                                    ))}
+                                    {importResult.errors.length > 5 && (
+                                        <li>... และอีก {importResult.errors.length - 5} รายการ</li>
+                                    )}
+                                </Box>
+                            )}
+                        </Alert>
+                    )}
+
+                    {/* Data Table */}
+                    <Paper sx={{ borderRadius: 1, border: '1px solid', borderColor: 'divider', overflow: 'hidden' }}>
+                        <Box sx={{ p: 2, bgcolor: alpha(theme.palette.primary.main, 0.03), borderBottom: '1px solid', borderColor: 'divider' }}>
+                            <Typography variant="h6" fontWeight={600}>
+                                ตัวอย่างข้อมูล
+                            </Typography>
+                        </Box>
+                        <TableContainer sx={{ maxHeight: 500 }}>
+                            <Table stickyHeader size="small">
+                                <TableHead>
+                                    <TableRow>
+                                        <TableCell sx={{ fontWeight: 600, bgcolor: 'background.paper' }}>แถว</TableCell>
+                                        <TableCell sx={{ fontWeight: 600, bgcolor: 'background.paper' }}>รหัสพนักงาน</TableCell>
+                                        <TableCell sx={{ fontWeight: 600, bgcolor: 'background.paper' }}>ชื่อ</TableCell>
+                                        <TableCell sx={{ fontWeight: 600, bgcolor: 'background.paper' }}>นามสกุล</TableCell>
+                                        <TableCell sx={{ fontWeight: 600, bgcolor: 'background.paper' }}>ตำแหน่ง</TableCell>
+                                        <TableCell sx={{ fontWeight: 600, bgcolor: 'background.paper' }}>ฝ่าย</TableCell>
+                                        <TableCell sx={{ fontWeight: 600, bgcolor: 'background.paper' }}>วันที่เข้างาน</TableCell>
+                                        <TableCell sx={{ fontWeight: 600, bgcolor: 'background.paper' }} align="center">สถานะ</TableCell>
+                                    </TableRow>
+                                </TableHead>
+                                <TableBody>
+                                    {previewData.map((row, index) => (
+                                        <TableRow
+                                            key={index}
+                                            sx={{
+                                                bgcolor: !row.isValid ? alpha(theme.palette.error.main, 0.05) : 'inherit',
+                                                '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.04) }
+                                            }}
+                                        >
+                                            <TableCell>{row.rowNumber}</TableCell>
+                                            <TableCell>
+                                                <Typography variant="body2" fontWeight={600}>
+                                                    {row.employeeId || '-'}
+                                                </Typography>
+                                            </TableCell>
+                                            <TableCell>{row.firstName || '-'}</TableCell>
+                                            <TableCell>{row.lastName || '-'}</TableCell>
+                                            <TableCell>
+                                                <Typography variant="body2" sx={{ maxWidth: 200, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                                    {row.position || '-'}
+                                                </Typography>
+                                            </TableCell>
+                                            <TableCell>
+                                                <Typography variant="body2" sx={{ maxWidth: 150, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                                    {row.department || '-'}
+                                                </Typography>
+                                            </TableCell>
+                                            <TableCell>
+                                                <Box>
+                                                    <Typography variant="body2">
+                                                        {row.startDate || '-'}
+                                                    </Typography>
+                                                    {row.isValid && row.originalYear > 0 && (
+                                                        <Typography variant="caption" color="text.secondary">
+                                                            พ.ศ. {row.originalYear} → ค.ศ. {row.convertedYear}
+                                                        </Typography>
+                                                    )}
+                                                </Box>
+                                            </TableCell>
+                                            <TableCell align="center">
+                                                {row.isValid ? (
+                                                    <Chip
+                                                        icon={<TickCircle size={14} variant="Bold" />}
+                                                        label="พร้อม"
+                                                        size="small"
+                                                        color="success"
+                                                        sx={{ fontWeight: 500 }}
+                                                    />
+                                                ) : (
+                                                    <Tooltip title={row.errors.join(', ')}>
+                                                        <Chip
+                                                            icon={<Warning2 size={14} variant="Bold" />}
+                                                            label="มีปัญหา"
+                                                            size="small"
+                                                            color="error"
+                                                            sx={{ fontWeight: 500 }}
+                                                        />
+                                                    </Tooltip>
+                                                )}
+                                            </TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </TableContainer>
+                    </Paper>
+                </>
+            )}
+        </Box>
+    );
+}

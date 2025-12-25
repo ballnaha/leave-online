@@ -59,6 +59,7 @@ import {
   Building4,
   RowVertical,
   Hierarchy,
+  DocumentUpload,
 } from 'iconsax-react';
 import UserDialog from './UserDialog';
 import UserViewDialog from './UserViewDialog';
@@ -322,11 +323,11 @@ export default function UsersPage() {
   }, [selectedUser, toastr]);
 
   // Get unique values for filters - memoized
-  const uniqueCompanies = useMemo(() => 
+  const uniqueCompanies = useMemo(() =>
     [...new Set(users.map((u) => u.company))].filter(Boolean), [users]);
-  const uniqueDepartments = useMemo(() => 
+  const uniqueDepartments = useMemo(() =>
     [...new Set(users.map((u) => u.department))].filter(Boolean), [users]);
-  
+
   // Get unique sections (filtered by department if selected) - memoized
   const uniqueSections = useMemo(() => [...new Set(
     users
@@ -335,11 +336,11 @@ export default function UsersPage() {
   )].filter(Boolean) as string[], [users, departmentFilter]);
 
   // Create department code to name map - memoized
-  const departmentNameMap = useMemo(() => 
+  const departmentNameMap = useMemo(() =>
     new Map(users.map((u) => [u.department, u.departmentName])), [users]);
-  
+
   // Create section code to name map - memoized
-  const sectionNameMap = useMemo(() => 
+  const sectionNameMap = useMemo(() =>
     new Map(users.map((u) => [u.section, u.sectionName])), [users]);
 
   // Role tabs configuration
@@ -568,22 +569,36 @@ export default function UsersPage() {
             </Box>
           </Box>
         </Box>
-        <Button
-          variant="contained"
-          startIcon={<Add size={18} color="#fff" />}
-          onClick={handleCreate}
-          sx={{
-            borderRadius: 1,
-            px: 3,
-            py: 1.25,
-            boxShadow: `0 4px 14px ${alpha(theme.palette.primary.main, 0.4)}`,
-            '&:hover': {
-              boxShadow: `0 6px 20px ${alpha(theme.palette.primary.main, 0.5)}`,
-            },
-          }}
-        >
-          เพิ่มผู้ใช้งาน
-        </Button>
+        <Box sx={{ display: 'flex', gap: 1.5 }}>
+          <Button
+            variant="outlined"
+            startIcon={<DocumentUpload size={18} color={theme.palette.primary.main} />}
+            onClick={() => window.location.href = '/admin/users/import'}
+            sx={{
+              borderRadius: 1,
+              px: 3,
+              py: 1.25,
+            }}
+          >
+            นำเข้า Excel
+          </Button>
+          <Button
+            variant="contained"
+            startIcon={<Add size={18} color="#fff" />}
+            onClick={handleCreate}
+            sx={{
+              borderRadius: 1,
+              px: 3,
+              py: 1.25,
+              boxShadow: `0 4px 14px ${alpha(theme.palette.primary.main, 0.4)}`,
+              '&:hover': {
+                boxShadow: `0 6px 20px ${alpha(theme.palette.primary.main, 0.5)}`,
+              },
+            }}
+          >
+            เพิ่มผู้ใช้งาน
+          </Button>
+        </Box>
       </Box>
 
       {/* Stats Cards */}
@@ -690,10 +705,10 @@ export default function UsersPage() {
         }}
       >
         {/* Row 1: Search + Company + Department */}
-        <Box sx={{ 
-          display: 'grid', 
-          gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: '2fr 1fr 1fr' }, 
-          gap: 1.5, 
+        <Box sx={{
+          display: 'grid',
+          gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: '2fr 1fr 1fr' },
+          gap: 1.5,
           alignItems: 'center',
           mb: { xs: 1.5, md: 1.5 }
         }}>
@@ -772,11 +787,11 @@ export default function UsersPage() {
         </Box>
 
         {/* Row 2: Section + Status + Count + Refresh */}
-        <Box sx={{ 
-          display: 'grid', 
-          gridTemplateColumns: { xs: '1fr 1fr', sm: 'repeat(2, 1fr)', md: '1fr 1fr auto auto' }, 
-          gap: 1.5, 
-          alignItems: 'center' 
+        <Box sx={{
+          display: 'grid',
+          gridTemplateColumns: { xs: '1fr 1fr', sm: 'repeat(2, 1fr)', md: '1fr 1fr auto auto' },
+          gap: 1.5,
+          alignItems: 'center'
         }}>
           {/* Section Filter */}
           <FormControl size="small" fullWidth>
@@ -821,10 +836,10 @@ export default function UsersPage() {
             </Select>
           </FormControl>
 
-          <Box sx={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            gap: 1, 
+          <Box sx={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 1,
             gridColumn: { xs: '1 / -1', md: 'auto' },
             justifyContent: { xs: 'flex-end', md: 'flex-start' }
           }}>
@@ -834,7 +849,7 @@ export default function UsersPage() {
               exclusive
               onChange={(_e, v) => v && setViewMode(v)}
               size="small"
-              sx={{ 
+              sx={{
                 display: { xs: 'none', md: 'flex' },
                 '& .MuiToggleButton-root': {
                   px: 1.5,
@@ -922,11 +937,11 @@ export default function UsersPage() {
               ))}
             </Box>
           ) : filteredUsers.length === 0 ? (
-            <Paper 
-              sx={{ 
-                p: 6, 
-                textAlign: 'center', 
-                borderRadius: 1, 
+            <Paper
+              sx={{
+                p: 6,
+                textAlign: 'center',
+                borderRadius: 1,
                 border: '1px solid',
                 borderColor: 'divider',
               }}
@@ -964,11 +979,11 @@ export default function UsersPage() {
                   <TableBody>
                     {groupedData.map((companyGroup, companyIndex) => {
                       const isCompanyExpanded = expandedCompanies.has(companyGroup.company);
-                      const companyUserCount = companyGroup.departments.reduce((sum, d) => 
+                      const companyUserCount = companyGroup.departments.reduce((sum, d) =>
                         sum + d.sections.reduce((s, sec) => s + sec.users.length, 0) + d.usersWithoutSection.length, 0);
                       // สลับสีพื้นหลังบริษัท
-                      const companyBgColor = companyGroup.company === 'PSC' 
-                        ? '#EEF2FF' 
+                      const companyBgColor = companyGroup.company === 'PSC'
+                        ? '#EEF2FF'
                         : companyIndex % 2 === 0 ? '#FFF7ED' : '#F0FDF4';
 
                       return (
@@ -984,10 +999,10 @@ export default function UsersPage() {
                           >
                             <TableCell sx={{ py: 1.5 }}>
                               <IconButton size="small" sx={{ p: 0.5 }}>
-                                <ArrowDown2 
-                                  size={18} 
+                                <ArrowDown2
+                                  size={18}
                                   color={theme.palette.primary.main}
-                                  style={{ 
+                                  style={{
                                     transform: isCompanyExpanded ? 'rotate(0deg)' : 'rotate(-90deg)',
                                     transition: 'transform 0.2s ease',
                                   }}
@@ -1003,9 +1018,9 @@ export default function UsersPage() {
                                 <Chip
                                   label={`${companyUserCount} คน`}
                                   size="small"
-                                  sx={{ 
-                                    bgcolor: alpha(theme.palette.primary.main, 0.15), 
-                                    color: theme.palette.primary.main, 
+                                  sx={{
+                                    bgcolor: alpha(theme.palette.primary.main, 0.15),
+                                    color: theme.palette.primary.main,
                                     fontWeight: 600,
                                     height: 24,
                                   }}
@@ -1022,7 +1037,7 @@ export default function UsersPage() {
                             const isDeptExpanded = expandedDepartments.has(`${companyGroup.company}-${deptGroup.department}`);
                             const deptUserCount = deptGroup.sections.reduce((sum, sec) => sum + sec.users.length, 0) + deptGroup.usersWithoutSection.length;
                             // สลับสีพื้นหลังฝ่าย
-                            const deptBgColor = deptIndex % 2 === 0 
+                            const deptBgColor = deptIndex % 2 === 0
                               ? alpha(theme.palette.info.main, 0.04)
                               : alpha(theme.palette.secondary.main, 0.04);
 
@@ -1039,10 +1054,10 @@ export default function UsersPage() {
                                 >
                                   <TableCell sx={{ py: 1, pl: 3 }}>
                                     <IconButton size="small" sx={{ p: 0.25 }}>
-                                      <ArrowDown2 
-                                        size={16} 
+                                      <ArrowDown2
+                                        size={16}
                                         color={theme.palette.text.secondary}
-                                        style={{ 
+                                        style={{
                                           transform: isDeptExpanded ? 'rotate(0deg)' : 'rotate(-90deg)',
                                           transition: 'transform 0.2s ease',
                                         }}
@@ -1058,9 +1073,9 @@ export default function UsersPage() {
                                       <Chip
                                         label={`${deptUserCount} คน`}
                                         size="small"
-                                        sx={{ 
-                                          bgcolor: alpha(theme.palette.info.main, 0.1), 
-                                          color: theme.palette.info.main, 
+                                        sx={{
+                                          bgcolor: alpha(theme.palette.info.main, 0.1),
+                                          color: theme.palette.info.main,
                                           fontWeight: 600,
                                           height: 22,
                                           fontSize: '0.7rem',
@@ -1081,7 +1096,7 @@ export default function UsersPage() {
                                     {/* Sections with users */}
                                     {deptGroup.sections.map((sectionGroup, sectionIndex) => {
                                       const isSectionExpanded = expandedSections.has(`${companyGroup.company}-${deptGroup.department}-${sectionGroup.section}`);
-                                      const sectionBgColor = sectionIndex % 2 === 0 
+                                      const sectionBgColor = sectionIndex % 2 === 0
                                         ? alpha(theme.palette.warning.main, 0.04)
                                         : alpha(theme.palette.success.main, 0.04);
 
@@ -1098,10 +1113,10 @@ export default function UsersPage() {
                                           >
                                             <TableCell sx={{ py: 0.75, pl: 5 }}>
                                               <IconButton size="small" sx={{ p: 0.25 }}>
-                                                <ArrowDown2 
-                                                  size={14} 
+                                                <ArrowDown2
+                                                  size={14}
                                                   color={theme.palette.warning.dark}
-                                                  style={{ 
+                                                  style={{
                                                     transform: isSectionExpanded ? 'rotate(0deg)' : 'rotate(-90deg)',
                                                     transition: 'transform 0.2s ease',
                                                   }}
@@ -1117,9 +1132,9 @@ export default function UsersPage() {
                                                 <Chip
                                                   label={`${sectionGroup.users.length} คน`}
                                                   size="small"
-                                                  sx={{ 
-                                                    bgcolor: alpha(theme.palette.warning.main, 0.1), 
-                                                    color: theme.palette.warning.dark, 
+                                                  sx={{
+                                                    bgcolor: alpha(theme.palette.warning.main, 0.1),
+                                                    color: theme.palette.warning.dark,
                                                     fontWeight: 600,
                                                     height: 20,
                                                     fontSize: '0.65rem',
@@ -1131,8 +1146,8 @@ export default function UsersPage() {
 
                                           {/* User Rows within Section */}
                                           {isSectionExpanded && sectionGroup.users.map(user => (
-                                            <TableRow 
-                                              key={user.id} 
+                                            <TableRow
+                                              key={user.id}
                                               hover
                                               sx={{
                                                 '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.04) },
@@ -1255,8 +1270,8 @@ export default function UsersPage() {
 
                                     {/* Users without section (directly under department) */}
                                     {deptGroup.usersWithoutSection.map(user => (
-                                      <TableRow 
-                                        key={user.id} 
+                                      <TableRow
+                                        key={user.id}
                                         hover
                                         sx={{
                                           '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.04) },
@@ -1389,19 +1404,19 @@ export default function UsersPage() {
               <Box sx={{ display: { xs: 'flex', md: 'none' }, flexDirection: 'column', gap: 1.5 }}>
                 {groupedData.map((companyGroup, companyIndex) => {
                   const isCompanyExpanded = expandedCompanies.has(companyGroup.company);
-                  const companyUserCount = companyGroup.departments.reduce((sum, d) => 
+                  const companyUserCount = companyGroup.departments.reduce((sum, d) =>
                     sum + d.sections.reduce((s, sec) => s + sec.users.length, 0) + d.usersWithoutSection.length, 0);
-                  const companyBgColor = companyGroup.company === 'PSC' 
-                    ? '#EEF2FF' 
+                  const companyBgColor = companyGroup.company === 'PSC'
+                    ? '#EEF2FF'
                     : companyIndex % 2 === 0 ? '#FFF7ED' : '#F0FDF4';
 
                   return (
-                    <Paper 
-                      key={companyGroup.company} 
-                      elevation={0} 
-                      sx={{ 
-                        borderRadius: 1, 
-                        border: '1px solid', 
+                    <Paper
+                      key={companyGroup.company}
+                      elevation={0}
+                      sx={{
+                        borderRadius: 1,
+                        border: '1px solid',
                         borderColor: 'divider',
                         overflow: 'hidden',
                       }}
@@ -1418,10 +1433,10 @@ export default function UsersPage() {
                           cursor: 'pointer',
                         }}
                       >
-                        <ArrowDown2 
-                          size={18} 
+                        <ArrowDown2
+                          size={18}
                           color={theme.palette.primary.main}
-                          style={{ 
+                          style={{
                             transform: isCompanyExpanded ? 'rotate(0deg)' : 'rotate(-90deg)',
                             transition: 'transform 0.2s ease',
                           }}
@@ -1433,9 +1448,9 @@ export default function UsersPage() {
                         <Chip
                           label={`${companyUserCount} คน`}
                           size="small"
-                          sx={{ 
-                            bgcolor: alpha(theme.palette.primary.main, 0.15), 
-                            color: theme.palette.primary.main, 
+                          sx={{
+                            bgcolor: alpha(theme.palette.primary.main, 0.15),
+                            color: theme.palette.primary.main,
                             fontWeight: 600,
                             height: 22,
                             fontSize: '0.7rem',
@@ -1447,7 +1462,7 @@ export default function UsersPage() {
                       {isCompanyExpanded && companyGroup.departments.map((deptGroup, deptIndex) => {
                         const isDeptExpanded = expandedDepartments.has(`${companyGroup.company}-${deptGroup.department}`);
                         const deptUserCount = deptGroup.sections.reduce((sum, sec) => sum + sec.users.length, 0) + deptGroup.usersWithoutSection.length;
-                        const deptBgColor = deptIndex % 2 === 0 
+                        const deptBgColor = deptIndex % 2 === 0
                           ? alpha(theme.palette.info.main, 0.04)
                           : alpha(theme.palette.secondary.main, 0.04);
 
@@ -1469,10 +1484,10 @@ export default function UsersPage() {
                                 cursor: 'pointer',
                               }}
                             >
-                              <ArrowDown2 
-                                size={16} 
+                              <ArrowDown2
+                                size={16}
                                 color={theme.palette.text.secondary}
-                                style={{ 
+                                style={{
                                   transform: isDeptExpanded ? 'rotate(0deg)' : 'rotate(-90deg)',
                                   transition: 'transform 0.2s ease',
                                 }}
@@ -1484,9 +1499,9 @@ export default function UsersPage() {
                               <Chip
                                 label={`${deptUserCount}`}
                                 size="small"
-                                sx={{ 
-                                  bgcolor: alpha(theme.palette.info.main, 0.1), 
-                                  color: theme.palette.info.main, 
+                                sx={{
+                                  bgcolor: alpha(theme.palette.info.main, 0.1),
+                                  color: theme.palette.info.main,
                                   fontWeight: 600,
                                   height: 20,
                                   fontSize: '0.65rem',
@@ -1501,7 +1516,7 @@ export default function UsersPage() {
                                 {/* Sections with users */}
                                 {deptGroup.sections.map((sectionGroup, sectionIndex) => {
                                   const isSectionExpanded = expandedSections.has(`${companyGroup.company}-${deptGroup.department}-${sectionGroup.section}`);
-                                  const sectionBgColor = sectionIndex % 2 === 0 
+                                  const sectionBgColor = sectionIndex % 2 === 0
                                     ? alpha(theme.palette.warning.main, 0.04)
                                     : alpha(theme.palette.success.main, 0.04);
 
@@ -1523,10 +1538,10 @@ export default function UsersPage() {
                                           cursor: 'pointer',
                                         }}
                                       >
-                                        <ArrowDown2 
-                                          size={14} 
+                                        <ArrowDown2
+                                          size={14}
                                           color={theme.palette.warning.dark}
-                                          style={{ 
+                                          style={{
                                             transform: isSectionExpanded ? 'rotate(0deg)' : 'rotate(-90deg)',
                                             transition: 'transform 0.2s ease',
                                           }}
@@ -1538,9 +1553,9 @@ export default function UsersPage() {
                                         <Chip
                                           label={`${sectionGroup.users.length}`}
                                           size="small"
-                                          sx={{ 
-                                            bgcolor: alpha(theme.palette.warning.main, 0.1), 
-                                            color: theme.palette.warning.dark, 
+                                          sx={{
+                                            bgcolor: alpha(theme.palette.warning.main, 0.1),
+                                            color: theme.palette.warning.dark,
                                             fontWeight: 600,
                                             height: 18,
                                             fontSize: '0.6rem',
