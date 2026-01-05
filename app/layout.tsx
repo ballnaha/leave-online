@@ -44,6 +44,9 @@ export const metadata: Metadata = {
   formatDetection: {
     telephone: false,
   },
+  other: {
+    google: 'notranslate',
+  },
 };
 
 export default function RootLayout({
@@ -52,7 +55,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" style={{ overscrollBehavior: 'none' }}>
+    <html lang="th" style={{ overscrollBehavior: 'none' }}>
       <head>
         <link rel="apple-touch-icon" href="/images/psc-logo.png" />
         <link rel="apple-touch-icon" sizes="152x152" href="/images/psc-logo.png" />
