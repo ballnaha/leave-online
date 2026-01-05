@@ -220,12 +220,45 @@ export async function GET(request: NextRequest) {
       // ข้าม approval ที่ไม่มี leaveRequest
       if (!approval.leaveRequest) return false;
       if (approval.status !== 'pending') return true; // ถ้าทำไปแล้วก็ให้เห็น
-      // ถ้ายัง pending ต้องเช็คว่าเป็นคิวตัวเองไหม
+      // ถ้ายัง pending ต้องเช็คว่าเป็นคิวตัวเองไหม (ต้องตรงกับ currentLevel)
       return approval.leaveRequest.currentLevel === approval.level;
     });
 
+    // Group by leaveRequestId เพื่อไม่ให้เห็นใบซ้ำในกรณีผู้อนุมัติคนเดียวมีหลายขั้นตอน (เช่น HR ปกติ + Escalated)
+    // โดยเลือกขั้นตอนที่สำคัญที่สุด: Pending ที่ตรงกับ currentLevel > ขั้นตอนที่ทำไปแล้ว (Approved/Rejected) > ขั้นตอนที่ถูกข้าม (Skipped)
+    const groupedMap = new Map<number, any>();
+
+    filteredApprovals.forEach(approval => {
+      const leaveId = approval.leaveRequestId;
+      const existing = groupedMap.get(leaveId);
+
+      if (!existing) {
+        groupedMap.set(leaveId, approval);
+        return;
+      }
+
+      // Logic การเลือกเมื่อมีซ้ำ:
+      // 1. ถ้าอันใหม่เป็น pending และตรงกับ currentLevel ให้เอาอันใหม่แน่นอน
+      const isNewActivePending = approval.status === 'pending' && approval.level === approval.leaveRequest?.currentLevel;
+      // 2. ถ้าอันเก่าเป็น skipped แต่อันใหม่เป็น approved/rejected ให้เอาอันใหม่
+      const isOldSkipped = existing.status === 'skipped';
+      const isNewActioned = ['approved', 'rejected'].includes(approval.status);
+
+      if (isNewActivePending || (isOldSkipped && isNewActioned)) {
+        groupedMap.set(leaveId, approval);
+      } else if (approval.status !== 'skipped' && existing.status === 'skipped') {
+        // ถ้าอันนึงไม่ skipped แต่อีกอัน skipped ให้เอาอันที่ไม่ skipped
+        groupedMap.set(leaveId, approval);
+      } else if (approval.level > existing.level) {
+        // ถ้าสถานะพอกัน ให้เอา level ที่สูงกว่า (เช่น escalated level 99)
+        groupedMap.set(leaveId, approval);
+      }
+    });
+
+    const uniqueApprovals = Array.from(groupedMap.values());
+
     // จัดรูปแบบข้อมูลให้อ่านง่าย
-    const result = filteredApprovals.map((approval) => ({
+    const result = uniqueApprovals.map((approval) => ({
       approvalId: approval.id,
       level: approval.level,
       status: approval.status,
@@ -259,7 +292,7 @@ export async function GET(request: NextRequest) {
       },
     }));
 
-    // นับจำนวน
+    // นับจำนวนจากผลลัพธ์ที่ Unique แล้ว
     const counts = {
       pending: result.filter((r) => r.status === 'pending').length,
       approved: result.filter((r) => r.status === 'approved').length,
