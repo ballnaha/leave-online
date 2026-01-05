@@ -389,31 +389,80 @@ export default function AdminLeaveReportsPage() {
 
   const exportExcel = async () => {
     try {
-      const XLSX = await import('xlsx');
-      const header = ['ลำดับ', 'รหัสพนักงาน', 'ชื่อพนักงาน', 'ตำแหน่ง', 'ฝ่าย', 'แผนก', 'วันที่หยุด', 'จำนวนวัน', 'ประเภท', 'เหตุผลการลา', 'สถานะ', 'หมายเหตุ'];
-      const data = exportRows.map((r, i) => [i + 1, r.employeeId, r.employeeName, r.position, r.department, r.section, r.leaveDate, r.totalDays, r.leaveTypeName, r.reason, r.statusLabel, r.note]);
-      const sheet = XLSX.utils.aoa_to_sheet([header, ...data]);
+      const ExcelJS = await import('exceljs');
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet('LeaveReport');
 
       // Set column widths
-      sheet['!cols'] = [
-        { wch: 6 },  // ลำดับ
-        { wch: 12 }, // รหัสพนักงาน
-        { wch: 20 }, // ชื่อพนักงาน
-        { wch: 15 }, // ตำแหน่ง
-        { wch: 15 }, // ฝ่าย
-        { wch: 15 }, // แผนก
-        { wch: 25 }, // วันที่หยุด
-        { wch: 10 }, // จำนวนวัน
-        { wch: 15 }, // ประเภท
-        { wch: 40 }, // เหตุผลการลา
-        { wch: 12 }, // สถานะ
-        { wch: 30 }, // หมายเหตุ
+      worksheet.columns = [
+        { width: 6 },  // ลำดับ
+        { width: 12 }, // รหัสพนักงาน
+        { width: 20 }, // ชื่อพนักงาน
+        { width: 15 }, // ตำแหน่ง
+        { width: 15 }, // ฝ่าย
+        { width: 15 }, // แผนก
+        { width: 25 }, // วันที่หยุด
+        { width: 10 }, // จำนวนวัน
+        { width: 15 }, // ประเภท
+        { width: 40 }, // เหตุผลการลา
+        { width: 12 }, // สถานะ
+        { width: 30 }, // หมายเหตุ
       ];
 
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, sheet, 'LeaveReport');
+      // Add header row
+      const header = ['ลำดับ', 'รหัสพนักงาน', 'ชื่อพนักงาน', 'ตำแหน่ง', 'ฝ่าย', 'แผนก', 'วันที่หยุด', 'จำนวนวัน', 'ประเภท', 'เหตุผลการลา', 'สถานะ', 'หมายเหตุ'];
+      const headerRow = worksheet.addRow(header);
+      headerRow.font = { bold: true };
+      headerRow.eachCell((cell) => {
+        cell.fill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { argb: 'FFE0E0E0' },
+        };
+        cell.border = {
+          top: { style: 'thin' },
+          left: { style: 'thin' },
+          bottom: { style: 'thin' },
+          right: { style: 'thin' },
+        };
+      });
+
+      // Add data rows
+      exportRows.forEach((r, i) => {
+        const row = worksheet.addRow([
+          i + 1,
+          r.employeeId,
+          r.employeeName,
+          r.position,
+          r.department,
+          r.section,
+          r.leaveDate,
+          r.totalDays,
+          r.leaveTypeName,
+          r.reason,
+          r.statusLabel,
+          r.note,
+        ]);
+        row.eachCell((cell) => {
+          cell.border = {
+            top: { style: 'thin' },
+            left: { style: 'thin' },
+            bottom: { style: 'thin' },
+            right: { style: 'thin' },
+          };
+        });
+      });
+
+      // Generate buffer and download
+      const buffer = await workbook.xlsx.writeBuffer();
+      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
       const today = new Date().toISOString().slice(0, 10);
-      XLSX.writeFile(wb, `leave-report-${today}.xlsx`);
+      a.download = `leave-report-${today}.xlsx`;
+      a.click();
+      URL.revokeObjectURL(url);
     } catch {
       toastError('Export Excel ไม่สำเร็จ');
     }

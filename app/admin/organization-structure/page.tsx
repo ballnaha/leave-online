@@ -132,6 +132,14 @@ const roleColors: Record<string, { bg: string; color: string }> = {
   employee: { bg: '#F5F5F5', color: '#616161' },
 };
 
+// Shift display labels
+const shiftLabels: Record<string, string> = {
+  shift_a: 'กะ A',
+  shift_b: 'กะ B',
+  day: 'กะ A',  // backwards compatibility
+  night: 'กะ B', // backwards compatibility
+};
+
 // Stat Card Component
 interface StatCardProps {
   title: string;
@@ -664,7 +672,7 @@ export default function OrganizationStructurePage() {
                                   )}
                                   {user.shift && (
                                     <Chip
-                                      label={user.shift}
+                                      label={shiftLabels[user.shift] || user.shift}
                                       size="small"
                                       sx={{ fontSize: '0.65rem', height: 22 }}
                                     />
@@ -772,7 +780,7 @@ export default function OrganizationStructurePage() {
                                   <Typography variant="body2">{user.sectionName || '-'}</Typography>
                                 </TableCell>
                                 <TableCell>
-                                  <Typography variant="body2">{user.shift || '-'}</Typography>
+                                  <Typography variant="body2">{user.shift ? shiftLabels[user.shift] || user.shift : '-'}</Typography>
                                 </TableCell>
                                 <TableCell>
                                   <Chip

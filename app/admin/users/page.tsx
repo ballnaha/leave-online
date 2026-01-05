@@ -98,9 +98,11 @@ interface StatCardProps {
   icon: React.ReactNode;
   color: 'primary' | 'success' | 'warning' | 'error' | 'secondary';
   subtitle?: string;
+  onClick?: () => void;
+  isActive?: boolean;
 }
 
-const StatCard = memo(function StatCard({ title, value, icon, color, subtitle }: StatCardProps) {
+const StatCard = memo(function StatCard({ title, value, icon, color, subtitle, onClick, isActive }: StatCardProps) {
   const theme = useTheme();
 
   const colorMap = {
@@ -116,14 +118,17 @@ const StatCard = memo(function StatCard({ title, value, icon, color, subtitle }:
       sx={{
         borderRadius: 1,
         border: '1px solid',
-        borderColor: 'divider',
-        boxShadow: '0 4px 20px rgba(0,0,0,0.04)',
+        borderColor: isActive ? `${colorMap[color].main}` : 'divider',
+        bgcolor: isActive ? alpha(colorMap[color].main, 0.04) : 'background.paper',
+        boxShadow: isActive ? `0 0 0 1px ${colorMap[color].main}` : '0 4px 20px rgba(0,0,0,0.04)',
+        cursor: onClick ? 'pointer' : 'default',
         transition: 'all 0.3s ease',
         '&:hover': {
-          transform: 'translateY(-4px)',
+          transform: onClick ? 'translateY(-4px)' : 'none',
           boxShadow: '0 8px 30px rgba(0,0,0,0.08)',
         },
       }}
+      onClick={onClick}
     >
       <CardContent sx={{ p: 3 }}>
         <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
@@ -200,6 +205,7 @@ export default function UsersPage() {
   const [departmentFilter, setDepartmentFilter] = useState<string>('all');
   const [sectionFilter, setSectionFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [showNewUsersOnly, setShowNewUsersOnly] = useState(false);
 
   // View Mode: 'list' (table/card) or 'tree' (accordion)
   const [viewMode, setViewMode] = useState<'list' | 'tree'>('list');
@@ -369,25 +375,29 @@ export default function UsersPage() {
 
   // Filter users (memoized to prevent unnecessary re-renders)
   const filteredUsers = useMemo(() => {
-    return users.filter((user) => {
-      const matchesSearch =
-        user.employeeId.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        user.firstName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        user.lastName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (user.email?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false);
+    return users
+      .filter((user) => {
+        const matchesSearch =
+          user.employeeId.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          user.firstName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          user.lastName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          (user.email?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false);
 
-      const matchesCompany = companyFilter === 'all' || user.company === companyFilter;
-      const matchesDepartment = departmentFilter === 'all' || user.department === departmentFilter;
-      const matchesSection = sectionFilter === 'all' || user.section === sectionFilter;
-      const matchesRole = roleTab === 'all' || user.role === roleTab;
-      const matchesStatus =
-        statusFilter === 'all' ||
-        (statusFilter === 'active' && user.isActive) ||
-        (statusFilter === 'inactive' && !user.isActive);
+        const matchesCompany = companyFilter === 'all' || user.company === companyFilter;
+        const matchesDepartment = departmentFilter === 'all' || user.department === departmentFilter;
+        const matchesSection = sectionFilter === 'all' || user.section === sectionFilter;
+        const matchesRole = roleTab === 'all' || user.role === roleTab;
+        const matchesStatus =
+          statusFilter === 'all' ||
+          (statusFilter === 'active' && user.isActive) ||
+          (statusFilter === 'inactive' && !user.isActive);
 
-      return matchesSearch && matchesCompany && matchesDepartment && matchesSection && matchesRole && matchesStatus;
-    });
-  }, [users, searchQuery, companyFilter, departmentFilter, sectionFilter, roleTab, statusFilter]);
+        const matchesNewUser = !showNewUsersOnly || dayjs(user.startDate).isSame(dayjs(), 'month');
+
+        return matchesSearch && matchesCompany && matchesDepartment && matchesSection && matchesRole && matchesStatus && matchesNewUser;
+      })
+      .sort((a, b) => a.firstName.localeCompare(b.firstName, 'th'));
+  }, [users, searchQuery, companyFilter, departmentFilter, sectionFilter, roleTab, statusFilter, showNewUsersOnly]);
 
   // Paginated users
   const paginatedUsers = filteredUsers.slice(
@@ -528,7 +538,7 @@ export default function UsersPage() {
   // Reset page when filters change
   useEffect(() => {
     setPage(0);
-  }, [searchQuery, companyFilter, departmentFilter, sectionFilter, roleTab, statusFilter]);
+  }, [searchQuery, companyFilter, departmentFilter, sectionFilter, roleTab, statusFilter, showNewUsersOnly]);
 
   // Reset section filter when department changes
   useEffect(() => {
@@ -609,6 +619,16 @@ export default function UsersPage() {
           icon={<People size={26} color={theme.palette.primary.main} variant="Bold" />}
           color="primary"
           subtitle="ในระบบ"
+          onClick={() => {
+            setSearchQuery('');
+            setCompanyFilter('all');
+            setDepartmentFilter('all');
+            setSectionFilter('all');
+            setStatusFilter('all');
+            setShowNewUsersOnly(false);
+            setRoleTab('all');
+          }}
+          isActive={false}
         />
         <StatCard
           title="พนักงานใหม่"
@@ -616,6 +636,8 @@ export default function UsersPage() {
           icon={<User size={26} color={theme.palette.success.main} variant="Bold" />}
           color="success"
           subtitle="เดือนนี้"
+          onClick={() => setShowNewUsersOnly(!showNewUsersOnly)}
+          isActive={showNewUsersOnly}
         />
         <StatCard
           title="เปิดใช้งาน"
@@ -623,6 +645,8 @@ export default function UsersPage() {
           icon={<TickCircle size={26} color={theme.palette.warning.main} variant="Bold" />}
           color="warning"
           subtitle="Active Users"
+          onClick={() => setStatusFilter(statusFilter === 'active' ? 'all' : 'active')}
+          isActive={statusFilter === 'active'}
         />
         <StatCard
           title="ปิดใช้งาน"
@@ -630,8 +654,12 @@ export default function UsersPage() {
           icon={<CloseCircle size={26} color={theme.palette.secondary.main} variant="Bold" />}
           color="secondary"
           subtitle="Inactive Users"
+          onClick={() => setStatusFilter(statusFilter === 'inactive' ? 'all' : 'inactive')}
+          isActive={statusFilter === 'inactive'}
         />
       </Box>
+
+
 
       {/* Role Tabs */}
       <Paper
@@ -731,22 +759,12 @@ export default function UsersPage() {
               },
             }}
             InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <SearchNormal1 size={18} color={theme.palette.text.secondary} />
-                </InputAdornment>
-              ),
             }}
           />
 
           {/* Company Filter */}
           <FormControl size="small" fullWidth>
-            <InputLabel>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                <Building size={16} color={theme.palette.text.secondary} />
-                บริษัท
-              </Box>
-            </InputLabel>
+            <InputLabel>บริษัท</InputLabel>
             <Select
               value={companyFilter}
               onChange={(e) => setCompanyFilter(e.target.value)}
@@ -764,12 +782,7 @@ export default function UsersPage() {
 
           {/* Department Filter */}
           <FormControl size="small" fullWidth>
-            <InputLabel>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                <Layer size={16} color={theme.palette.text.secondary} />
-                ฝ่าย
-              </Box>
-            </InputLabel>
+            <InputLabel>ฝ่าย</InputLabel>
             <Select
               value={departmentFilter}
               onChange={(e) => setDepartmentFilter(e.target.value)}
@@ -795,12 +808,7 @@ export default function UsersPage() {
         }}>
           {/* Section Filter */}
           <FormControl size="small" fullWidth>
-            <InputLabel>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                <Layer size={16} color={theme.palette.text.secondary} />
-                แผนก
-              </Box>
-            </InputLabel>
+            <InputLabel>แผนก</InputLabel>
             <Select
               value={sectionFilter}
               onChange={(e) => setSectionFilter(e.target.value)}
@@ -818,12 +826,7 @@ export default function UsersPage() {
 
           {/* Status Filter */}
           <FormControl size="small" fullWidth>
-            <InputLabel>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                <Filter size={16} color={theme.palette.text.secondary} />
-                สถานะ
-              </Box>
-            </InputLabel>
+            <InputLabel>สถานะ</InputLabel>
             <Select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
@@ -911,6 +914,97 @@ export default function UsersPage() {
         </Box>
       </Paper>
 
+      {/* Active Filters */}
+      {(searchQuery || companyFilter !== 'all' || departmentFilter !== 'all' || sectionFilter !== 'all' || statusFilter !== 'all' || showNewUsersOnly || roleTab !== 'all') && (
+        <Box sx={{ mb: 3, display: 'flex', flexWrap: 'wrap', gap: 1, alignItems: 'center' }}>
+          <Typography variant="body2" color="text.secondary" mr={1}>
+            ตัวกรองที่เลือก:
+          </Typography>
+
+          {searchQuery && (
+            <Chip
+              label={`ค้นหา: ${searchQuery}`}
+              onDelete={() => setSearchQuery('')}
+              color="primary"
+              variant="outlined"
+              size="small"
+            />
+          )}
+          {roleTab !== 'all' && (
+            <Chip
+              label={`ตำแหน่ง: ${roleTabs.find(t => t.value === roleTab)?.label}`}
+              onDelete={() => setRoleTab('all')}
+              color="primary"
+              variant="outlined"
+              size="small"
+            />
+          )}
+          {companyFilter !== 'all' && (
+            <Chip
+              label={`บริษัท: ${companyFilter}`}
+              onDelete={() => setCompanyFilter('all')}
+              color="primary"
+              variant="outlined"
+              size="small"
+            />
+          )}
+          {departmentFilter !== 'all' && (
+            <Chip
+              label={`ฝ่าย: ${departmentNameMap.get(departmentFilter) || departmentFilter}`}
+              onDelete={() => setDepartmentFilter('all')}
+              color="primary"
+              variant="outlined"
+              size="small"
+            />
+          )}
+          {sectionFilter !== 'all' && (
+            <Chip
+              label={`แผนก: ${sectionNameMap.get(sectionFilter) || sectionFilter}`}
+              onDelete={() => setSectionFilter('all')}
+              color="primary"
+              variant="outlined"
+              size="small"
+            />
+          )}
+          {statusFilter !== 'all' && (
+            <Chip
+              label={`สถานะ: ${statusFilter === 'active' ? 'Active' : 'Inactive'}`}
+              onDelete={() => setStatusFilter('all')}
+              color="primary"
+              variant="outlined"
+              size="small"
+            />
+          )}
+          {showNewUsersOnly && (
+            <Chip
+              label="พนักงานใหม่เดือนนี้"
+              onDelete={() => setShowNewUsersOnly(false)}
+              color="success"
+              variant="filled"
+              size="small"
+              icon={<User size={14} variant="Bold" />}
+            />
+          )}
+
+          <Button
+            size="small"
+            color="error"
+            sx={{ ml: 1, textTransform: 'none' }}
+            onClick={() => {
+              setSearchQuery('');
+              setCompanyFilter('all');
+              setDepartmentFilter('all');
+              setSectionFilter('all');
+              setStatusFilter('all');
+              setShowNewUsersOnly(false);
+              setRoleTab('all');
+            }}
+          >
+            ล้างตัวกรองทั้งหมด
+          </Button>
+        </Box>
+      )}
+
       {/* Error Alert */}
       {error && (
         <Alert
@@ -994,10 +1088,12 @@ export default function UsersPage() {
                             sx={{
                               cursor: 'pointer',
                               bgcolor: companyBgColor,
+                              borderTop: '8px solid',
+                              borderColor: 'background.paper', // Match table background to look like spacing
                               '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.08) },
                             }}
                           >
-                            <TableCell sx={{ py: 1.5 }}>
+                            <TableCell sx={{ py: 2 }}>
                               <IconButton size="small" sx={{ p: 0.5 }}>
                                 <ArrowDown2
                                   size={18}
@@ -1049,10 +1145,12 @@ export default function UsersPage() {
                                   sx={{
                                     cursor: 'pointer',
                                     bgcolor: deptBgColor,
+                                    borderTop: '4px solid',
+                                    borderColor: 'background.paper',
                                     '&:hover': { bgcolor: alpha(theme.palette.info.main, 0.1) },
                                   }}
                                 >
-                                  <TableCell sx={{ py: 1, pl: 3 }}>
+                                  <TableCell sx={{ py: 1.5, pl: 3 }}>
                                     <IconButton size="small" sx={{ p: 0.25 }}>
                                       <ArrowDown2
                                         size={16}
@@ -1108,10 +1206,12 @@ export default function UsersPage() {
                                             sx={{
                                               cursor: 'pointer',
                                               bgcolor: sectionBgColor,
+                                              borderTop: '2px solid',
+                                              borderColor: 'background.paper',
                                               '&:hover': { bgcolor: alpha(theme.palette.warning.main, 0.1) },
                                             }}
                                           >
-                                            <TableCell sx={{ py: 0.75, pl: 5 }}>
+                                            <TableCell sx={{ py: 1.25, pl: 5 }}>
                                               <IconButton size="small" sx={{ p: 0.25 }}>
                                                 <ArrowDown2
                                                   size={14}
@@ -1150,7 +1250,9 @@ export default function UsersPage() {
                                               key={user.id}
                                               hover
                                               sx={{
-                                                '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.04) },
+                                                bgcolor: alpha(theme.palette.primary.main, 0.06), // Clearly distinct background
+                                                '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.12) },
+                                                borderLeft: `4px solid ${alpha(theme.palette.primary.main, 0.6)}`, // More visible nesting indicator
                                               }}
                                             >
                                               <TableCell />

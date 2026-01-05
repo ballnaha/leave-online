@@ -39,6 +39,8 @@ import {
     UserRemove,
     FilterEdit,
     ArrowDown2,
+    ArrowLeft2,
+    Building4,
 } from 'iconsax-react';
 import { useRouter } from 'next/navigation';
 import {
@@ -120,6 +122,36 @@ interface ComparisonStat {
     previous: number;
 }
 
+interface DrilldownDepartment {
+    code: string;
+    name: string;
+    totalDays: number;
+}
+
+interface DrilldownData {
+    leaveType: string;
+    year: number;
+    totalDays: number;
+    departments: DrilldownDepartment[];
+}
+
+interface DrilldownSection {
+    code: string;
+    name: string;
+    totalDays: number;
+}
+
+interface SectionDrilldownData {
+    leaveType: string;
+    department: {
+        code: string;
+        name: string;
+    };
+    year: number;
+    totalDays: number;
+    sections: DrilldownSection[];
+}
+
 interface DashboardData {
     stats: DashboardStats;
     pendingLeaves: PendingLeave[];
@@ -147,6 +179,13 @@ export default function AdminDashboardPage() {
     const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
     const isMobile = useMediaQuery(theme.breakpoints.down('lg'));
     const [showMobileFilters, setShowMobileFilters] = useState(false);
+
+    // Drilldown chart state
+    const [drilldownLevel, setDrilldownLevel] = useState<'none' | 'department' | 'section'>('none');
+    const [drilldownData, setDrilldownData] = useState<DrilldownData | null>(null);
+    const [sectionDrilldownData, setSectionDrilldownData] = useState<SectionDrilldownData | null>(null);
+    const [drilldownLoading, setDrilldownLoading] = useState(false);
+    const showDrilldown = drilldownLevel !== 'none';
 
     const fetchData = async (isInitial = true, company = 'all', dept = 'all', section = 'all', year = selectedYear) => {
         if (isInitial) setLoading(true);
@@ -203,6 +242,84 @@ export default function AdminDashboardPage() {
         fetchData(false, selectedCompany, selectedDept, selectedSection, year);
     };
 
+    // Drilldown functions
+    const fetchDrilldownData = async (leaveType: string) => {
+        setDrilldownLoading(true);
+        setDrilldownLevel('department');
+        setDrilldownData(null);
+        setSectionDrilldownData(null);
+
+        try {
+            const params = new URLSearchParams();
+            params.append('leaveType', leaveType);
+            if (selectedCompany !== 'all') params.append('company', selectedCompany);
+            if (selectedDept !== 'all') params.append('dept', selectedDept);
+            if (selectedSection !== 'all') params.append('section', selectedSection);
+            params.append('year', selectedYear.toString());
+
+            const res = await fetch(`/api/admin/dashboard/drilldown?${params.toString()}`);
+            if (res.ok) {
+                const result = await res.json();
+                setDrilldownData(result);
+            }
+        } catch (error) {
+            console.error('Failed to fetch drilldown data', error);
+        } finally {
+            setDrilldownLoading(false);
+        }
+    };
+
+    const fetchSectionDrilldownData = async (departmentCode: string) => {
+        if (!drilldownData) return;
+
+        setDrilldownLoading(true);
+        setDrilldownLevel('section');
+        setSectionDrilldownData(null);
+
+        try {
+            const params = new URLSearchParams();
+            params.append('leaveType', drilldownData.leaveType);
+            params.append('department', departmentCode);
+            if (selectedCompany !== 'all') params.append('company', selectedCompany);
+            params.append('year', selectedYear.toString());
+
+            const res = await fetch(`/api/admin/dashboard/drilldown/section?${params.toString()}`);
+            if (res.ok) {
+                const result = await res.json();
+                setSectionDrilldownData(result);
+            }
+        } catch (error) {
+            console.error('Failed to fetch section drilldown data', error);
+        } finally {
+            setDrilldownLoading(false);
+        }
+    };
+
+    const handleChartClick = (_event: any, elements: any[]) => {
+        if (elements.length > 0 && data?.comparisonStats) {
+            const index = elements[0].index;
+            const leaveType = data.comparisonStats[index]?.type;
+            if (leaveType) {
+                fetchDrilldownData(leaveType);
+            }
+        }
+    };
+
+    const handleDepartmentClick = (departmentCode: string) => {
+        fetchSectionDrilldownData(departmentCode);
+    };
+
+    const handleBackFromDrilldown = () => {
+        if (drilldownLevel === 'section') {
+            // Go back to department level
+            setDrilldownLevel('department');
+            setSectionDrilldownData(null);
+        } else {
+            // Go back to chart
+            setDrilldownLevel('none');
+            setDrilldownData(null);
+        }
+    };
 
     const typeColors: { [key: string]: string } = {
         'ลาป่วย': '#5E72E4',
@@ -597,175 +714,507 @@ export default function AdminDashboardPage() {
                             bgcolor: alpha(theme.palette.background.paper, 0.75),
                             boxShadow: '0 4px 20px rgba(0, 0, 0, 0.04)',
                         }}>
-                            {/* Header with inline legend */}
-                            <Box sx={{
-                                display: 'flex',
-                                justifyContent: 'space-between',
-                                alignItems: 'flex-start',
-                                mb: 4,
-                                flexWrap: 'wrap',
-                                gap: 2
-                            }}>
-                                <Box>
-                                    <Typography variant="h6" fontWeight={700} sx={{ color: theme.palette.text.primary, mb: 0.5 }}>
-                                        เปรียบเทียบสถิติการลา
-                                    </Typography>
-                                    <Typography variant="body2" color="text.secondary">
-                                        เปรียบเทียบปี {selectedYear + 543} กับปี {selectedYear + 542}
-                                    </Typography>
-                                </Box>
-
-                                {/* Inline Legend */}
-                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                        <Box sx={{
-                                            width: 8,
-                                            height: 8,
-                                            borderRadius: '50%',
-                                            bgcolor: '#6366F1',
-                                        }} />
-                                        <Typography variant="body2" sx={{ color: theme.palette.text.secondary, fontWeight: 500 }}>
-                                            ปี {selectedYear + 543}
-                                        </Typography>
-                                    </Box>
-                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                        <Box sx={{
-                                            width: 8,
-                                            height: 8,
-                                            borderRadius: '50%',
-                                            bgcolor: '#A78BFA',
-                                        }} />
-                                        <Typography variant="body2" sx={{ color: theme.palette.text.secondary, fontWeight: 500 }}>
-                                            ปี {selectedYear + 542}
-                                        </Typography>
-                                    </Box>
-                                </Box>
-                            </Box>
-
-                            <Box sx={{ height: 320, width: '100%', position: 'relative' }}>
-                                {statsLoading ? (
-                                    <Skeleton variant="rectangular" height="100%" width="100%" sx={{ borderRadius: 2 }} />
-                                ) : data?.comparisonStats && data.comparisonStats.length > 0 ? (
-                                    <Bar
-                                        data={{
-                                            labels: data.comparisonStats.map(s => s.type),
-                                            datasets: [
-                                                {
-                                                    label: `ปี ${selectedYear + 543}`,
-                                                    data: data.comparisonStats.map(s => s.current),
-                                                    backgroundColor: '#6366F1',
-                                                    hoverBackgroundColor: '#4F46E5',
-                                                    borderRadius: {
-                                                        topLeft: 6,
-                                                        topRight: 6,
-                                                        bottomLeft: 6,
-                                                        bottomRight: 6,
-                                                    },
-                                                    borderSkipped: false,
-                                                    barThickness: 18,
-                                                    categoryPercentage: 0.7,
-                                                    barPercentage: 0.85,
-                                                },
-                                                {
-                                                    label: `ปี ${selectedYear + 542}`,
-                                                    data: data.comparisonStats.map(s => s.previous),
-                                                    backgroundColor: '#C4B5FD',
-                                                    hoverBackgroundColor: '#A78BFA',
-                                                    borderRadius: {
-                                                        topLeft: 6,
-                                                        topRight: 6,
-                                                        bottomLeft: 6,
-                                                        bottomRight: 6,
-                                                    },
-                                                    borderSkipped: false,
-                                                    barThickness: 18,
-                                                    categoryPercentage: 0.7,
-                                                    barPercentage: 0.85,
-                                                }
-                                            ]
-                                        }}
-                                        options={{
-                                            responsive: true,
-                                            maintainAspectRatio: false,
-                                            plugins: {
-                                                legend: {
-                                                    display: false,
-                                                },
-                                                tooltip: {
-                                                    enabled: true,
-                                                    padding: 12,
-                                                    backgroundColor: 'rgba(255, 255, 255, 0.98)',
-                                                    titleColor: theme.palette.text.primary,
-                                                    bodyColor: theme.palette.text.secondary,
-                                                    borderColor: alpha(theme.palette.divider, 0.2),
-                                                    borderWidth: 1,
-                                                    cornerRadius: 8,
-                                                    displayColors: true,
-                                                    boxWidth: 8,
-                                                    boxHeight: 8,
-                                                    boxPadding: 4,
-                                                    titleFont: { weight: 'bold' as const, size: 12 },
-                                                    bodyFont: { size: 11 },
-                                                    callbacks: {
-                                                        label: (context: any) => ` ${context.dataset.label}: ${context.raw} วัน`
-                                                    }
-                                                }
+                            {showDrilldown ? (
+                                /* Drilldown View */
+                                <Box
+                                    sx={{
+                                        animation: 'fadeScaleIn 0.35s cubic-bezier(0.4, 0, 0.2, 1) forwards',
+                                        '@keyframes fadeScaleIn': {
+                                            '0%': {
+                                                opacity: 0,
+                                                transform: 'scale(0.95)',
                                             },
-                                            scales: {
-                                                y: {
-                                                    beginAtZero: true,
-                                                    border: { display: false },
-                                                    ticks: {
-                                                        maxTicksLimit: 5,
-                                                        font: { size: 11, weight: 400 },
-                                                        color: alpha(theme.palette.text.secondary, 0.7),
-                                                        padding: 12,
-                                                    },
-                                                    grid: {
-                                                        color: alpha(theme.palette.divider, 0.4),
-                                                        drawTicks: false,
-                                                        lineWidth: 1,
-                                                    }
-                                                },
-                                                x: {
-                                                    border: { display: false },
-                                                    grid: { display: false },
-                                                    ticks: {
-                                                        font: { size: 11, weight: 500 },
-                                                        color: alpha(theme.palette.text.secondary, 0.8),
-                                                        padding: 8,
-                                                    }
-                                                }
-                                            }
-                                        }}
-                                        plugins={[{
-                                            id: 'datalabels',
-                                            afterDatasetsDraw(chart: any) {
-                                                const { ctx, data } = chart;
-                                                ctx.save();
-                                                data.datasets.forEach((dataset: any, i: number) => {
-                                                    const meta = chart.getDatasetMeta(i);
-                                                    meta.data.forEach((bar: any, index: number) => {
-                                                        const dataValue = dataset.data[index];
-                                                        if (dataValue > 0) {
-                                                            ctx.fillStyle = i === 0 ? '#4338CA' : '#7C3AED';
-                                                            ctx.font = '600 10px Inter, system-ui, sans-serif';
-                                                            ctx.textAlign = 'center';
-                                                            ctx.textBaseline = 'bottom';
-                                                            ctx.fillText(dataValue, bar.x, bar.y - 4);
-                                                        }
-                                                    });
-                                                });
-                                                ctx.restore();
-                                            }
-                                        }]}
-                                    />
-                                ) : (
-                                    <Box sx={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', width: '100%' }}>
-                                        <Typography variant="body2" color="text.secondary">ไม่มีข้อมูลสำหรับการเปรียบเทียบในเงื่อนไขที่เลือก</Typography>
+                                            '100%': {
+                                                opacity: 1,
+                                                transform: 'scale(1)',
+                                            },
+                                        },
+                                    }}
+                                >
+                                    {/* Drilldown Header */}
+                                    <Box sx={{
+                                        display: 'flex',
+                                        justifyContent: 'space-between',
+                                        alignItems: 'flex-start',
+                                        mb: 4,
+                                        flexWrap: 'wrap',
+                                        gap: 2
+                                    }}>
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                                            <IconButton
+                                                onClick={handleBackFromDrilldown}
+                                                size="small"
+                                                sx={{
+                                                    bgcolor: alpha('#6366F1', 0.1),
+                                                    '&:hover': { bgcolor: alpha('#6366F1', 0.2) },
+                                                }}
+                                            >
+                                                <ArrowLeft2 size={18} color="#6366F1" />
+                                            </IconButton>
+                                            <Box>
+                                                <Typography variant="h6" fontWeight={700} sx={{ color: theme.palette.text.primary, mb: 0.5 }}>
+                                                    {drilldownLevel === 'section'
+                                                        ? sectionDrilldownData?.department?.name || 'รายละเอียดแผนก'
+                                                        : drilldownData?.leaveType || 'รายละเอียดการลา'}
+                                                </Typography>
+                                                <Typography variant="body2" color="text.secondary">
+                                                    {drilldownLevel === 'section'
+                                                        ? `${drilldownData?.leaveType} • แยกตามหน่วยงาน • ปี ${selectedYear + 543} • รวม ${sectionDrilldownData?.totalDays || 0} วัน`
+                                                        : `แยกตามฝ่าย • ปี ${selectedYear + 543} • รวม ${drilldownData?.totalDays || 0} วัน • คลิกเพื่อดูหน่วยงาน`}
+                                                </Typography>
+                                            </Box>
+                                        </Box>
+                                        <Chip
+                                            label={drilldownLevel === 'section'
+                                                ? `${sectionDrilldownData?.sections?.length || 0} หน่วยงาน`
+                                                : `${drilldownData?.departments?.length || 0} ฝ่าย`}
+                                            size="small"
+                                            sx={{
+                                                bgcolor: alpha(drilldownLevel === 'section' ? '#10B981' : '#6366F1', 0.1),
+                                                color: drilldownLevel === 'section' ? '#10B981' : '#6366F1',
+                                                fontWeight: 600,
+                                            }}
+                                        />
                                     </Box>
-                                )}
-                            </Box>
+
+                                    {/* Drilldown Content */}
+                                    <Box sx={{ height: 320, overflow: 'auto', width: '100%' }}>
+                                        {drilldownLoading ? (
+                                            <Stack spacing={1}>
+                                                {[...Array(6)].map((_, index) => (
+                                                    <Box
+                                                        key={index}
+                                                        sx={{
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            gap: 2,
+                                                            p: 1.5,
+                                                            borderRadius: 1,
+                                                        }}
+                                                    >
+                                                        <Skeleton variant="circular" width={28} height={28} />
+                                                        <Box sx={{ flex: 1 }}>
+                                                            <Skeleton variant="text" width={`${70 - index * 8}%`} height={20} />
+                                                        </Box>
+                                                        <Skeleton variant="rectangular" width={80} height={4} sx={{ borderRadius: 2, display: { xs: 'none', sm: 'block' } }} />
+                                                        <Skeleton variant="text" width={50} height={20} />
+                                                    </Box>
+                                                ))}
+                                            </Stack>
+                                        ) : drilldownLevel === 'section' ? (
+                                            /* Section Level */
+                                            sectionDrilldownData && sectionDrilldownData.sections.length > 0 ? (
+                                                <Stack spacing={1}>
+                                                    {sectionDrilldownData.sections.map((section, index) => {
+                                                        const maxDays = sectionDrilldownData.sections[0]?.totalDays || 1;
+                                                        const percentage = (section.totalDays / maxDays) * 100;
+
+                                                        return (
+                                                            <Box
+                                                                key={section.code}
+                                                                sx={{
+                                                                    display: 'flex',
+                                                                    alignItems: 'center',
+                                                                    gap: 2,
+                                                                    p: 1.5,
+                                                                    borderRadius: 1,
+                                                                    bgcolor: index === 0
+                                                                        ? alpha('#10B981', 0.08)
+                                                                        : index % 2 === 0
+                                                                            ? alpha(theme.palette.background.default, 0.5)
+                                                                            : 'transparent',
+                                                                    transition: 'all 0.15s ease',
+                                                                }}
+                                                            >
+                                                                {/* Rank Number */}
+                                                                <Typography
+                                                                    variant="body2"
+                                                                    sx={{
+                                                                        minWidth: 28,
+                                                                        height: 28,
+                                                                        borderRadius: '50%',
+                                                                        bgcolor: index < 3
+                                                                            ? ['#F59E0B', '#94A3B8', '#CD7F32'][index]
+                                                                            : alpha('#10B981', 0.1),
+                                                                        color: index < 3 ? 'white' : '#10B981',
+                                                                        display: 'flex',
+                                                                        alignItems: 'center',
+                                                                        justifyContent: 'center',
+                                                                        fontWeight: 700,
+                                                                        fontSize: '0.75rem',
+                                                                        flexShrink: 0,
+                                                                    }}
+                                                                >
+                                                                    {index + 1}
+                                                                </Typography>
+
+                                                                {/* Section Name */}
+                                                                <Box sx={{ flex: 1, minWidth: 0 }}>
+                                                                    <Typography
+                                                                        variant="body2"
+                                                                        fontWeight={index === 0 ? 600 : 500}
+                                                                        sx={{
+                                                                            overflow: 'hidden',
+                                                                            textOverflow: 'ellipsis',
+                                                                            whiteSpace: 'nowrap',
+                                                                            color: index === 0 ? '#047857' : 'text.primary',
+                                                                        }}
+                                                                    >
+                                                                        {section.name}
+                                                                    </Typography>
+                                                                </Box>
+
+                                                                {/* Progress Bar */}
+                                                                <Box sx={{ width: 80, display: { xs: 'none', sm: 'block' } }}>
+                                                                    <LinearProgress
+                                                                        variant="determinate"
+                                                                        value={percentage}
+                                                                        sx={{
+                                                                            height: 4,
+                                                                            borderRadius: 2,
+                                                                            bgcolor: alpha('#10B981', 0.1),
+                                                                            '& .MuiLinearProgress-bar': {
+                                                                                bgcolor: index === 0 ? '#10B981' : '#6EE7B7',
+                                                                                borderRadius: 2,
+                                                                            }
+                                                                        }}
+                                                                    />
+                                                                </Box>
+
+                                                                {/* Days Value */}
+                                                                <Typography
+                                                                    variant="body2"
+                                                                    fontWeight={700}
+                                                                    sx={{
+                                                                        minWidth: 60,
+                                                                        textAlign: 'right',
+                                                                        color: index === 0 ? '#047857' : 'text.primary',
+                                                                    }}
+                                                                >
+                                                                    {section.totalDays} วัน
+                                                                </Typography>
+                                                            </Box>
+                                                        );
+                                                    })}
+                                                </Stack>
+                                            ) : (
+                                                <Box sx={{ height: 200, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', width: '100%' }}>
+                                                    <Building4 size={48} color="#94A3B8" variant="Outline" />
+                                                    <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
+                                                        ไม่พบข้อมูลหน่วยงานในฝ่ายนี้
+                                                    </Typography>
+                                                </Box>
+                                            )
+                                        ) : (
+                                            /* Department Level */
+                                            drilldownData && drilldownData.departments.length > 0 ? (
+                                                <Stack spacing={1}>
+                                                    {drilldownData.departments.map((dept, index) => {
+                                                        const maxDays = drilldownData.departments[0]?.totalDays || 1;
+                                                        const percentage = (dept.totalDays / maxDays) * 100;
+
+                                                        return (
+                                                            <Box
+                                                                key={dept.code}
+                                                                onClick={() => handleDepartmentClick(dept.code)}
+                                                                sx={{
+                                                                    display: 'flex',
+                                                                    alignItems: 'center',
+                                                                    gap: 2,
+                                                                    p: 1.5,
+                                                                    borderRadius: 1,
+                                                                    cursor: 'pointer',
+                                                                    bgcolor: index === 0
+                                                                        ? alpha('#6366F1', 0.08)
+                                                                        : index % 2 === 0
+                                                                            ? alpha(theme.palette.background.default, 0.5)
+                                                                            : 'transparent',
+                                                                    transition: 'background-color 0.15s ease',
+                                                                    '&:hover': {
+                                                                        bgcolor: alpha('#6366F1', 0.12),
+                                                                    },
+                                                                }}
+                                                            >
+                                                                {/* Rank Number */}
+                                                                <Typography
+                                                                    variant="body2"
+                                                                    sx={{
+                                                                        minWidth: 28,
+                                                                        height: 28,
+                                                                        borderRadius: '50%',
+                                                                        bgcolor: index < 3
+                                                                            ? ['#F59E0B', '#94A3B8', '#CD7F32'][index]
+                                                                            : alpha('#6366F1', 0.1),
+                                                                        color: index < 3 ? 'white' : '#6366F1',
+                                                                        display: 'flex',
+                                                                        alignItems: 'center',
+                                                                        justifyContent: 'center',
+                                                                        fontWeight: 700,
+                                                                        fontSize: '0.75rem',
+                                                                        flexShrink: 0,
+                                                                    }}
+                                                                >
+                                                                    {index + 1}
+                                                                </Typography>
+
+                                                                {/* Department Name */}
+                                                                <Box sx={{ flex: 1, minWidth: 0 }}>
+                                                                    <Typography
+                                                                        variant="body2"
+                                                                        fontWeight={index === 0 ? 600 : 500}
+                                                                        sx={{
+                                                                            overflow: 'hidden',
+                                                                            textOverflow: 'ellipsis',
+                                                                            whiteSpace: 'nowrap',
+                                                                            color: index === 0 ? '#4338CA' : 'text.primary',
+                                                                        }}
+                                                                    >
+                                                                        {dept.name}
+                                                                    </Typography>
+                                                                </Box>
+
+                                                                {/* Progress Bar (mini) */}
+                                                                <Box sx={{ width: 80, display: { xs: 'none', sm: 'block' } }}>
+                                                                    <LinearProgress
+                                                                        variant="determinate"
+                                                                        value={percentage}
+                                                                        sx={{
+                                                                            height: 4,
+                                                                            borderRadius: 2,
+                                                                            bgcolor: alpha('#6366F1', 0.1),
+                                                                            '& .MuiLinearProgress-bar': {
+                                                                                bgcolor: index === 0 ? '#6366F1' : '#A78BFA',
+                                                                                borderRadius: 2,
+                                                                            }
+                                                                        }}
+                                                                    />
+                                                                </Box>
+
+                                                                {/* Days Value */}
+                                                                <Typography
+                                                                    variant="body2"
+                                                                    fontWeight={700}
+                                                                    sx={{
+                                                                        minWidth: 60,
+                                                                        textAlign: 'right',
+                                                                        color: index === 0 ? '#4338CA' : 'text.primary',
+                                                                    }}
+                                                                >
+                                                                    {dept.totalDays} วัน
+                                                                </Typography>
+
+                                                                {/* Arrow indicator */}
+                                                                <ArrowRight2 size={16} color="#94A3B8" />
+                                                            </Box>
+                                                        );
+                                                    })}
+                                                </Stack>
+                                            ) : (
+                                                <Box sx={{ height: 200, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', width: '100%' }}>
+                                                    <Building4 size={48} color="#94A3B8" variant="Outline" />
+                                                    <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
+                                                        ไม่พบข้อมูลการลาประเภทนี้ในเงื่อนไขที่เลือก
+                                                    </Typography>
+                                                </Box>
+                                            )
+                                        )}
+                                    </Box>
+                                </Box>
+                            ) : (
+                                /* Comparison View (Original) */
+                                <Box
+                                    sx={{
+                                        animation: 'fadeScaleIn 0.35s cubic-bezier(0.4, 0, 0.2, 1) forwards',
+                                        '@keyframes fadeScaleIn': {
+                                            '0%': {
+                                                opacity: 0,
+                                                transform: 'scale(0.95)',
+                                            },
+                                            '100%': {
+                                                opacity: 1,
+                                                transform: 'scale(1)',
+                                            },
+                                        },
+                                    }}
+                                >
+                                    {/* Header with inline legend */}
+                                    <Box sx={{
+                                        display: 'flex',
+                                        justifyContent: 'space-between',
+                                        alignItems: 'flex-start',
+                                        mb: 4,
+                                        flexWrap: 'wrap',
+                                        gap: 2
+                                    }}>
+                                        <Box>
+                                            <Typography variant="h6" fontWeight={700} sx={{ color: theme.palette.text.primary, mb: 0.5 }}>
+                                                เปรียบเทียบสถิติการลา
+                                            </Typography>
+                                            <Typography variant="body2" color="text.secondary">
+                                                เปรียบเทียบปี {selectedYear + 543} กับปี {selectedYear + 542} • คลิกที่แท่งเพื่อดูรายละเอียด
+                                            </Typography>
+                                        </Box>
+
+                                        {/* Inline Legend */}
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                <Box sx={{
+                                                    width: 8,
+                                                    height: 8,
+                                                    borderRadius: '50%',
+                                                    bgcolor: '#6366F1',
+                                                }} />
+                                                <Typography variant="body2" sx={{ color: theme.palette.text.secondary, fontWeight: 500 }}>
+                                                    ปี {selectedYear + 543}
+                                                </Typography>
+                                            </Box>
+                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                <Box sx={{
+                                                    width: 8,
+                                                    height: 8,
+                                                    borderRadius: '50%',
+                                                    bgcolor: '#A78BFA',
+                                                }} />
+                                                <Typography variant="body2" sx={{ color: theme.palette.text.secondary, fontWeight: 500 }}>
+                                                    ปี {selectedYear + 542}
+                                                </Typography>
+                                            </Box>
+                                        </Box>
+                                    </Box>
+
+                                    <Box sx={{ height: 320, width: '100%', position: 'relative' }}>
+                                        {statsLoading ? (
+                                            <Skeleton variant="rectangular" height="100%" width="100%" sx={{ borderRadius: 2 }} />
+                                        ) : data?.comparisonStats && data.comparisonStats.length > 0 ? (
+                                            <Bar
+                                                data={{
+                                                    labels: data.comparisonStats.map(s => s.type),
+                                                    datasets: [
+                                                        {
+                                                            label: `ปี ${selectedYear + 543}`,
+                                                            data: data.comparisonStats.map(s => s.current),
+                                                            backgroundColor: '#6366F1',
+                                                            hoverBackgroundColor: '#4F46E5',
+                                                            borderRadius: {
+                                                                topLeft: 6,
+                                                                topRight: 6,
+                                                                bottomLeft: 6,
+                                                                bottomRight: 6,
+                                                            },
+                                                            borderSkipped: false,
+                                                            barThickness: 18,
+                                                            categoryPercentage: 0.7,
+                                                            barPercentage: 0.85,
+                                                        },
+                                                        {
+                                                            label: `ปี ${selectedYear + 542}`,
+                                                            data: data.comparisonStats.map(s => s.previous),
+                                                            backgroundColor: '#C4B5FD',
+                                                            hoverBackgroundColor: '#A78BFA',
+                                                            borderRadius: {
+                                                                topLeft: 6,
+                                                                topRight: 6,
+                                                                bottomLeft: 6,
+                                                                bottomRight: 6,
+                                                            },
+                                                            borderSkipped: false,
+                                                            barThickness: 18,
+                                                            categoryPercentage: 0.7,
+                                                            barPercentage: 0.85,
+                                                        }
+                                                    ]
+                                                }}
+                                                options={{
+                                                    responsive: true,
+                                                    maintainAspectRatio: false,
+                                                    plugins: {
+                                                        legend: {
+                                                            display: false,
+                                                        },
+                                                        tooltip: {
+                                                            enabled: true,
+                                                            padding: 12,
+                                                            backgroundColor: 'rgba(255, 255, 255, 0.98)',
+                                                            titleColor: theme.palette.text.primary,
+                                                            bodyColor: theme.palette.text.secondary,
+                                                            borderColor: alpha(theme.palette.divider, 0.2),
+                                                            borderWidth: 1,
+                                                            cornerRadius: 8,
+                                                            displayColors: true,
+                                                            boxWidth: 8,
+                                                            boxHeight: 8,
+                                                            boxPadding: 4,
+                                                            titleFont: { weight: 'bold' as const, size: 12 },
+                                                            bodyFont: { size: 11 },
+                                                            callbacks: {
+                                                                label: (context: any) => ` ${context.dataset.label}: ${context.raw} วัน`
+                                                            }
+                                                        }
+                                                    },
+                                                    scales: {
+                                                        y: {
+                                                            beginAtZero: true,
+                                                            border: { display: false },
+                                                            ticks: {
+                                                                maxTicksLimit: 5,
+                                                                font: { size: 11, weight: 400 },
+                                                                color: alpha(theme.palette.text.secondary, 0.7),
+                                                                padding: 12,
+                                                            },
+                                                            grid: {
+                                                                color: alpha(theme.palette.divider, 0.4),
+                                                                drawTicks: false,
+                                                                lineWidth: 1,
+                                                            }
+                                                        },
+                                                        x: {
+                                                            border: { display: false },
+                                                            grid: { display: false },
+                                                            ticks: {
+                                                                font: { size: 11, weight: 500 },
+                                                                color: alpha(theme.palette.text.secondary, 0.8),
+                                                                padding: 8,
+                                                            }
+                                                        }
+                                                    },
+                                                    onClick: handleChartClick,
+                                                    onHover: (event: any, elements: any[]) => {
+                                                        const target = event.native?.target as HTMLElement | undefined;
+                                                        if (target) {
+                                                            target.style.cursor = elements.length > 0 ? 'pointer' : 'default';
+                                                        }
+                                                    },
+                                                }}
+                                                plugins={[{
+                                                    id: 'datalabels',
+                                                    afterDatasetsDraw(chart: any) {
+                                                        const { ctx, data: chartData } = chart;
+                                                        ctx.save();
+                                                        chartData.datasets.forEach((dataset: any, i: number) => {
+                                                            const meta = chart.getDatasetMeta(i);
+                                                            meta.data.forEach((bar: any, index: number) => {
+                                                                const dataValue = dataset.data[index];
+                                                                if (dataValue > 0) {
+                                                                    ctx.fillStyle = i === 0 ? '#4338CA' : '#7C3AED';
+                                                                    ctx.font = '600 10px Inter, system-ui, sans-serif';
+                                                                    ctx.textAlign = 'center';
+                                                                    ctx.textBaseline = 'bottom';
+                                                                    ctx.fillText(dataValue, bar.x, bar.y - 4);
+                                                                }
+                                                            });
+                                                        });
+                                                        ctx.restore();
+                                                    }
+                                                }]}
+                                            />
+                                        ) : (
+                                            <Box sx={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', width: '100%' }}>
+                                                <Typography variant="body2" color="text.secondary">ไม่มีข้อมูลสำหรับการเปรียบเทียบในเงื่อนไขที่เลือก</Typography>
+                                            </Box>
+                                        )}
+                                    </Box>
+                                </Box>
+                            )}
                         </Paper>
 
                         {/* Row 1: Pending & Activity */}
@@ -1264,8 +1713,10 @@ export default function AdminDashboardPage() {
                             </Stack>
                         </Paper>
                     </Box>
-                </Box>
-            </Box>
-        </Box>
+                </Box >
+            </Box >
+
+            {/* Drilldown Modal - Removed, now using inline chart */}
+        </Box >
     );
 }

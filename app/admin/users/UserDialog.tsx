@@ -24,9 +24,11 @@ import {
   useMediaQuery,
   Autocomplete,
   Checkbox,
+  Avatar,
+  CircularProgress,
 } from '@mui/material';
 import { useToastr } from '@/app/components/Toastr';
-import { User, Eye, EyeOff, LoaderCircle, UserPlus, UserCog, CheckSquare, Square } from 'lucide-react';
+import { User, Eye, EyeOff, LoaderCircle, UserPlus, UserCog, CheckSquare, Square, Camera, Trash2, Upload } from 'lucide-react';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
@@ -71,6 +73,7 @@ interface UserData {
   isActive: boolean;
   managedDepartments?: string | null;
   managedSections?: string | null;
+  avatar?: string | null;
 }
 
 interface UserDialogProps {
@@ -94,6 +97,10 @@ export default function UserDialog({
   const [departments, setDepartments] = useState<Department[]>([]);
   const [sections, setSections] = useState<Section[]>([]);
   const [showPassword, setShowPassword] = useState(false);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [pendingAvatarFile, setPendingAvatarFile] = useState<File | null>(null); // File waiting to be uploaded on save
+  const [confirmDeleteAvatar, setConfirmDeleteAvatar] = useState(false); // Confirm dialog state
 
   const [formData, setFormData] = useState({
     employeeId: '',
@@ -113,6 +120,7 @@ export default function UserDialog({
     isActive: true,
     managedDepartments: [] as string[],
     managedSections: [] as string[],
+    avatar: '' as string,
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -125,7 +133,7 @@ export default function UserDialog({
       // Parse JSON strings to arrays
       let managedDepts: string[] = [];
       let managedSects: string[] = [];
-      
+
       try {
         if (user.managedDepartments) {
           managedDepts = JSON.parse(user.managedDepartments);
@@ -155,7 +163,9 @@ export default function UserDialog({
         isActive: user.isActive ?? true,
         managedDepartments: managedDepts,
         managedSections: managedSects,
+        avatar: user.avatar || '',
       });
+      setAvatarPreview(user.avatar || null);
     } else {
       setFormData({
         employeeId: '',
@@ -175,10 +185,15 @@ export default function UserDialog({
         isActive: true,
         managedDepartments: [],
         managedSections: [],
+        avatar: '',
       });
+      setAvatarPreview(null);
     }
     setErrors({});
     setShowPassword(false);
+    setUploadingAvatar(false);
+    setPendingAvatarFile(null);
+    setConfirmDeleteAvatar(false);
   }, [user, open]);
 
   const fetchOptions = async () => {
@@ -218,18 +233,18 @@ export default function UserDialog({
       ...prev,
       [name]: type === 'checkbox' ? checked : value,
     }));
-    
+
     if (name === 'company') {
       setFormData((prev) => ({ ...prev, department: '', section: '' }));
     }
     if (name === 'department') {
       setFormData((prev) => ({ ...prev, section: '' }));
     }
-    
+
     // Reset managedDepartments/managedSections เมื่อเปลี่ยน role เป็น role ที่ไม่ต้องดูแลฝ่าย
     if (name === 'role' && !MANAGER_ROLES.includes(value)) {
-      setFormData((prev) => ({ 
-        ...prev, 
+      setFormData((prev) => ({
+        ...prev,
         managedDepartments: [],
         managedSections: [],
       }));
@@ -248,7 +263,7 @@ export default function UserDialog({
     if (!user && !formData.password) newErrors.password = 'กรุณากรอกรหัสผ่าน';
     if (!formData.company) newErrors.company = 'กรุณาเลือกบริษัท';
     if (!formData.department) newErrors.department = 'กรุณาเลือกฝ่าย';
-    
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -258,6 +273,43 @@ export default function UserDialog({
 
     setLoading(true);
     try {
+      let avatarUrl = formData.avatar;
+      const employeeIdForUpload = user?.employeeId || formData.employeeId;
+
+      // For EDIT mode: Upload avatar before saving
+      if (user && pendingAvatarFile && employeeIdForUpload) {
+        setUploadingAvatar(true);
+
+        const formDataUpload = new FormData();
+        formDataUpload.append('file', pendingAvatarFile);
+        formDataUpload.append('employeeId', employeeIdForUpload);
+
+        const uploadRes = await fetch('/api/admin/users/avatar', {
+          method: 'POST',
+          body: formDataUpload,
+        });
+
+        if (!uploadRes.ok) {
+          const uploadData = await uploadRes.json().catch(() => ({ error: 'เกิดข้อผิดพลาด' }));
+          throw new Error(uploadData.error || 'อัปโหลดรูปภาพไม่สำเร็จ');
+        }
+
+        const uploadData = await uploadRes.json();
+        avatarUrl = uploadData.url;
+        setUploadingAvatar(false);
+      }
+
+      // Delete old avatar if avatar was cleared (and there was an old one in DB)
+      if (!avatarUrl && user?.avatar && user.avatar.startsWith('/uploads/')) {
+        try {
+          await fetch(`/api/admin/users/avatar?url=${encodeURIComponent(user.avatar)}`, {
+            method: 'DELETE',
+          });
+        } catch {
+          // Ignore delete errors
+        }
+      }
+
       const url = user
         ? `/api/admin/users/${user.id}`
         : '/api/admin/users';
@@ -267,12 +319,13 @@ export default function UserDialog({
         ...formData,
         startDate: formData.startDate.toISOString(),
         // Convert arrays to JSON strings
-        managedDepartments: formData.managedDepartments.length > 0 
-          ? JSON.stringify(formData.managedDepartments) 
+        managedDepartments: formData.managedDepartments.length > 0
+          ? JSON.stringify(formData.managedDepartments)
           : null,
-        managedSections: formData.managedSections.length > 0 
-          ? JSON.stringify(formData.managedSections) 
+        managedSections: formData.managedSections.length > 0
+          ? JSON.stringify(formData.managedSections)
           : null,
+        avatar: avatarUrl || null, // Include avatar URL (for edit mode or create without avatar)
       };
 
       // สำหรับการสร้าง user ใหม่ ต้องมี password
@@ -299,11 +352,140 @@ export default function UserDialog({
         throw new Error(data.error || 'เกิดข้อผิดพลาด');
       }
 
+      // For CREATE mode: If we have pending avatar, upload it after user is created
+      if (!user && pendingAvatarFile && employeeIdForUpload) {
+        setUploadingAvatar(true);
+
+        const formDataUpload = new FormData();
+        formDataUpload.append('file', pendingAvatarFile);
+        formDataUpload.append('employeeId', employeeIdForUpload);
+
+        const uploadRes = await fetch('/api/admin/users/avatar', {
+          method: 'POST',
+          body: formDataUpload,
+        });
+
+        if (uploadRes.ok) {
+          const uploadData = await uploadRes.json();
+          // Get the newly created user and update with avatar
+          const userData = await res.json();
+          if (userData?.id) {
+            await fetch(`/api/admin/users/${userData.id}`, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ avatar: uploadData.url }),
+            });
+          }
+        }
+        setUploadingAvatar(false);
+      }
+
       onSave();
     } catch (error: any) {
       toastr.error(error.message);
     } finally {
       setLoading(false);
+      setUploadingAvatar(false);
+    }
+  };
+
+  // Avatar select handler - store file as pending, will upload on save
+  const handleAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+    if (!allowedTypes.includes(file.type)) {
+      toastr.error('รองรับเฉพาะไฟล์ JPEG, PNG, WebP และ GIF เท่านั้น');
+      return;
+    }
+
+    // Validate file size (15MB)
+    if (file.size > 15 * 1024 * 1024) {
+      toastr.error('ขนาดไฟล์ต้องไม่เกิน 15MB');
+      return;
+    }
+
+    // Must have employeeId to upload avatar (can use form employeeId for create mode)
+    if (!formData.employeeId?.trim()) {
+      toastr.warning('กรุณากรอกรหัสพนักงานก่อนเลือกรูปโปรไฟล์');
+      return;
+    }
+
+    // Store file as pending
+    setPendingAvatarFile(file);
+
+    // Create preview URL
+    const previewUrl = URL.createObjectURL(file);
+    setAvatarPreview(previewUrl);
+
+    // Reset file input
+    e.target.value = '';
+  };
+
+  // Avatar delete - open confirm dialog
+  const handleAvatarDeleteClick = () => {
+    // If just pending file (not saved yet), delete immediately without confirm
+    if (pendingAvatarFile && !user?.avatar) {
+      setPendingAvatarFile(null);
+      setAvatarPreview(user?.avatar || null);
+      return;
+    }
+    // Open confirm dialog for saved avatars
+    setConfirmDeleteAvatar(true);
+  };
+
+  // Avatar delete confirmation handler - delete from folder and database
+  const handleConfirmDeleteAvatar = async () => {
+    if (!user) return;
+
+    setUploadingAvatar(true);
+    setConfirmDeleteAvatar(false);
+
+    try {
+      // 1. Delete from folder if it's our uploaded file
+      const avatarToDelete = user.avatar || formData.avatar;
+      if (avatarToDelete && avatarToDelete.startsWith('/uploads/')) {
+        await fetch(`/api/admin/users/avatar?url=${encodeURIComponent(avatarToDelete)}`, {
+          method: 'DELETE',
+        });
+      }
+
+      // 2. Update database to remove avatar
+      const updateRes = await fetch(`/api/admin/users/${user.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...formData,
+          startDate: formData.startDate.toISOString(),
+          managedDepartments: formData.managedDepartments.length > 0
+            ? JSON.stringify(formData.managedDepartments)
+            : null,
+          managedSections: formData.managedSections.length > 0
+            ? JSON.stringify(formData.managedSections)
+            : null,
+          avatar: null, // Set avatar to null
+        }),
+      });
+
+      if (!updateRes.ok) {
+        throw new Error('ไม่สามารถลบรูปภาพได้');
+      }
+
+      // 3. Clear local state
+      setPendingAvatarFile(null);
+      setFormData((prev) => ({ ...prev, avatar: '' }));
+      setAvatarPreview(null);
+
+      toastr.success('ลบรูปโปรไฟล์สำเร็จ');
+
+      // 4. Refresh table and close modal
+      onSave();
+    } catch (error: any) {
+      toastr.error(error.message || 'เกิดข้อผิดพลาดในการลบรูปภาพ');
+    } finally {
+      setUploadingAvatar(false);
     }
   };
 
@@ -312,14 +494,14 @@ export default function UserDialog({
   );
 
   const selectedDepartmentObj = departments.find(d => d.code === formData.department || d.name === formData.department);
-  
+
   const filteredSections = sections.filter(
     (s) => !selectedDepartmentObj || s.departmentId === selectedDepartmentObj.id
   );
 
   // Section Header Component
   const SectionHeader = ({ title, color = 'primary' }: { title: string; color?: 'primary' | 'secondary' | 'success' | 'warning' }) => (
-    <Box sx={{ 
+    <Box sx={{
       gridColumn: '1 / -1',
       display: 'flex',
       alignItems: 'center',
@@ -329,10 +511,10 @@ export default function UserDialog({
       borderColor: `${color}.main`,
       mb: 0.5,
     }}>
-      <Typography 
-        variant="caption" 
-        fontWeight={700} 
-        sx={{ 
+      <Typography
+        variant="caption"
+        fontWeight={700}
+        sx={{
           color: `${color}.main`,
           textTransform: 'uppercase',
           letterSpacing: 1,
@@ -345,10 +527,10 @@ export default function UserDialog({
 
   return (
     <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale="th">
-      <Dialog 
-        open={open} 
-        onClose={onClose} 
-        maxWidth="md" 
+      <Dialog
+        open={open}
+        onClose={onClose}
+        maxWidth="md"
         fullWidth
         fullScreen={isMobile}
         PaperProps={{
@@ -358,9 +540,9 @@ export default function UserDialog({
           }
         }}
       >
-        <DialogTitle sx={{ 
-          display: 'flex', 
-          alignItems: 'center', 
+        <DialogTitle sx={{
+          display: 'flex',
+          alignItems: 'center',
           gap: 1.5,
           pb: 1,
           borderBottom: '1px solid',
@@ -392,15 +574,102 @@ export default function UserDialog({
         </DialogTitle>
 
         <DialogContent sx={{ p: 2 }}>
-          <Box sx={{ 
-            display: 'grid', 
-            gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, 
+          <Box sx={{
+            display: 'grid',
+            gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' },
             gap: 2,
-            mt:2,
+            mt: 2,
           }}>
             {/* Personal Info Section */}
             <SectionHeader title="ข้อมูลส่วนตัว" color="primary" />
-            
+
+            {/* Avatar Upload - Show for both create and edit modes */}
+            <Box sx={{
+              gridColumn: '1 / -1',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 3,
+              p: 2,
+              bgcolor: alpha(theme.palette.primary.main, 0.04),
+              borderRadius: 2,
+              border: '1px dashed',
+              borderColor: alpha(theme.palette.primary.main, 0.3),
+            }}>
+              <Box sx={{ position: 'relative' }}>
+                <Avatar
+                  src={avatarPreview || undefined}
+                  sx={{
+                    width: 100,
+                    height: 100,
+                    bgcolor: alpha(theme.palette.primary.main, 0.1),
+                    color: 'primary.main',
+                    fontSize: '2.5rem',
+                    fontWeight: 600,
+                    border: '3px solid',
+                    borderColor: avatarPreview ? 'primary.main' : 'divider',
+                  }}
+                >
+                  {!avatarPreview && (formData.firstName?.[0]?.toUpperCase() || <User size={40} />)}
+                </Avatar>
+                {uploadingAvatar && (
+                  <Box sx={{
+                    position: 'absolute',
+                    inset: 0,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    bgcolor: 'rgba(255,255,255,0.8)',
+                    borderRadius: '50%',
+                  }}>
+                    <CircularProgress size={32} />
+                  </Box>
+                )}
+              </Box>
+              <Box sx={{ flex: 1 }}>
+                <Typography variant="subtitle2" fontWeight={600} gutterBottom>
+                  รูปโปรไฟล์ {pendingAvatarFile && <Chip label="รอบันทึก" size="small" color="warning" sx={{ ml: 1, height: 20, fontSize: '0.65rem' }} />}
+                </Typography>
+                <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 1.5 }}>
+                  {!formData.employeeId?.trim()
+                    ? 'กรุณากรอกรหัสพนักงานก่อนเลือกรูปโปรไฟล์'
+                    : pendingAvatarFile
+                      ? 'รูปภาพจะถูกอัปโหลดเมื่อกดปุ่มบันทึก'
+                      : 'รองรับ JPEG, PNG, WebP, GIF ขนาดไม่เกิน 15MB (จะถูก resize อัตโนมัติ)'}
+                </Typography>
+                <Box sx={{ display: 'flex', gap: 1 }}>
+                  <Button
+                    component="label"
+                    variant="outlined"
+                    size="small"
+                    startIcon={<Upload size={16} />}
+                    disabled={uploadingAvatar || !formData.employeeId?.trim()}
+                    sx={{ borderRadius: 1 }}
+                  >
+                    {avatarPreview ? 'เปลี่ยนรูป' : 'อัปโหลดรูป'}
+                    <input
+                      type="file"
+                      hidden
+                      accept="image/jpeg,image/png,image/webp,image/gif"
+                      onChange={handleAvatarUpload}
+                    />
+                  </Button>
+                  {(avatarPreview || pendingAvatarFile) && (
+                    <Button
+                      variant="outlined"
+                      color="error"
+                      size="small"
+                      startIcon={<Trash2 size={16} />}
+                      onClick={handleAvatarDeleteClick}
+                      disabled={uploadingAvatar}
+                      sx={{ borderRadius: 1 }}
+                    >
+                      ลบรูป
+                    </Button>
+                  )}
+                </Box>
+              </Box>
+            </Box>
+
             <TextField
               label="รหัสพนักงาน"
               name="employeeId"
@@ -480,10 +749,10 @@ export default function UserDialog({
                 ),
               }}
             />
-            
+
             {/* Organization Section */}
             <SectionHeader title="ข้อมูลสังกัด" color="secondary" />
-            
+
             <FormControl size="small" fullWidth error={!!errors.company} required>
               <InputLabel>บริษัท</InputLabel>
               <Select
@@ -534,10 +803,10 @@ export default function UserDialog({
               size="small"
               fullWidth
             />
-            
+
             {/* Employment Section */}
             <SectionHeader title="ข้อมูลการจ้างงาน" color="success" />
-            
+
             <FormControl size="small" fullWidth>
               <InputLabel>กะการทำงาน</InputLabel>
               <Select
@@ -547,8 +816,8 @@ export default function UserDialog({
                 onChange={handleChange}
               >
                 <MenuItem value="">ไม่มีกะ</MenuItem>
-                <MenuItem value="day">กะกลางวัน</MenuItem>
-                <MenuItem value="night">กะกลางคืน</MenuItem>
+                <MenuItem value="shift_a">กะ A</MenuItem>
+                <MenuItem value="shift_b">กะ B</MenuItem>
               </Select>
             </FormControl>
             <FormControl size="small" fullWidth>
@@ -588,11 +857,11 @@ export default function UserDialog({
                   setFormData((prev) => ({ ...prev, startDate: newValue }));
                 }
               }}
-              slotProps={{ 
-                textField: { 
+              slotProps={{
+                textField: {
                   size: 'small',
                   fullWidth: true,
-                } 
+                }
               }}
             />
 
@@ -628,7 +897,7 @@ export default function UserDialog({
                         const section = sections.find(s => s.code === sCode);
                         return section && selectedDeptIds.includes(section.departmentId);
                       });
-                      
+
                       setFormData(prev => ({
                         ...prev,
                         managedDepartments: newDeptCodes,
@@ -820,9 +1089,9 @@ export default function UserDialog({
                 </Box>
               </>
             )}
-            
+
             {/* Status */}
-            <Box sx={{ 
+            <Box sx={{
               gridColumn: '1 / -1',
               display: 'flex',
               alignItems: 'center',
@@ -851,8 +1120,8 @@ export default function UserDialog({
                   />
                 }
                 label={
-                  <Chip 
-                    label={formData.isActive ? 'Active' : 'Inactive'} 
+                  <Chip
+                    label={formData.isActive ? 'Active' : 'Inactive'}
                     size="small"
                     color={formData.isActive ? 'success' : 'error'}
                     variant="filled"
@@ -864,10 +1133,10 @@ export default function UserDialog({
           </Box>
         </DialogContent>
 
-        <DialogActions sx={{ 
-          px: 2, 
-          py: 1.5, 
-          borderTop: '1px solid', 
+        <DialogActions sx={{
+          px: 2,
+          py: 1.5,
+          borderTop: '1px solid',
           borderColor: 'divider',
           bgcolor: alpha(theme.palette.grey[500], 0.04),
         }}>
@@ -877,11 +1146,53 @@ export default function UserDialog({
           <Button
             onClick={handleSubmit}
             variant="contained"
-            disabled={loading}
-            startIcon={loading ? <LoaderCircle size={18} className="animate-spin" /> : null}
+            disabled={loading || uploadingAvatar}
+            startIcon={(loading || uploadingAvatar) ? <LoaderCircle size={18} className="animate-spin" /> : null}
             sx={{ minWidth: 100 }}
           >
-            {loading ? 'กำลังบันทึก...' : 'บันทึก'}
+            {uploadingAvatar ? 'กำลังอัปโหลดรูป...' : loading ? 'กำลังบันทึก...' : 'บันทึก'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Confirm Delete Avatar Dialog */}
+      <Dialog
+        open={confirmDeleteAvatar}
+        onClose={() => setConfirmDeleteAvatar(false)}
+        maxWidth="xs"
+        fullWidth
+      >
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Box sx={{
+            p: 1,
+            borderRadius: 2,
+            bgcolor: alpha(theme.palette.error.main, 0.1),
+            color: 'error.main',
+          }}>
+            <Trash2 size={20} />
+          </Box>
+          ยืนยันการลบรูปโปรไฟล์
+        </DialogTitle>
+        <DialogContent>
+          <Typography color="text.secondary">
+            คุณต้องการลบรูปโปรไฟล์หรือไม่? การดำเนินการนี้จะลบรูปภาพออกจากระบบทันทีและไม่สามารถกู้คืนได้
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button
+            onClick={() => setConfirmDeleteAvatar(false)}
+            color="inherit"
+          >
+            ยกเลิก
+          </Button>
+          <Button
+            onClick={handleConfirmDeleteAvatar}
+            variant="contained"
+            color="error"
+            disabled={uploadingAvatar}
+            startIcon={uploadingAvatar ? <LoaderCircle size={18} className="animate-spin" /> : <Trash2 size={16} />}
+          >
+            {uploadingAvatar ? 'กำลังลบ...' : 'ลบรูปภาพ'}
           </Button>
         </DialogActions>
       </Dialog>

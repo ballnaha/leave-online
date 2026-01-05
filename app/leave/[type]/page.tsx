@@ -1360,7 +1360,7 @@ export default function LeaveFormPage() {
                                 {/* Shift Type */}
                                 <Box sx={{ flex: 1 }}>
                                     <Typography variant="subtitle2" sx={{ mb: 1, display: 'block', fontWeight: 600 }}>
-                                        {t('shift_type', 'ประเภทกะ')}
+                                        {t('time_of_entry', 'เวลาเข้างาน')}
                                     </Typography>
                                     <Box sx={{ display: 'flex', bgcolor: 'transparent', gap: 1 }}>
                                         <Box onClick={() => handleShiftChange('day')}
@@ -1382,7 +1382,7 @@ export default function LeaveFormPage() {
                                                 }
                                             }}>
                                             <Sun1 size={20} color={shiftType === 'day' ? '#E65100' : '#94A3B8'} variant={shiftType === 'day' ? 'Bold' : 'Linear'} style={{ transition: 'all 0.3s ease' }} />
-                                            <Typography variant="button" sx={{ textTransform: 'none', fontSize: '0.85rem', fontWeight: 600, transition: 'color 0.3s ease' }}>{t('leave_shift_day', 'กะเช้า')}</Typography>
+                                            <Typography variant="button" sx={{ textTransform: 'none', fontSize: '0.85rem', fontWeight: 600, transition: 'color 0.3s ease' }}>{t('leave_shift_day', 'เข้าเช้า')}</Typography>
                                         </Box>
                                         <Box onClick={() => handleShiftChange('night')}
                                             sx={{
@@ -1403,7 +1403,7 @@ export default function LeaveFormPage() {
                                                 }
                                             }}>
                                             <Moon size={20} color={shiftType === 'night' ? '#3949AB' : '#94A3B8'} variant={shiftType === 'night' ? 'Bold' : 'Linear'} style={{ transition: 'all 0.3s ease' }} />
-                                            <Typography variant="button" sx={{ textTransform: 'none', fontSize: '0.85rem', fontWeight: 600, transition: 'color 0.3s ease' }}>{t('leave_shift_night', 'กะดึก')}</Typography>
+                                            <Typography variant="button" sx={{ textTransform: 'none', fontSize: '0.85rem', fontWeight: 600, transition: 'color 0.3s ease' }}>{t('leave_shift_night', 'เข้าดึก')}</Typography>
                                         </Box>
                                     </Box>
                                 </Box>

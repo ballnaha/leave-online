@@ -1,51 +1,59 @@
 import { NextResponse } from 'next/server';
-import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
 
 // GET - Download demo template Excel
 export async function GET() {
     try {
+        // Create workbook and worksheet
+        const workbook = new ExcelJS.Workbook();
+        const worksheet = workbook.addWorksheet('ข้อมูลพนักงาน');
+
+        // Set column widths
+        worksheet.columns = [
+            { width: 10 }, // ลำดับ
+            { width: 35 }, // ชื่อ
+            { width: 30 }, // ตำแหน่ง
+            { width: 15 }, // วันที่เข้างาน
+        ];
+
         // Create demo data
         const demoData = [
-            ['ฝ่ายผลิต1'],
             ['ชื่อ', 'ตำแหน่ง', 'วันที่เข้างาน'],
+            ['ฝ่ายผลิต1', '', ''],
             ['200039 นายฐิติณัฏฐ์ ศรีรัตน์', 'STAFF วางแผนการผลิต', '15/10/2533'],
             ['200096 นางกันนิกา คุ้มจั่นอัด', 'Asst.Supervisor', '01/07/2540'],
             ['200105 นายยุดหนา จันปัด', 'Senior engineer', '16/06/2542'],
             ['200141 น.ส.ชมาพร บุญครอง', 'Staff ฝ่ายผลิต1', '16/04/2547'],
             ['201069 นายธนามกร เศรษฐีสมบัติ', 'Senior engineer', '01/12/2563'],
-            [],
-            ['ฝ่ายบัญชี'],
-            ['ชื่อ', 'ตำแหน่ง', 'วันที่เข้างาน'],
-            ['300001 นางสาวสมหญิง ใจดี', 'หัวหน้าฝ่ายบัญชี', '01/03/2545'],
-            ['300002 นายสมชาย รักงาน', 'พนักงานบัญชี', '15/08/2555'],
+            ['แผนกอาบ', '', ''],
+            ['200050 นายสนอง ศรีเคน', 'ช่างอาบ', '27/07/2535'],
+            ['200051 นายประทวน บุญชู', 'Supervisor', '21/08/2535'],
+            ['200080 น.ส.คนึงนิตย์ ฉลูทอง', 'พนักงานคัดเหล็ก/Blank/กระป๋อง/ฝา', '08/09/2538'],
+            ['200089 นายมานพ พรหมทะ', 'ช่างอาบ', '23/04/2539'],
+            ['200098 นายธเนตร บุตรชะม้อย', 'Supervisor', '11/05/2541'],
             [],
             ['คำอธิบาย:'],
-            ['- คอลัมน์ "ชื่อ": รหัสพนักงาน ตามด้วยคำนำหน้า+ชื่อ นามสกุล'],
-            ['- คอลัมน์ "ตำแหน่ง": ตำแหน่งงาน'],
-            ['- คอลัมน์ "วันที่เข้างาน": วัน/เดือน/ปี (พ.ศ.) เช่น 15/10/2533'],
+            ['- ชื่อฝ่าย: ขึ้นต้นด้วย "ฝ่าย" (เช่น ฝ่ายผลิต1)'],
+            ['- ชื่อแผนก: ขึ้นต้นด้วย "แผนก" (เช่น แผนกอาบ)'],
+            ['- พนักงาน: รหัสพนักงาน เว้้นวรรค ตามด้วย ชื่อ-นามสกุล'],
+            ['- วันที่เข้างาน: รูปแบบ วัน/เดือน/ปี (พ.ศ.)'],
             [''],
             ['หมายเหตุ:'],
-            ['- ปี พ.ศ. จะถูกแปลงเป็น ค.ศ. อัตโนมัติ (ลบ 543)'],
-            ['- รหัสพนักงานที่ซ้ำจะอัพเดทข้อมูลแทนการสร้างใหม่'],
+            ['- ระบบจะดึง ฝ่าย และ แผนก ล่าสุดที่อยู่ด้านบนมาใส่ให้พนักงานอัตโนมัติ'],
             ['- รหัสผ่านเริ่มต้นคือ 123456'],
         ];
 
-        // Create workbook and worksheet
-        const workbook = XLSX.utils.book_new();
-        const worksheet = XLSX.utils.aoa_to_sheet(demoData);
+        // Add rows to worksheet
+        demoData.forEach(row => {
+            worksheet.addRow(row);
+        });
 
-        // Set column widths
-        worksheet['!cols'] = [
-            { wch: 35 }, // ชื่อ
-            { wch: 25 }, // ตำแหน่ง
-            { wch: 15 }, // วันที่เข้างาน
-        ];
-
-        // Add worksheet to workbook
-        XLSX.utils.book_append_sheet(workbook, worksheet, 'ข้อมูลพนักงาน');
+        // Style header rows
+        worksheet.getRow(2).font = { bold: true };
+        worksheet.getRow(10).font = { bold: true };
 
         // Generate buffer
-        const buffer = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+        const buffer = await workbook.xlsx.writeBuffer();
 
         // Return as downloadable file
         return new NextResponse(buffer, {

@@ -45,19 +45,23 @@ import {
 } from 'iconsax-react';
 import { useRouter } from 'next/navigation';
 import { useToastr } from '@/app/components/Toastr';
-import * as XLSX from 'xlsx';
+import * as ExcelJS from 'exceljs';
 
 interface PreviewUser {
     rowNumber: number;
     employeeId: string;
     firstName: string;
     lastName: string;
+    gender: 'male' | 'female' | '';
+    genderLabel: string;
     position: string;
     startDate: string;
     startDateFormatted: string;
     originalYear: number;
     convertedYear: number;
     department: string;
+    section: string;
+    employeeType?: string;
     isValid: boolean;
     errors: string[];
 }
@@ -84,10 +88,13 @@ export default function ImportUsersPage() {
     const [previewData, setPreviewData] = useState<PreviewUser[]>([]);
     const [companies, setCompanies] = useState<Company[]>([]);
     const [selectedCompany, setSelectedCompany] = useState<string>('');
+    const [employeeType, setEmployeeType] = useState<string>('monthly'); // Default to monthly
     const [loading, setLoading] = useState(false);
     const [importing, setImporting] = useState(false);
+    const [importProgress, setImportProgress] = useState(0);
     const [importResult, setImportResult] = useState<ImportResult | null>(null);
     const [dragOver, setDragOver] = useState(false);
+    const [allDepartments, setAllDepartments] = useState<any[]>([]);
 
     // Fetch companies on mount
     useEffect(() => {
@@ -109,8 +116,26 @@ export default function ImportUsersPage() {
         fetchCompanies();
     }, []);
 
-    // Parse name to extract employeeId, firstName, lastName
-    const parseName = (name: string): { employeeId: string; firstName: string; lastName: string } => {
+    // Fetch departments and sections when company changes
+    useEffect(() => {
+        if (!selectedCompany) return;
+
+        const fetchDeptStructure = async () => {
+            try {
+                const res = await fetch(`/api/admin/departments?company=${selectedCompany}`);
+                if (res.ok) {
+                    const data = await res.json();
+                    setAllDepartments(data);
+                }
+            } catch (error) {
+                console.error('Failed to fetch department structure:', error);
+            }
+        };
+        fetchDeptStructure();
+    }, [selectedCompany]);
+
+    // Parse name to extract employeeId, firstName, lastName, gender
+    const parseName = (name: string): { employeeId: string; firstName: string; lastName: string; gender: 'male' | 'female' | '' } => {
         // Name format: "200039 นายฐิติณัฏฐ์ ศรีรัตน์" 
         // หรือ "200141 น.ส.ชมาพร บุญครอง"
         const trimmed = name?.trim() || '';
@@ -120,17 +145,35 @@ export default function ImportUsersPage() {
             const employeeId = match[1];
             const fullName = match[2].trim();
 
-            // Split fullName to firstName and lastName
-            // Handle prefixes like นาย, นาง, นางสาว, น.ส., น.ส, ว่าที่ ร.ต.
-            const prefixes = ['ว่าที่ ร.ต.', 'ว่าที่ร.ต.', 'นางสาว', 'น.ส.', 'น.ส', 'นาย', 'นาง'];
+            // Prefixes with gender mapping
+            // Male prefixes: นาย, ว่าที่ ร.ต.
+            // Female prefixes: นาง, นางสาว, น.ส., นส., นส
+            const malePrefixes = ['ว่าที่ ร.ต.', 'ว่าที่ร.ต.', 'นาย'];
+            const femalePrefixes = ['นางสาว', 'น.ส.', 'น.ส', 'นส.', 'นส', 'นาง'];
+            const allPrefixes = [...malePrefixes, ...femalePrefixes];
+
             let firstName = '';
             let lastName = '';
+            let gender: 'male' | 'female' | '' = '';
             let remainingName = fullName;
 
-            for (const prefix of prefixes) {
+            // Check male prefixes first
+            for (const prefix of malePrefixes) {
                 if (fullName.startsWith(prefix)) {
                     remainingName = fullName.substring(prefix.length).trim();
+                    gender = 'male';
                     break;
+                }
+            }
+
+            // If not male, check female prefixes
+            if (!gender) {
+                for (const prefix of femalePrefixes) {
+                    if (fullName.startsWith(prefix)) {
+                        remainingName = fullName.substring(prefix.length).trim();
+                        gender = 'female';
+                        break;
+                    }
                 }
             }
 
@@ -144,26 +187,65 @@ export default function ImportUsersPage() {
                 lastName = '';
             }
 
-            return { employeeId, firstName, lastName };
+            return { employeeId, firstName, lastName, gender };
         }
 
-        return { employeeId: '', firstName: trimmed, lastName: '' };
+        return { employeeId: '', firstName: trimmed, lastName: '', gender: '' };
     };
 
-    // Convert Buddhist year to Christian year
-    const convertBEtoAD = (dateStr: string): { formatted: string; originalYear: number; convertedYear: number; isValid: boolean } => {
-        // Date format: DD/MM/YYYY (BE)
-        // e.g., "15/10/2533" -> "1990-10-15"
-        const match = dateStr?.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    // Convert Buddhist year to Christian year (Support both String and Date object)
+    const convertBEtoAD = (value: any): { formatted: string; originalYear: number; convertedYear: number; isValid: boolean } => {
+        if (!value) return { formatted: '', originalYear: 0, convertedYear: 0, isValid: false };
+
+        let day, month, year;
+
+        // 1. If it's already a Date object (Excel often returns this)
+        if (value instanceof Date && !isNaN(value.getTime())) {
+            day = value.getDate();
+            month = value.getMonth() + 1;
+            year = value.getFullYear();
+
+            // If Excel date is 1900-2100, it's likely already AD
+            // But if it's > 2400, it's BE
+            if (year > 2400) {
+                const yearAD = year - 543;
+                return {
+                    formatted: `${yearAD}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`,
+                    originalYear: year,
+                    convertedYear: yearAD,
+                    isValid: true
+                };
+            }
+            return {
+                formatted: `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`,
+                originalYear: year + 543,
+                convertedYear: year,
+                isValid: true
+            };
+        }
+
+        // 2. If it's a string, support multiple separators: /, -, .
+        const dateStr = String(value).trim();
+        const match = dateStr.match(/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{4})$/);
 
         if (match) {
-            const day = parseInt(match[1], 10);
-            const month = parseInt(match[2], 10);
-            const yearBE = parseInt(match[3], 10);
-            const yearAD = yearBE - 543;
+            day = parseInt(match[1], 10);
+            month = parseInt(match[2], 10);
+            let yearValue = parseInt(match[3], 10);
 
-            // Validate
-            if (yearAD > 1900 && yearAD <= new Date().getFullYear() && month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+            let yearBE = yearValue;
+            let yearAD = yearValue;
+
+            if (yearValue > 2400) {
+                // It's definitely BE
+                yearAD = yearValue - 543;
+            } else if (yearValue < 2100) {
+                // It's already AD
+                yearBE = yearValue + 543;
+            }
+
+            // Simple validation
+            if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
                 const formatted = `${yearAD}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
                 return { formatted, originalYear: yearBE, convertedYear: yearAD, isValid: true };
             }
@@ -188,14 +270,26 @@ export default function ImportUsersPage() {
 
         try {
             const arrayBuffer = await selectedFile.arrayBuffer();
-            const workbook = XLSX.read(arrayBuffer, { type: 'buffer' });
+            const workbook = new ExcelJS.Workbook();
+            await workbook.xlsx.load(arrayBuffer);
 
             // Get first sheet
-            const sheetName = workbook.SheetNames[0];
-            const sheet = workbook.Sheets[sheetName];
+            const worksheet = workbook.worksheets[0];
+            if (!worksheet) {
+                toastr.error('ไฟล์ไม่มีข้อมูล');
+                setLoading(false);
+                return;
+            }
 
-            // Convert to JSON
-            const rawData = XLSX.utils.sheet_to_json(sheet, { header: 1 }) as unknown[][];
+            // Convert worksheet to array of arrays
+            const rawData: unknown[][] = [];
+            worksheet.eachRow((row, rowNumber) => {
+                const rowValues: unknown[] = [];
+                row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
+                    rowValues[colNumber - 1] = cell.value;
+                });
+                rawData[rowNumber - 1] = rowValues;
+            });
 
             if (rawData.length < 2) {
                 toastr.error('ไฟล์ไม่มีข้อมูล');
@@ -206,15 +300,21 @@ export default function ImportUsersPage() {
             // Find header row (look for 'ชื่อ' column)
             let headerRowIndex = 0;
             let currentDepartment = '';
+            let currentSection = '';
 
             for (let i = 0; i < rawData.length; i++) {
                 const row = rawData[i];
                 if (row && Array.isArray(row)) {
-                    // Check if this row is a department header
-                    const firstCell = String(row[0] || '');
-                    if (firstCell.startsWith('ฝ่าย')) {
-                        currentDepartment = firstCell;
+                    // Check if any cell in this row has department or section info before headers
+                    const possibleHeader = row.find(cell => String(cell || '').trim().startsWith('ฝ่าย'));
+                    if (possibleHeader) {
+                        currentDepartment = String(possibleHeader).trim();
                     }
+                    const possibleSection = row.find(cell => String(cell || '').trim().startsWith('แผนก'));
+                    if (possibleSection) {
+                        currentSection = String(possibleSection).trim();
+                    }
+
                     // Check if this is the header row
                     if (row.some(cell => String(cell).includes('ชื่อ'))) {
                         headerRowIndex = i;
@@ -227,6 +327,7 @@ export default function ImportUsersPage() {
             const nameIndex = headers.findIndex(h => String(h).includes('ชื่อ'));
             const positionIndex = headers.findIndex(h => String(h).includes('ตำแหน่ง'));
             const dateIndex = headers.findIndex(h => String(h).includes('วันที่เข้างาน'));
+            const sectionColIndex = headers.findIndex(h => String(h).includes('แผนก'));
 
             if (nameIndex === -1 || dateIndex === -1) {
                 toastr.error('ไม่พบคอลัมน์ชื่อหรือวันที่เข้างาน');
@@ -236,26 +337,90 @@ export default function ImportUsersPage() {
 
             const preview: PreviewUser[] = [];
             let departmentFromData = currentDepartment;
+            let sectionFromData = currentSection;
+
+            // Build lookup map from allDepartments
+            const sectionToDeptMap = new Map<string, { deptName: string; deptCode: string }>();
+            allDepartments.forEach(dept => {
+                dept.sections?.forEach((sec: any) => {
+                    const secName = sec.name.trim();
+                    const info = { deptName: dept.name, deptCode: dept.code };
+
+                    // Add variations
+                    sectionToDeptMap.set(secName, info);
+                    sectionToDeptMap.set(secName.toLowerCase(), info);
+
+                    // Variations with "แผนก"
+                    const withPrefix = secName.startsWith('แผนก') ? secName : `แผนก${secName}`;
+                    const withoutPrefix = secName.startsWith('แผนก') ? secName.substring(4).trim() : secName;
+
+                    sectionToDeptMap.set(withPrefix, info);
+                    sectionToDeptMap.set(withPrefix.toLowerCase(), info);
+                    sectionToDeptMap.set(withoutPrefix, info);
+                    sectionToDeptMap.set(withoutPrefix.toLowerCase(), info);
+
+                    // Variations with/without spaces
+                    sectionToDeptMap.set(withPrefix.replace(/\s+/g, ''), info);
+                    sectionToDeptMap.set(withoutPrefix.replace(/\s+/g, ''), info);
+                });
+            });
 
             for (let i = headerRowIndex + 1; i < rawData.length; i++) {
                 const row = rawData[i] as unknown[];
                 if (!row || row.length === 0) continue;
 
-                // Check if this row is a department header
-                const firstCell = String(row[0] || '');
-                if (firstCell.startsWith('ฝ่าย')) {
-                    departmentFromData = firstCell;
+                // Check for hierarchical headers in the name column (as seen in user image)
+                const nameValueRaw = String(row[nameIndex] || '').trim();
+
+                if (nameValueRaw.startsWith('ฝ่าย')) {
+                    departmentFromData = nameValueRaw;
+                    sectionFromData = ''; // Reset section when new department starts
                     continue;
                 }
 
-                const nameValue = String(row[nameIndex] || '').trim();
+                if (nameValueRaw.startsWith('แผนก')) {
+                    sectionFromData = nameValueRaw;
+                    continue;
+                }
+
                 const positionValue = String(row[positionIndex] || '').trim();
-                const dateValue = String(row[dateIndex] || '').trim();
+                const dateRaw = row[dateIndex];
+                const dateValueStr = String(dateRaw || '').trim();
 
-                if (!nameValue || !nameValue.match(/^\d/)) continue; // Skip if no employee ID
+                // If there's a specific 'Section' column, prioritize it
+                let finalSection = sectionFromData;
+                if (sectionColIndex !== -1) {
+                    const colSectionValue = String(row[sectionColIndex] || '').trim();
+                    if (colSectionValue) finalSection = colSectionValue;
+                }
 
-                const { employeeId, firstName, lastName } = parseName(nameValue);
-                const dateResult = convertBEtoAD(dateValue);
+                // LOGIC: Check database structure (frontend cache) to find correct department for this section
+                let resolvedDepartment = departmentFromData;
+                if (finalSection) {
+                    const searchKey = finalSection.trim();
+                    const dbMatch = sectionToDeptMap.get(searchKey) ||
+                        sectionToDeptMap.get(searchKey.toLowerCase()) ||
+                        sectionToDeptMap.get(searchKey.replace(/\s+/g, '')) ||
+                        sectionToDeptMap.get(searchKey.toLowerCase().replace(/\s+/g, ''));
+
+                    if (dbMatch) {
+                        resolvedDepartment = dbMatch.deptName;
+                    } else {
+                        // Try partial match if no exact match
+                        for (const [key, info] of sectionToDeptMap.entries()) {
+                            if (key.length > 3 && (searchKey.includes(key) || key.includes(searchKey))) {
+                                resolvedDepartment = info.deptName;
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                if (!nameValueRaw || !nameValueRaw.match(/^\d/)) continue; // Skip if no employee ID
+
+                const { employeeId, firstName, lastName, gender } = parseName(nameValueRaw);
+                const dateResult = convertBEtoAD(dateRaw);
+                const genderLabel = gender === 'male' ? 'ชาย' : gender === 'female' ? 'หญิง' : '-';
 
                 const errors: string[] = [];
 
@@ -268,14 +433,18 @@ export default function ImportUsersPage() {
                     employeeId,
                     firstName,
                     lastName,
+                    gender,
+                    genderLabel,
                     position: positionValue,
                     startDate: dateResult.formatted,
                     startDateFormatted: dateResult.isValid
-                        ? `${dateValue} → ${dateResult.formatted}`
-                        : dateValue,
+                        ? `${dateValueStr} → ${dateResult.formatted}`
+                        : dateValueStr,
                     originalYear: dateResult.originalYear,
                     convertedYear: dateResult.convertedYear,
-                    department: departmentFromData,
+                    department: resolvedDepartment,
+                    section: finalSection,
+                    employeeType: employeeType, // Add selected employee type
                     isValid: errors.length === 0,
                     errors,
                 });
@@ -295,7 +464,7 @@ export default function ImportUsersPage() {
         } finally {
             setLoading(false);
         }
-    }, [toastr]);
+    }, [toastr, allDepartments, employeeType]);
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const selectedFile = e.target.files?.[0];
@@ -351,28 +520,54 @@ export default function ImportUsersPage() {
         }
 
         setImporting(true);
+        setImportProgress(0);
+        setImportResult({ success: 0, failed: 0, errors: [] });
+
+        const chunkSize = 50;
+        const totalUsers = validData.length;
+        let successCount = 0;
+        let failedCount = 0;
+        let allErrors: { row: number; message: string }[] = [];
 
         try {
-            const response = await fetch('/api/admin/users/import', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ users: validData, company: selectedCompany }),
-            });
+            for (let i = 0; i < totalUsers; i += chunkSize) {
+                const chunk = validData.slice(i, i + chunkSize).map(u => ({
+                    ...u,
+                    employeeType: u.employeeType || employeeType
+                }));
 
-            const result = await response.json();
+                const response = await fetch('/api/admin/users/import', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ users: chunk, company: selectedCompany }),
+                });
 
-            if (!response.ok) {
-                throw new Error(result.error || 'เกิดข้อผิดพลาดในการนำเข้าข้อมูล');
+                const result = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(result.error || 'เกิดข้อผิดพลาดในการนำเข้าข้อมูล');
+                }
+
+                successCount += result.success;
+                failedCount += result.failed;
+                allErrors = [...allErrors, ...result.errors];
+
+                const progress = Math.min(Math.round(((i + chunk.length) / totalUsers) * 100), 100);
+                setImportProgress(progress);
+
+                setImportResult({
+                    success: successCount,
+                    failed: failedCount,
+                    errors: allErrors
+                });
             }
 
-            setImportResult(result);
-
-            if (result.success > 0) {
-                toastr.success(`นำเข้าข้อมูลสำเร็จ ${result.success} รายการ`);
+            if (successCount > 0) {
+                toastr.success(`นำเข้าข้อมูลสำเร็จ ${successCount} รายการ`);
             }
 
-            if (result.failed > 0) {
-                toastr.warning(`นำเข้าไม่สำเร็จ ${result.failed} รายการ`);
+            if (failedCount > 0) {
+                toastr.warning(`นำเข้าไม่สำเร็จ ${failedCount} รายการ`);
             }
         } catch (error: any) {
             console.error('Import error:', error);
@@ -422,7 +617,7 @@ export default function ImportUsersPage() {
                 </Box>
                 <Button
                     variant="outlined"
-                    startIcon={<DocumentDownload size={18} />}
+                    startIcon={<DocumentDownload size={18} color={theme.palette.primary.main} />}
                     onClick={() => window.open('/api/admin/users/import/template', '_blank')}
                     sx={{
                         borderRadius: 1,
@@ -430,69 +625,101 @@ export default function ImportUsersPage() {
                         py: 1.25,
                     }}
                 >
-                    ดาวน์โหลด Template
+                    ตัวอย่าง Template
                 </Button>
             </Box>
 
-            {/* Info Card */}
-            <Alert
-                severity="info"
-                icon={<InfoCircle size={24} color={theme.palette.info.main} variant="Bold" />}
-                sx={{ mb: 3, borderRadius: 1 }}
-            >
-                <AlertTitle sx={{ fontWeight: 600 }}>รูปแบบไฟล์ Excel ที่รองรับ</AlertTitle>
-                <Box component="ul" sx={{ m: 0, pl: 2 }}>
-                    <li><strong>ชื่อ:</strong> รหัสพนักงาน + ชื่อ-นามสกุล (เช่น &quot;200039 นายฐิติณัฏฐ์ ศรีรัตน์&quot;)</li>
-                    <li><strong>ตำแหน่ง:</strong> ตำแหน่งงาน (เช่น &quot;STAFF วางแผนการผลิต&quot;)</li>
-                    <li><strong>วันที่เข้างาน:</strong> DD/MM/YYYY (พ.ศ.) - ระบบจะแปลงเป็น ค.ศ. อัตโนมัติ</li>
-                </Box>
-            </Alert>
-
-            {/* Company Selector */}
-            <Paper
-                sx={{
-                    p: 3,
-                    mb: 3,
-                    borderRadius: 1,
-                    border: '1px solid',
-                    borderColor: 'divider',
-                }}
-            >
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
-                    <Avatar
-                        sx={{
-                            width: 40,
-                            height: 40,
-                            bgcolor: alpha(theme.palette.primary.main, 0.1),
-                        }}
-                    >
-                        <Building size={20} color={theme.palette.primary.main} variant="Bold" />
-                    </Avatar>
-                    <Box>
-                        <Typography variant="subtitle1" fontWeight={600}>
-                            เลือกบริษัท
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                            เลือกบริษัทที่ต้องการนำเข้าข้อมูลพนักงาน
-                        </Typography>
+            {/* Selection Area: Company & Employee Type */}
+            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 3, mb: 3 }}>
+                {/* Company Selector */}
+                <Paper
+                    sx={{
+                        p: 3,
+                        borderRadius: 1,
+                        border: '1px solid',
+                        borderColor: 'divider',
+                        height: '100%',
+                    }}
+                >
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+                        <Avatar
+                            sx={{
+                                width: 40,
+                                height: 40,
+                                bgcolor: alpha(theme.palette.primary.main, 0.1),
+                            }}
+                        >
+                            <Building size={20} color={theme.palette.primary.main} variant="Bold" />
+                        </Avatar>
+                        <Box>
+                            <Typography variant="subtitle1" fontWeight={600}>
+                                เลือกบริษัท
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary">
+                                เลือกบริษัทที่นำเข้าข้อมูล
+                            </Typography>
+                        </Box>
                     </Box>
-                </Box>
-                <FormControl fullWidth size="small">
-                    <InputLabel>บริษัท</InputLabel>
-                    <Select
-                        value={selectedCompany}
-                        onChange={(e) => setSelectedCompany(e.target.value)}
-                        label="บริษัท"
-                        sx={{ borderRadius: 1 }}
-                    >
-                        {companies.map((company) => (
-                            <MenuItem key={company.id} value={company.code}>
-                                {company.code} - {company.name}
-                            </MenuItem>
-                        ))}
-                    </Select>
-                </FormControl>
-            </Paper>
+                    <FormControl fullWidth size="small">
+                        <InputLabel>บริษัท</InputLabel>
+                        <Select
+                            value={selectedCompany}
+                            onChange={(e) => setSelectedCompany(e.target.value)}
+                            label="บริษัท"
+                            sx={{ borderRadius: 1 }}
+                        >
+                            {companies.map((company) => (
+                                <MenuItem key={company.id} value={company.code}>
+                                    {company.code} - {company.name}
+                                </MenuItem>
+                            ))}
+                        </Select>
+                    </FormControl>
+                </Paper>
+
+                {/* Employee Type Selector */}
+                <Paper
+                    sx={{
+                        p: 3,
+                        borderRadius: 1,
+                        border: '1px solid',
+                        borderColor: 'divider',
+                        height: '100%',
+                    }}
+                >
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+                        <Avatar
+                            sx={{
+                                width: 40,
+                                height: 40,
+                                bgcolor: alpha(theme.palette.info.main, 0.1),
+                            }}
+                        >
+                            <People size={20} color={theme.palette.info.main} variant="Bold" />
+                        </Avatar>
+                        <Box>
+                            <Typography variant="subtitle1" fontWeight={600}>
+                                ประเภทพนักงาน
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary">
+                                รายเดือน หรือ รายวัน
+                            </Typography>
+                        </Box>
+                    </Box>
+                    <FormControl fullWidth size="small">
+                        <InputLabel>ประเภทพนักงาน</InputLabel>
+                        <Select
+                            value={employeeType}
+                            onChange={(e) => setEmployeeType(e.target.value)}
+                            label="ประเภทพนักงาน"
+                            sx={{ borderRadius: 1 }}
+                        >
+                            <MenuItem value="monthly">พนักงานรายเดือน (Monthly)</MenuItem>
+                            <MenuItem value="daily">พนักงานรายวัน (Daily)</MenuItem>
+                        </Select>
+                    </FormControl>
+                </Paper>
+            </Box>
 
             {/* Upload Area */}
             <Paper
@@ -615,6 +842,10 @@ export default function ImportUsersPage() {
                             startIcon={<Trash size={18} color={theme.palette.error.main} />}
                             onClick={handleClear}
                             disabled={importing}
+                            sx={{
+                                color: theme.palette.error.main,
+                                borderColor: theme.palette.error.main,
+                            }}
                         >
                             ล้างข้อมูล
                         </Button>
@@ -634,7 +865,26 @@ export default function ImportUsersPage() {
                     {/* Progress */}
                     {importing && (
                         <Box sx={{ mb: 3 }}>
-                            <LinearProgress />
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                                <Typography variant="body2" color="primary" fontWeight={600}>
+                                    กำลังนำเข้าข้อมูล...
+                                </Typography>
+                                <Typography variant="body2" color="primary" fontWeight={600}>
+                                    {importProgress}%
+                                </Typography>
+                            </Box>
+                            <LinearProgress
+                                variant="determinate"
+                                value={importProgress}
+                                sx={{
+                                    height: 10,
+                                    borderRadius: 5,
+                                    bgcolor: alpha(theme.palette.primary.main, 0.1),
+                                    '& .MuiLinearProgress-bar': {
+                                        borderRadius: 5,
+                                    }
+                                }}
+                            />
                         </Box>
                     )}
 
@@ -663,22 +913,24 @@ export default function ImportUsersPage() {
                     )}
 
                     {/* Data Table */}
-                    <Paper sx={{ borderRadius: 1, border: '1px solid', borderColor: 'divider', overflow: 'hidden' }}>
+                    <Paper sx={{ borderRadius: 1, border: '1px solid', borderColor: 'divider', overflow: 'hidden', mb: 5 }}>
                         <Box sx={{ p: 2, bgcolor: alpha(theme.palette.primary.main, 0.03), borderBottom: '1px solid', borderColor: 'divider' }}>
                             <Typography variant="h6" fontWeight={600}>
                                 ตัวอย่างข้อมูล
                             </Typography>
                         </Box>
-                        <TableContainer sx={{ maxHeight: 500 }}>
+                        <TableContainer sx={{ maxHeight: '700px' }}>
                             <Table stickyHeader size="small">
                                 <TableHead>
                                     <TableRow>
-                                        <TableCell sx={{ fontWeight: 600, bgcolor: 'background.paper' }}>แถว</TableCell>
+                                        <TableCell sx={{ fontWeight: 600, bgcolor: 'background.paper' }}>แถวใน Excel</TableCell>
                                         <TableCell sx={{ fontWeight: 600, bgcolor: 'background.paper' }}>รหัสพนักงาน</TableCell>
                                         <TableCell sx={{ fontWeight: 600, bgcolor: 'background.paper' }}>ชื่อ</TableCell>
                                         <TableCell sx={{ fontWeight: 600, bgcolor: 'background.paper' }}>นามสกุล</TableCell>
+                                        <TableCell sx={{ fontWeight: 600, bgcolor: 'background.paper' }}>เพศ</TableCell>
                                         <TableCell sx={{ fontWeight: 600, bgcolor: 'background.paper' }}>ตำแหน่ง</TableCell>
                                         <TableCell sx={{ fontWeight: 600, bgcolor: 'background.paper' }}>ฝ่าย</TableCell>
+                                        <TableCell sx={{ fontWeight: 600, bgcolor: 'background.paper' }}>แผนก</TableCell>
                                         <TableCell sx={{ fontWeight: 600, bgcolor: 'background.paper' }}>วันที่เข้างาน</TableCell>
                                         <TableCell sx={{ fontWeight: 600, bgcolor: 'background.paper' }} align="center">สถานะ</TableCell>
                                     </TableRow>
@@ -701,6 +953,18 @@ export default function ImportUsersPage() {
                                             <TableCell>{row.firstName || '-'}</TableCell>
                                             <TableCell>{row.lastName || '-'}</TableCell>
                                             <TableCell>
+                                                <Chip
+                                                    label={row.genderLabel}
+                                                    size="small"
+                                                    variant="outlined"
+                                                    sx={{
+                                                        fontWeight: 500,
+                                                        color: row.gender === 'male' ? '#1976d2' : row.gender === 'female' ? '#e91e63' : 'text.secondary',
+                                                        borderColor: row.gender === 'male' ? '#1976d2' : row.gender === 'female' ? '#e91e63' : 'divider',
+                                                    }}
+                                                />
+                                            </TableCell>
+                                            <TableCell>
                                                 <Typography variant="body2" sx={{ maxWidth: 200, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                                                     {row.position || '-'}
                                                 </Typography>
@@ -708,6 +972,11 @@ export default function ImportUsersPage() {
                                             <TableCell>
                                                 <Typography variant="body2" sx={{ maxWidth: 150, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                                                     {row.department || '-'}
+                                                </Typography>
+                                            </TableCell>
+                                            <TableCell>
+                                                <Typography variant="body2" sx={{ maxWidth: 150, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                                    {row.section || '-'}
                                                 </Typography>
                                             </TableCell>
                                             <TableCell>
@@ -725,19 +994,21 @@ export default function ImportUsersPage() {
                                             <TableCell align="center">
                                                 {row.isValid ? (
                                                     <Chip
-                                                        icon={<TickCircle size={14} variant="Bold" />}
+                                                        icon={<TickCircle size={14} variant="Bold" color="#00B894" />}
                                                         label="พร้อม"
                                                         size="small"
                                                         color="success"
+                                                        variant="outlined"
                                                         sx={{ fontWeight: 500 }}
                                                     />
                                                 ) : (
                                                     <Tooltip title={row.errors.join(', ')}>
                                                         <Chip
-                                                            icon={<Warning2 size={14} variant="Bold" />}
+                                                            icon={<Warning2 size={14} variant="Bold" color="#FF0000" />}
                                                             label="มีปัญหา"
                                                             size="small"
                                                             color="error"
+                                                            variant="outlined"
                                                             sx={{ fontWeight: 500 }}
                                                         />
                                                     </Tooltip>
@@ -749,6 +1020,8 @@ export default function ImportUsersPage() {
                             </Table>
                         </TableContainer>
                     </Paper>
+
+
                 </>
             )}
         </Box>

@@ -850,8 +850,8 @@ export default function EditProfilePage() {
                 setDrawerTitle(t('select_shift', 'เลือกกะทำงาน'));
                 setDrawerOptions([
                     { value: '', label: t('not_specified', 'ไม่ระบุ') },
-                    { value: 'day', label: t('shift_day', 'กะกลางวัน') },
-                    { value: 'night', label: t('shift_night', 'กะกลางคืน') },
+                    { value: 'shift_a', label: t('shift_day', 'กะ A') },
+                    { value: 'shift_b', label: t('shift_night', 'กะ B') },
 
                 ]);
                 break;
@@ -900,7 +900,7 @@ export default function EditProfilePage() {
                 const sec = sections.find(s => s.code === formData.sectionId || s.name === formData.sectionId);
                 return sec?.name || profile?.sectionName || '';
             case 'shift':
-                const shifts: Record<string, string> = { day: t('shift_day', 'กะกลางวัน'), night: t('shift_night', 'กะกลางคืน') };
+                const shifts: Record<string, string> = { shift_a: t('shift_day', 'กะ A'), shift_b: t('shift_night', 'กะ B') };
                 return formData.shift ? shifts[formData.shift] || formData.shift : '';
             case 'gender':
                 const genders: Record<string, string> = { male: t('gender_male', 'ชาย'), female: t('gender_female', 'หญิง') };

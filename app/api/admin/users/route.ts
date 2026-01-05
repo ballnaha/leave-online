@@ -112,6 +112,7 @@ export async function POST(request: NextRequest) {
       isActive,
       managedDepartments,
       managedSections,
+      avatar,
     } = body;
 
     // Validate required fields
@@ -169,6 +170,7 @@ export async function POST(request: NextRequest) {
         isActive: isActive ?? true,
         managedDepartments: managedDepartments || null,
         managedSections: managedSections || null,
+        avatar: avatar || null,
       },
     });
 

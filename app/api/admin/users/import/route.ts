@@ -9,9 +9,11 @@ interface ImportUser {
     employeeId: string;
     firstName: string;
     lastName: string;
+    gender: 'male' | 'female' | '';
     position: string;
     startDate: string;
     department: string;
+    section: string;
 }
 
 // POST - Import users from Excel
@@ -44,6 +46,44 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Company is required' }, { status: 400 });
         }
 
+        // Fetch departments and sections for the selected company only
+        const departments = await prisma.department.findMany({
+            where: {
+                isActive: true,
+                company: company  // Filter by selected company
+            },
+            include: { sections: { where: { isActive: true } } }
+        });
+
+        // Build lookup maps (name -> code) for departments and sections within this company
+        const deptNameToCode = new Map<string, string>();
+        const sectionNameToCode = new Map<string, { code: string; deptCode: string }>();
+
+        departments.forEach(dept => {
+            // Add by exact name match
+            deptNameToCode.set(dept.name.trim(), dept.code);
+            deptNameToCode.set(dept.name.toLowerCase().trim(), dept.code);
+
+            // Also match "ฝ่าย" prefix variations
+            if (dept.name.startsWith('ฝ่าย')) {
+                deptNameToCode.set(dept.name.trim(), dept.code);
+            } else {
+                deptNameToCode.set(`ฝ่าย${dept.name}`.trim(), dept.code);
+            }
+
+            // Add sections for this department
+            dept.sections.forEach(section => {
+                const sectionName = section.name.trim();
+                sectionNameToCode.set(sectionName, { code: section.code, deptCode: dept.code });
+                sectionNameToCode.set(sectionName.toLowerCase(), { code: section.code, deptCode: dept.code });
+
+                // Also match "แผนก" prefix variations
+                if (!sectionName.startsWith('แผนก')) {
+                    sectionNameToCode.set(`แผนก${sectionName}`, { code: section.code, deptCode: dept.code });
+                }
+            });
+        });
+
         let success = 0;
         let failed = 0;
         const errors: { row: number; message: string }[] = [];
@@ -59,6 +99,23 @@ export async function POST(request: NextRequest) {
                     throw new Error('ข้อมูลไม่ครบถ้วน');
                 }
 
+                // Convert gender to database format
+                const genderValue = user.gender === 'male' ? 'male' : user.gender === 'female' ? 'female' : 'unknown';
+
+                // Find section info from database
+                const sectionInfo = findSectionInfo(user.section, sectionNameToCode);
+                const sectionCode = sectionInfo?.code || null;
+
+                // Resolve department: 
+                // 1. If section is recognized in DB, always follow its parent department
+                // 2. Otherwise, use the department name from Excel
+                let departmentCode = 'GENERAL';
+                if (sectionInfo) {
+                    departmentCode = sectionInfo.deptCode;
+                } else if (user.department) {
+                    departmentCode = findDepartmentCode(user.department, deptNameToCode);
+                }
+
                 // Check if employeeId already exists
                 const existingUser = await prisma.user.findUnique({
                     where: { employeeId: user.employeeId }
@@ -71,29 +128,29 @@ export async function POST(request: NextRequest) {
                         data: {
                             firstName: user.firstName,
                             lastName: user.lastName || '',
+                            gender: genderValue,
                             position: user.position || null,
                             startDate: new Date(user.startDate),
-                            company: company, // Update company
+                            company: company,
+                            department: departmentCode,
+                            section: sectionCode,
                             updatedAt: new Date(),
                         }
                     });
                     success++;
                 } else {
                     // Create new user
-                    // Extract department code from department name (e.g., "ฝ่ายผลิต1" -> "PROD1")
-                    const departmentCode = extractDepartmentCode(user.department);
-
                     await prisma.user.create({
                         data: {
                             employeeId: user.employeeId,
                             password: defaultPassword,
                             firstName: user.firstName,
                             lastName: user.lastName || '',
-                            gender: 'unknown', // Default, can be updated later
-                            company: company, // Use selected company
-                            employeeType: 'monthly', // Default type
-                            department: departmentCode || 'GENERAL',
-                            section: null,
+                            gender: genderValue,
+                            company: company,
+                            employeeType: 'monthly',
+                            department: departmentCode,
+                            section: sectionCode,
                             position: user.position || null,
                             startDate: new Date(user.startDate),
                             role: 'employee',
@@ -114,7 +171,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({
             success,
             failed,
-            errors: errors.slice(0, 20), // Limit error list
+            errors: errors.slice(0, 20),
             message: `Imported ${success} users, ${failed} failed`
         });
 
@@ -127,24 +184,64 @@ export async function POST(request: NextRequest) {
     }
 }
 
-// Helper function to extract department code from Thai name
-function extractDepartmentCode(departmentName: string): string {
-    // Mapping of common department names to codes
-    const deptMap: Record<string, string> = {
-        'ฝ่ายผลิต1': 'PROD1',
-        'ฝ่ายผลิต2': 'PROD2',
-        'ฝ่ายผลิต': 'PROD',
-        'ฝ่ายบัญชี': 'ACC',
-        'ฝ่ายบุคคล': 'HR',
-        'ฝ่ายขาย': 'SALES',
-        'ฝ่ายคลังสินค้า': 'WH',
-        'ฝ่ายจัดซื้อ': 'PURCH',
-        'ฝ่ายธุรการ': 'ADMIN',
-        'ฝ่ายวิศวกรรม': 'ENG',
-        'ฝ่ายคุณภาพ': 'QA',
-        'ฝ่ายซ่อมบำรุง': 'MAINT',
-        'ฝ่ายวางแผน': 'PLAN',
-    };
+// Helper function to find department code from name (using database lookup)
+function findDepartmentCode(departmentName: string, deptMap: Map<string, string>): string {
+    if (!departmentName) return 'GENERAL';
 
-    return deptMap[departmentName] || 'GENERAL';
+    const trimmedName = departmentName.trim();
+
+    // Try exact match first
+    if (deptMap.has(trimmedName)) {
+        return deptMap.get(trimmedName)!;
+    }
+
+    // Try lowercase match
+    if (deptMap.has(trimmedName.toLowerCase())) {
+        return deptMap.get(trimmedName.toLowerCase())!;
+    }
+
+    // Try partial match (contains)
+    for (const [name, code] of deptMap.entries()) {
+        if (trimmedName.includes(name) || name.includes(trimmedName)) {
+            return code;
+        }
+    }
+
+    // Default if no match found
+    return 'GENERAL';
 }
+
+// Helper function to find section info from name (using database lookup)
+function findSectionInfo(sectionName: string, sectionMap: Map<string, { code: string; deptCode: string }>): { code: string; deptCode: string } | null {
+    if (!sectionName) return null;
+
+    const trimmedName = sectionName.trim();
+
+    // 1. Try exact match first (case-insensitive)
+    if (sectionMap.has(trimmedName)) {
+        return sectionMap.get(trimmedName)!;
+    }
+    if (sectionMap.has(trimmedName.toLowerCase())) {
+        return sectionMap.get(trimmedName.toLowerCase())!;
+    }
+
+    // 2. Try matching without "แผนก" prefix if the input has it
+    if (trimmedName.startsWith('แผนก')) {
+        const withoutPrefix = trimmedName.substring(4).trim();
+        if (sectionMap.has(withoutPrefix)) {
+            return sectionMap.get(withoutPrefix)!;
+        }
+    }
+
+    // 3. Try partial match as fallback, but must be at least 3 chars
+    if (trimmedName.length >= 3) {
+        for (const [name, info] of sectionMap.entries()) {
+            if (trimmedName.includes(name) || name.includes(trimmedName)) {
+                return info;
+            }
+        }
+    }
+
+    return null;
+}
+

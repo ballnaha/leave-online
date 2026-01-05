@@ -88,6 +88,7 @@ export async function PUT(
       isActive,
       managedDepartments,
       managedSections,
+      avatar,
     } = body;
 
     const userId = parseInt(id);
@@ -147,6 +148,11 @@ export async function PUT(
       managedDepartments: managedDepartments || null,
       managedSections: managedSections || null,
     };
+
+    // Handle avatar update (can be null to remove, string to set)
+    if (avatar !== undefined) {
+      updateData.avatar = avatar || null;
+    }
 
     if (employeeId) updateData.employeeId = employeeId;
     if (password) {

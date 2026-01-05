@@ -132,6 +132,14 @@ const leaveTypeConfig: Record<string, { icon: IconComponent; color: string; ligh
   default: { icon: InfoCircle, color: PRIMARY_COLOR, lightColor: PRIMARY_LIGHT },
 };
 
+// Shift display labels
+const shiftLabels: Record<string, string> = {
+  shift_a: 'กะ A',
+  shift_b: 'กะ B',
+  day: 'กะ A',  // backwards compatibility
+  night: 'กะ B', // backwards compatibility
+};
+
 interface ApprovalItem {
   approvalId: number;
   level: number;
@@ -217,7 +225,7 @@ export default function ApprovalPage() {
   const [approvals, setApprovals] = useState<ApprovalItem[]>([]);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [tabValue, setTabValue] = useState(0);
-  const [counts, setCounts] = useState({ pending: 0, approved: 0, rejected: 0, cancelled: 0, total: 0 });
+  // Remove static counts state, we will derive it from approvals and filters
 
   // View mode: 'mobile' or 'desktop'
   const [viewMode, setViewMode] = useState<'mobile' | 'desktop'>('mobile');
@@ -379,7 +387,7 @@ export default function ApprovalPage() {
       if (!response.ok) throw new Error('Failed to fetch approvals');
       const data = await response.json();
       setApprovals(data.data);
-      setCounts(data.counts);
+      // We no longer set counts state here as it's derived from approvals
     } catch (error) {
       console.error('Error fetching approvals:', error);
     } finally {
@@ -824,30 +832,9 @@ export default function ApprovalPage() {
     return timeString ? `${dateStr} ${timeString} น.` : dateStr;
   };
 
-  const filteredApprovals = (() => {
-    let filtered: ApprovalItem[];
-    switch (tabValue) {
-      case 0: // รออนุมัติ
-        // ต้องตรวจสอบว่า leaveRequest ไม่ถูกยกเลิก และ approval status ยังเป็น pending
-        filtered = approvals.filter(a =>
-          a.status === 'pending' &&
-          a.leaveRequest.status !== 'cancelled' &&
-          a.leaveRequest.status !== 'approved' &&
-          a.leaveRequest.status !== 'rejected'
-        );
-        break;
-      case 1: // อนุมัติแล้ว
-        filtered = approvals.filter(a => a.status === 'approved' || a.leaveRequest.status === 'approved');
-        break;
-      case 2: // ปฏิเสธ
-        filtered = approvals.filter(a => a.status === 'rejected' || a.leaveRequest.status === 'rejected');
-        break;
-      case 3: // ยกเลิก
-        filtered = approvals.filter(a => a.status === 'cancelled' || a.leaveRequest.status === 'cancelled');
-        break;
-      default:
-        filtered = approvals;
-    }
+  // Base filtered data (respects all dropdown filters but NOT the Tab selection)
+  const baseFilteredApprovals = useMemo(() => {
+    let filtered = approvals;
 
     // Apply month/year filter
     if (filterMonth !== 'all' || filterYear) {
@@ -873,7 +860,43 @@ export default function ApprovalPage() {
     }
 
     return filtered;
-  })();
+  }, [approvals, filterMonth, filterYear, filterCompany, filterDepartment, filterSection]);
+
+  // Derived counts based on base filtered data
+  const derivedCounts = useMemo(() => {
+    return {
+      pending: baseFilteredApprovals.filter(a =>
+        a.status === 'pending' &&
+        a.leaveRequest.status !== 'cancelled' &&
+        a.leaveRequest.status !== 'approved' &&
+        a.leaveRequest.status !== 'rejected'
+      ).length,
+      approved: baseFilteredApprovals.filter(a => a.status === 'approved' || a.leaveRequest.status === 'approved').length,
+      rejected: baseFilteredApprovals.filter(a => a.status === 'rejected' || a.leaveRequest.status === 'rejected').length,
+      cancelled: baseFilteredApprovals.filter(a => a.status === 'cancelled' || a.leaveRequest.status === 'cancelled').length,
+      total: baseFilteredApprovals.length
+    };
+  }, [baseFilteredApprovals]);
+
+  const filteredApprovals = useMemo(() => {
+    switch (tabValue) {
+      case 0: // รออนุมัติ
+        return baseFilteredApprovals.filter(a =>
+          a.status === 'pending' &&
+          a.leaveRequest.status !== 'cancelled' &&
+          a.leaveRequest.status !== 'approved' &&
+          a.leaveRequest.status !== 'rejected'
+        );
+      case 1: // อนุมัติแล้ว
+        return baseFilteredApprovals.filter(a => a.status === 'approved' || a.leaveRequest.status === 'approved');
+      case 2: // ปฏิเสธ
+        return baseFilteredApprovals.filter(a => a.status === 'rejected' || a.leaveRequest.status === 'rejected');
+      case 3: // ยกเลิก
+        return baseFilteredApprovals.filter(a => a.status === 'cancelled' || a.leaveRequest.status === 'cancelled');
+      default:
+        return baseFilteredApprovals;
+    }
+  }, [baseFilteredApprovals, tabValue]);
 
   // Get unique companies from approvals (for HR Manager filter)
   const uniqueCompanies = useMemo(() => {
@@ -919,7 +942,8 @@ export default function ApprovalPage() {
   const departmentSummary = useMemo(() => {
     const summary: Record<string, { pending: number; total: number; sections: Record<string, number> }> = {};
 
-    approvals.forEach(a => {
+    // Use baseFilteredApprovals to respect month/year filters in the summary cards
+    baseFilteredApprovals.forEach(a => {
       const dept = a.leaveRequest.user.department || 'ไม่ระบุฝ่าย';
       const sec = a.leaveRequest.user.section || 'ไม่ระบุแผนก';
       const isPending = a.status === 'pending' &&
@@ -1767,10 +1791,10 @@ export default function ApprovalPage() {
               }}
             >
               {[
-                { id: 0, label: t('tab_pending', 'รออนุมัติ'), icon: Clock, color: '#E65100', count: counts.pending, showBadge: true },
-                { id: 1, label: t('tab_approved', 'อนุมัติ'), icon: TickCircle, color: '#2E7D32', count: counts.approved, showBadge: true },
-                { id: 2, label: t('tab_rejected', 'ปฏิเสธ'), icon: CloseCircle, color: '#D32F2F', count: counts.rejected, showBadge: true },
-                { id: 3, label: t('tab_cancelled', 'ยกเลิก'), icon: Forbidden2, color: '#757575', count: counts.cancelled, showBadge: true },
+                { id: 0, label: t('tab_pending', 'รออนุมัติ'), icon: Clock, color: '#E65100', count: derivedCounts.pending, showBadge: true },
+                { id: 1, label: t('tab_approved', 'อนุมัติ'), icon: TickCircle, color: '#2E7D32', count: derivedCounts.approved, showBadge: true },
+                { id: 2, label: t('tab_rejected', 'ปฏิเสธ'), icon: CloseCircle, color: '#D32F2F', count: derivedCounts.rejected, showBadge: true },
+                { id: 3, label: t('tab_cancelled', 'ยกเลิก'), icon: Forbidden2, color: '#757575', count: derivedCounts.cancelled, showBadge: true },
                 { id: 4, label: t('tab_team_history', 'ประวัติทีม'), icon: Profile2User, color: '#6C63FF', count: 0, showBadge: false },
               ].map((tab) => {
                 const Icon = tab.icon;
@@ -2984,7 +3008,7 @@ export default function ApprovalPage() {
                                   </Box>
                                   <Box>
                                     <Typography sx={{ fontSize: '0.8rem', color: 'text.secondary' }}>กะการทำงาน</Typography>
-                                    <Typography sx={{ fontSize: '0.9rem', fontWeight: 600 }}>{approval.leaveRequest.user.shift || '-'}</Typography>
+                                    <Typography sx={{ fontSize: '0.9rem', fontWeight: 600 }}>{approval.leaveRequest.user.shift ? shiftLabels[approval.leaveRequest.user.shift] || approval.leaveRequest.user.shift : '-'}</Typography>
                                   </Box>
                                 </Box>
                               </Paper>
@@ -3390,7 +3414,7 @@ export default function ApprovalPage() {
                             <Box>
                               <Typography sx={{ fontSize: '0.75rem', color: '#94A3B8' }}>กะการทำงาน</Typography>
                               <Typography sx={{ fontSize: '0.9rem', color: '#334155', fontWeight: 500 }}>
-                                {approval.leaveRequest.user.shift || '-'}
+                                {approval.leaveRequest.user.shift ? shiftLabels[approval.leaveRequest.user.shift] || approval.leaveRequest.user.shift : '-'}
                               </Typography>
                             </Box>
                           </Box>

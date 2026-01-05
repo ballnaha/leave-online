@@ -7,6 +7,12 @@ const nextConfig: NextConfig = {
     'http://192.168.132.30',
     '192.168.132.30',
   ],
+  // Experimental features for large file uploads
+  experimental: {
+    serverActions: {
+      bodySizeLimit: '20mb', // Allow larger file uploads
+    },
+  },
   images: {
     // เปิดใช้งาน image optimization
     unoptimized: false,
@@ -52,6 +58,16 @@ const nextConfig: NextConfig = {
           {
             key: 'Service-Worker-Allowed',
             value: '/',
+          },
+        ],
+      },
+      {
+        // Allow caching for uploaded avatars
+        source: '/uploads/:path*',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=86400, stale-while-revalidate=604800', // 1 day, stale: 7 days
           },
         ],
       },

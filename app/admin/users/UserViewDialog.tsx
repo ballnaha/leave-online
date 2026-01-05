@@ -91,6 +91,14 @@ const genderLabels: { [key: string]: string } = {
   female: 'หญิง',
 };
 
+// Shift display mapping
+const shiftLabels: { [key: string]: string } = {
+  shift_a: 'กะ A',
+  shift_b: 'กะ B',
+  day: 'กะ A',  // backwards compatibility
+  night: 'กะ B', // backwards compatibility
+};
+
 // Info Item with larger fonts
 function InfoItem({ label, value }: { label: string; value: React.ReactNode }) {
   return (
@@ -125,13 +133,13 @@ export default function UserViewDialog({
     if (user.managedDepartments) {
       managedDepts = JSON.parse(user.managedDepartments);
     }
-  } catch (e) {}
+  } catch (e) { }
 
   try {
     if (user.managedSections) {
       managedSects = JSON.parse(user.managedSections);
     }
-  } catch (e) {}
+  } catch (e) { }
 
   // Get department names for managed departments
   const managedDepartmentDetails = managedDepts.map((code) => {
@@ -157,10 +165,10 @@ export default function UserViewDialog({
   const isManagerRole = ['dept_manager', 'section_head', 'hr_manager', 'shift_supervisor'].includes(user.role);
 
   return (
-    <Dialog 
-      open={open} 
-      onClose={onClose} 
-      maxWidth="md" 
+    <Dialog
+      open={open}
+      onClose={onClose}
+      maxWidth="md"
       fullWidth
       fullScreen={isMobile}
       PaperProps={{
@@ -256,14 +264,14 @@ export default function UserViewDialog({
           {/* Left Column - Personal & Work Info */}
           <Box sx={{ flex: 1 }}>
             {/* Personal Info */}
-            <Typography 
-              variant="body2" 
-              color="primary" 
-              fontWeight={600} 
-              sx={{ 
-                display: 'flex', 
-                alignItems: 'center', 
-                gap: 0.5, 
+            <Typography
+              variant="body2"
+              color="primary"
+              fontWeight={600}
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 0.5,
                 mb: 1,
                 textTransform: 'uppercase',
                 letterSpacing: 0.5,
@@ -273,10 +281,10 @@ export default function UserViewDialog({
               <User size={16} />
               ข้อมูลส่วนตัว
             </Typography>
-            <Box 
-              sx={{ 
-                p: 2, 
-                mb: 2, 
+            <Box
+              sx={{
+                p: 2,
+                mb: 2,
                 borderRadius: 1,
                 bgcolor: alpha(theme.palette.background.default, 0.5),
                 border: '1px solid',
@@ -286,27 +294,27 @@ export default function UserViewDialog({
               <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
                 <InfoItem label="อีเมล" value={user.email} />
                 <InfoItem label="เพศ" value={genderLabels[user.gender] || user.gender} />
-                <InfoItem 
-                  label="วันเริ่มงาน" 
+                <InfoItem
+                  label="วันเริ่มงาน"
                   value={user.startDate ? new Date(user.startDate).toLocaleDateString('th-TH', {
                     year: 'numeric',
                     month: 'short',
                     day: 'numeric',
-                  }) : '-'} 
+                  }) : '-'}
                 />
                 <InfoItem label="ประเภท" value={employeeTypeLabels[user.employeeType] || user.employeeType} />
               </Box>
             </Box>
 
             {/* Work Info */}
-            <Typography 
-              variant="body2" 
-              color="primary" 
-              fontWeight={600} 
-              sx={{ 
-                display: 'flex', 
-                alignItems: 'center', 
-                gap: 0.5, 
+            <Typography
+              variant="body2"
+              color="primary"
+              fontWeight={600}
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 0.5,
                 mb: 1,
                 textTransform: 'uppercase',
                 letterSpacing: 0.5,
@@ -316,9 +324,9 @@ export default function UserViewDialog({
               <Building2 size={16} />
               ข้อมูลสังกัด
             </Typography>
-            <Box 
-              sx={{ 
-                p: 2, 
+            <Box
+              sx={{
+                p: 2,
                 borderRadius: 1,
                 bgcolor: alpha(theme.palette.background.default, 0.5),
                 border: '1px solid',
@@ -327,7 +335,7 @@ export default function UserViewDialog({
             >
               <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
                 <InfoItem label="บริษัท" value={user.company} />
-                <InfoItem label="กะ" value={user.shift} />
+                <InfoItem label="กะ" value={user.shift ? shiftLabels[user.shift] || user.shift : '-'} />
                 <InfoItem label="ฝ่าย" value={`${user.departmentName} (${user.department})`} />
                 <InfoItem label="แผนก" value={user.section ? `${user.sectionName || user.section}` : '-'} />
               </Box>
@@ -336,14 +344,14 @@ export default function UserViewDialog({
 
           {/* Right Column - Managed Scope */}
           <Box sx={{ flex: 1 }}>
-            <Typography 
-              variant="body2" 
-              color="warning.main" 
-              fontWeight={600} 
-              sx={{ 
-                display: 'flex', 
-                alignItems: 'center', 
-                gap: 0.5, 
+            <Typography
+              variant="body2"
+              color="warning.main"
+              fontWeight={600}
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 0.5,
                 mb: 1,
                 textTransform: 'uppercase',
                 letterSpacing: 0.5,
@@ -353,9 +361,9 @@ export default function UserViewDialog({
               <Eye size={16} />
               ขอบเขตการดูแล
             </Typography>
-            <Box 
-              sx={{ 
-                p: 2, 
+            <Box
+              sx={{
+                p: 2,
                 borderRadius: 1,
                 bgcolor: alpha(theme.palette.warning.main, 0.04),
                 border: '1px solid',
