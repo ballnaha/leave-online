@@ -39,15 +39,20 @@ export default function PullToRefresh({
         return () => window.removeEventListener('scroll', checkScrollPosition);
     }, [checkScrollPosition]);
 
-    const handleTouchStart = useCallback((e: React.TouchEvent) => {
-        if (disabled || isRefreshing) return;
-
-        // ถ้ามี drawer/overlay/dialog เปิดอยู่ → ไม่ทำงาน (ป้องกันชนกับ Vaul drawer)
-        const hasOverlay = document.querySelector('[vaul-overlay]') ||
+    // ตรวจสอบว่ามี overlay/drawer/dialog เปิดอยู่หรือไม่
+    const isOverlayOpen = useCallback(() => {
+        return !!(
+            document.querySelector('[vaul-overlay]') ||
             document.querySelector('[vaul-drawer]') ||
             document.querySelector('.MuiDrawer-root') ||
-            document.querySelector('.MuiDialog-root');
-        if (hasOverlay) return;
+            document.querySelector('.MuiDialog-root') ||
+            document.querySelector('.MuiModal-root')
+        );
+    }, []);
+
+    const handleTouchStart = useCallback((e: React.TouchEvent) => {
+        if (disabled || isRefreshing) return;
+        if (isOverlayOpen()) return;
 
         checkScrollPosition();
         if (!isScrolledToTop.current) return;
@@ -55,10 +60,15 @@ export default function PullToRefresh({
         touchStartY.current = e.touches[0].clientY;
         touchStartX.current = e.touches[0].clientX;
         setIsPulling(true);
-    }, [disabled, isRefreshing, checkScrollPosition]);
+    }, [disabled, isRefreshing, checkScrollPosition, isOverlayOpen]);
 
     const handleTouchMove = useCallback((e: React.TouchEvent) => {
         if (disabled || isRefreshing || !isPulling) return;
+        if (isOverlayOpen()) {
+            setPullDistance(0);
+            setIsPulling(false);
+            return;
+        }
         if (!isScrolledToTop.current) {
             setPullDistance(0);
             return;
@@ -80,7 +90,7 @@ export default function PullToRefresh({
             const resistance = Math.min(diffY * 0.5, maxPull);
             setPullDistance(resistance);
         }
-    }, [disabled, isRefreshing, isPulling, maxPull, pullDistance]);
+    }, [disabled, isRefreshing, isPulling, maxPull, pullDistance, isOverlayOpen]);
 
     const handleTouchEnd = useCallback(async () => {
         if (disabled || isRefreshing) return;
