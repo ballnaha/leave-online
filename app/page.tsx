@@ -287,9 +287,11 @@ export default function Home() {
     return t('status_pending', 'รอการอนุมัติ');
   };
 
-  // แสดง 5 รายการล่าสุด (รวมบังคับพักร้อนด้วย)
+  // แสดง 5 รายการล่าสุด: ใบลาที่พนักงานลาเองก่อน ตามด้วยบังคับพักร้อน (FL)
   const recentLeaveRequests = useMemo(() => {
-    return leaveRequests.slice(0, 5);
+    const userLeaves = leaveRequests.filter(l => !(l.leaveCode && l.leaveCode.startsWith('FL')));
+    const forcedLeaves = leaveRequests.filter(l => l.leaveCode && l.leaveCode.startsWith('FL'));
+    return [...userLeaves, ...forcedLeaves].slice(0, 5);
   }, [leaveRequests]);
 
   const getLeaveTypeConfig = (code: string) => {
