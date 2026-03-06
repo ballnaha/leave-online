@@ -298,8 +298,13 @@ const Header = () => {
                                 {loading ? (
                                     <Skeleton variant="text" width={100} height={24} />
                                 ) : (
-                                    <Typography variant="subtitle1" sx={{ fontWeight: 'bold', lineHeight: 1, color: 'text.primary', fontSize: '1rem', mt: 0.8 }}>
-                                        {user?.firstName + ' ' + user?.lastName || 'ผู้ใช้'}
+                                    <Typography variant="subtitle1" sx={{ fontWeight: 'bold', lineHeight: 1.3, color: 'text.primary', fontSize: '1rem', mt: 0.5 }}>
+                                        {user?.firstName || 'ผู้ใช้'}
+                                        {user?.lastName && (
+                                            <Typography component="span" sx={{ display: { xs: 'block', sm: 'inline' }, fontWeight: 'bold', fontSize: '1rem', color: 'text.primary', '&::before': { content: { xs: 'none', sm: '" "' } } }}>
+                                                {user.lastName}
+                                            </Typography>
+                                        )}
                                     </Typography>
                                 )}
                             </Box>
