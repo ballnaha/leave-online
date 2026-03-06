@@ -354,7 +354,8 @@ export default function HolidayDialog({
             {formData.deductFromAnnualLeave && (
               <Alert severity="warning" sx={{ mt: 1 }}>
                 <Typography variant="body2">
-                  ระบบจะสร้างใบลาพักร้อนอัตโนมัติสำหรับพนักงานทุกคน{formData.companyId ? ' ในบริษัทที่เลือก' : ''} และหักจากโควตาวันลาพักร้อน
+                  ระบบจะสร้างใบลาพักร้อนอัตโนมัติให้พนักงานทุกคนทุกตำแหน่ง{formData.companyId ? ' ในบริษัทที่เลือก' : ''} และหักจากโควตาวันลาพักร้อน
+                  (หากปิดหรือลบวันหยุดนี้ ใบลาที่สร้างไว้จะถูกลบอัตโนมัติ)
                 </Typography>
               </Alert>
             )}

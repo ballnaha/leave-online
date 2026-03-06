@@ -1332,24 +1332,6 @@ export default function LeaveFormPage() {
                                             fontSize: '0.65rem',
                                         }}
                                     />
-                                    {/* แสดง Chip บังคับพักร้อน เฉพาะลาพักร้อนและมีวันบังคับ */}
-                                    {leaveType.code === 'vacation' && forcedLeaveDays > 0 && (
-                                        <Chip
-                                            size="small"
-                                            icon={<CalendarRemove size={12} color="#E65100" variant="Bold" />}
-                                            label={t('forced_annual_leave_days', 'บังคับพักร้อน {{days}} วัน').replace('{{days}}', String(forcedLeaveDays))}
-                                            sx={{
-                                                bgcolor: 'rgba(230, 81, 0, 0.12)',
-                                                color: '#E65100',
-                                                fontWeight: 600,
-                                                fontSize: '0.65rem',
-                                                '& .MuiChip-icon': {
-                                                    marginLeft: '4px',
-                                                    marginRight: '-2px',
-                                                }
-                                            }}
-                                        />
-                                    )}
                                 </Box>
                             )}
                         </Box>
@@ -1989,6 +1971,28 @@ export default function LeaveFormPage() {
                                     : t('leave_max_quota_unpaid', 'สิทธิ์ลา {days} วัน/ปี (ไม่ได้รับค่าจ้าง)').replace('{days}', leaveType.maxDaysPerYear.toString())
                                 }
                             </Typography>
+                        )}
+
+                        {/* แสดง Chip บังคับพักร้อน เฉพาะลาพักร้อนและมีวันบังคับ */}
+                        {leaveType && leaveType.code === 'vacation' && forcedLeaveDays > 0 && (
+                            <Box sx={{ display: 'flex', justifyContent: 'center', mt: 1.5 }}>
+                                <Chip
+                                    size="small"
+                                    icon={<CalendarRemove size={14} color="#E65100" variant="Bold" />}
+                                    label={t('forced_annual_leave_days', 'บังคับพักร้อน {{days}} วัน').replace('{{days}}', String(forcedLeaveDays))}
+                                    sx={{
+                                        bgcolor: 'rgba(230, 81, 0, 0.12)',
+                                        color: '#E65100',
+                                        fontWeight: 600,
+                                        fontSize: '0.75rem',
+                                        height: 28,
+                                        '& .MuiChip-icon': {
+                                            marginLeft: '6px',
+                                            marginRight: '-2px',
+                                        }
+                                    }}
+                                />
+                            </Box>
                         )}
                     </Box>
 

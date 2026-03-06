@@ -287,11 +287,9 @@ export default function Home() {
     return t('status_pending', 'รอการอนุมัติ');
   };
 
-  // แสดง 5 รายการล่าสุด โดยไม่รวมการบังคับพักร้อน (FL)
+  // แสดง 5 รายการล่าสุด (รวมบังคับพักร้อนด้วย)
   const recentLeaveRequests = useMemo(() => {
-    return leaveRequests
-      .filter(leave => !(leave.leaveCode && leave.leaveCode.startsWith('FL')))
-      .slice(0, 5);
+    return leaveRequests.slice(0, 5);
   }, [leaveRequests]);
 
   const getLeaveTypeConfig = (code: string) => {
@@ -380,356 +378,358 @@ export default function Home() {
   }
 
   return (
-    <PullToRefresh onRefresh={handleRefresh}>
-      <Box sx={{ minHeight: '100vh', bgcolor: 'background.default', pb: 10 }}>
-        <Container maxWidth={false} sx={{ maxWidth: 1200, px: { xs: 2.5, sm: 3, md: 4 } }}>
-          <Header />
-        </Container>
+    <>
+      <PullToRefresh onRefresh={handleRefresh}>
+        <Box sx={{ minHeight: '100vh', bgcolor: 'background.default', pb: 10 }}>
+          <Container maxWidth={false} sx={{ maxWidth: 1200, px: { xs: 2.5, sm: 3, md: 4 } }}>
+            <Header />
+          </Container>
 
-        {/* DashboardCard - Full Width on Mobile */}
-        <Box sx={{ px: { xs: 0, sm: 3, md: 4 } }}>
-          <DashboardCard
-            leaveTypes={filteredLeaveTypes}
-            leaveRequests={leaveRequests}
-            year={year}
-            onYearChange={setYear}
-            loading={showLoading}
-          />
+          {/* DashboardCard - Full Width on Mobile */}
+          <Box sx={{ px: { xs: 0, sm: 3, md: 4 } }}>
+            <DashboardCard
+              leaveTypes={filteredLeaveTypes}
+              leaveRequests={leaveRequests}
+              year={year}
+              onYearChange={setYear}
+              loading={showLoading}
+            />
 
-          {/* Manage Leave Card - Show only for approvers (not employee) */}
-          {user?.role && user.role !== 'employee' && (
-            <Card
-              sx={{
+            {/* Manage Leave Card - Show only for approvers (not employee) */}
+            {user?.role && user.role !== 'employee' && (
+              <Card
+                sx={{
 
-                mx: 2.5,
-                mb: 1,
-                maxWidth: { xs: 330, sm: 600, md: 800 },
-                margin: { xs: '-1rem auto 0 auto', sm: '-2rem auto 0 auto', md: '-2rem auto 0 auto' },
-                borderRadius: '20px',
-                boxShadow: '0 8px 32px rgba(0,0,0,0.08)',
-                background: 'rgba(255, 255, 255, 0.7)',
-                backdropFilter: 'blur(20px)',
-                WebkitBackdropFilter: 'blur(20px)',
-                border: '1px solid rgba(255, 255, 255, 0.5)',
-                position: 'relative',
-                overflow: 'hidden',
-                zIndex: 10,
-                '&::before': {
-                  content: '""',
-                  position: 'absolute',
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  background: 'linear-gradient(135deg, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0.1) 100%)',
-                  pointerEvents: 'none',
-                },
-              }}
-            >
-              <CardActionArea onClick={() => router.push('/approval')} sx={{ p: 0 }}>
-                <CardContent sx={{ py: 2.5, px: 2.5, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, zIndex: 1 }}>
-                    <Box
-                      sx={{
-                        width: 48,
-                        height: 48,
-                        borderRadius: '14px',
-                        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        boxShadow: '0 4px 12px rgba(102, 126, 234, 0.3)',
-                      }}
-                    >
-                      <TaskSquare size={26} color="white" variant="Outline" />
-                    </Box>
-                    <Box>
-                      <Typography variant="subtitle1" sx={{ fontWeight: 700, color: '#1E293B', lineHeight: 1.3 }}>
-                        {t('home_manage_leave', 'จัดการใบลา')}
-                      </Typography>
-                      <Typography variant="caption" sx={{ color: '#64748B' }}>
-                        {t('home_manage_leave_desc', 'จัดการคำขออนุมัติการลา')}
-                      </Typography>
-                    </Box>
-                  </Box>
-                  <ArrowForwardIos sx={{ color: '#94A3B8', fontSize: 18, zIndex: 1 }} />
-                </CardContent>
-              </CardActionArea>
-            </Card>
-          )}
-        </Box>
-
-        <Container maxWidth={false} sx={{ maxWidth: 1200, px: { xs: 2.5, sm: 3, md: 4 } }}>
-          {/* Quick Actions Section */}
-          <Box sx={{ mt: 3, mb: 3 }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5 }}>
-              <Typography variant="h6" sx={{ fontWeight: 'bold', color: 'text.primary' }}>
-                {t('home_apply_leave', 'ยื่นการลา')}
-              </Typography>
-
-            </Box>
-
-            {showLoading ? (
-              <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 2, px: 1 }}>
-                {[1, 2, 3, 4, 5].map((i) => (
-                  <Box key={i} sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
-                    <Skeleton variant="circular" width={56} height={56} />
-                    <Skeleton variant="text" width={40} />
-                  </Box>
-                ))}
-              </Box>
-            ) : (
-              <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 2, px: 1 }}>
-                {filteredLeaveTypes.map((type) => {
-                  const config = getLeaveTypeConfig(type.code);
-                  const IconComponent = config.icon;
-
-                  const usedDays = leaveRequests
-                    .filter(req => (req.leaveType === type.code || req.leaveCode === type.code) &&
-                      ['approved', 'pending', 'in_progress', 'completed'].includes(req.status))
-                    .reduce((sum, req) => sum + (req.totalDays || 0), 0);
-
-                  const isQuotaFull = type.maxDaysPerYear !== null && usedDays >= type.maxDaysPerYear;
-
-                  return (
-                    <Box
-                      key={type.id}
-                      onClick={() => !isQuotaFull && !type.isDisabled && router.push(`/leave/${type.code}`)}
-                      sx={{
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                        gap: 1,
-                        cursor: (isQuotaFull || type.isDisabled) ? 'default' : 'pointer',
-                        opacity: (isQuotaFull || type.isDisabled) ? 0.6 : 1,
-                        filter: (isQuotaFull || type.isDisabled) ? 'grayscale(100%)' : 'none',
-                      }}
-                    >
+                  mx: 2.5,
+                  mb: 1,
+                  maxWidth: { xs: 330, sm: 600, md: 800 },
+                  margin: { xs: '-1rem auto 0 auto', sm: '-2rem auto 0 auto', md: '-2rem auto 0 auto' },
+                  borderRadius: '20px',
+                  boxShadow: '0 8px 32px rgba(0,0,0,0.08)',
+                  background: 'rgba(255, 255, 255, 0.7)',
+                  backdropFilter: 'blur(20px)',
+                  WebkitBackdropFilter: 'blur(20px)',
+                  border: '1px solid rgba(255, 255, 255, 0.5)',
+                  position: 'relative',
+                  overflow: 'hidden',
+                  zIndex: 10,
+                  '&::before': {
+                    content: '""',
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    background: 'linear-gradient(135deg, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0.1) 100%)',
+                    pointerEvents: 'none',
+                  },
+                }}
+              >
+                <CardActionArea onClick={() => router.push('/approval')} sx={{ p: 0 }}>
+                  <CardContent sx={{ py: 2.5, px: 2.5, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, zIndex: 1 }}>
                       <Box
                         sx={{
-                          width: 56,
-                          height: 56,
-                          borderRadius: '50%',
-                          background: config.image ? 'transparent' : config.gradient,
+                          width: 48,
+                          height: 48,
+                          borderRadius: '14px',
+                          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
-                          boxShadow: config.image ? 'none' : `0 4px 16px ${config.color}40`,
-                          transition: 'transform 0.2s, box-shadow 0.2s',
-                          '&:hover': (isQuotaFull || type.isDisabled) ? {} : {
-                            transform: 'scale(1.1)',
-                            boxShadow: config.image ? 'none' : `0 6px 20px ${config.color}50`,
-                          }
+                          boxShadow: '0 4px 12px rgba(102, 126, 234, 0.3)',
                         }}
                       >
-                        {config.image ? (
-                          <Image
-                            src={config.image}
-                            alt={type.name}
-                            width={50}
-                            height={50}
-                            priority
-                            style={{ objectFit: 'contain' }}
-                          />
-                        ) : (
-                          <IconComponent size={28} color="white" />
-                        )}
+                        <TaskSquare size={26} color="white" variant="Outline" />
                       </Box>
-                      <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary', textAlign: 'center', lineHeight: 1.2 }}>
-                        {t(`leave_${type.code}`, type.name)}
-                        {isQuotaFull && (
-                          <Typography component="span" sx={{ display: 'block', fontSize: '0.65rem', color: 'error.main', mt: 0.5 }}>
-                            (เต็ม)
-                          </Typography>
-                        )}
-                        {type.isDisabled && (
-                          <Typography component="span" sx={{ display: 'block', fontSize: '0.6rem', color: 'warning.main', mt: 0.5 }}>
-                            {type.disabledReason}
-                          </Typography>
-                        )}
-                      </Typography>
+                      <Box>
+                        <Typography variant="subtitle1" sx={{ fontWeight: 700, color: '#1E293B', lineHeight: 1.3 }}>
+                          {t('home_manage_leave', 'จัดการใบลา')}
+                        </Typography>
+                        <Typography variant="caption" sx={{ color: '#64748B' }}>
+                          {t('home_manage_leave_desc', 'จัดการคำขออนุมัติการลา')}
+                        </Typography>
+                      </Box>
                     </Box>
-                  );
-                })}
+                    <ArrowForwardIos sx={{ color: '#94A3B8', fontSize: 18, zIndex: 1 }} />
+                  </CardContent>
+                </CardActionArea>
+              </Card>
+            )}
+          </Box>
+
+          <Container maxWidth={false} sx={{ maxWidth: 1200, px: { xs: 2.5, sm: 3, md: 4 } }}>
+            {/* Quick Actions Section */}
+            <Box sx={{ mt: 3, mb: 3 }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5 }}>
+                <Typography variant="h6" sx={{ fontWeight: 'bold', color: 'text.primary' }}>
+                  {t('home_apply_leave', 'ยื่นการลา')}
+                </Typography>
+
               </Box>
-            )}
-          </Box>
 
-
-
-
-          {/* Recent Requests Section */}
-          <Box sx={{ pb: 3 }}>
-            {showLoading ? (
-              <>
-                <Skeleton variant="text" width={160} height={28} sx={{ mb: 1 }} />
-                <Skeleton variant="rounded" height={48} sx={{ borderRadius: 2, mb: 2 }} />
-                {[1, 2, 3].map(i => (
-                  <Skeleton key={i} variant="rounded" height={82} sx={{ borderRadius: 2, mb: 1.5 }} />
-                ))}
-              </>
-            ) : (
-              <>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5 }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Typography variant="h6" sx={{ fontWeight: 'bold', color: 'text.primary' }}>
-                      {t('home_history', 'ประวัติการลา')}
-                    </Typography>
-
-                  </Box>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                    <IconButton
-                      size="small"
-                      aria-label={t('home_recent_requests_toggle_view', 'สลับรูปแบบการแสดงผล')}
-                      onClick={() =>
-                        setRecentRequestsDisplayMode((prev) => (prev === 'list' ? 'swiper' : 'list'))
-                      }
-                    >
-                      {recentRequestsDisplayMode === 'list' ? (
-                        <ViewCarousel fontSize="small" />
-                      ) : (
-                        <ViewList fontSize="small" />
-                      )}
-                    </IconButton>
-
-                    <Button
-                      size="small"
-                      sx={{ fontWeight: 'medium' }}
-                      onClick={() => router.push('/leave')}
-                    >
-                      {t('home_see_all', 'ดูทั้งหมด')}
-                    </Button>
-                  </Box>
+              {showLoading ? (
+                <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 2, px: 1 }}>
+                  {[1, 2, 3, 4, 5].map((i) => (
+                    <Box key={i} sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
+                      <Skeleton variant="circular" width={56} height={56} />
+                      <Skeleton variant="text" width={40} />
+                    </Box>
+                  ))}
                 </Box>
-
-                <LeaveTimeline
-                  items={recentLeaveRequests.map((leave) => {
-                    const config = getLeaveTypeConfig(leave.leaveType || leave.leaveCode || 'default');
+              ) : (
+                <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 2, px: 1 }}>
+                  {filteredLeaveTypes.map((type) => {
+                    const config = getLeaveTypeConfig(type.code);
                     const IconComponent = config.icon;
-                    const totalLevels = leave.approvals?.length || 0;
-                    const approvedCount = leave.approvals?.filter(a => a.status === 'approved').length || 0;
 
-                    // หา approver ที่กำลังรออนุมัติ
-                    const pendingApproval = leave.approvals?.find(a => a.status === 'pending');
-                    const waitingForApprover = pendingApproval?.approver?.firstName || undefined;
+                    const usedDays = leaveRequests
+                      .filter(req => (req.leaveType === type.code || req.leaveCode === type.code) &&
+                        ['approved', 'pending', 'in_progress', 'completed'].includes(req.status))
+                      .reduce((sum, req) => sum + (req.totalDays || 0), 0);
 
-                    return {
-                      id: leave.id,
-                      leaveCode: leave.leaveCode || undefined,
-                      title: t(`leave_${leave.leaveType || leave.leaveCode}`, leave.leaveTypeInfo?.name || 'การลา'),
-                      date: formatDate(leave.startDate, leave.endDate),
-                      startDate: leave.startDate,
-                      endDate: leave.endDate,
-                      totalDays: leave.totalDays || 1,
-                      reason: leave.reason || undefined,
-                      createdAt: leave.createdAt || undefined,
-                      status: mapStatus(leave.status),
-                      icon: <IconComponent size={22} color={config.color} />,
-                      iconColor: config.color,
-                      approvalStatus: getApprovalStatusText(leave),
-                      waitingForApprover: waitingForApprover,
-                      currentLevel: approvedCount,
-                      totalLevels: totalLevels,
-                      onClick: () => handleLeaveClick(leave),
-                    };
+                    const isQuotaFull = type.maxDaysPerYear !== null && usedDays >= type.maxDaysPerYear;
+
+                    return (
+                      <Box
+                        key={type.id}
+                        onClick={() => !isQuotaFull && !type.isDisabled && router.push(`/leave/${type.code}`)}
+                        sx={{
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          gap: 1,
+                          cursor: (isQuotaFull || type.isDisabled) ? 'default' : 'pointer',
+                          opacity: (isQuotaFull || type.isDisabled) ? 0.6 : 1,
+                          filter: (isQuotaFull || type.isDisabled) ? 'grayscale(100%)' : 'none',
+                        }}
+                      >
+                        <Box
+                          sx={{
+                            width: 56,
+                            height: 56,
+                            borderRadius: '50%',
+                            background: config.image ? 'transparent' : config.gradient,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            boxShadow: config.image ? 'none' : `0 4px 16px ${config.color}40`,
+                            transition: 'transform 0.2s, box-shadow 0.2s',
+                            '&:hover': (isQuotaFull || type.isDisabled) ? {} : {
+                              transform: 'scale(1.1)',
+                              boxShadow: config.image ? 'none' : `0 6px 20px ${config.color}50`,
+                            }
+                          }}
+                        >
+                          {config.image ? (
+                            <Image
+                              src={config.image}
+                              alt={type.name}
+                              width={50}
+                              height={50}
+                              priority
+                              style={{ objectFit: 'contain' }}
+                            />
+                          ) : (
+                            <IconComponent size={28} color="white" />
+                          )}
+                        </Box>
+                        <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary', textAlign: 'center', lineHeight: 1.2 }}>
+                          {t(`leave_${type.code}`, type.name)}
+                          {isQuotaFull && (
+                            <Typography component="span" sx={{ display: 'block', fontSize: '0.65rem', color: 'error.main', mt: 0.5 }}>
+                              (เต็ม)
+                            </Typography>
+                          )}
+                          {type.isDisabled && (
+                            <Typography component="span" sx={{ display: 'block', fontSize: '0.6rem', color: 'warning.main', mt: 0.5 }}>
+                              {type.disabledReason}
+                            </Typography>
+                          )}
+                        </Typography>
+                      </Box>
+                    );
                   })}
-                  displayMode={recentRequestsDisplayMode}
-                />
-              </>
-            )}
+                </Box>
+              )}
+            </Box>
+
+
+
+
+            {/* Recent Requests Section */}
+            <Box sx={{ pb: 3 }}>
+              {showLoading ? (
+                <>
+                  <Skeleton variant="text" width={160} height={28} sx={{ mb: 1 }} />
+                  <Skeleton variant="rounded" height={48} sx={{ borderRadius: 2, mb: 2 }} />
+                  {[1, 2, 3].map(i => (
+                    <Skeleton key={i} variant="rounded" height={82} sx={{ borderRadius: 2, mb: 1.5 }} />
+                  ))}
+                </>
+              ) : (
+                <>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Typography variant="h6" sx={{ fontWeight: 'bold', color: 'text.primary' }}>
+                        {t('home_history', 'ประวัติการลา')}
+                      </Typography>
+
+                    </Box>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                      <IconButton
+                        size="small"
+                        aria-label={t('home_recent_requests_toggle_view', 'สลับรูปแบบการแสดงผล')}
+                        onClick={() =>
+                          setRecentRequestsDisplayMode((prev) => (prev === 'list' ? 'swiper' : 'list'))
+                        }
+                      >
+                        {recentRequestsDisplayMode === 'list' ? (
+                          <ViewCarousel fontSize="small" />
+                        ) : (
+                          <ViewList fontSize="small" />
+                        )}
+                      </IconButton>
+
+                      <Button
+                        size="small"
+                        sx={{ fontWeight: 'medium' }}
+                        onClick={() => router.push('/leave')}
+                      >
+                        {t('home_see_all', 'ดูทั้งหมด')}
+                      </Button>
+                    </Box>
+                  </Box>
+
+                  <LeaveTimeline
+                    items={recentLeaveRequests.map((leave) => {
+                      const config = getLeaveTypeConfig(leave.leaveType || leave.leaveCode || 'default');
+                      const IconComponent = config.icon;
+                      const totalLevels = leave.approvals?.length || 0;
+                      const approvedCount = leave.approvals?.filter(a => a.status === 'approved').length || 0;
+
+                      // หา approver ที่กำลังรออนุมัติ
+                      const pendingApproval = leave.approvals?.find(a => a.status === 'pending');
+                      const waitingForApprover = pendingApproval?.approver?.firstName || undefined;
+
+                      return {
+                        id: leave.id,
+                        leaveCode: leave.leaveCode || undefined,
+                        title: t(`leave_${leave.leaveType || leave.leaveCode}`, leave.leaveTypeInfo?.name || 'การลา'),
+                        date: formatDate(leave.startDate, leave.endDate),
+                        startDate: leave.startDate,
+                        endDate: leave.endDate,
+                        totalDays: leave.totalDays || 1,
+                        reason: leave.reason || undefined,
+                        createdAt: leave.createdAt || undefined,
+                        status: mapStatus(leave.status),
+                        icon: <IconComponent size={22} color={config.color} />,
+                        iconColor: config.color,
+                        approvalStatus: getApprovalStatusText(leave),
+                        waitingForApprover: waitingForApprover,
+                        currentLevel: approvedCount,
+                        totalLevels: totalLevels,
+                        onClick: () => handleLeaveClick(leave),
+                      };
+                    })}
+                    displayMode={recentRequestsDisplayMode}
+                  />
+                </>
+              )}
+            </Box>
+          </Container>
+        </Box>
+      </PullToRefresh>
+
+      <BottomNav activePage="home" />
+
+      <LeaveDetailDrawer
+        open={drawerOpen && !cancelDialogOpen}
+        onClose={handleCloseDrawer}
+        leave={selectedLeave}
+        onCancel={() => setCancelDialogOpen(true)}
+      />
+
+      {/* Cancel Confirmation Dialog */}
+      <Dialog
+        open={cancelDialogOpen}
+        onClose={() => {
+          if (!cancelling) {
+            setCancelDialogOpen(false);
+            setCancelReason('');
+          }
+        }}
+        sx={{ zIndex: 1400 }}
+        PaperProps={{
+          sx: {
+            borderRadius: 1,
+            maxWidth: 400,
+            width: '90%',
+          },
+        }}
+      >
+        <DialogTitle sx={{ pb: 1 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+            <Box
+              sx={{
+                width: 40,
+                height: 40,
+                borderRadius: 1,
+                bgcolor: '#FEF2F2',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <AlertTriangle size={22} color="#DC2626" />
+            </Box>
+            <Typography sx={{ fontWeight: 700, color: '#1E293B' }}>
+              {t('cancel_leave_title', 'ยืนยันการยกเลิกใบลา')}
+            </Typography>
           </Box>
-        </Container>
-
-        <BottomNav activePage="home" />
-
-        <LeaveDetailDrawer
-          open={drawerOpen && !cancelDialogOpen}
-          onClose={handleCloseDrawer}
-          leave={selectedLeave}
-          onCancel={() => setCancelDialogOpen(true)}
-        />
-
-        {/* Cancel Confirmation Dialog */}
-        <Dialog
-          open={cancelDialogOpen}
-          onClose={() => {
-            if (!cancelling) {
+        </DialogTitle>
+        <DialogContent>
+          <Typography sx={{ color: '#64748B', fontSize: '0.95rem', mb: 2 }}>
+            {t('cancel_leave_desc', 'กรุณาระบุเหตุผลที่ต้องการยกเลิกใบลา')}
+          </Typography>
+          <TextField
+            fullWidth
+            multiline
+            rows={3}
+            placeholder={t('cancel_reason_placeholder', 'ระบุเหตุผล...')}
+            value={cancelReason}
+            onChange={(e) => setCancelReason(e.target.value)}
+            disabled={cancelling}
+            sx={{
+              '& .MuiOutlinedInput-root': {
+                borderRadius: 1,
+              },
+            }}
+          />
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button
+            onClick={() => {
               setCancelDialogOpen(false);
               setCancelReason('');
-            }
-          }}
-          sx={{ zIndex: 1400 }}
-          PaperProps={{
-            sx: {
-              borderRadius: 1,
-              maxWidth: 400,
-              width: '90%',
-            },
-          }}
-        >
-          <DialogTitle sx={{ pb: 1 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-              <Box
-                sx={{
-                  width: 40,
-                  height: 40,
-                  borderRadius: 1,
-                  bgcolor: '#FEF2F2',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                <AlertTriangle size={22} color="#DC2626" />
-              </Box>
-              <Typography sx={{ fontWeight: 700, color: '#1E293B' }}>
-                {t('cancel_leave_title', 'ยืนยันการยกเลิกใบลา')}
-              </Typography>
-            </Box>
-          </DialogTitle>
-          <DialogContent>
-            <Typography sx={{ color: '#64748B', fontSize: '0.95rem', mb: 2 }}>
-              {t('cancel_leave_desc', 'กรุณาระบุเหตุผลที่ต้องการยกเลิกใบลา')}
-            </Typography>
-            <TextField
-              fullWidth
-              multiline
-              rows={3}
-              placeholder={t('cancel_reason_placeholder', 'ระบุเหตุผล...')}
-              value={cancelReason}
-              onChange={(e) => setCancelReason(e.target.value)}
-              disabled={cancelling}
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  borderRadius: 1,
-                },
-              }}
-            />
-          </DialogContent>
-          <DialogActions sx={{ px: 3, pb: 2 }}>
-            <Button
-              onClick={() => {
-                setCancelDialogOpen(false);
-                setCancelReason('');
-              }}
-              disabled={cancelling}
-              sx={{ color: '#64748B' }}
-            >
-              {t('btn_back', 'ย้อนกลับ')}
-            </Button>
-            <Button
-              variant="contained"
-              color="error"
-              onClick={handleCancelLeave}
-              disabled={cancelling || !cancelReason.trim()}
-              sx={{ borderRadius: 1 }}
-            >
-              {cancelling ? t('cancelling', 'กำลังยกเลิก...') : t('btn_confirm_cancel', 'ยืนยันยกเลิก')}
-            </Button>
-          </DialogActions>
-        </Dialog>
-      </Box>
-    </PullToRefresh>
+            }}
+            disabled={cancelling}
+            sx={{ color: '#64748B' }}
+          >
+            {t('btn_back', 'ย้อนกลับ')}
+          </Button>
+          <Button
+            variant="contained"
+            color="error"
+            onClick={handleCancelLeave}
+            disabled={cancelling || !cancelReason.trim()}
+            sx={{ borderRadius: 1 }}
+          >
+            {cancelling ? t('cancelling', 'กำลังยกเลิก...') : t('btn_confirm_cancel', 'ยืนยันยกเลิก')}
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </>
   );
 }
 

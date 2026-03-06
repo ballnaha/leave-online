@@ -100,9 +100,9 @@ async function createForcedAnnualLeaveRequests(
 ) {
     try {
         // ดึงพนักงานที่เกี่ยวข้อง (ตามบริษัท หรือทุกคนถ้า companyId = null)
+        // รวมทุก role ไม่ใช่แค่ employee
         const whereClause: any = {
             isActive: true,
-            role: 'employee', // เฉพาะพนักงานทั่วไป
         };
 
         if (companyId) {
@@ -120,6 +120,26 @@ async function createForcedAnnualLeaveRequests(
             where: whereClause,
             select: { id: true, employeeId: true }
         });
+
+        // ตรวจสอบว่ามี forced leave สำหรับวันนี้อยู่แล้วหรือไม่ (ป้องกัน duplicate)
+        const existingForcedLeaves = await prisma.leaveRequest.findMany({
+            where: {
+                leaveCode: { startsWith: 'FL' },
+                startDate: holidayDate,
+                endDate: holidayDate,
+                reason: { contains: holidayName },
+            },
+            select: { userId: true }
+        });
+        const existingUserIds = new Set(existingForcedLeaves.map(l => l.userId));
+
+        // กรองเฉพาะพนักงานที่ยังไม่มี forced leave
+        const newEmployees = employees.filter(e => !existingUserIds.has(e.id));
+
+        if (newEmployees.length === 0) {
+            console.log(`No new forced leave requests needed for ${holidayDate.toISOString().split('T')[0]} - all employees already have one`);
+            return;
+        }
 
         // สร้าง leave code prefix
         const year = String(holidayDate.getFullYear()).slice(-2);
@@ -140,7 +160,7 @@ async function createForcedAnnualLeaveRequests(
         }
 
         // สร้าง LeaveRequest สำหรับแต่ละพนักงาน
-        for (const employee of employees) {
+        for (const employee of newEmployees) {
             const leaveCode = `${prefix}${String(runningNumber).padStart(3, '0')}`;
             runningNumber++;
 
@@ -160,10 +180,55 @@ async function createForcedAnnualLeaveRequests(
             });
         }
 
-        console.log(`Created ${employees.length} forced annual leave requests for ${holidayDate.toISOString().split('T')[0]}`);
+        console.log(`Created ${newEmployees.length} forced annual leave requests for ${holidayDate.toISOString().split('T')[0]} (${existingUserIds.size} already existed)`);
     } catch (error) {
         console.error('Error creating forced annual leave requests:', error);
         // ไม่ throw error เพื่อไม่ให้กระทบการสร้าง holiday
     }
 }
 
+// Helper function: ลบ LeaveRequest ที่เกี่ยวข้องกับบังคับพักร้อน
+export async function deleteForcedAnnualLeaveRequests(
+    holidayDate: Date,
+    companyId: number | null,
+    holidayName: string
+) {
+    try {
+        const whereClause: any = {
+            leaveCode: { startsWith: 'FL' },
+            startDate: holidayDate,
+            endDate: holidayDate,
+            leaveType: 'vacation',
+        };
+
+        // ถ้ามี holidayName ให้ filter ด้วย reason
+        if (holidayName) {
+            whereClause.reason = { contains: holidayName };
+        }
+
+        // ถ้ามี companyId ให้ filter เฉพาะพนักงานในบริษัทนั้น
+        if (companyId) {
+            const company = await prisma.company.findUnique({
+                where: { id: companyId },
+                select: { code: true }
+            });
+            if (company) {
+                const companyUserIds = await prisma.user.findMany({
+                    where: { company: company.code },
+                    select: { id: true }
+                });
+                whereClause.userId = { in: companyUserIds.map(u => u.id) };
+            }
+        }
+
+        const result = await prisma.leaveRequest.deleteMany({
+            where: whereClause,
+        });
+
+        console.log(`Deleted ${result.count} forced annual leave requests for ${holidayDate.toISOString().split('T')[0]}`);
+        return result.count;
+    } catch (error) {
+        console.error('Error deleting forced annual leave requests:', error);
+        return 0;
+    }
+}

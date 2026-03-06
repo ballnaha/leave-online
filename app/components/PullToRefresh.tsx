@@ -82,7 +82,11 @@ export default function PullToRefresh({
             setIsRefreshing(true);
             setPullDistance(threshold * 0.6); // Show loading spinner at reduced height
             try {
-                await onRefresh();
+                // รอทั้ง refresh และ minimum delay เพื่อให้ loading แสดงอย่างน้อย 800ms
+                await Promise.all([
+                    onRefresh(),
+                    new Promise(resolve => setTimeout(resolve, 800)),
+                ]);
             } catch (error) {
                 console.error('Refresh failed:', error);
             } finally {
