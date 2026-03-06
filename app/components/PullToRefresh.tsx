@@ -41,6 +41,14 @@ export default function PullToRefresh({
 
     const handleTouchStart = useCallback((e: React.TouchEvent) => {
         if (disabled || isRefreshing) return;
+
+        // ถ้ามี drawer/overlay/dialog เปิดอยู่ → ไม่ทำงาน (ป้องกันชนกับ Vaul drawer)
+        const hasOverlay = document.querySelector('[vaul-overlay]') ||
+            document.querySelector('[vaul-drawer]') ||
+            document.querySelector('.MuiDrawer-root') ||
+            document.querySelector('.MuiDialog-root');
+        if (hasOverlay) return;
+
         checkScrollPosition();
         if (!isScrolledToTop.current) return;
 
