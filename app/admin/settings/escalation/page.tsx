@@ -152,8 +152,8 @@ export default function EscalationSettingsPage() {
     const [running, setRunning] = useState(false);
 
     const [config, setConfig] = useState<EscalationConfig>({
-        escalationHours: 48,
-        reminderHours: 24,
+        escalationHours: 24, // แสดงผลเป็นวันถัดไป
+        reminderHours: 4,    // เตือนก่อน 4 ชม.
         enabled: true,
         lastRun: null,
         cronConfigured: false,
@@ -449,7 +449,7 @@ export default function EscalationSettingsPage() {
                     <Alert severity="info" icon={<Bell size={20} />}>
                         <Typography variant="body2">
                             <strong>เงื่อนไข:</strong> ใบลาที่รออนุมัติจะถูกส่งต่อไป HR Manager โดยอัตโนมัติ
-                            เมื่อถึงเวลา <strong>08:00 น.</strong> ของวันที่ <strong>สร้างใบลา + 2 วัน</strong>
+                            เมื่อถึงเวลา <strong>13:00 น.</strong> ของ <strong>วันถัดไป</strong> นับจากวันที่สร้างใบลา
                         </Typography>
                     </Alert>
                 </CardContent>
@@ -595,7 +595,7 @@ export default function EscalationSettingsPage() {
                                                 <TableCell>
                                                     {item.hoursRemaining <= 0 ? (
                                                         <Chip label="รอ Escalate" size="small" color="error" variant="outlined" />
-                                                    ) : item.hoursRemaining <= 24 ? (
+                                                    ) : item.hoursRemaining <= 4 ? (
                                                         <Chip label="ใกล้หมดเวลา" size="small" color="warning" variant="outlined" />
                                                     ) : (
                                                         <Chip label="ปกติ" size="small" color="success" variant="outlined" />

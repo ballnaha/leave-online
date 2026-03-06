@@ -326,23 +326,19 @@ export default function UserApprovalFlowPage() {
 
   const fetchAllUsersFlows = useCallback(async () => {
     try {
-      // Fetch flows for each user to determine who has custom flows
-      const flowSet = new Set<number>();
-      for (const user of users) {
-        const response = await fetch(`/api/user-approval-flow?userId=${user.id}`);
-        if (!response.ok) continue;
-        const flows = await response.json();
-        // Has custom flow if there are flows other than HR (level 99)
-        const customFlows = flows.filter((f: ApprovalFlow) => f.level !== 99);
-        if (customFlows.length > 0) {
-          flowSet.add(user.id);
-        }
-      }
+      // API returns all user IDs that have custom flows in a single call if userId is omitted
+      const response = await fetch('/api/user-approval-flow');
+      if (!response.ok) throw new Error('Failed to fetch custom flows list');
+
+      const flows = await response.json();
+      // flows is an array of { userId: number }
+      const flowSet = new Set<number>(flows.map((f: { userId: number }) => f.userId));
+
       setUsersWithFlows(flowSet);
     } catch (error) {
       console.error('Error fetching users flows:', error);
     }
-  }, [users]);
+  }, []);
 
   const fetchUserFlow = useCallback(async (userId: number) => {
     try {
@@ -359,13 +355,8 @@ export default function UserApprovalFlowPage() {
     fetchMasterData();
     fetchUsers();
     fetchApprovers();
-  }, []);
-
-  useEffect(() => {
-    if (users.length > 0) {
-      fetchAllUsersFlows();
-    }
-  }, [users, fetchAllUsersFlows]);
+    fetchAllUsersFlows();
+  }, [fetchAllUsersFlows]);
 
   const handleOpenDialog = (user: UserOption) => {
     setSelectedUser(user);
@@ -1401,7 +1392,7 @@ export default function UserApprovalFlowPage() {
             เพิ่มผู้อนุมัติ
           </Box>
         </DialogTitle>
-        <DialogContent sx={{ p: { xs: 2, sm: 3 } }}>
+        <DialogContent sx={{ p: { xs: 2, sm: 3 }, mt: 2 }}>
           <Autocomplete
             options={allApprovers.filter(a => !approvalFlows.some(f => f.approverId === a.id))}
             getOptionLabel={(option) => `${option.firstName} ${option.lastName}`}

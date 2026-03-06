@@ -62,6 +62,9 @@ const leaveTypeConfig: Record<string, { icon: any; color: string; gradient: stri
     sterilization: { icon: Health, color: '#2DCECC', gradient: 'linear-gradient(135deg, #2DCECC 0%, #2D8BCC 100%)' },
     business: { icon: Car, color: '#8965E0', gradient: 'linear-gradient(135deg, #8965E0 0%, #BC65E0 100%)' },
     unpaid: { icon: Clock, color: '#F5365C', gradient: 'linear-gradient(135deg, #F5365C 0%, #F56036 100%)' },
+    sick_no_pay: { icon: Health, color: '#F5365C', gradient: 'linear-gradient(135deg, #F5365C 0%, #F56036 100%)' },
+    personal_no_pay: { icon: Briefcase, color: '#F5365C', gradient: 'linear-gradient(135deg, #F5365C 0%, #F56036 100%)' },
+    paternity_care: { icon: Lovely, color: '#2DCECC', gradient: 'linear-gradient(135deg, #2DCECC 0%, #2D8BCC 100%)' },
     other: { icon: HelpCircle, color: '#5E72E4', gradient: 'linear-gradient(135deg, #5E72E4 0%, #825EE4 100%)' },
     default: { icon: MessageQuestion, color: '#8898AA', gradient: 'linear-gradient(135deg, #8898AA 0%, #6A7A8A 100%)' },
 };
@@ -80,6 +83,7 @@ const BottomNav: React.FC<BottomNavProps> = ({ activePage = 'home' }) => {
     const [animatingOut, setAnimatingOut] = useState(false);
     const [renderMenu, setRenderMenu] = useState(false);
     const [leaveTypes, setLeaveTypes] = useState<LeaveType[]>(cachedLeaveTypes || []);
+    const [myLeaves, setMyLeaves] = useState<any[]>([]);
     const closeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     // ตรวจสอบว่า install prompt แสดงจริงไหม (ใช้ logic เดียวกับ PWAInstallPrompt)
@@ -95,61 +99,121 @@ const BottomNav: React.FC<BottomNavProps> = ({ activePage = 'home' }) => {
         return years;
     };
 
-    // Filter leave types based on gender and years of service
-    // แสดงทุกประเภทการลาที่ผู้ใช้มีสิทธิ์
+    // Filter leave types based on gender, years of service, and used quota
     const filteredLeaveTypes = useMemo(() => {
         const yearsOfService = getYearsOfService(user?.startDate);
 
-        return leaveTypes.filter(leave => {
+        // Function to calculate used days for a specific leave type
+        const getUsedDays = (code: string) => {
+            return myLeaves
+                .filter(req => (req.leaveType === code || req.leaveCode === code) &&
+                    ['approved', 'pending', 'in_progress', 'completed'].includes(req.status))
+                .reduce((sum, req) => sum + (req.totalDays || 0), 0);
+        };
+
+        return leaveTypes.map(leave => {
             // ถ้าเป็นเพศชาย ไม่แสดงลาคลอด (maternity)
             if (user?.gender === 'male' && leave.code === 'maternity') {
-                return false;
+                return null;
             }
             // ถ้าเป็นเพศหญิง ไม่แสดงลาดูแลภรรยาคลอด (paternity)
             if (user?.gender === 'female' && leave.code === 'paternity') {
-                return false;
+                return null;
             }
-            // ถ้าเป็นเพศหญิง ไม่แสดงลาบวช (ordination)
-            if (user?.gender === 'female' && leave.code === 'ordination') {
-                return false;
+            // ถ้าเป็นเพศหญิง ไม่แสดงลาบวช (ordination) และลาเลี้ยงดูบุตร (paternity_care)
+            if (user?.gender === 'female' && (leave.code === 'ordination' || leave.code === 'paternity_care')) {
+                return null;
             }
             // ลาบวช ต้องมีอายุงาน >= 1 ปี
             if (leave.code === 'ordination' && yearsOfService < 1) {
-                return false;
+                return null;
             }
-            return true;
-        });
-    }, [leaveTypes, user?.gender, user?.startDate]);
 
-    // Fetch leave types from API - only if not cached
+            let isDisabled = false;
+            let disabledReason = "";
+
+            // ฟังก์ชันสำหรับตรวจสอบว่าลาพักร้อนหมดหรือยัง
+            const isVacationExhausted = () => {
+                const vacationType = leaveTypes.find(t => t.code === 'annual' || t.code === 'vacation');
+                if (vacationType && vacationType.maxDaysPerYear !== null) {
+                    const usedVacationDays = getUsedDays(vacationType.code);
+                    return usedVacationDays >= vacationType.maxDaysPerYear;
+                }
+                return true; // ถ้าไม่มีประเภทลาพักร้อน ถือว่าหมดแล้ว
+            };
+
+            // เงื่อนไขลาป่วยไม่รับค่าจ้าง: แสดงเมื่อลาป่วยใช้สิทธิ์ครบแล้ว
+            if (leave.code === 'sick_no_pay') {
+                const sickType = leaveTypes.find(t => t.code === 'sick');
+                if (sickType && sickType.maxDaysPerYear !== null) {
+                    const usedSickDays = getUsedDays('sick');
+                    if (usedSickDays < sickType.maxDaysPerYear) {
+                        isDisabled = true;
+                        disabledReason = t('must_exhaust_regular_sick', '(ใช้สิทธิ์ลาป่วยปกติก่อน)');
+                    }
+                }
+            }
+
+            // เงื่อนไขลากิจไม่รับค่าจ้าง: แสดงเมื่อลากิจใช้สิทธิ์ครบแล้ว
+            if (leave.code === 'personal_no_pay') {
+                const personalType = leaveTypes.find(t => t.code === 'personal');
+                if (personalType && personalType.maxDaysPerYear !== null) {
+                    const usedPersonalDays = getUsedDays('personal');
+                    if (usedPersonalDays < personalType.maxDaysPerYear) {
+                        isDisabled = true;
+                        disabledReason = t('must_exhaust_regular_personal', '(ใช้สิทธิ์ลากิจปกติก่อน)');
+                    } else if (!isVacationExhausted()) {
+                        isDisabled = true;
+                        disabledReason = t('must_exhaust_vacation', '(ใช้สิทธิ์ลาพักร้อนให้หมดก่อน)');
+                    }
+                }
+            }
+
+            return { ...leave, isDisabled, disabledReason };
+        }).filter((leave): leave is any => leave !== null);
+    }, [leaveTypes, user?.gender, user?.startDate, myLeaves]);
+
+    // Fetch leave types and user leaves from API
     useEffect(() => {
-        // ถ้ามี cache แล้วไม่ต้อง fetch
-        if (cachedLeaveTypes) {
-            setLeaveTypes(cachedLeaveTypes);
-            return;
-        }
-
-        // ถ้ากำลัง fetch อยู่ ไม่ต้องทำซ้ำ
-        if (isFetching) return;
-
         fetchLeaveTypes();
     }, []);
 
-    const fetchLeaveTypes = async () => {
+    const fetchLeaveTypes = async (bypassCache = false) => {
+        // ถ้ากำลัง fetch อยู่ ไม่ต้องทำซ้ำ
+        if (isFetching) return;
+
         isFetching = true;
         try {
-            const response = await fetch('/api/leave-types');
-            if (!response.ok) throw new Error('Failed to fetch leave types');
-            const data = await response.json();
-            // แสดงทั้งหมด
-            cachedLeaveTypes = data;
-            setLeaveTypes(data);
+            const [typesRes, leavesRes] = await Promise.all([
+                fetch('/api/leave-types'),
+                fetch('/api/my-leaves?year=' + new Date().getFullYear())
+            ]);
+
+            if (typesRes.ok) {
+                const data = await typesRes.json();
+                cachedLeaveTypes = data;
+                setLeaveTypes(data);
+            }
+
+            if (leavesRes.ok) {
+                const leavesData = await leavesRes.json();
+                if (leavesData.success && Array.isArray(leavesData.data)) {
+                    setMyLeaves(leavesData.data);
+                }
+            }
         } catch (error) {
-            console.error('Error fetching leave types:', error);
+            console.error('Error fetching data:', error);
         } finally {
             isFetching = false;
         }
     };
+
+    // Re-fetch data whenever menu is opened to ensure quota is up to date
+    useEffect(() => {
+        if (openMenu) {
+            fetchLeaveTypes(true);
+        }
+    }, [openMenu]);
 
     const getLeaveTypeConfig = (code: string) => {
         return leaveTypeConfig[code] || leaveTypeConfig.default;
@@ -241,21 +305,33 @@ const BottomNav: React.FC<BottomNavProps> = ({ activePage = 'home' }) => {
                                     const Icon = config.icon;
                                     const delay = index * 0.08; // seconds
                                     const reverseDelay = (filteredLeaveTypes.length - 1 - index) * 0.06; // seconds
+
+                                    // Check if quota is full
+                                    const maxDays = leave.maxDaysPerYear;
+                                    const usedDays = myLeaves
+                                        .filter(req => (req.leaveType === leave.code || req.leaveCode === leave.code) &&
+                                            ['approved', 'pending', 'in_progress', 'completed'].includes(req.status))
+                                        .reduce((sum, req) => sum + req.totalDays, 0);
+
+                                    const isQuotaFull = maxDays !== null && usedDays >= maxDays;
+
                                     return (
                                         <Box
                                             key={leave.id}
-                                            onClick={() => handleLeaveTypeClick(leave.code)}
+                                            onClick={() => !isQuotaFull && !leave.isDisabled && handleLeaveTypeClick(leave.code)}
                                             sx={{
                                                 display: 'flex',
                                                 alignItems: 'center',
                                                 gap: 1.25,
                                                 p: 1.25,
                                                 borderRadius: 2.5,
-                                                cursor: 'pointer',
+                                                cursor: (isQuotaFull || leave.isDisabled) ? 'default' : 'pointer',
                                                 background: 'rgba(255, 255, 255, 0.98)',
                                                 backdropFilter: 'blur(20px)',
                                                 border: '1px solid rgba(255, 255, 255, 0.8)',
                                                 boxShadow: '0 8px 24px rgba(0, 0, 0, 0.12)',
+                                                opacity: (isQuotaFull || leave.isDisabled) ? 0.6 : 1,
+                                                filter: (isQuotaFull || leave.isDisabled) ? 'grayscale(100%)' : 'none',
                                                 animation: openMenu
                                                     ? `slideInBounce-${index} 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) ${delay}s both`
                                                     : animatingOut
@@ -292,7 +368,7 @@ const BottomNav: React.FC<BottomNavProps> = ({ activePage = 'home' }) => {
                                                         transform: 'translateX(40px) scale(0.7)',
                                                     },
                                                 },
-                                                '&:hover': {
+                                                '&:hover': (isQuotaFull || leave.isDisabled) ? {} : {
                                                     transform: 'translateX(-6px) scale(1.05)',
                                                     boxShadow: `0 12px 32px ${config.color}50`,
                                                     borderColor: config.color,
@@ -377,6 +453,16 @@ const BottomNav: React.FC<BottomNavProps> = ({ activePage = 'home' }) => {
                                                 }}
                                             >
                                                 {t(`leave_${leave.code}`, leave.name)}
+                                                {isQuotaFull && (
+                                                    <Box component="span" sx={{ color: '#F5365C', ml: 0.5, fontSize: '0.7rem', fontWeight: 700 }}>
+                                                        ({t('full', 'เต็ม')})
+                                                    </Box>
+                                                )}
+                                                {leave.isDisabled && (
+                                                    <Box component="span" sx={{ display: 'block', color: '#fb8c00', fontSize: '0.65rem', fontWeight: 600 }}>
+                                                        {leave.disabledReason}
+                                                    </Box>
+                                                )}
                                             </Typography>
                                         </Box>
                                     );

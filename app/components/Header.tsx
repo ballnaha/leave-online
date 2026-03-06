@@ -7,6 +7,7 @@ import Sidebar from './Sidebar';
 import { useLocale, localeLabel } from '../providers/LocaleProvider';
 import { useUser } from '../providers/UserProvider';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { signOut } from 'next-auth/react';
 import { useToastr } from '@/app/components/Toastr';
 import dayjs from 'dayjs';
@@ -297,8 +298,8 @@ const Header = () => {
                                 {loading ? (
                                     <Skeleton variant="text" width={100} height={24} />
                                 ) : (
-                                    <Typography variant="subtitle1" sx={{ fontWeight: 'bold', lineHeight: 1, color: 'text.primary', fontSize: '1rem' }}>
-                                        {user?.firstName || 'ผู้ใช้'}
+                                    <Typography variant="subtitle1" sx={{ fontWeight: 'bold', lineHeight: 1, color: 'text.primary', fontSize: '1rem', mt: 0.8 }}>
+                                        {user?.firstName + ' ' + user?.lastName || 'ผู้ใช้'}
                                     </Typography>
                                 )}
                             </Box>
@@ -320,7 +321,8 @@ const Header = () => {
                         </IconButton>
 
                         <IconButton
-                            onClick={handleNotificationClick}
+                            component={Link}
+                            href="/notifications"
                             sx={{
                                 bgcolor: 'white',
                                 boxShadow: 'none',
@@ -698,9 +700,10 @@ const Header = () => {
 
                                 {/* View Full Profile Button */}
                                 <Box
+                                    component={Link}
+                                    href="/profile"
                                     onClick={() => {
                                         setProfileDrawerOpen(false);
-                                        router.push('/profile');
                                     }}
                                     sx={{
                                         bgcolor: 'white',

@@ -35,6 +35,7 @@ import {
     Briefcase,
     Heart,
     Sun1,
+    Lovely,
     InfoCircle,
     Send2,
     Save2,
@@ -84,6 +85,9 @@ const leaveTypeConfig: Record<string, { icon: any; color: string; lightColor: st
     sterilization: { icon: Health, color: PRIMARY_COLOR, lightColor: PRIMARY_LIGHT },
     business: { icon: Car, color: PRIMARY_COLOR, lightColor: PRIMARY_LIGHT },
     unpaid: { icon: Clock, color: PRIMARY_COLOR, lightColor: PRIMARY_LIGHT },
+    sick_no_pay: { icon: Health, color: PRIMARY_COLOR, lightColor: PRIMARY_LIGHT },
+    personal_no_pay: { icon: Briefcase, color: PRIMARY_COLOR, lightColor: PRIMARY_LIGHT },
+    paternity_care: { icon: Lovely, color: PRIMARY_COLOR, lightColor: PRIMARY_LIGHT },
     default: { icon: InfoCircle, color: PRIMARY_COLOR, lightColor: PRIMARY_LIGHT },
 };
 
@@ -163,6 +167,7 @@ export default function LeaveFormPage() {
     const [leaveType, setLeaveType] = useState<LeaveTypeData | null>(null);
     const [holidays, setHolidays] = useState<HolidayData[]>([]); // วันหยุดจาก database
     const [forcedLeaveDays, setForcedLeaveDays] = useState<number>(0); // จำนวนวันบังคับพักร้อน
+    const [usedLeaveDays, setUsedLeaveDays] = useState<number>(0); // จำนวนวันที่ใช้ไปแล้วสำหรับประเภทที่เลือก
     const [shiftType, setShiftType] = useState<'day' | 'night'>('day'); // กะทำงาน: day = กะเช้า, night = กะดึก
     const [durationType, setDurationType] = useState<'full' | 'morning' | 'afternoon'>('full'); // ประเภทเวลาเริ่ม: เต็มวัน, ครึ่งเช้า, ครึ่งบ่าย
     const [endDurationType, setEndDurationType] = useState<'full' | 'morning' | 'afternoon'>('full'); // ประเภทเวลาสิ้นสุด: เต็มวัน, ครึ่งเช้า, ครึ่งบ่าย
@@ -672,9 +677,10 @@ export default function LeaveFormPage() {
 
                 // ดึงข้อมูลวันหยุดของปีปัจจุบันและปีถัดไป
                 const nextYear = currentYear + 1;
-                const [holidaysCurrentRes, holidaysNextRes] = await Promise.all([
+                const [holidaysCurrentRes, holidaysNextRes, myLeavesRes] = await Promise.all([
                     fetch(`/api/holidays?year=${currentYear}`),
                     fetch(`/api/holidays?year=${nextYear}`),
+                    fetch(`/api/my-leaves?year=${currentYear}`),
                 ]);
 
                 const holidaysData: HolidayData[] = [];
@@ -694,6 +700,82 @@ export default function LeaveFormPage() {
                     holidaysData.push(...nextYearHolidays);
                 }
                 setHolidays(holidaysData);
+
+                // คำนวณวันลาที่ใช้ไปแล้ว (ดึง Logic จาก Backend มาใช้เพื่อให้ตรงกัน)
+                if (myLeavesRes.ok && selectedType) {
+                    const myLeavesResult = await myLeavesRes.json();
+                    if (myLeavesResult.success && Array.isArray(myLeavesResult.data)) {
+                        // คำนวณวันลาที่ใช้ไปของประเภทปัจจุบัน
+                        const used = myLeavesResult.data
+                            .filter((req: any) => {
+                                // ตรวจสอบสถานะ: approved, pending, in_progress, completed
+                                const isValidStatus = ['approved', 'pending', 'in_progress', 'completed'].includes(req.status);
+                                if (!isValidStatus) return false;
+
+                                // ตรวจสอบประเภทการลา (Robust Matching: ID, Code, Name)
+                                const reqType = String(req.leaveType).toLowerCase();
+                                return (
+                                    reqType === String(selectedType.id) ||
+                                    reqType === String(selectedType.code).toLowerCase() ||
+                                    reqType === String(selectedType.name).toLowerCase()
+                                );
+                            })
+                            .reduce((sum: number, req: any) => sum + (req.totalDays || 0), 0);
+                        setUsedLeaveDays(used);
+
+                        // ตรวจสอบเงื่อนไขพิเศษ: ลาไม่รับค่าจ้าง (sick_no_pay, personal_no_pay)
+                        // จะลาได้ก็ต่อเมื่อ ลาปกติ (sick, personal) และลาพักร้อน (annual/vacation) ใช้สิทธิ์ครบแล้ว
+                        if (selectedType.code === 'sick_no_pay' || selectedType.code === 'personal_no_pay') {
+                            const regularCode = selectedType.code === 'sick_no_pay' ? 'sick' : 'personal';
+                            const regularType = leaveTypesData.find((lt: LeaveTypeData) => lt.code === regularCode);
+                            const vacationType = leaveTypesData.find((lt: LeaveTypeData) => lt.code === 'annual' || lt.code === 'vacation');
+
+                            // 1. ตรวจสอบลาปกติ
+                            if (regularType && regularType.maxDaysPerYear !== null) {
+                                const usedRegular = myLeavesResult.data
+                                    .filter((req: any) => {
+                                        const isValidStatus = ['approved', 'pending', 'in_progress', 'completed'].includes(req.status);
+                                        if (!isValidStatus) return false;
+                                        const reqType = String(req.leaveType).toLowerCase();
+                                        return (
+                                            reqType === String(regularType.id) ||
+                                            reqType === String(regularType.code).toLowerCase()
+                                        );
+                                    })
+                                    .reduce((sum: number, req: any) => sum + (req.totalDays || 0), 0);
+
+                                if (usedRegular < regularType.maxDaysPerYear) {
+                                    const regularName = t(`leave_${regularCode}`, regularType.name);
+                                    toastr.error(`${t('error', 'เกิดข้อผิดพลาด')}: ${t('leave_quota_not_exhausted', 'คุณยังใช้สิทธิ์{name}ไม่ครบ ไม่สามารถใช้สิทธิ์นี้ได้').replace('{name}', regularName)}`);
+                                    router.replace('/');
+                                    return;
+                                }
+                            }
+
+                            // 2. ตรวจสอบลาพักร้อน (เฉพาะลากิจไม่รับค่าจ้าง)
+                            if (selectedType.code === 'personal_no_pay' && vacationType && vacationType.maxDaysPerYear !== null) {
+                                const usedVacation = myLeavesResult.data
+                                    .filter((req: any) => {
+                                        const isValidStatus = ['approved', 'pending', 'in_progress', 'completed'].includes(req.status);
+                                        if (!isValidStatus) return false;
+                                        const reqType = String(req.leaveType).toLowerCase();
+                                        return (
+                                            reqType === String(vacationType.id) ||
+                                            reqType === String(vacationType.code).toLowerCase()
+                                        );
+                                    })
+                                    .reduce((sum: number, req: any) => sum + (req.totalDays || 0), 0);
+
+                                if (usedVacation < vacationType.maxDaysPerYear) {
+                                    const vacationName = t(`leave_${vacationType.code}`, vacationType.name);
+                                    toastr.error(`${t('error', 'เกิดข้อผิดพลาด')}: ${t('leave_quota_not_exhausted', 'คุณยังใช้สิทธิ์{name}ไม่ครบ ไม่สามารถใช้สิทธิ์นี้ได้').replace('{name}', vacationName)}`);
+                                    router.replace('/');
+                                    return;
+                                }
+                            }
+                        }
+                    }
+                }
             } catch (error) {
                 console.error('Error fetching data:', error);
                 toastr.error('เกิดข้อผิดพลาดในการโหลดข้อมูล');
@@ -725,8 +807,8 @@ export default function LeaveFormPage() {
     // จัดการการอัพโหลดไฟล์
     const MAX_FILES = 3;
     const MAX_FILE_SIZE = 15 * 1024 * 1024; // 15MB
-    const MAX_IMAGE_WIDTH = 1600; // ความกว้างสูงสุดของรูป
-    const MAX_IMAGE_HEIGHT = 1600; // ความสูงสูงสุดของรูป
+    const MAX_IMAGE_WIDTH = 1200; // ความกว้างสูงสุดของรูป
+    const MAX_IMAGE_HEIGHT = 1200; // ความสูงสูงสุดของรูป
     const IMAGE_QUALITY = 0.8; // คุณภาพรูป (0.8 = 80%)
 
     // ฟังก์ชัน resize รูปภาพ
@@ -899,6 +981,12 @@ export default function LeaveFormPage() {
             newErrors.totalDays = 'กรุณาระบุจำนวนวันลา';
         } else if (maxLeaveDaysByRange !== null && totalDaysNum > maxLeaveDaysByRange) {
             newErrors.totalDays = `จำนวนวันลาสูงสุด ${maxLeaveDaysByRange} วัน ตามช่วงวันที่เลือก`;
+        } else if (leaveType?.maxDaysPerYear) {
+            // ตรวจสอบโควต้าคงเหลือ
+            const remainingDays = Math.max(0, leaveType.maxDaysPerYear - usedLeaveDays);
+            if (totalDaysNum > remainingDays) {
+                newErrors.totalDays = `จำนวนวันลาเกินสิทธิ์คงเหลือ (เหลือ ${remainingDays} วัน)`;
+            }
         }
 
         if (!formData.reason.trim()) {
@@ -913,6 +1001,11 @@ export default function LeaveFormPage() {
         // ตรวจสอบหลักฐานสำหรับลากิจตั้งแต่ 1 วันขึ้นไป
         if (leaveCode === 'personal' && totalDaysNum >= 1 && formData.attachments.length === 0) {
             newErrors.attachments = 'กรุณาแนบหลักฐานการลากิจ';
+        }
+
+        // ตรวจสอบหลักฐานสำหรับลาเลี้ยงดูบุตร (บังคับแนบเสมอ)
+        if (leaveCode === 'paternity_care' && formData.attachments.length === 0) {
+            newErrors.attachments = 'กรุณาแนบหลักฐาน (เช่น ทะเบียนสมรส, สูติบัตร)';
         }
 
         // ตรวจสอบลาย้อนหลังเกินกำหนด
@@ -1280,6 +1373,17 @@ export default function LeaveFormPage() {
                                     {t('leave_info', 'ข้อมูลผู้ขอลา')}
                                 </Typography>
                             </Box>
+
+                            {/* แสดง Alert แจ้งเตือนสิทธิ์การลาเต็ม */}
+                            {leaveType.maxDaysPerYear && usedLeaveDays >= leaveType.maxDaysPerYear && (
+                                <Alert
+                                    severity="error"
+                                    icon={<Warning2 size={20} variant="Bold" />}
+                                    sx={{ mb: 2, borderRadius: 2, fontWeight: 500 }}
+                                >
+                                    {t('quota_already_full', 'ท่านใช้สิทธิ์การลานี้เต็มโควตาแล้ว (ครบ {{max}} วันแล้ว)').replace('{{max}}', String(leaveType.maxDaysPerYear))}
+                                </Alert>
+                            )}
 
                             <Box sx={{ display: 'grid', gap: 1.5 }}>
                                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -1939,7 +2043,8 @@ export default function LeaveFormPage() {
                                 {t('leave_attachments', 'ไฟล์แนบ')}
                                 {/* แสดง * บังคับแนบไฟล์ */}
                                 {((leaveCode === 'sick' && parseFloat(formData.totalDays) >= 3) ||
-                                    (leaveCode === 'personal' && parseFloat(formData.totalDays) >= 1)) && (
+                                    (leaveCode === 'personal' && parseFloat(formData.totalDays) >= 1) ||
+                                    (leaveCode === 'paternity_care')) && (
                                         <Typography component="span" sx={{ color: 'error.main', ml: 0.5 }}>*</Typography>
                                     )}
                             </Typography>
@@ -1954,6 +2059,11 @@ export default function LeaveFormPage() {
                         {leaveCode === 'personal' && parseFloat(formData.totalDays) >= 1 && (
                             <Alert severity="warning" sx={{ mb: 2, py: 0.5 }}>
                                 {t('leave_personal_attachment_required', 'ลากิจต้องแนบหลักฐานประกอบ')}
+                            </Alert>
+                        )}
+                        {leaveCode === 'paternity_care' && (
+                            <Alert severity="warning" sx={{ mb: 2, py: 0.5 }}>
+                                {t('leave_paternity_care_attachment_required', 'กรุณาแนบหลักฐาน (เช่น ทะเบียนสมรส, สูติบัตร)')}
                             </Alert>
                         )}
 
@@ -2161,7 +2271,7 @@ export default function LeaveFormPage() {
                         fullWidth
                         startIcon={<Send2 size={18} color="#ffffff" />}
                         onClick={handleOpenConfirm}
-                        disabled={submitting}
+                        disabled={submitting || (leaveType?.maxDaysPerYear ? usedLeaveDays >= leaveType.maxDaysPerYear : false)}
                         sx={{
                             py: 1.5,
                             borderRadius: 3,
@@ -2172,9 +2282,16 @@ export default function LeaveFormPage() {
                                 bgcolor: '#1565c0',
                                 boxShadow: '0 6px 20px rgba(25, 118, 210, 0.5)',
                             },
+                            '&.Mui-disabled': {
+                                bgcolor: 'grey.300',
+                                color: 'grey.500',
+                                boxShadow: 'none',
+                            }
                         }}
                     >
-                        {submitting ? t('leave_submitting', 'กำลังส่ง...') : t('leave_submit', 'ส่งคำขอลา')}
+                        {(leaveType?.maxDaysPerYear && usedLeaveDays >= leaveType.maxDaysPerYear)
+                            ? t('leave_quota_full', 'สิทธิ์การลาเต็มแล้ว')
+                            : submitting ? t('leave_submitting', 'กำลังส่ง...') : t('leave_submit', 'ส่งคำขอลา')}
                     </Button>
                 </Box>
             </Box >

@@ -143,6 +143,7 @@ interface LeaveRequest {
   user: UserInfo;
   approvals: Approval[];
   attachments: Attachment[];
+  cancelReason?: string;
 }
 
 interface Company {
@@ -378,6 +379,11 @@ export default function AdminLeavesPage() {
   const [approvalComment, setApprovalComment] = useState('');
   const [approvalLoading, setApprovalLoading] = useState(false);
 
+  // Revoke dialog
+  const [revokeDialogOpen, setRevokeDialogOpen] = useState(false);
+  const [revokeReason, setRevokeReason] = useState('');
+  const [revokeLoading, setRevokeLoading] = useState(false);
+
   // Filter collapse state for mobile
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
 
@@ -529,6 +535,16 @@ export default function AdminLeavesPage() {
     setApprovalComment('');
   };
 
+  const handleOpenRevokeDialog = () => {
+    setRevokeReason('');
+    setRevokeDialogOpen(true);
+  };
+
+  const handleCloseRevokeDialog = () => {
+    setRevokeDialogOpen(false);
+    setRevokeReason('');
+  };
+
   const handleSubmitApproval = async () => {
     if (!selectedLeave || !approvalAction) return;
 
@@ -566,7 +582,39 @@ export default function AdminLeavesPage() {
     }
   };
 
+  const handleRevoke = async () => {
+    if (!selectedLeave || !revokeReason.trim()) return;
+
+    try {
+      setRevokeLoading(true);
+      const response = await fetch(`/api/leaves/${selectedLeave.id}/revoke`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          reason: revokeReason,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to revoke leave');
+      }
+
+      toastr.success('เพิกถอนอนุมัติใบลาเรียบร้อยแล้ว');
+      handleCloseRevokeDialog();
+      setDetailDialogOpen(false);
+      fetchLeaves();
+    } catch (error: any) {
+      console.error('Revoke error:', error);
+      toastr.error(error.message || 'เกิดข้อผิดพลาดในการเพิกถอน');
+    } finally {
+      setRevokeLoading(false);
+    }
+  };
+
   const isPendingLeave = selectedLeave && ['pending', 'in_progress'].includes(selectedLeave.status);
+  const isApprovedLeave = selectedLeave && selectedLeave.status === 'approved';
 
   return (
     <Box>
@@ -1450,6 +1498,16 @@ export default function AdminLeavesPage() {
                           <Typography variant="caption" color="text.secondary">เหตุผล</Typography>
                           <Typography variant="body2">{selectedLeave.reason}</Typography>
                         </Box>
+                        {selectedLeave.status === 'cancelled' && selectedLeave.cancelReason && (
+                          <Box sx={{ gridColumn: '1 / -1', mt: 1, p: 1.5, bgcolor: '#FFEBEE', borderRadius: 1, border: '1px dashed', borderColor: '#EF5350' }}>
+                            <Typography variant="caption" color="error" fontWeight={600} gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                              <InfoCircle size={14} variant="Bold" color="#EF5350" /> เหตุผลการยกเลิก / เพิกถอน
+                            </Typography>
+                            <Typography variant="body2" color="error.dark">
+                              {selectedLeave.cancelReason}
+                            </Typography>
+                          </Box>
+                        )}
                       </Box>
                     </Paper>
 
@@ -1776,6 +1834,30 @@ export default function AdminLeavesPage() {
               </Button>
             </Box>
           )}
+
+          {isApprovedLeave && (
+            <Button
+              fullWidth
+              variant="contained"
+              onClick={handleOpenRevokeDialog}
+              startIcon={<InfoCircle size={20} variant="Bold" color="white" />}
+              sx={{
+                borderRadius: 1,
+                textTransform: 'none',
+                py: 1.5,
+                fontWeight: 700,
+                fontSize: '0.95rem',
+                bgcolor: '#FF9800',
+                boxShadow: '0 4px 12px rgba(255, 152, 0, 0.25)',
+                '&:hover': {
+                  bgcolor: '#F57C00',
+                  boxShadow: '0 6px 16px rgba(255, 152, 0, 0.35)',
+                }
+              }}
+            >
+              เพิกถอนการอนุมัติ (Revoke)
+            </Button>
+          )}
           <Button
             fullWidth
             variant="outlined"
@@ -2068,6 +2150,61 @@ export default function AdminLeavesPage() {
           </Box>
         </DialogActions>
       </Dialog>
+
+      {/* Revoke Dialog */}
+      <Dialog
+        open={revokeDialogOpen}
+        onClose={handleCloseRevokeDialog}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{ sx: { borderRadius: 1 } }}
+      >
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1.5, borderBottom: '1px solid', borderColor: 'divider' }}>
+          <Box sx={{
+            width: 40, height: 40, borderRadius: '50%', bgcolor: '#FFF3E0', display: 'flex', alignItems: 'center', justifyContent: 'center'
+          }}>
+            <InfoCircle size={24} variant="Bold" color="#FF9800" />
+          </Box>
+          <Box>
+            <Typography variant="h6" fontWeight={700}>ยืนยันการเพิกถอน</Typography>
+            <Typography variant="caption" color="text.secondary">Revoke Approved Leave</Typography>
+          </Box>
+        </DialogTitle>
+        <DialogContent sx={{ pt: 3 }}>
+          <Typography variant="body1" sx={{ mb: 3, mt: 2 }}>
+            คุณต้องการเพิกถอนการอนุมัติใบลาของ <strong>{selectedLeave?.user.firstName} {selectedLeave?.user.lastName}</strong> ใช่หรือไม่?
+            <br />
+            <Typography component="span" variant="caption" color="error">
+              * การกระทำนี้ไม่สามารถย้อนกลับได้ สถานะใบลาจะเปลี่ยนเป็น "ยกเลิก"
+            </Typography>
+          </Typography>
+
+          <TextField
+            label="เหตุผลในการเพิกถอน *"
+            fullWidth
+            multiline
+            rows={3}
+            value={revokeReason}
+            onChange={(e) => setRevokeReason(e.target.value)}
+            placeholder="โปรดระบุสาเหตุที่ต้องการยกเลิกใบลาที่อนุมัติแล้ว..."
+          />
+        </DialogContent>
+        <DialogActions sx={{ p: 3, pt: 0 }}>
+          <Button onClick={handleCloseRevokeDialog} variant="outlined" disabled={revokeLoading}>
+            ยกเลิก
+          </Button>
+          <Button
+            onClick={handleRevoke}
+            variant="contained"
+            color="warning"
+            disabled={!revokeReason.trim() || revokeLoading}
+            startIcon={revokeLoading ? undefined : <CloseCircle size={20} color="white" />}
+          >
+            {revokeLoading ? 'กำลังดำเนินการ...' : 'ยืนยันเพิกถอน'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
     </Box >
   );
 }

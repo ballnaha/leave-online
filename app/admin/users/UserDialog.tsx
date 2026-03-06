@@ -205,7 +205,8 @@ export default function UserDialog({
       ]);
 
       if (companiesRes.ok) {
-        setCompanies(await companiesRes.json());
+        const data = await companiesRes.json();
+        setCompanies(data.sort((a: any, b: any) => a.code.localeCompare(b.code)));
       } else {
         console.error('Failed to fetch companies');
       }
@@ -225,7 +226,7 @@ export default function UserDialog({
   };
 
   // Roles ที่ต้องดูแลฝ่าย/แผนกเพิ่มเติมได้
-  const MANAGER_ROLES = ['dept_manager', 'section_head', 'hr_manager', 'shift_supervisor'];
+  const MANAGER_ROLES = ['dept_manager', 'section_head', 'hr_manager', 'hr', 'shift_supervisor'];
 
   const handleChange = (e: any) => {
     const { name, value, checked, type } = e.target;
@@ -489,15 +490,15 @@ export default function UserDialog({
     }
   };
 
-  const filteredDepartments = departments.filter(
-    (d) => !formData.company || d.company === formData.company
-  );
+  const filteredDepartments = departments
+    .filter((d) => !formData.company || d.company === formData.company)
+    .sort((a, b) => a.code.localeCompare(b.code));
 
   const selectedDepartmentObj = departments.find(d => d.code === formData.department || d.name === formData.department);
 
-  const filteredSections = sections.filter(
-    (s) => !selectedDepartmentObj || s.departmentId === selectedDepartmentObj.id
-  );
+  const filteredSections = sections
+    .filter((s) => !selectedDepartmentObj || s.departmentId === selectedDepartmentObj.id)
+    .sort((a, b) => a.code.localeCompare(b.code));
 
   // Section Header Component
   const SectionHeader = ({ title, color = 'primary' }: { title: string; color?: 'primary' | 'secondary' | 'success' | 'warning' }) => (
@@ -766,35 +767,52 @@ export default function UserDialog({
                 ))}
               </Select>
             </FormControl>
-            <FormControl size="small" fullWidth error={!!errors.department} required>
-              <InputLabel>ฝ่าย</InputLabel>
-              <Select
-                name="department"
-                value={formData.department}
-                label="ฝ่าย"
-                onChange={handleChange}
-                disabled={!formData.company}
-              >
-                {filteredDepartments.map((d) => (
-                  <MenuItem key={d.id} value={d.code}>{d.name}</MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-            <FormControl size="small" fullWidth>
-              <InputLabel>แผนก</InputLabel>
-              <Select
-                name="section"
-                value={formData.section}
-                label="แผนก"
-                onChange={handleChange}
-                disabled={!formData.department}
-              >
-                <MenuItem value="">- ไม่ระบุ -</MenuItem>
-                {filteredSections.map((s) => (
-                  <MenuItem key={s.id} value={s.code}>{s.name}</MenuItem>
-                ))}
-              </Select>
-            </FormControl>
+            <Autocomplete
+              size="small"
+              fullWidth
+              options={filteredDepartments}
+              getOptionLabel={(option) => {
+                if (typeof option === 'string') return option;
+                return `${option.code} - ${option.name}`;
+              }}
+              value={filteredDepartments.find(d => d.code === formData.department) || null}
+              onChange={(_e, newValue) => {
+                setFormData(prev => ({ ...prev, department: newValue?.code || '', section: '' }));
+                if (errors.department) {
+                  setErrors(prev => ({ ...prev, department: '' }));
+                }
+              }}
+              disabled={!formData.company}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label="ฝ่าย"
+                  required
+                  error={!!errors.department}
+                  helperText={errors.department}
+                />
+              )}
+            />
+            <Autocomplete
+              size="small"
+              fullWidth
+              options={filteredSections}
+              getOptionLabel={(option) => {
+                if (typeof option === 'string') return option;
+                return `${option.code} - ${option.name}`;
+              }}
+              value={filteredSections.find(s => s.code === formData.section) || null}
+              onChange={(_e, newValue) => {
+                setFormData(prev => ({ ...prev, section: newValue?.code || '' }));
+              }}
+              disabled={!formData.department}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label="แผนก"
+                />
+              )}
+            />
             <TextField
               label="ตำแหน่ง"
               name="position"
@@ -886,7 +904,7 @@ export default function UserDialog({
                         return a.name.localeCompare(b.name);
                       })
                     }
-                    getOptionLabel={(option) => `${option.name} (${option.code})`}
+                    getOptionLabel={(option) => `${option.code} - ${option.name}`}
                     value={departments.filter(d => formData.managedDepartments.includes(d.code))}
                     onChange={(_, newValue) => {
                       const newDeptCodes = newValue.map(d => d.code);
@@ -922,7 +940,7 @@ export default function UserDialog({
                             style={{ marginRight: 8 }}
                             checked={selected}
                           />
-                          {option.name} ({option.code})
+                          {option.code} - {option.name}
                         </li>
                       );
                     }}
@@ -933,9 +951,9 @@ export default function UserDialog({
                         return (
                           <Chip
                             key={key}
-                            label={`${option.name}`}
+                            label={`${option.code} - ${option.name}`}
                             size="small"
-                            color={option.company === 'PSC' ? 'primary' : 'secondary'}
+                            color={option.code.startsWith('3') ? 'primary' : option.code.startsWith('2') ? 'secondary' : 'default'}
                             variant="outlined"
                             {...tagProps}
                           />
@@ -970,16 +988,20 @@ export default function UserDialog({
                   />
                 </Box>
                 <Box sx={{ gridColumn: '1 / -1' }}>
-                  {/* แสดงเฉพาะเมื่อมีฝ่ายที่ดูแลเพิ่มเติม */}
-                  {formData.managedDepartments.length > 0 ? (
+                  {/* แสดงแผนกที่ดูแลเพิ่มเติม - สามารถเลือกแผนกในฝ่ายตัวเองหรือฝ่ายที่ดูแลเพิ่มเติม */}
+                  {formData.department || formData.managedDepartments.length > 0 ? (
                     <Autocomplete
                       multiple
                       size="small"
                       options={sections
                         .filter(s => {
-                          // แสดงเฉพาะแผนกที่อยู่ในฝ่ายที่เลือกไว้
+                          // แสดงเฉพาะแผนกที่อยู่ในฝ่ายที่เลือกไว้ หรือฝ่ายของตัวเอง
                           const dept = departments.find(d => d.id === s.departmentId);
-                          return dept && formData.managedDepartments.includes(dept.code) && s.code !== formData.section;
+                          const isOwnDept = dept && dept.code === formData.department;
+                          const isManagedDept = dept && formData.managedDepartments.includes(dept.code);
+
+                          // กรองเอาเฉพาะแผนกที่อยู่ในฝ่ายที่เกี่ยวข้อง และไม่ใช่แผนกหลักของตัวเอง
+                          return (isOwnDept || isManagedDept) && s.code !== formData.section;
                         })
                         .sort((a, b) => {
                           // Sort by company first, then by department
@@ -994,7 +1016,7 @@ export default function UserDialog({
                           return deptA.name.localeCompare(deptB.name);
                         })
                       }
-                      getOptionLabel={(option) => `${option.name} (${option.code})`}
+                      getOptionLabel={(option) => `${option.code} - ${option.name}`}
                       value={sections.filter(s => formData.managedSections.includes(s.code))}
                       onChange={(_, newValue) => {
                         setFormData(prev => ({
@@ -1013,7 +1035,7 @@ export default function UserDialog({
                       renderInput={(params) => (
                         <TextField
                           {...params}
-                          label="แผนกที่ดูแลเพิ่มเติม (เฉพาะในฝ่ายที่เลือก)"
+                          label="แผนกที่ดูแลเพิ่มเติม"
                           placeholder="เลือกแผนก..."
                         />
                       )}
@@ -1027,7 +1049,7 @@ export default function UserDialog({
                               style={{ marginRight: 8 }}
                               checked={selected}
                             />
-                            {option.name} ({option.code})
+                            {option.code} - {option.name}
                           </li>
                         );
                       }}
@@ -1037,9 +1059,9 @@ export default function UserDialog({
                           return (
                             <Chip
                               key={key}
-                              label={`${option.name}`}
+                              label={`${option.code} - ${option.name}`}
                               size="small"
-                              color="info"
+                              color={option.code.startsWith('3') ? 'primary' : option.code.startsWith('2') ? 'secondary' : 'default'}
                               variant="outlined"
                               {...tagProps}
                             />

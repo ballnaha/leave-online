@@ -49,7 +49,10 @@ const leaveTypeConfig: Record<string, { icon: any; color: string }> = {
     paternity: { icon: Profile2User, color: '#11CDEF' },
     sterilization: { icon: Health, color: '#2DCECC' },
     business: { icon: Car, color: '#8965E0' },
-    unpaid: { icon: MoneySend, color: '#8898AA' },
+    unpaid: { icon: MoneySend, color: '#F5365C' },
+    sick_no_pay: { icon: Health, color: '#F5365C' },
+    personal_no_pay: { icon: Briefcase, color: '#F5365C' },
+    paternity_care: { icon: Lovely, color: '#2DCECC' },
     other: { icon: HelpCircle, color: '#5E72E4' },
     default: { icon: MessageQuestion, color: '#8898AA' },
 };
@@ -96,7 +99,7 @@ const DashboardCard: React.FC<DashboardCardProps> = ({ leaveTypes, leaveRequests
             const requests = leaveRequests.filter(req => req.leaveType === type.code);
 
             const approved = requests
-                .filter(req => req.status === 'approved')
+                .filter(req => ['approved', 'completed'].includes(req.status))
                 .reduce((sum, req) => sum + req.totalDays, 0);
 
             // Include both 'pending' and 'in_progress' as pending status
@@ -356,9 +359,9 @@ const DashboardCard: React.FC<DashboardCardProps> = ({ leaveTypes, leaveRequests
                     elevation={0}
                     sx={{
                         backgroundImage: {
-                            xs: 'url(/images/bg_psc3.webp)',
-                            sm: 'url(/images/bg_psc1.webp)',
-                            md: 'url(/images/bg_psc1.webp)',
+                            xs: 'url(/images/bg_psc7.webp)',
+                            sm: 'url(/images/bg_psc7.webp)',
+                            md: 'url(/images/bg_psc7.webp)',
                         },
                         backgroundSize: 'cover',
                         backgroundPosition: 'center center',
@@ -513,9 +516,9 @@ const DashboardCard: React.FC<DashboardCardProps> = ({ leaveTypes, leaveRequests
                 elevation={0}
                 sx={{
                     backgroundImage: {
-                        xs: 'url(/images/bg_psc3.webp)',      // Mobile
-                        sm: 'url(/images/bg_psc1.webp)',      // iPad/Tablet - เปลี่ยนเป็นรูปอื่นได้
-                        md: 'url(/images/bg_psc1.webp)',      // Desktop - เปลี่ยนเป็นรูปอื่นได้
+                        xs: 'url(/images/bg_psc7.webp)',      // Mobile
+                        sm: 'url(/images/bg_psc7.webp)',      // iPad/Tablet - เปลี่ยนเป็นรูปอื่นได้
+                        md: 'url(/images/bg_psc7.webp)',      // Desktop - เปลี่ยนเป็นรูปอื่นได้
                     },
                     backgroundSize: 'cover',
                     backgroundPosition: 'center center',
@@ -1027,7 +1030,7 @@ const DashboardCard: React.FC<DashboardCardProps> = ({ leaveTypes, leaveRequests
                                         alignItems: 'center',
                                         gap: 0.75,
                                         cursor: 'pointer',
-                                        minWidth: 56,
+                                        minWidth: 65,
                                         opacity: isSelected ? 1 : 0.7,
                                         transform: isSelected ? 'scale(1.05)' : 'scale(1)',
                                         touchAction: 'manipulation',
@@ -1056,12 +1059,9 @@ const DashboardCard: React.FC<DashboardCardProps> = ({ leaveTypes, leaveRequests
                                     <Typography
                                         variant="caption"
                                         sx={{
-                                            fontSize: '0.7rem',
+                                            fontSize: '0.8rem',
                                             textAlign: 'center',
-                                            whiteSpace: 'nowrap',
-                                            maxWidth: 56,
-                                            overflow: 'hidden',
-                                            textOverflow: 'ellipsis'
+                                            fontWeight: 400,
                                         }}
                                     >
                                         {t(`leave_${type.code}`, type.name)}

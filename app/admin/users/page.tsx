@@ -39,6 +39,7 @@ import {
   AccordionDetails,
   ToggleButton,
   ToggleButtonGroup,
+  Autocomplete,
 } from '@mui/material';
 import {
   Add,
@@ -60,6 +61,8 @@ import {
   RowVertical,
   Hierarchy,
   DocumentUpload,
+  Mobile,
+  Monitor,
 } from 'iconsax-react';
 import UserDialog from './UserDialog';
 import UserViewDialog from './UserViewDialog';
@@ -89,7 +92,15 @@ interface UserData {
   avatar: string | null;
   managedDepartments?: string | null;
   managedSections?: string | null;
+  deviceCount?: number;
 }
+
+const shiftLabels: Record<string, string> = {
+  shift_a: 'กะ A',
+  shift_b: 'กะ B',
+  day: 'กะ A',
+  night: 'กะ B',
+};
 
 // Stat Card Component
 interface StatCardProps {
@@ -205,6 +216,7 @@ export default function UsersPage() {
   const [departmentFilter, setDepartmentFilter] = useState<string>('all');
   const [sectionFilter, setSectionFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [employeeTypeFilter, setEmployeeTypeFilter] = useState<string>('all');
   const [showNewUsersOnly, setShowNewUsersOnly] = useState(false);
 
   // View Mode: 'list' (table/card) or 'tree' (accordion)
@@ -330,16 +342,16 @@ export default function UsersPage() {
 
   // Get unique values for filters - memoized
   const uniqueCompanies = useMemo(() =>
-    [...new Set(users.map((u) => u.company))].filter(Boolean), [users]);
+    [...new Set(users.map((u) => u.company))].filter(Boolean).sort(), [users]);
   const uniqueDepartments = useMemo(() =>
-    [...new Set(users.map((u) => u.department))].filter(Boolean), [users]);
+    [...new Set(users.map((u) => u.department))].filter(Boolean).sort((a, b) => a.localeCompare(b)), [users]);
 
   // Get unique sections (filtered by department if selected) - memoized
   const uniqueSections = useMemo(() => [...new Set(
     users
       .filter((u) => departmentFilter === 'all' || u.department === departmentFilter)
       .map((u) => u.section)
-  )].filter(Boolean) as string[], [users, departmentFilter]);
+  )].filter(Boolean).sort((a, b) => (a as string).localeCompare(b as string)) as string[], [users, departmentFilter]);
 
   // Create department code to name map - memoized
   const departmentNameMap = useMemo(() =>
@@ -377,10 +389,12 @@ export default function UsersPage() {
   const filteredUsers = useMemo(() => {
     return users
       .filter((user) => {
+        const fullName = `${user.firstName} ${user.lastName}`.toLowerCase();
         const matchesSearch =
           user.employeeId.toLowerCase().includes(searchQuery.toLowerCase()) ||
           user.firstName.toLowerCase().includes(searchQuery.toLowerCase()) ||
           user.lastName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          fullName.includes(searchQuery.toLowerCase()) ||
           (user.email?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false);
 
         const matchesCompany = companyFilter === 'all' || user.company === companyFilter;
@@ -392,12 +406,15 @@ export default function UsersPage() {
           (statusFilter === 'active' && user.isActive) ||
           (statusFilter === 'inactive' && !user.isActive);
 
+        const matchesEmployeeType =
+          employeeTypeFilter === 'all' || user.employeeType === employeeTypeFilter;
+
         const matchesNewUser = !showNewUsersOnly || dayjs(user.startDate).isSame(dayjs(), 'month');
 
-        return matchesSearch && matchesCompany && matchesDepartment && matchesSection && matchesRole && matchesStatus && matchesNewUser;
+        return matchesSearch && matchesCompany && matchesDepartment && matchesSection && matchesRole && matchesStatus && matchesEmployeeType && matchesNewUser;
       })
       .sort((a, b) => a.firstName.localeCompare(b.firstName, 'th'));
-  }, [users, searchQuery, companyFilter, departmentFilter, sectionFilter, roleTab, statusFilter, showNewUsersOnly]);
+  }, [users, searchQuery, companyFilter, departmentFilter, sectionFilter, roleTab, statusFilter, employeeTypeFilter, showNewUsersOnly]);
 
   // Paginated users
   const paginatedUsers = filteredUsers.slice(
@@ -472,7 +489,7 @@ export default function UsersPage() {
       }));
   }, [filteredUsers]);
 
-  // Toggle Company expand/collapse
+
   // Toggle Company expand/collapse - memoized
   const toggleCompany = useCallback((company: string) => {
     setExpandedCompanies(prev => {
@@ -538,7 +555,7 @@ export default function UsersPage() {
   // Reset page when filters change
   useEffect(() => {
     setPage(0);
-  }, [searchQuery, companyFilter, departmentFilter, sectionFilter, roleTab, statusFilter, showNewUsersOnly]);
+  }, [searchQuery, companyFilter, departmentFilter, sectionFilter, roleTab, statusFilter, employeeTypeFilter, showNewUsersOnly]);
 
   // Reset section filter when department changes
   useEffect(() => {
@@ -732,7 +749,7 @@ export default function UsersPage() {
           boxShadow: 'none',
         }}
       >
-        {/* Row 1: Search + Company + Department */}
+        {/* Row 1: Search + Company + Department + Employee Type */}
         <Box sx={{
           display: 'grid',
           gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: '2fr 1fr 1fr' },
@@ -781,46 +798,78 @@ export default function UsersPage() {
           </FormControl>
 
           {/* Department Filter */}
-          <FormControl size="small" fullWidth>
-            <InputLabel>ฝ่าย</InputLabel>
-            <Select
-              value={departmentFilter}
-              onChange={(e) => setDepartmentFilter(e.target.value)}
-              label="ฝ่าย"
-              sx={{ borderRadius: 1 }}
-            >
-              <MenuItem value="all">ทั้งหมด</MenuItem>
-              {uniqueDepartments.map((dept) => (
-                <MenuItem key={dept} value={dept}>
-                  {departmentNameMap.get(dept) || dept}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
+          <Autocomplete
+            size="small"
+            fullWidth
+            options={['all', ...uniqueDepartments]}
+            getOptionLabel={(option) => {
+              if (option === 'all') return 'ฝ่าย (ทั้งหมด)';
+              return `${option} - ${departmentNameMap.get(option) || option}`;
+            }}
+            value={departmentFilter}
+            onChange={(_e, newValue) => setDepartmentFilter(newValue || 'all')}
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                label="ฝ่าย"
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: 1,
+                    bgcolor: 'background.default',
+                  }
+                }}
+              />
+            )}
+            sx={{ borderRadius: 1 }}
+          />
+
         </Box>
 
         {/* Row 2: Section + Status + Count + Refresh */}
         <Box sx={{
           display: 'grid',
-          gridTemplateColumns: { xs: '1fr 1fr', sm: 'repeat(2, 1fr)', md: '1fr 1fr auto auto' },
+          gridTemplateColumns: { xs: '1fr 1fr', sm: 'repeat(2, 1fr)', md: '1fr 1fr 1fr auto' },
           gap: 1.5,
           alignItems: 'center'
         }}>
           {/* Section Filter */}
+          <Autocomplete
+            size="small"
+            fullWidth
+            options={['all', ...uniqueSections]}
+            getOptionLabel={(option) => {
+              if (option === 'all') return 'แผนก (ทั้งหมด)';
+              return `${option} - ${sectionNameMap.get(option) || option}`;
+            }}
+            value={sectionFilter}
+            onChange={(_e, newValue) => setSectionFilter(newValue || 'all')}
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                label="แผนก"
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: 1,
+                    bgcolor: 'background.default',
+                  }
+                }}
+              />
+            )}
+            sx={{ borderRadius: 1 }}
+          />
+
+          {/* Employee Type Filter */}
           <FormControl size="small" fullWidth>
-            <InputLabel>แผนก</InputLabel>
+            <InputLabel>ประเภท</InputLabel>
             <Select
-              value={sectionFilter}
-              onChange={(e) => setSectionFilter(e.target.value)}
-              label="แผนก"
+              value={employeeTypeFilter}
+              onChange={(e) => setEmployeeTypeFilter(e.target.value)}
+              label="ประเภท"
               sx={{ borderRadius: 1 }}
             >
               <MenuItem value="all">ทั้งหมด</MenuItem>
-              {uniqueSections.map((section) => (
-                <MenuItem key={section} value={section}>
-                  {sectionNameMap.get(section) || section}
-                </MenuItem>
-              ))}
+              <MenuItem value="monthly">รายเดือน</MenuItem>
+              <MenuItem value="daily">รายวัน</MenuItem>
             </Select>
           </FormControl>
 
@@ -915,7 +964,7 @@ export default function UsersPage() {
       </Paper>
 
       {/* Active Filters */}
-      {(searchQuery || companyFilter !== 'all' || departmentFilter !== 'all' || sectionFilter !== 'all' || statusFilter !== 'all' || showNewUsersOnly || roleTab !== 'all') && (
+      {(searchQuery || companyFilter !== 'all' || departmentFilter !== 'all' || sectionFilter !== 'all' || statusFilter !== 'all' || employeeTypeFilter !== 'all' || showNewUsersOnly || roleTab !== 'all') && (
         <Box sx={{ mb: 3, display: 'flex', flexWrap: 'wrap', gap: 1, alignItems: 'center' }}>
           <Typography variant="body2" color="text.secondary" mr={1}>
             ตัวกรองที่เลือก:
@@ -950,7 +999,7 @@ export default function UsersPage() {
           )}
           {departmentFilter !== 'all' && (
             <Chip
-              label={`ฝ่าย: ${departmentNameMap.get(departmentFilter) || departmentFilter}`}
+              label={`ฝ่าย: ${departmentFilter} - ${departmentNameMap.get(departmentFilter) || departmentFilter}`}
               onDelete={() => setDepartmentFilter('all')}
               color="primary"
               variant="outlined"
@@ -959,7 +1008,7 @@ export default function UsersPage() {
           )}
           {sectionFilter !== 'all' && (
             <Chip
-              label={`แผนก: ${sectionNameMap.get(sectionFilter) || sectionFilter}`}
+              label={`แผนก: ${sectionFilter} - ${sectionNameMap.get(sectionFilter) || sectionFilter}`}
               onDelete={() => setSectionFilter('all')}
               color="primary"
               variant="outlined"
@@ -970,6 +1019,15 @@ export default function UsersPage() {
             <Chip
               label={`สถานะ: ${statusFilter === 'active' ? 'Active' : 'Inactive'}`}
               onDelete={() => setStatusFilter('all')}
+              color="primary"
+              variant="outlined"
+              size="small"
+            />
+          )}
+          {employeeTypeFilter !== 'all' && (
+            <Chip
+              label={`ประเภท: ${employeeTypeFilter === 'monthly' ? 'รายเดือน' : 'รายวัน'}`}
+              onDelete={() => setEmployeeTypeFilter('all')}
               color="primary"
               variant="outlined"
               size="small"
@@ -1064,6 +1122,7 @@ export default function UsersPage() {
                       <TableCell sx={{ fontWeight: 600, bgcolor: 'background.paper', color: 'text.secondary', width: 40 }} />
                       <TableCell sx={{ fontWeight: 600, bgcolor: 'background.paper', color: 'text.secondary' }}>พนักงาน</TableCell>
                       <TableCell sx={{ fontWeight: 600, bgcolor: 'background.paper', color: 'text.secondary' }}>แผนก</TableCell>
+                      <TableCell sx={{ fontWeight: 600, bgcolor: 'background.paper', color: 'text.secondary' }}>กะ</TableCell>
                       <TableCell sx={{ fontWeight: 600, bgcolor: 'background.paper', color: 'text.secondary' }}>ตำแหน่ง</TableCell>
                       <TableCell sx={{ fontWeight: 600, bgcolor: 'background.paper', color: 'text.secondary' }}>สิทธิ์</TableCell>
                       <TableCell sx={{ fontWeight: 600, bgcolor: 'background.paper', color: 'text.secondary' }} align="center">สถานะ</TableCell>
@@ -1166,7 +1225,7 @@ export default function UsersPage() {
                                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, pl: 1 }}>
                                       <Building4 size={18} color={theme.palette.info.main} />
                                       <Typography fontWeight={600} color="text.primary" fontSize="0.875rem">
-                                        {deptGroup.departmentName}
+                                        {deptGroup.department} - {deptGroup.departmentName}
                                       </Typography>
                                       <Chip
                                         label={`${deptUserCount} คน`}
@@ -1227,7 +1286,7 @@ export default function UsersPage() {
                                               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, pl: 2 }}>
                                                 <Layer size={16} color={theme.palette.warning.dark} />
                                                 <Typography fontWeight={500} color="text.primary" fontSize="0.8rem">
-                                                  {sectionGroup.sectionName}
+                                                  {sectionGroup.section} - {sectionGroup.sectionName}
                                                 </Typography>
                                                 <Chip
                                                   label={`${sectionGroup.users.length} คน`}
@@ -1258,25 +1317,68 @@ export default function UsersPage() {
                                               <TableCell />
                                               <TableCell sx={{ pl: 6 }}>
                                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                                                  <Avatar
-                                                    src={user.avatar || undefined}
-                                                    sx={{ width: 32, height: 32, bgcolor: theme.palette.primary.main, fontSize: '0.875rem' }}
+                                                  <Badge
+                                                    overlap="circular"
+                                                    anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+                                                    variant="dot"
+                                                    invisible={!user.deviceCount || user.deviceCount === 0}
+                                                    sx={{
+                                                      '& .MuiBadge-badge': {
+                                                        backgroundColor: '#44b700',
+                                                        color: '#44b700',
+                                                        boxShadow: `0 0 0 2px ${theme.palette.background.paper}`,
+                                                        '&::after': {
+                                                          position: 'absolute',
+                                                          top: 0,
+                                                          left: 0,
+                                                          width: '100%',
+                                                          height: '100%',
+                                                          borderRadius: '50%',
+                                                          animation: 'ripple 1.2s infinite ease-in-out',
+                                                          border: '1px solid currentColor',
+                                                          content: '""',
+                                                        },
+                                                      },
+                                                      '@keyframes ripple': {
+                                                        '0%': { transform: 'scale(.8)', opacity: 1 },
+                                                        '100%': { transform: 'scale(2.4)', opacity: 0 },
+                                                      },
+                                                    }}
                                                   >
-                                                    {user.firstName.charAt(0)}
-                                                  </Avatar>
+                                                    <Avatar
+                                                      src={user.avatar || undefined}
+                                                      sx={{ width: 32, height: 32, bgcolor: theme.palette.primary.main, fontSize: '0.875rem' }}
+                                                    >
+                                                      {user.firstName.charAt(0)}
+                                                    </Avatar>
+                                                  </Badge>
                                                   <Box>
                                                     <Typography variant="body2" fontWeight={600}>
                                                       {user.firstName} {user.lastName}
                                                     </Typography>
-                                                    <Typography variant="caption" color="text.secondary">
-                                                      {user.employeeId}
-                                                    </Typography>
+                                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                                      <Typography variant="caption" color="text.secondary">
+                                                        {user.employeeId}
+                                                      </Typography>
+                                                      {user.deviceCount && user.deviceCount > 0 ? (
+                                                        <Tooltip title={`ลงทะเบียนรับการแจ้งเตือนแล้ว (${user.deviceCount} อุปกรณ์)`}>
+                                                          <Box sx={{ display: 'flex', ml: 0.5 }}>
+                                                            <Mobile size={16} color={theme.palette.success.main} variant="Outline" />
+                                                          </Box>
+                                                        </Tooltip>
+                                                      ) : null}
+                                                    </Box>
                                                   </Box>
                                                 </Box>
                                               </TableCell>
                                               <TableCell>
                                                 <Typography variant="body2" fontSize="0.8rem" color="text.secondary">
                                                   -
+                                                </Typography>
+                                              </TableCell>
+                                              <TableCell>
+                                                <Typography variant="body2" fontSize="0.8rem">
+                                                  {user.shift ? (shiftLabels[user.shift] || user.shift) : '-'}
                                                 </Typography>
                                               </TableCell>
                                               <TableCell>
@@ -1382,25 +1484,64 @@ export default function UsersPage() {
                                         <TableCell />
                                         <TableCell sx={{ pl: 5 }}>
                                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                                            <Avatar
-                                              src={user.avatar || undefined}
-                                              sx={{ width: 32, height: 32, bgcolor: theme.palette.primary.main, fontSize: '0.875rem' }}
+                                            <Badge
+                                              overlap="circular"
+                                              anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+                                              variant="dot"
+                                              invisible={!user.deviceCount || user.deviceCount === 0}
+                                              sx={{
+                                                '& .MuiBadge-badge': {
+                                                  backgroundColor: '#44b700',
+                                                  color: '#44b700',
+                                                  boxShadow: `0 0 0 2px ${theme.palette.background.paper}`,
+                                                  '&::after': {
+                                                    position: 'absolute',
+                                                    top: 0,
+                                                    left: 0,
+                                                    width: '100%',
+                                                    height: '100%',
+                                                    borderRadius: '50%',
+                                                    animation: 'ripple 1.2s infinite ease-in-out',
+                                                    border: '1px solid currentColor',
+                                                    content: '""',
+                                                  },
+                                                },
+                                              }}
                                             >
-                                              {user.firstName.charAt(0)}
-                                            </Avatar>
+                                              <Avatar
+                                                src={user.avatar || undefined}
+                                                sx={{ width: 32, height: 32, bgcolor: theme.palette.primary.main, fontSize: '0.875rem' }}
+                                              >
+                                                {user.firstName.charAt(0)}
+                                              </Avatar>
+                                            </Badge>
                                             <Box>
                                               <Typography variant="body2" fontWeight={600}>
                                                 {user.firstName} {user.lastName}
                                               </Typography>
-                                              <Typography variant="caption" color="text.secondary">
-                                                {user.employeeId}
-                                              </Typography>
+                                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                                <Typography variant="caption" color="text.secondary">
+                                                  {user.employeeId}
+                                                </Typography>
+                                                {user.deviceCount && user.deviceCount > 0 ? (
+                                                  <Tooltip title={`ลงทะเบียนรับการแจ้งเตือนแล้ว (${user.deviceCount} อุปกรณ์)`}>
+                                                    <Box sx={{ display: 'flex', ml: 0.5 }}>
+                                                      <Mobile size={16} color={theme.palette.success.main} variant="Outline" />
+                                                    </Box>
+                                                  </Tooltip>
+                                                ) : null}
+                                              </Box>
                                             </Box>
                                           </Box>
                                         </TableCell>
                                         <TableCell>
                                           <Typography variant="body2" fontSize="0.8rem" color="text.secondary">
                                             -
+                                          </Typography>
+                                        </TableCell>
+                                        <TableCell>
+                                          <Typography variant="body2" fontSize="0.8rem">
+                                            {user.shift ? (shiftLabels[user.shift] || user.shift) : '-'}
                                           </Typography>
                                         </TableCell>
                                         <TableCell>
@@ -1596,7 +1737,7 @@ export default function UsersPage() {
                               />
                               <Building4 size={16} color={theme.palette.info.main} />
                               <Typography fontWeight={600} fontSize="0.85rem" sx={{ flex: 1 }}>
-                                {deptGroup.departmentName}
+                                {deptGroup.department} - {deptGroup.departmentName}
                               </Typography>
                               <Chip
                                 label={`${deptUserCount}`}
@@ -1650,7 +1791,7 @@ export default function UsersPage() {
                                         />
                                         <Layer size={14} color={theme.palette.warning.dark} />
                                         <Typography fontWeight={500} fontSize="0.8rem" sx={{ flex: 1 }}>
-                                          {sectionGroup.sectionName}
+                                          {sectionGroup.section} - {sectionGroup.sectionName}
                                         </Typography>
                                         <Chip
                                           label={`${sectionGroup.users.length}`}
@@ -1694,7 +1835,7 @@ export default function UsersPage() {
                                                   {user.firstName} {user.lastName}
                                                 </Typography>
                                                 <Typography variant="caption" color="text.secondary" noWrap fontSize="0.65rem">
-                                                  {user.employeeId} • {user.position || user.role}
+                                                  {user.employeeId} {user.deviceCount && user.deviceCount > 0 ? '📱' : ''} • {user.position || user.role}
                                                 </Typography>
                                               </Box>
                                               <Box sx={{ display: 'flex', gap: 0.25 }}>
@@ -1818,20 +1959,42 @@ export default function UsersPage() {
               {/* Card Header */}
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                 <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-                  <Avatar
-                    src={user.avatar || undefined}
-                    alt={`${user.firstName} ${user.lastName}`}
-                    sx={{ width: 48, height: 48, bgcolor: theme.palette.primary.main }}
+                  <Badge
+                    overlap="circular"
+                    anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+                    variant="dot"
+                    invisible={!user.deviceCount || user.deviceCount === 0}
+                    sx={{
+                      '& .MuiBadge-badge': {
+                        backgroundColor: '#44b700',
+                        boxShadow: `0 0 0 2px ${theme.palette.background.paper}`,
+                      },
+                    }}
                   >
-                    {user.firstName.charAt(0)}
-                  </Avatar>
+                    <Avatar
+                      src={user.avatar || undefined}
+                      alt={`${user.firstName} ${user.lastName}`}
+                      sx={{ width: 48, height: 48, bgcolor: theme.palette.primary.main }}
+                    >
+                      {user.firstName.charAt(0)}
+                    </Avatar>
+                  </Badge>
                   <Box>
                     <Typography variant="subtitle1" fontWeight={700}>
                       {user.firstName} {user.lastName}
                     </Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      {user.employeeId}
-                    </Typography>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                      <Typography variant="caption" color="text.secondary">
+                        {user.employeeId}
+                      </Typography>
+                      {user.deviceCount && user.deviceCount > 0 ? (
+                        <Tooltip title={`ลงทะเบียนรับการแจ้งเตือนแล้ว (${user.deviceCount} อุปกรณ์)`}>
+                          <Box sx={{ display: 'flex', ml: 0.5 }}>
+                            <Mobile size={16} color={theme.palette.success.main} variant="Outline" />
+                          </Box>
+                        </Tooltip>
+                      ) : null}
+                    </Box>
                   </Box>
                 </Box>
                 <Chip
@@ -1862,14 +2025,21 @@ export default function UsersPage() {
                 <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                   <Typography variant="body2" color="text.secondary">สังกัด</Typography>
                   <Box sx={{ textAlign: 'right' }}>
-                    <Typography variant="body2" fontWeight={600}>{user.departmentName}</Typography>
+                    <Typography variant="body2" fontWeight={600}>{user.department} - {user.departmentName}</Typography>
                     <Typography variant="caption" color="text.secondary">{user.company}</Typography>
                     {user.sectionName && (
                       <Typography variant="caption" display="block" color="text.secondary">
-                        {user.sectionName}
+                        {user.section} - {user.sectionName}
                       </Typography>
                     )}
                   </Box>
+                </Box>
+
+                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <Typography variant="body2" color="text.secondary">กะ</Typography>
+                  <Typography variant="body2" fontWeight={600}>
+                    {user.shift ? (shiftLabels[user.shift] || user.shift) : '-'}
+                  </Typography>
                 </Box>
 
                 <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
@@ -1949,6 +2119,7 @@ export default function UsersPage() {
               <TableRow sx={{ bgcolor: alpha(theme.palette.primary.main, 0.04) }}>
                 <TableCell sx={{ fontWeight: 600, color: 'text.secondary', py: 2 }}>พนักงาน</TableCell>
                 <TableCell sx={{ fontWeight: 600, color: 'text.secondary', py: 2 }}>สังกัด</TableCell>
+                <TableCell sx={{ fontWeight: 600, color: 'text.secondary', py: 2 }}>กะ</TableCell>
                 <TableCell sx={{ fontWeight: 600, color: 'text.secondary', py: 2 }}>ตำแหน่ง</TableCell>
                 <TableCell sx={{ fontWeight: 600, color: 'text.secondary', py: 2 }}>สิทธิ์</TableCell>
                 <TableCell sx={{ fontWeight: 600, color: 'text.secondary', py: 2 }} align="center">สถานะ</TableCell>
@@ -2013,27 +2184,61 @@ export default function UsersPage() {
                   >
                     <TableCell>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                        <Avatar
-                          src={user.avatar || undefined}
-                          alt={`${user.firstName} ${user.lastName}`}
-                          sx={{ bgcolor: theme.palette.primary.main }}
+                        <Badge
+                          overlap="circular"
+                          anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+                          variant="dot"
+                          invisible={!user.deviceCount || user.deviceCount === 0}
+                          sx={{
+                            '& .MuiBadge-badge': {
+                              backgroundColor: '#44b700',
+                              color: '#44b700',
+                              boxShadow: `0 0 0 2px ${theme.palette.background.paper}`,
+                              '&::after': {
+                                position: 'absolute',
+                                top: 0,
+                                left: 0,
+                                width: '100%',
+                                height: '100%',
+                                borderRadius: '50%',
+                                animation: 'ripple 1.2s infinite ease-in-out',
+                                border: '1px solid currentColor',
+                                content: '""',
+                              },
+                            },
+                          }}
                         >
-                          {user.firstName.charAt(0)}
-                        </Avatar>
+                          <Avatar
+                            src={user.avatar || undefined}
+                            alt={`${user.firstName} ${user.lastName}`}
+                            sx={{ bgcolor: theme.palette.primary.main }}
+                          >
+                            {user.firstName.charAt(0)}
+                          </Avatar>
+                        </Badge>
                         <Box>
                           <Typography variant="subtitle2" fontWeight={600}>
                             {user.firstName} {user.lastName}
                           </Typography>
-                          <Typography variant="caption" color="text.secondary">
-                            {user.employeeId}
-                          </Typography>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                            <Typography variant="caption" color="text.secondary">
+                              {user.employeeId}
+                            </Typography>
+                            {user.deviceCount && user.deviceCount > 0 ? (
+                              <Tooltip title={`ลงทะเบียนรับการแจ้งเตือนแล้ว (${user.deviceCount} อุปกรณ์)`}>
+                                <Box sx={{ display: 'flex', ml: 0.5 }}>
+                                  <Mobile size={16} color={theme.palette.success.main} variant="Outline" />
+                                </Box>
+                              </Tooltip>
+                            ) : null}
+                          </Box>
                         </Box>
                       </Box>
                     </TableCell>
                     <TableCell>
                       <Box>
                         <Typography variant="body2" fontWeight={500}>
-                          {user.departmentName}
+                          {user.department} - {user.departmentName}
                         </Typography>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexWrap: 'wrap' }}>
                           <Chip
@@ -2044,7 +2249,7 @@ export default function UsersPage() {
                           />
                           {user.sectionName && (
                             <Typography variant="caption" color="text.secondary">
-                              • {user.sectionName}
+                              • {user.section} - {user.sectionName}
                             </Typography>
                           )}
                         </Box>
@@ -2065,7 +2270,7 @@ export default function UsersPage() {
                                           key={code}
                                           label={code}
                                           size="small"
-                                          color="warning"
+                                          color={code.startsWith('3') ? 'primary' : code.startsWith('2') ? 'secondary' : 'warning'}
                                           variant="outlined"
                                           sx={{ height: 18, fontSize: '0.6rem' }}
                                         />
@@ -2090,7 +2295,7 @@ export default function UsersPage() {
                                           key={code}
                                           label={code}
                                           size="small"
-                                          color="info"
+                                          color={code.startsWith('3') ? 'primary' : code.startsWith('2') ? 'secondary' : 'info'}
                                           variant="outlined"
                                           sx={{ height: 18, fontSize: '0.6rem' }}
                                         />
@@ -2104,6 +2309,11 @@ export default function UsersPage() {
                           </Box>
                         )}
                       </Box>
+                    </TableCell>
+                    <TableCell>
+                      <Typography variant="body2">
+                        {user.shift ? (shiftLabels[user.shift] || user.shift) : '-'}
+                      </Typography>
                     </TableCell>
                     <TableCell>
                       <Typography variant="body2">

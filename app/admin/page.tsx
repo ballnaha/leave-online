@@ -429,6 +429,14 @@ export default function AdminDashboardPage() {
                         </Tooltip>
                         <Button
                             variant="contained"
+                            startIcon={<People size={18} color={theme.palette.common.white} />}
+                            onClick={() => router.push('/admin/employee-stats')}
+                            sx={{ borderRadius: 1, textTransform: 'none', fontWeight: 600, px: { xs: 2, md: 3 }, fontSize: { xs: '0.8125rem', md: '0.875rem' }, flex: { xs: 1, sm: 'initial' }, bgcolor: alpha(theme.palette.secondary.main, 1), '&:hover': { bgcolor: alpha(theme.palette.secondary.main, 0.9) } }}
+                        >
+                            สถิติรายบุคคล
+                        </Button>
+                        <Button
+                            variant="contained"
                             startIcon={<DocumentText size={18} color={theme.palette.common.white} />}
                             onClick={() => router.push('/admin/leaves')}
                             sx={{ borderRadius: 1, textTransform: 'none', fontWeight: 600, px: { xs: 2, md: 3 }, fontSize: { xs: '0.8125rem', md: '0.875rem' }, flex: { xs: 1, sm: 'initial' } }}
@@ -1368,18 +1376,7 @@ export default function AdminDashboardPage() {
                                         </Box>
                                         <Typography variant="h6" fontWeight={700}>ความเคลื่อนไหว</Typography>
                                     </Box>
-                                    <Button
-                                        size="small"
-                                        onClick={() => router.push('/admin/notifications')}
-                                        endIcon={<ArrowRight2 size={16} color="#6366F1" />}
-                                        sx={{
-                                            borderRadius: 1,
-                                            textTransform: 'none',
-                                            fontWeight: 600,
-                                        }}
-                                    >
-                                        ประวัติ
-                                    </Button>
+
                                 </Box>
                                 <Box sx={{ p: 2.5, flex: 1 }}>
                                     {loading ? (
@@ -1714,9 +1711,9 @@ export default function AdminDashboardPage() {
                         </Paper>
                     </Box>
                 </Box >
-            </Box >
 
-            {/* Drilldown Modal - Removed, now using inline chart */}
+            </Box >
         </Box >
+
     );
 }

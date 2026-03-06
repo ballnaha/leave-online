@@ -31,12 +31,12 @@ export const viewport: Viewport = {
 
 export const metadata: Metadata = {
   title: "Leave Online",
-  description: "Mobile first leave management application",
+  description: "Poonsuc Can Leave Online",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "Leave Online",
+    title: "Poonsuc Can Leave Online",
     startupImage: [
       '/images/psc-logo.png',
     ],

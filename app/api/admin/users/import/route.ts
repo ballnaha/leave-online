@@ -14,6 +14,7 @@ interface ImportUser {
     startDate: string;
     department: string;
     section: string;
+    employeeType?: string;
 }
 
 // POST - Import users from Excel
@@ -60,7 +61,11 @@ export async function POST(request: NextRequest) {
         const sectionNameToCode = new Map<string, { code: string; deptCode: string }>();
 
         departments.forEach(dept => {
-            // Add by exact name match
+            // Add by code match (Prioritize codes as requested)
+            deptNameToCode.set(dept.code.trim(), dept.code);
+            deptNameToCode.set(dept.code.toLowerCase().trim(), dept.code);
+
+            // Add by exact name match (Keep as fallback)
             deptNameToCode.set(dept.name.trim(), dept.code);
             deptNameToCode.set(dept.name.toLowerCase().trim(), dept.code);
 
@@ -74,6 +79,13 @@ export async function POST(request: NextRequest) {
             // Add sections for this department
             dept.sections.forEach(section => {
                 const sectionName = section.name.trim();
+                const sectionCode = section.code.trim();
+
+                // Add by code match (Prioritize codes)
+                sectionNameToCode.set(sectionCode, { code: section.code, deptCode: dept.code });
+                sectionNameToCode.set(sectionCode.toLowerCase(), { code: section.code, deptCode: dept.code });
+
+                // Add by name match (Keep as fallback)
                 sectionNameToCode.set(sectionName, { code: section.code, deptCode: dept.code });
                 sectionNameToCode.set(sectionName.toLowerCase(), { code: section.code, deptCode: dept.code });
 
@@ -134,6 +146,7 @@ export async function POST(request: NextRequest) {
                             company: company,
                             department: departmentCode,
                             section: sectionCode,
+                            employeeType: user.employeeType || 'monthly',
                             updatedAt: new Date(),
                         }
                     });
@@ -148,7 +161,7 @@ export async function POST(request: NextRequest) {
                             lastName: user.lastName || '',
                             gender: genderValue,
                             company: company,
-                            employeeType: 'monthly',
+                            employeeType: user.employeeType || 'monthly',
                             department: departmentCode,
                             section: sectionCode,
                             position: user.position || null,
@@ -185,24 +198,24 @@ export async function POST(request: NextRequest) {
 }
 
 // Helper function to find department code from name (using database lookup)
-function findDepartmentCode(departmentName: string, deptMap: Map<string, string>): string {
-    if (!departmentName) return 'GENERAL';
+function findDepartmentCode(input: string, deptMap: Map<string, string>): string {
+    if (!input) return 'GENERAL';
 
-    const trimmedName = departmentName.trim();
+    const trimmedInput = input.trim();
 
-    // Try exact match first
-    if (deptMap.has(trimmedName)) {
-        return deptMap.get(trimmedName)!;
+    // 1. Try exact match (could be name or code now)
+    if (deptMap.has(trimmedInput)) {
+        return deptMap.get(trimmedInput)!;
     }
 
-    // Try lowercase match
-    if (deptMap.has(trimmedName.toLowerCase())) {
-        return deptMap.get(trimmedName.toLowerCase())!;
+    // 2. Try lowercase match
+    if (deptMap.has(trimmedInput.toLowerCase())) {
+        return deptMap.get(trimmedInput.toLowerCase())!;
     }
 
-    // Try partial match (contains)
-    for (const [name, code] of deptMap.entries()) {
-        if (trimmedName.includes(name) || name.includes(trimmedName)) {
+    // 3. Try partial match (contains) as fallback for names
+    for (const [key, code] of deptMap.entries()) {
+        if (trimmedInput.includes(key) || key.includes(trimmedInput)) {
             return code;
         }
     }
@@ -212,31 +225,31 @@ function findDepartmentCode(departmentName: string, deptMap: Map<string, string>
 }
 
 // Helper function to find section info from name (using database lookup)
-function findSectionInfo(sectionName: string, sectionMap: Map<string, { code: string; deptCode: string }>): { code: string; deptCode: string } | null {
-    if (!sectionName) return null;
+function findSectionInfo(input: string, sectionMap: Map<string, { code: string; deptCode: string }>): { code: string; deptCode: string } | null {
+    if (!input) return null;
 
-    const trimmedName = sectionName.trim();
+    const trimmedInput = input.trim();
 
-    // 1. Try exact match first (case-insensitive)
-    if (sectionMap.has(trimmedName)) {
-        return sectionMap.get(trimmedName)!;
+    // 1. Try exact match first (could be name or code)
+    if (sectionMap.has(trimmedInput)) {
+        return sectionMap.get(trimmedInput)!;
     }
-    if (sectionMap.has(trimmedName.toLowerCase())) {
-        return sectionMap.get(trimmedName.toLowerCase())!;
+    if (sectionMap.has(trimmedInput.toLowerCase())) {
+        return sectionMap.get(trimmedInput.toLowerCase())!;
     }
 
     // 2. Try matching without "แผนก" prefix if the input has it
-    if (trimmedName.startsWith('แผนก')) {
-        const withoutPrefix = trimmedName.substring(4).trim();
+    if (trimmedInput.startsWith('แผนก')) {
+        const withoutPrefix = trimmedInput.substring(4).trim();
         if (sectionMap.has(withoutPrefix)) {
             return sectionMap.get(withoutPrefix)!;
         }
     }
 
     // 3. Try partial match as fallback, but must be at least 3 chars
-    if (trimmedName.length >= 3) {
-        for (const [name, info] of sectionMap.entries()) {
-            if (trimmedName.includes(name) || name.includes(trimmedName)) {
+    if (trimmedInput.length >= 3) {
+        for (const [key, info] of sectionMap.entries()) {
+            if (trimmedInput.includes(key) || key.includes(trimmedInput)) {
                 return info;
             }
         }

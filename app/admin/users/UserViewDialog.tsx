@@ -162,7 +162,7 @@ export default function UserViewDialog({
   });
 
   // Check if user is a manager type
-  const isManagerRole = ['dept_manager', 'section_head', 'hr_manager', 'shift_supervisor'].includes(user.role);
+  const isManagerRole = ['dept_manager', 'section_head', 'hr_manager', 'hr', 'shift_supervisor'].includes(user.role);
 
   return (
     <Dialog
@@ -372,7 +372,7 @@ export default function UserViewDialog({
               }}
             >
               {/* Special handling for hr_manager */}
-              {user.role === 'hr_manager' ? (
+              {['hr_manager', 'hr'].includes(user.role) ? (
                 <Box
                   sx={{
                     p: 2,
@@ -472,20 +472,24 @@ export default function UserViewDialog({
                     </Typography>
                     {managedDepartmentDetails.length > 0 ? (
                       <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75, mt: 0.5 }}>
-                        {managedDepartmentDetails.map((dept) => (
-                          <Chip
-                            key={dept.code}
-                            icon={<Building2 size={14} />}
-                            label={`${dept.name} (${dept.code})`}
-                            size="small"
-                            sx={{
-                              height: 28,
-                              fontSize: '0.8rem',
-                              bgcolor: alpha(theme.palette.warning.main, 0.1),
-                              color: theme.palette.warning.main,
-                            }}
-                          />
-                        ))}
+                        {managedDepartmentDetails.map((dept) => {
+                          const isPSC = dept.code.startsWith('3');
+                          const isPS = dept.code.startsWith('2');
+                          return (
+                            <Chip
+                              key={dept.code}
+                              icon={<Building2 size={14} />}
+                              label={`${dept.name} (${dept.code})`}
+                              size="small"
+                              sx={{
+                                height: 28,
+                                fontSize: '0.8rem',
+                                bgcolor: isPSC ? alpha(theme.palette.primary.main, 0.1) : isPS ? alpha(theme.palette.secondary.main, 0.1) : alpha(theme.palette.warning.main, 0.1),
+                                color: isPSC ? 'primary.main' : isPS ? 'secondary.main' : 'warning.main',
+                              }}
+                            />
+                          );
+                        })}
                       </Box>
                     ) : (
                       <Typography variant="body2" color="text.disabled" sx={{ fontStyle: 'italic', display: 'block', mt: 0.5 }}>
@@ -501,20 +505,24 @@ export default function UserViewDialog({
                     </Typography>
                     {managedSectionDetails.length > 0 ? (
                       <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75, mt: 0.5 }}>
-                        {managedSectionDetails.map((sect) => (
-                          <Chip
-                            key={sect.code}
-                            icon={<Layers size={14} />}
-                            label={`${sect.name} (${sect.code})`}
-                            size="small"
-                            sx={{
-                              height: 28,
-                              fontSize: '0.8rem',
-                              bgcolor: alpha(theme.palette.info.main, 0.1),
-                              color: theme.palette.info.main,
-                            }}
-                          />
-                        ))}
+                        {managedSectionDetails.map((sect) => {
+                          const isPSC = sect.code.startsWith('3');
+                          const isPS = sect.code.startsWith('2');
+                          return (
+                            <Chip
+                              key={sect.code}
+                              icon={<Layers size={14} />}
+                              label={`${sect.name} (${sect.code})`}
+                              size="small"
+                              sx={{
+                                height: 28,
+                                fontSize: '0.8rem',
+                                bgcolor: isPSC ? alpha(theme.palette.primary.main, 0.1) : isPS ? alpha(theme.palette.secondary.main, 0.1) : alpha(theme.palette.info.main, 0.1),
+                                color: isPSC ? 'primary.main' : isPS ? 'secondary.main' : 'info.main',
+                              }}
+                            />
+                          );
+                        })}
                       </Box>
                     ) : (
                       <Typography variant="body2" color="text.disabled" sx={{ fontStyle: 'italic', display: 'block', mt: 0.5 }}>

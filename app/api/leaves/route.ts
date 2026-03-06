@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import { createApprovalSteps } from '@/lib/escalation';
+import { createApprovalSteps, calculateEscalationDeadline } from '@/lib/escalation';
 import { notifyLeaveSubmitted } from '@/lib/onesignal';
 import { calculateVacationDays } from '@/lib/vacationCalculator';
 
@@ -114,7 +114,7 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'User not found' }, { status: 404 });
         }
 
-        // Validation for Ordination Leave
+        // Validation for Ordination Leave (Male only)
         if (leaveType === 'ordination') {
             if (user.gender !== 'male') {
                 return NextResponse.json(
@@ -132,68 +132,110 @@ export async function POST(request: Request) {
             }
         }
 
-        // Validation for Vacation Leave - ตรวจสอบสิทธิ์ลาพักร้อน
-        if (leaveType === 'vacation') {
-            const leaveYear = start.getFullYear();
-            const vacationType = await prisma.leaveType.findUnique({
-                where: { code: 'vacation' },
-                select: { maxDaysPerYear: true }
-            });
-
-            const maxVacationDays = calculateVacationDays(
-                user.startDate,
-                leaveYear,
-                vacationType?.maxDaysPerYear || 6
-            );
-
-            if (maxVacationDays === 0) {
+        // Validation for Paternity Leave (Male only)
+        if (leaveType === 'paternity' || leaveType === 'paternity_care') {
+            if (user.gender !== 'male') {
                 return NextResponse.json(
-                    { error: 'คุณยังไม่มีสิทธิ์ลาพักร้อนในปีนี้ (ต้องทำงานครบ 1 ปีก่อน)' },
-                    { status: 400 }
-                );
-            }
-
-            // ตรวจสอบวันลาที่ใช้ไปแล้วในปีนี้
-            const usedVacationDays = await prisma.leaveRequest.aggregate({
-                where: {
-                    userId: Number(session.user.id),
-                    leaveType: 'vacation',
-                    status: { in: ['approved', 'pending', 'in_progress'] },
-                    startDate: {
-                        gte: new Date(leaveYear, 0, 1),
-                        lt: new Date(leaveYear + 1, 0, 1)
-                    }
-                },
-                _sum: { totalDays: true }
-            });
-
-            const usedDays = usedVacationDays._sum.totalDays || 0;
-            const remainingDays = maxVacationDays - usedDays;
-
-            // ตรวจสอบว่าวันพักร้อนหมดแล้วหรือไม่
-            if (remainingDays <= 0) {
-                return NextResponse.json(
-                    { error: `คุณไม่มีวันพักร้อนคงเหลือในปีนี้ (ใช้ไปแล้ว ${usedDays} วัน จากทั้งหมด ${maxVacationDays} วัน)` },
-                    { status: 400 }
-                );
-            }
-
-            if (Number(totalDays) > remainingDays) {
-                return NextResponse.json(
-                    { error: `สิทธิ์ลาพักร้อนไม่เพียงพอ (ขอลา ${totalDays} วัน แต่เหลือ ${remainingDays} วัน จากทั้งหมด ${maxVacationDays} วัน)` },
+                    { error: 'This leave type is only for male employees' },
                     { status: 400 }
                 );
             }
         }
 
+        // Validation for Maternity Leave (Female only)
+        if (leaveType === 'maternity') {
+            if (user.gender !== 'female') {
+                return NextResponse.json(
+                    { error: 'Maternity leave is only for female employees' },
+                    { status: 400 }
+                );
+            }
+        }
+
+        // --- เริ่มต้นการตรวจสอบโควต้าวันลา ---
+        const leaveYear = start.getFullYear();
+        const leaveTypeData = await prisma.leaveType.findFirst({
+            where: {
+                OR: [
+                    { code: leaveType },
+                    { name: leaveType }
+                ],
+                isActive: true
+            }
+        });
+
+        if (leaveTypeData) {
+            let maxDays = leaveTypeData.maxDaysPerYear || 0;
+
+            // ถ้าเป็นลาพักร้อน ให้คำนวณตามอายุงาน
+            if (leaveTypeData.code === 'vacation') {
+                maxDays = calculateVacationDays(
+                    user.startDate,
+                    leaveYear,
+                    leaveTypeData.maxDaysPerYear || 6
+                );
+
+                if (maxDays === 0) {
+                    return NextResponse.json(
+                        { error: 'คุณยังไม่มีสิทธิ์ลาพักร้อนในปีนี้ (ต้องทำงานครบ 1 ปีก่อน)' },
+                        { status: 400 }
+                    );
+                }
+            }
+
+            // ตรวจสอบโควต้าเฉพาะประเภทที่มีกำหนดวันลาสูงสุด (maxDays > 0)
+            if (maxDays > 0) {
+                // ดึงรายการลาทั้งหมดของประเภทนี้ในปีนี้ (ใช้ Logic เดียวกับ Leave Summary API)
+                const usedLeaves = await prisma.leaveRequest.findMany({
+                    where: {
+                        userId: Number(session.user.id),
+                        status: { in: ['approved', 'pending', 'in_progress', 'completed'] },
+                        startDate: {
+                            gte: new Date(leaveYear, 0, 1),
+                            lt: new Date(leaveYear + 1, 0, 1)
+                        }
+                    },
+                    select: { leaveType: true, totalDays: true }
+                });
+
+                // คำนวณวันลาที่ใช้ไปโดยอ้างอิง ID, CODE หรือ NAME (Case-insensitive) เพื่อความแม่นยำ
+                let usedDays = 0;
+                usedLeaves.forEach(req => {
+                    const reqType = String(req.leaveType).toLowerCase();
+                    if (
+                        reqType === String(leaveTypeData.id) ||
+                        reqType === String(leaveTypeData.code).toLowerCase() ||
+                        reqType === String(leaveTypeData.name).toLowerCase()
+                    ) {
+                        usedDays += req.totalDays || 0;
+                    }
+                });
+
+                const remainingDays = maxDays - usedDays;
+
+                if (remainingDays <= 0) {
+                    return NextResponse.json(
+                        { error: `คุณไม่มีสิทธิ์ลาคงเหลือสำหรับประเภทนี้ในปีนี้ (ใช้ไปแล้ว ${usedDays} วัน จากทั้งหมด ${maxDays} วัน)` },
+                        { status: 400 }
+                    );
+                }
+
+                if (Number(totalDays) > remainingDays) {
+                    return NextResponse.json(
+                        { error: `จำนวนวันลาคงเหลือไม่เพียงพอ (ขอลา ${totalDays} วัน แต่เหลือแค่ ${remainingDays} วัน)` },
+                        { status: 400 }
+                    );
+                }
+            }
+        }
+        // --- สิ้นสุดการตรวจสอบโควต้าวันลา ---
+
         const attachmentList: AttachmentPayload[] = Array.isArray(attachments)
             ? attachments
             : [];
 
-        // คำนวณ escalation deadline (2 วัน = 48 ชั่วโมง) -> ปัดไปเป็น 08:00 ของวันที่ครบกำหนด
-        const escalationDeadline = new Date();
-        escalationDeadline.setDate(escalationDeadline.getDate() + 2); // บวก 2 วัน
-        escalationDeadline.setHours(8, 0, 0, 0); // ตั้งเวลาเป็น 08:00:00
+        // คำนวณ escalation deadline (13:00 ของวันถัดไป)
+        const escalationDeadline = calculateEscalationDeadline();
 
         // สร้างรหัสใบลา
         const leaveCode = await generateLeaveCode(leaveType, start);

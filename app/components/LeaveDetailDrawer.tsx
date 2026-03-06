@@ -456,7 +456,10 @@ const leaveTypeConfig: Record<string, { icon: any; color: string; lightColor: st
     paternity: { icon: Profile2User, color: '#11CDEF', lightColor: '#E1F5FE', label: 'ลาดูแลภรรยาคลอดบุตร' },
     sterilization: { icon: Health, color: '#2DCECC', lightColor: '#E0F2F1', label: 'ลาทำหมัน' },
     business: { icon: Car, color: '#8965E0', lightColor: '#F3E5F5', label: 'ลาติดต่อธุรกิจ' },
-    unpaid: { icon: Clock, color: '#8898AA', lightColor: '#ECEFF1', label: 'ลาไม่รับค่าจ้าง' },
+    unpaid: { icon: Clock, color: '#F5365C', lightColor: '#FEE2E2', label: 'ลาไม่รับค่าจ้าง' },
+    sick_no_pay: { icon: Health, color: '#F5365C', lightColor: '#FEE2E2', label: 'ลาป่วยไม่รับค่าจ้าง' },
+    personal_no_pay: { icon: Briefcase, color: '#F5365C', lightColor: '#FEE2E2', label: 'ลากิจไม่รับค่าจ้าง' },
+    paternity_care: { icon: Lovely, color: '#2DCECC', lightColor: '#E0F7FA', label: 'ลาเลี้ยงดูบุตร' },
     other: { icon: MessageQuestion, color: '#5E72E4', lightColor: '#E9ECFF', label: 'อื่นๆ' },
     default: { icon: Clock, color: '#8898AA', lightColor: '#F0F3F5', label: 'การลา' },
 };
@@ -719,7 +722,7 @@ const LeaveDetailDrawer: React.FC<LeaveDetailDrawerProps> = ({ open, onClose, le
                                                     }
                                                 </Typography>
                                                 <Typography sx={{ fontSize: '0.8rem', color: '#64748B' }}>
-                                                    
+
                                                     {leave.startTime && leave.endTime &&
                                                         ` • ${leave.startTime} - ${leave.endTime}`
                                                     }
@@ -1040,7 +1043,7 @@ const LeaveDetailDrawer: React.FC<LeaveDetailDrawerProps> = ({ open, onClose, le
                                                                                 {' '}• {approval.actedBy?.position || approval.approver?.position}
                                                                             </Typography>
                                                                         )}
-                                                                        {approval.actedBy && approval.approver && (
+                                                                        {approval.actedBy && approval.approver && approval.actedBy.id !== approval.approver.id && (
                                                                             <Typography component="span" sx={{ color: '#94A3B8', fontSize: '0.8rem', ml: 0.75 }}>
                                                                                 ({t('approved_on_behalf', 'อนุมัติแทน')} {approval.approver.firstName} {approval.approver.lastName})
                                                                             </Typography>

@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions, isAdminRole } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { Prisma, UserRole } from '@prisma/client';
+import { resolveApproversByRole } from '@/lib/escalation';
 
 function isUserRole(value: unknown): value is UserRole {
   return (
@@ -42,9 +43,7 @@ export async function GET(request: Request) {
       orderBy: { updatedAt: 'desc' }
     });
 
-    // Manually populate approver details if needed, or just return IDs
-    // For the UI, we probably want names.
-    // Let's fetch all referenced users.
+    // ดึง users ที่ถูกระบุโดยตรง (approverId)
     const userIds = new Set<number>();
     (workflows as WorkflowWithSteps[]).forEach((w) => {
       w.steps.forEach((s) => {
@@ -59,13 +58,38 @@ export async function GET(request: Request) {
 
     const userMap = new Map(users.map((u) => [u.id, u]));
 
-    const enrichedWorkflows = (workflows as WorkflowWithSteps[]).map((w) => ({
-      ...w,
-      steps: w.steps.map((s) => ({
-        ...s,
-        approver: s.approverId ? (userMap.get(s.approverId) ?? null) : null,
+    // Enrich workflows with approver names using shared function
+    const enrichedWorkflows = await Promise.all(
+      (workflows as WorkflowWithSteps[]).map(async (w) => ({
+        ...w,
+        steps: await Promise.all(
+          w.steps.map(async (s) => {
+            let approverNames: string[] = [];
+
+            if (s.approverId) {
+              // กรณีระบุตัวบุคคล
+              const u = userMap.get(s.approverId);
+              if (u) approverNames.push(`${u.firstName} ${u.lastName}`);
+            } else if (s.approverRole) {
+              // กรณีระบุ Role - ใช้ Shared Function
+              const matches = await resolveApproversByRole({
+                approverRole: s.approverRole,
+                company: w.company,
+                department: w.department,
+                section: w.section,
+              });
+              approverNames = matches.map(u => `${u.firstName} ${u.lastName}`);
+            }
+
+            return {
+              ...s,
+              approver: s.approverId ? (userMap.get(s.approverId) ?? null) : null,
+              roleNames: approverNames
+            };
+          })
+        )
       }))
-    }));
+    );
 
     return NextResponse.json(enrichedWorkflows);
   } catch (error) {

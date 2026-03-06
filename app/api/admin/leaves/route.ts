@@ -72,16 +72,41 @@ export async function GET(request: NextRequest) {
       };
     }
 
-    // Search by employee name or ID
     if (search) {
-      where.user = {
-        ...where.user,
-        OR: [
-          { employeeId: { contains: search } },
-          { firstName: { contains: search } },
-          { lastName: { contains: search } },
-        ],
-      };
+      const trimmedSearch = search.trim();
+      const searchParts = trimmedSearch.split(/\s+/);
+
+      if (searchParts.length > 1) {
+        where.user = {
+          ...where.user,
+          OR: [
+            {
+              AND: [
+                { firstName: { contains: searchParts[0] } },
+                { lastName: { contains: searchParts.slice(1).join(' ') } },
+              ]
+            },
+            {
+              AND: [
+                { firstName: { contains: searchParts.slice(0, -1).join(' ') } },
+                { lastName: { contains: searchParts[searchParts.length - 1] } },
+              ]
+            },
+            { employeeId: { contains: trimmedSearch } },
+            { firstName: { contains: trimmedSearch } },
+            { lastName: { contains: trimmedSearch } },
+          ],
+        };
+      } else {
+        where.user = {
+          ...where.user,
+          OR: [
+            { employeeId: { contains: trimmedSearch } },
+            { firstName: { contains: trimmedSearch } },
+            { lastName: { contains: trimmedSearch } },
+          ],
+        };
+      }
     }
 
     const leaves = await prisma.leaveRequest.findMany({

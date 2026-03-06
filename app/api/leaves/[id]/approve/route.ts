@@ -22,6 +22,9 @@ const leaveTypeCodeMap: Record<string, string> = {
   business: 'BS',
   unpaid: 'UP',
   other: 'OT',
+  sick_no_pay: 'SN',
+  personal_no_pay: 'PN',
+  paternity_care: 'PC',
 };
 
 // Generate leave code: SK2511001 (type + year + month + running)
@@ -68,7 +71,7 @@ export async function POST(
     const { id } = await params;
     const leaveRequestId = parseInt(id);
     const approverId = parseInt(session.user.id);
-    const isAdmin = session.user.role === 'admin';
+    const isAdmin = ['admin', 'hr', 'hr_manager'].includes(session.user.role);
     const body = await request.json();
     const { action, comment } = body; // action: 'approve' | 'reject'
 
@@ -107,14 +110,14 @@ export async function POST(
     // - Admin: สามารถทำแทนได้ทุกคน โดยทำกับ level ปัจจุบัน
     const pendingApproval = isAdmin
       ? leaveRequest.approvals.find(
-          (a) => a.level === leaveRequest.currentLevel && a.status === 'pending'
-        )
+        (a) => a.level === leaveRequest.currentLevel && a.status === 'pending'
+      )
       : leaveRequest.approvals.find(
-          (a) =>
-            a.approverId === approverId &&
-            a.level === leaveRequest.currentLevel &&
-            a.status === 'pending'
-        );
+        (a) =>
+          a.approverId === approverId &&
+          a.level === leaveRequest.currentLevel &&
+          a.status === 'pending'
+      );
 
     if (!pendingApproval) {
       return NextResponse.json(
@@ -190,18 +193,18 @@ export async function POST(
         });
 
         // แจ้งเตือนพนักงานว่าใบลาผ่านการอนุมัติขั้นนี้แล้ว
-        const totalApprovals = leaveRequest.approvals.length;
-        const completedApprovals = leaveRequest.approvals.filter(
-          a => a.status === 'approved' || a.id === pendingApproval.id
-        ).length;
+        // รวมคนที่มี level เดียวกันนับเป็น 1 step เพื่อความไม่สับสน
+        const uniqueLevels = Array.from(new Set(leaveRequest.approvals.map(a => a.level))).sort((a, b) => a - b);
+        const totalLevels = uniqueLevels.length;
+        const currentStep = uniqueLevels.indexOf(pendingApproval.level) + 1;
 
         await notifyLeavePartialApproved(
           leaveRequest.userId,
           leaveRequestId,
           approverName,
           leaveRequest.leaveType,
-          completedApprovals,
-          totalApprovals,
+          currentStep,
+          totalLevels,
           leaveRequest.totalDays,
           leaveRequest.startDate?.toISOString(),
           leaveRequest.endDate?.toISOString(),

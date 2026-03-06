@@ -34,6 +34,7 @@ import {
   Divider,
   useTheme,
   alpha,
+  TablePagination,
 } from '@mui/material';
 import {
   SearchNormal1,
@@ -50,6 +51,7 @@ import {
   UserSquare,
 } from 'iconsax-react';
 import { Drawer as VaulDrawer } from 'vaul';
+import DepartmentUserList from './DepartmentUserList';
 
 const PRIMARY_COLOR = '#6C63FF';
 
@@ -363,26 +365,43 @@ export default function OrganizationStructurePage() {
     });
   };
 
-  // Open subordinates dialog
-  const handleOpenSubordinates = (user: UserData) => {
+  // Subordinates loading state
+  const [loadedSubordinates, setLoadedSubordinates] = useState<Subordinate[]>([]);
+  const [subordinatesLoading, setSubordinatesLoading] = useState(false);
+
+  // Open subordinates dialog and load data on-demand
+  const handleOpenSubordinates = async (user: UserData) => {
     setSelectedUser(user);
     setSubordinatesDialogOpen(true);
     setSubordinateSearch('');
+    setLoadedSubordinates([]);
+    setSubordinatesLoading(true);
+
+    try {
+      const response = await fetch(`/api/admin/organization-structure/${user.id}/subordinates`);
+      if (response.ok) {
+        const result = await response.json();
+        setLoadedSubordinates(result.subordinates || []);
+      }
+    } catch (error) {
+      console.error('Error loading subordinates:', error);
+    } finally {
+      setSubordinatesLoading(false);
+    }
   };
 
-  // Filtered subordinates
+  // Filtered subordinates (use loaded data instead of pre-loaded)
   const filteredSubordinates = useMemo(() => {
-    if (!selectedUser) return [];
-    if (!subordinateSearch) return selectedUser.subordinates;
+    if (!subordinateSearch) return loadedSubordinates;
 
     const query = subordinateSearch.toLowerCase();
-    return selectedUser.subordinates.filter(
+    return loadedSubordinates.filter(
       sub =>
         sub.fullName.toLowerCase().includes(query) ||
         sub.employeeId?.toLowerCase().includes(query) ||
         sub.position?.toLowerCase().includes(query)
     );
-  }, [selectedUser, subordinateSearch]);
+  }, [loadedSubordinates, subordinateSearch]);
 
   return (
     <Box>
@@ -551,6 +570,7 @@ export default function OrganizationStructurePage() {
               key={companyGroup.company}
               expanded={expandedCompanies.has(companyGroup.company)}
               onChange={() => toggleCompany(companyGroup.company)}
+              TransitionProps={{ unmountOnExit: true }}
               elevation={0}
               sx={{
                 border: '1px solid #E2E8F0',
@@ -560,7 +580,7 @@ export default function OrganizationStructurePage() {
               }}
             >
               <AccordionSummary
-                expandIcon={<ArrowDown2 size={20} />}
+                expandIcon={<ArrowDown2 size={20} variant="Bold" color={PRIMARY_COLOR} />}
                 sx={{
                   bgcolor: '#F8FAFC',
                   px: { xs: 1.5, sm: 2 },
@@ -588,6 +608,7 @@ export default function OrganizationStructurePage() {
                     key={`${companyGroup.company}-${deptGroup.department}`}
                     expanded={expandedDepartments.has(`${companyGroup.company}-${deptGroup.department}`)}
                     onChange={() => toggleDepartment(`${companyGroup.company}-${deptGroup.department}`)}
+                    TransitionProps={{ unmountOnExit: true }}
                     elevation={0}
                     sx={{
                       '&:before': { display: 'none' },
@@ -595,7 +616,7 @@ export default function OrganizationStructurePage() {
                     }}
                   >
                     <AccordionSummary
-                      expandIcon={<ArrowDown2 size={18} />}
+                      expandIcon={<ArrowDown2 size={18} variant="Bold" color={PRIMARY_COLOR} />}
                       sx={{
                         bgcolor: 'white',
                         pl: { xs: 2, sm: 4 },
@@ -613,239 +634,14 @@ export default function OrganizationStructurePage() {
                       />
                     </AccordionSummary>
                     <AccordionDetails sx={{ p: 0 }}>
-                      {/* Mobile Card Layout - แสดงเสมอบน mobile */}
-                      <Box sx={{ display: { xs: 'block', md: viewMode === 'card' ? 'block' : 'none' }, p: { xs: 1.5, sm: 2 } }}>
-                        <Box sx={{
-                          display: 'grid',
-                          gridTemplateColumns: {
-                            xs: '1fr',
-                            sm: 'repeat(2, 1fr)',
-                            lg: viewMode === 'card' ? 'repeat(3, 1fr)' : 'repeat(2, 1fr)'
-                          },
-                          gap: { xs: 1.5, sm: 2 }
-                        }}>
-                          {deptGroup.users.map(user => (
-                            <Card
-                              key={user.id}
-                              elevation={0}
-                              sx={{
-                                border: '1px solid #E2E8F0',
-                                borderRadius: 1,
-                              }}
-                            >
-                              <CardContent sx={{ p: { xs: 1.5, sm: 2 }, '&:last-child': { pb: { xs: 1.5, sm: 2 } } }}>
-                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1.5 }}>
-                                  <Avatar
-                                    src={user.avatar || undefined}
-                                    sx={{ width: { xs: 40, sm: 48 }, height: { xs: 40, sm: 48 }, bgcolor: PRIMARY_COLOR }}
-                                  >
-                                    {user.firstName?.[0]}
-                                  </Avatar>
-                                  <Box sx={{ flex: 1, minWidth: 0 }}>
-                                    <Typography fontWeight={600} noWrap sx={{ fontSize: { xs: '0.875rem', sm: '1rem' } }}>
-                                      {user.fullName}
-                                    </Typography>
-                                    <Typography variant="caption" color="text.secondary" noWrap>
-                                      {user.position || user.employeeId}
-                                    </Typography>
-                                  </Box>
-                                </Box>
-
-                                <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap', mb: 1.5 }}>
-                                  <Chip
-                                    label={user.roleName}
-                                    size="small"
-                                    sx={{
-                                      bgcolor: roleColors[user.role]?.bg || '#F5F5F5',
-                                      color: roleColors[user.role]?.color || '#616161',
-                                      fontWeight: 600,
-                                      fontSize: '0.65rem',
-                                      height: 22,
-                                    }}
-                                  />
-                                  {user.sectionName && (
-                                    <Chip
-                                      label={user.sectionName}
-                                      size="small"
-                                      sx={{ fontSize: '0.65rem', height: 22 }}
-                                    />
-                                  )}
-                                  {user.shift && (
-                                    <Chip
-                                      label={shiftLabels[user.shift] || user.shift}
-                                      size="small"
-                                      sx={{ fontSize: '0.65rem', height: 22 }}
-                                    />
-                                  )}
-                                </Box>
-
-                                {/* หัวหน้า */}
-                                <Box sx={{ mb: 1 }}>
-                                  <Typography variant="caption" fontWeight={600} color="text.secondary">
-                                    หัวหน้า:
-                                  </Typography>
-                                  {user.hasApprover ? (
-                                    <Box sx={{ mt: 0.5 }}>
-                                      {user.approvers.map(a => (
-                                        <Box key={a.level} sx={{ display: 'flex', alignItems: 'center', gap: 1, py: 0.25 }}>
-                                          <Avatar
-                                            src={a.approver.avatar || undefined}
-                                            sx={{ width: 24, height: 24, fontSize: '0.65rem', bgcolor: PRIMARY_COLOR }}
-                                          >
-                                            {a.approver.firstName?.[0]}
-                                          </Avatar>
-                                          <Typography variant="body2" fontSize="0.8rem">
-                                            {a.approver.fullName}
-                                          </Typography>
-                                        </Box>
-                                      ))}
-                                    </Box>
-                                  ) : (
-                                    <Typography variant="body2" color="text.secondary" sx={{ mt: 0.25 }}>
-                                      -
-                                    </Typography>
-                                  )}
-                                </Box>
-
-                                {/* ลูกน้อง */}
-                                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', pt: 1, borderTop: '1px solid #F1F5F9' }}>
-                                  <Typography variant="caption" fontWeight={600} color="text.secondary">
-                                    ลูกน้อง:
-                                  </Typography>
-                                  {user.subordinateCount > 0 ? (
-                                    <Chip
-                                      icon={<People size={12} color="#2E7D32" />}
-                                      label={`${user.subordinateCount} คน`}
-                                      size="small"
-                                      onClick={() => handleOpenSubordinates(user)}
-                                      sx={{
-                                        bgcolor: '#E8F5E9',
-                                        color: '#2E7D32',
-                                        fontWeight: 600,
-                                        fontSize: '0.7rem',
-                                        height: 24,
-                                        cursor: 'pointer',
-                                        '&:hover': { bgcolor: '#C8E6C9' },
-                                      }}
-                                    />
-                                  ) : (
-                                    <Typography variant="body2" color="text.secondary">-</Typography>
-                                  )}
-                                </Box>
-                              </CardContent>
-                            </Card>
-                          ))}
-                        </Box>
-                      </Box>
-
-                      {/* Desktop Table Layout - แสดงเฉพาะบน md+ และ viewMode === 'table' */}
-                      <TableContainer sx={{ display: { xs: 'none', md: viewMode === 'table' ? 'block' : 'none' } }}>
-                        <Table size="small">
-                          <TableHead>
-                            <TableRow sx={{ bgcolor: '#F8FAFC' }}>
-                              <TableCell sx={{ fontWeight: 600, pl: 4 }}>พนักงาน</TableCell>
-                              <TableCell sx={{ fontWeight: 600 }}>ตำแหน่ง</TableCell>
-                              <TableCell sx={{ fontWeight: 600 }}>แผนก</TableCell>
-                              <TableCell sx={{ fontWeight: 600 }}>กะ</TableCell>
-                              <TableCell sx={{ fontWeight: 600 }}>Role</TableCell>
-                              <TableCell sx={{ fontWeight: 600 }}>หัวหน้า</TableCell>
-                              <TableCell sx={{ fontWeight: 600 }}>ลูกน้อง</TableCell>
-                            </TableRow>
-                          </TableHead>
-                          <TableBody>
-                            {deptGroup.users.map(user => (
-                              <TableRow key={user.id} hover>
-                                <TableCell sx={{ pl: 4 }}>
-                                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                                    <Avatar
-                                      src={user.avatar || undefined}
-                                      sx={{ width: 36, height: 36, bgcolor: PRIMARY_COLOR }}
-                                    >
-                                      {user.firstName?.[0]}
-                                    </Avatar>
-                                    <Box>
-                                      <Typography variant="body2" fontWeight={600}>
-                                        {user.fullName}
-                                      </Typography>
-                                      <Typography variant="caption" color="text.secondary">
-                                        {user.employeeId}
-                                      </Typography>
-                                    </Box>
-                                  </Box>
-                                </TableCell>
-                                <TableCell>
-                                  <Typography variant="body2">{user.position || '-'}</Typography>
-                                </TableCell>
-                                <TableCell>
-                                  <Typography variant="body2">{user.sectionName || '-'}</Typography>
-                                </TableCell>
-                                <TableCell>
-                                  <Typography variant="body2">{user.shift ? shiftLabels[user.shift] || user.shift : '-'}</Typography>
-                                </TableCell>
-                                <TableCell>
-                                  <Chip
-                                    label={user.roleName}
-                                    size="small"
-                                    sx={{
-                                      bgcolor: roleColors[user.role]?.bg || '#F5F5F5',
-                                      color: roleColors[user.role]?.color || '#616161',
-                                      fontWeight: 600,
-                                      fontSize: '0.7rem',
-                                      height: 24,
-                                    }}
-                                  />
-                                </TableCell>
-                                <TableCell>
-                                  {user.hasApprover ? (
-                                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-                                      {user.approvers.map(a => (
-                                        <Box key={a.level} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                          <Avatar
-                                            src={a.approver.avatar || undefined}
-                                            sx={{ width: 24, height: 24, fontSize: '0.7rem', bgcolor: PRIMARY_COLOR }}
-                                          >
-                                            {a.approver.firstName?.[0]}
-                                          </Avatar>
-                                          <Tooltip title={`${a.approver.position || ''} (${a.approver.roleName})`}>
-                                            <Typography variant="body2" sx={{ cursor: 'help' }}>
-                                              {a.approver.fullName}
-                                            </Typography>
-                                          </Tooltip>
-                                        </Box>
-                                      ))}
-                                    </Box>
-                                  ) : (
-                                    <Typography variant="body2" color="text.secondary">
-                                      -
-                                    </Typography>
-                                  )}
-                                </TableCell>
-                                <TableCell>
-                                  {user.subordinateCount > 0 ? (
-                                    <Chip
-                                      icon={<People size={14} />}
-                                      label={`${user.subordinateCount} คน`}
-                                      size="small"
-                                      onClick={() => handleOpenSubordinates(user)}
-                                      sx={{
-                                        bgcolor: '#E8F5E9',
-                                        color: '#2E7D32',
-                                        fontWeight: 600,
-                                        cursor: 'pointer',
-                                        '&:hover': { bgcolor: '#C8E6C9' },
-                                      }}
-                                    />
-                                  ) : (
-                                    <Typography variant="body2" color="text.secondary">
-                                      -
-                                    </Typography>
-                                  )}
-                                </TableCell>
-                              </TableRow>
-                            ))}
-                          </TableBody>
-                        </Table>
-                      </TableContainer>
+                      <DepartmentUserList
+                        users={deptGroup.users}
+                        viewMode={viewMode}
+                        handleOpenSubordinates={handleOpenSubordinates}
+                        shiftLabels={shiftLabels}
+                        roleColors={roleColors}
+                        PRIMARY_COLOR={PRIMARY_COLOR}
+                      />
                     </AccordionDetails>
                   </Accordion>
                 ))}
@@ -971,6 +767,7 @@ export default function OrganizationStructurePage() {
                     placeholder="ค้นหาชื่อ, รหัสพนักงาน..."
                     value={subordinateSearch}
                     onChange={(e) => setSubordinateSearch(e.target.value)}
+                    disabled={subordinatesLoading}
                     InputProps={{
                       startAdornment: (
                         <InputAdornment position="start">
@@ -1000,7 +797,32 @@ export default function OrganizationStructurePage() {
 
                 {/* Content - Mobile Card / Desktop Table */}
                 <Box sx={{ flex: 1, overflow: 'auto', px: 2, py: 2 }}>
-                  {filteredSubordinates.length > 0 ? (
+                  {subordinatesLoading ? (
+                    <Box sx={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      py: 6,
+                      minHeight: 200,
+                    }}>
+                      <Box sx={{
+                        width: 40,
+                        height: 40,
+                        borderRadius: '50%',
+                        border: '3px solid #E2E8F0',
+                        borderTopColor: PRIMARY_COLOR,
+                        animation: 'spin 1s linear infinite',
+                        '@keyframes spin': {
+                          '0%': { transform: 'rotate(0deg)' },
+                          '100%': { transform: 'rotate(360deg)' },
+                        },
+                      }} />
+                      <Typography color="text.secondary" sx={{ mt: 2 }}>
+                        กำลังโหลด...
+                      </Typography>
+                    </Box>
+                  ) : filteredSubordinates.length > 0 ? (
                     <>
                       {/* Mobile Card Layout */}
                       <Box sx={{ display: { xs: 'flex', md: 'none' }, flexDirection: 'column', gap: 1.5 }}>

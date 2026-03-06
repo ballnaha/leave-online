@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions, isAdminRole } from '@/lib/auth';
+import { createApprovalSteps, resolveApproversByRole } from '@/lib/escalation';
+import { ROLE_WEIGHTS } from '@/types/user-role';
 
 interface ApprovalFlow {
     level: number;
@@ -53,8 +55,10 @@ export async function GET(request: NextRequest) {
         const approvalSteps: ApprovalFlow[] = [];
         let message: string | undefined;
 
-        // Case 1: If user is dept_manager, send directly to HR Manager
-        if (user.role === 'dept_manager') {
+        const requesterWeight = ROLE_WEIGHTS[user.role] || 0;
+
+        // Case 1: If weight >= dept_manager, send directly to HR Manager
+        if (requesterWeight >= ROLE_WEIGHTS.dept_manager) {
             const hrManager = await prisma.user.findFirst({
                 where: {
                     role: 'hr_manager',
@@ -80,7 +84,7 @@ export async function GET(request: NextRequest) {
                     isRequired: true,
                     source: 'fallback',
                 });
-                message = 'ผู้จัดการฝ่ายจะส่งใบลาตรงไป HR Manager';
+                message = `ตำแหน่ง ${user.role} (Lv.${requesterWeight}) จะข้ามไปหา HR Manager โดยตรง`;
             }
 
             return NextResponse.json({
@@ -110,8 +114,12 @@ export async function GET(request: NextRequest) {
         });
 
         if (userFlows.length > 0) {
-            // Filter out self-approval
-            const filteredFlows = userFlows.filter(flow => flow.approverId !== user.id);
+            // Filter: Role must be STRICTLY higher than requester
+            const filteredFlows = userFlows.filter(flow => {
+                if (flow.approverId === user.id) return false;
+                const approverWeight = ROLE_WEIGHTS[flow.approver.role] || 0;
+                return approverWeight > requesterWeight;
+            });
 
             if (filteredFlows.length === 0) {
                 // If no approvers left after filtering, fallback to HR Manager
@@ -128,7 +136,7 @@ export async function GET(request: NextRequest) {
                         isRequired: true,
                         source: 'fallback',
                     });
-                    message = 'ใช้ User Flow แต่กรองผู้อนุมัติที่เป็นตัวเองออก ส่งต่อไป HR Manager';
+                    message = 'ใช้ User Flow แต่ทุกตำแหน่งต่ำกว่าหรือเท่ากับผู้ขอลา จึงส่งต่อไป HR Manager';
                 }
             } else {
                 for (const flow of filteredFlows) {
@@ -142,7 +150,7 @@ export async function GET(request: NextRequest) {
                         source: 'user_flow',
                     });
                 }
-                message = 'ใช้ User-specific Approval Flow';
+                message = 'ใช้ User-specific Approval Flow (ข้ามตำแหน่งที่เท่ากันหรือต่ำกว่า)';
             }
 
             return NextResponse.json({
@@ -192,89 +200,47 @@ export async function GET(request: NextRequest) {
 
         if (workflow && workflow.steps.length > 0) {
             for (const step of workflow.steps) {
-                let approverId = step.approverId;
-                let approver = null;
+                let potentialApprovers: any[] = [];
 
-                if (approverId) {
-                    approver = await prisma.user.findUnique({
-                        where: { id: approverId },
+                if (step.approverId) {
+                    // กรณีระบุตัวบุคคล
+                    const approver = await prisma.user.findUnique({
+                        where: { id: step.approverId },
                         select: { id: true, firstName: true, lastName: true, role: true, position: true },
                     });
+                    if (approver) potentialApprovers.push(approver);
                 } else if (step.approverRole) {
-                    // Resolve Role dynamically
                     const role = step.approverRole;
 
-                    if (role === 'hr_manager') {
-                        // Special handling for HR Manager
-                        const hrInCompany = await prisma.user.findFirst({
-                            where: { role, isActive: true, company: user.company, id: { not: user.id } },
-                        });
-                        approver = hrInCompany || await prisma.user.findFirst({
-                            where: { role, isActive: true, id: { not: user.id } },
-                        });
-                    } else if (role === 'section_head' && user.section) {
-                        approver = await prisma.user.findFirst({
-                            where: { role, isActive: true, section: user.section, id: { not: user.id } },
-                        });
-                    } else if (role === 'dept_manager' && user.department) {
-                        approver = await prisma.user.findFirst({
-                            where: { role, isActive: true, department: user.department, id: { not: user.id } },
-                        });
-                    } else if (role === 'shift_supervisor' && user.shift) {
-                        approver = await prisma.user.findFirst({
-                            where: { role, isActive: true, shift: user.shift, id: { not: user.id } },
-                        });
+                    // Skip steps where Role is lower than or equal to requester (unless HR Manager)
+                    if (role !== 'hr_manager' && (ROLE_WEIGHTS[role] || 0) <= requesterWeight) {
+                        continue;
                     }
 
-                    // Try managed departments/sections if not found
-                    if (!approver) {
-                        const potentialApprovers = await prisma.user.findMany({
-                            where: {
-                                role,
-                                isActive: true,
-                                id: { not: user.id },
-                                OR: [
-                                    { managedDepartments: { not: null } },
-                                    { managedSections: { not: null } },
-                                ],
-                            },
-                        });
+                    // ใช้ Shared Function ในการหาผู้อนุมัติ
+                    const matches = await resolveApproversByRole({
+                        approverRole: role,
+                        company: user.company,
+                        department: user.department,
+                        section: user.section,
+                        excludeUserId: user.id,
+                    });
 
-                        for (const potential of potentialApprovers) {
-                            let manages = false;
-
-                            if (potential.managedDepartments && user.department) {
-                                try {
-                                    const depts: string[] = JSON.parse(potential.managedDepartments);
-                                    if (depts.includes(user.department)) manages = true;
-                                } catch { }
-                            }
-
-                            if (!manages && potential.managedSections && user.section) {
-                                try {
-                                    const sects: string[] = JSON.parse(potential.managedSections);
-                                    if (sects.includes(user.section)) manages = true;
-                                } catch { }
-                            }
-
-                            if (manages) {
-                                approver = potential;
-                                break;
-                            }
-                        }
-                    }
+                    potentialApprovers = matches;
                 }
 
-                if (approver && approver.id !== user.id) {
-                    approvalSteps.push({
-                        level: step.level,
-                        approverId: approver.id,
-                        approverName: `${approver.firstName} ${approver.lastName}`,
-                        approverRole: approver.role,
-                        approverPosition: approver.position || undefined,
-                        isRequired: true,
-                        source: 'workflow',
-                    });
+                for (const app of potentialApprovers) {
+                    if (app.id !== user.id && (ROLE_WEIGHTS[app.role] || 0) > requesterWeight) {
+                        approvalSteps.push({
+                            level: step.level,
+                            approverId: app.id,
+                            approverName: `${app.firstName} ${app.lastName}`,
+                            approverRole: app.role,
+                            approverPosition: app.position || undefined,
+                            isRequired: true,
+                            source: 'workflow',
+                        });
+                    }
                 }
             }
 
@@ -284,7 +250,7 @@ export async function GET(request: NextRequest) {
                     userName: `${user.firstName} ${user.lastName}`,
                     userRole: user.role,
                     approvalSteps,
-                    message,
+                    message: message,
                 });
             }
         }
@@ -415,128 +381,25 @@ export async function POST(request: NextRequest) {
             },
         });
 
-        // Create approval steps using the same logic as createApprovalSteps
-        const approvalSteps: { level: number; approverId: number; approverName: string }[] = [];
-        const now = new Date();
+        // Create approval steps using shared logic
+        await createApprovalSteps(leaveRequest.id, userId);
 
-        // Check if dept_manager - send directly to HR
-        if (user.role === 'dept_manager') {
-            const hrManager = await prisma.user.findFirst({
-                where: { role: 'hr_manager', isActive: true, id: { not: userId } },
-            });
-            if (hrManager) {
-                await prisma.leaveApproval.create({
-                    data: {
-                        leaveRequestId: leaveRequest.id,
-                        level: 99,
-                        approverId: hrManager.id,
-                        status: 'pending',
-                        notifiedAt: now,
-                    },
-                });
-                approvalSteps.push({ level: 99, approverId: hrManager.id, approverName: `${hrManager.firstName} ${hrManager.lastName}` });
-            }
-        } else {
-            // Check user-specific flow
-            const userFlows = await prisma.userApprovalFlow.findMany({
-                where: { userId, isActive: true },
-                orderBy: { level: 'asc' },
-                include: { approver: true },
-            });
+        // Fetch the created steps to return in response
+        const createdSteps = await prisma.leaveApproval.findMany({
+            where: { leaveRequestId: leaveRequest.id },
+            include: {
+                approver: {
+                    select: { firstName: true, lastName: true }
+                }
+            },
+            orderBy: { level: 'asc' }
+        });
 
-            if (userFlows.length > 0) {
-                const filteredFlows = userFlows.filter(f => f.approverId !== userId);
-                let isFirst = true;
-                for (const flow of filteredFlows) {
-                    await prisma.leaveApproval.create({
-                        data: {
-                            leaveRequestId: leaveRequest.id,
-                            level: flow.level,
-                            approverId: flow.approverId,
-                            status: 'pending',
-                            notifiedAt: isFirst ? now : null,
-                        },
-                    });
-                    approvalSteps.push({ level: flow.level, approverId: flow.approverId, approverName: `${flow.approver.firstName} ${flow.approver.lastName}` });
-                    isFirst = false;
-                }
-            } else {
-                // Check workflow
-                let workflow = null;
-                if (user.section) {
-                    workflow = await prisma.approvalWorkflow.findFirst({
-                        where: { section: user.section, isActive: true },
-                        include: { steps: { orderBy: { level: 'asc' } } },
-                    });
-                }
-                if (!workflow && user.department) {
-                    workflow = await prisma.approvalWorkflow.findFirst({
-                        where: { department: user.department, section: null, isActive: true },
-                        include: { steps: { orderBy: { level: 'asc' } } },
-                    });
-                }
-                if (!workflow && user.company) {
-                    workflow = await prisma.approvalWorkflow.findFirst({
-                        where: { company: user.company, department: null, section: null, isActive: true },
-                        include: { steps: { orderBy: { level: 'asc' } } },
-                    });
-                }
-
-                if (workflow && workflow.steps.length > 0) {
-                    let isFirst = true;
-                    for (const step of workflow.steps) {
-                        let approverId = step.approverId;
-                        let approver = null;
-
-                        if (approverId) {
-                            approver = await prisma.user.findUnique({ where: { id: approverId } });
-                        } else if (step.approverRole) {
-                            const role = step.approverRole;
-                            if (role === 'hr_manager') {
-                                approver = await prisma.user.findFirst({ where: { role, isActive: true, id: { not: userId } } });
-                            } else if (role === 'section_head' && user.section) {
-                                approver = await prisma.user.findFirst({ where: { role, isActive: true, section: user.section, id: { not: userId } } });
-                            } else if (role === 'dept_manager' && user.department) {
-                                approver = await prisma.user.findFirst({ where: { role, isActive: true, department: user.department, id: { not: userId } } });
-                            }
-                        }
-
-                        if (approver && approver.id !== userId) {
-                            await prisma.leaveApproval.create({
-                                data: {
-                                    leaveRequestId: leaveRequest.id,
-                                    level: step.level,
-                                    approverId: approver.id,
-                                    status: 'pending',
-                                    notifiedAt: isFirst ? now : null,
-                                },
-                            });
-                            approvalSteps.push({ level: step.level, approverId: approver.id, approverName: `${approver.firstName} ${approver.lastName}` });
-                            isFirst = false;
-                        }
-                    }
-                }
-
-                // Fallback to HR if no steps created
-                if (approvalSteps.length === 0) {
-                    const hrManager = await prisma.user.findFirst({
-                        where: { role: 'hr_manager', isActive: true, id: { not: userId } },
-                    });
-                    if (hrManager) {
-                        await prisma.leaveApproval.create({
-                            data: {
-                                leaveRequestId: leaveRequest.id,
-                                level: 99,
-                                approverId: hrManager.id,
-                                status: 'pending',
-                                notifiedAt: now,
-                            },
-                        });
-                        approvalSteps.push({ level: 99, approverId: hrManager.id, approverName: `${hrManager.firstName} ${hrManager.lastName}` });
-                    }
-                }
-            }
-        }
+        const approvalSteps = createdSteps.map(s => ({
+            level: s.level,
+            approverId: s.approverId,
+            approverName: `${s.approver.firstName} ${s.approver.lastName}`
+        }));
 
         return NextResponse.json({
             success: true,

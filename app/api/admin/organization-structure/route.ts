@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
     const sectionFilter = searchParams.get('section') || 'all';
     const shiftFilter = searchParams.get('shift') || 'all';
 
-    // Fetch master data
+    // Fetch master data in parallel
     const [companies, allDepartments, allSections] = await Promise.all([
       prisma.company.findMany({ orderBy: { name: 'asc' } }),
       prisma.department.findMany({ orderBy: { name: 'asc' } }),
@@ -43,9 +43,10 @@ export async function GET(request: NextRequest) {
     if (sectionFilter !== 'all') userWhere.section = sectionFilter;
     if (shiftFilter !== 'all') userWhere.shift = shiftFilter;
 
-    // Fetch all users with their approval flows
-    const users = await prisma.user.findMany({
-      where: userWhere,
+    // =========== OPTIMIZED: Single query for all active users ===========
+    // Fetch all active users ONCE (used for both display and lookups)
+    const allActiveUsers = await prisma.user.findMany({
+      where: { isActive: true },
       select: {
         id: true,
         employeeId: true,
@@ -59,98 +60,122 @@ export async function GET(request: NextRequest) {
         section: true,
         shift: true,
         avatar: true,
-        approvalFlows: {
-          where: { isActive: true },
-          orderBy: { level: 'asc' },
-          include: {
-            approver: {
-              select: {
-                id: true,
-                employeeId: true,
-                firstName: true,
-                lastName: true,
-                position: true,
-                role: true,
-                avatar: true,
-              },
-            },
-          },
-        },
-      },
-      orderBy: [
-        { company: 'asc' },
-        { department: 'asc' },
-        { section: 'asc' },
-        { firstName: 'asc' },
-      ],
-    });
-
-    // Fetch ALL active users for subordinate calculation (not filtered)
-    const allActiveUsers = await prisma.user.findMany({
-      where: { isActive: true },
-      select: {
-        id: true,
-        employeeId: true,
-        firstName: true,
-        lastName: true,
-        position: true,
-        role: true,
-        avatar: true,
-        company: true,
-        department: true,
-        section: true,
-        shift: true,
       },
     });
 
-    // Get unique data from all users (for cascading filters)
-    const allUsers = await prisma.user.findMany({
-      where: { isActive: true },
-      select: { company: true, department: true, section: true, shift: true },
-    });
+    // =========== OPTIMIZED: Pre-build lookup indexes ===========
+    // Index by department for O(1) supervisor lookup
+    const sectionHeadsByDeptSection = new Map<string, SubordinateUser>();
+    const deptManagersByDept = new Map<string, SubordinateUser>();
 
-    // Build cascading filter options
-    // Departments: filter by selected company
-    const filteredDepartments = companyFilter !== 'all'
-      ? [...new Set(allUsers.filter(u => u.company === companyFilter).map(u => u.department))]
-      : [...new Set(allUsers.map(u => u.department))];
-    
-    // Sections: filter by selected department (and company)
-    const filteredSections = departmentFilter !== 'all'
-      ? [...new Set(allUsers
-          .filter(u => u.department === departmentFilter && (companyFilter === 'all' || u.company === companyFilter))
-          .map(u => u.section)
-          .filter(Boolean))]
-      : companyFilter !== 'all'
-        ? [...new Set(allUsers.filter(u => u.company === companyFilter).map(u => u.section).filter(Boolean))]
-        : [...new Set(allUsers.map(u => u.section).filter(Boolean))];
-
-    // Shifts: filter by selected section/department/company
-    let filteredShifts: string[] = [];
-    if (sectionFilter !== 'all') {
-      filteredShifts = [...new Set(allUsers
-        .filter(u => u.section === sectionFilter)
-        .map(u => u.shift)
-        .filter(Boolean))] as string[];
-    } else if (departmentFilter !== 'all') {
-      filteredShifts = [...new Set(allUsers
-        .filter(u => u.department === departmentFilter)
-        .map(u => u.shift)
-        .filter(Boolean))] as string[];
-    } else if (companyFilter !== 'all') {
-      filteredShifts = [...new Set(allUsers
-        .filter(u => u.company === companyFilter)
-        .map(u => u.shift)
-        .filter(Boolean))] as string[];
-    } else {
-      filteredShifts = [...new Set(allUsers.map(u => u.shift).filter(Boolean))] as string[];
+    for (const u of allActiveUsers) {
+      if (u.role === 'section_head' && u.section) {
+        sectionHeadsByDeptSection.set(`${u.department}:${u.section}`, u);
+      }
+      if (u.role === 'dept_manager') {
+        deptManagersByDept.set(u.department, u);
+      }
     }
 
-    // Transform data
-    const result = users.map(user => {
-      // หาหัวหน้าจาก organization structure (ไม่สนใจบริษัท ดูแค่ฝ่ายเดียวกัน)
-      const orgSupervisors = getOrganizationSupervisors(user, allActiveUsers);
-      
+    // =========== OPTIMIZED: Pre-count subordinates per user ===========
+    // Build subordinate counts using Maps for O(n) total instead of O(n²)
+    const subordinateCountByUser = new Map<number, number>();
+
+    // Group users by company-dept-section-shift for fast counting
+    const usersByCompanyDept = new Map<string, SubordinateUser[]>();
+    const usersByCompanyDeptSection = new Map<string, SubordinateUser[]>();
+    const usersByCompanyDeptSectionShift = new Map<string, SubordinateUser[]>();
+
+    for (const u of allActiveUsers) {
+      // Group by company+dept
+      const keyDept = `${u.company}:${u.department}`;
+      if (!usersByCompanyDept.has(keyDept)) usersByCompanyDept.set(keyDept, []);
+      usersByCompanyDept.get(keyDept)!.push(u);
+
+      // Group by company+dept+section
+      if (u.section) {
+        const keySect = `${u.company}:${u.department}:${u.section}`;
+        if (!usersByCompanyDeptSection.has(keySect)) usersByCompanyDeptSection.set(keySect, []);
+        usersByCompanyDeptSection.get(keySect)!.push(u);
+
+        // Group by company+dept+section+shift
+        if (u.shift) {
+          const keyShift = `${u.company}:${u.department}:${u.section}:${u.shift}`;
+          if (!usersByCompanyDeptSectionShift.has(keyShift)) usersByCompanyDeptSectionShift.set(keyShift, []);
+          usersByCompanyDeptSectionShift.get(keyShift)!.push(u);
+        }
+      }
+    }
+
+    // Pre-compute subordinate counts using grouped data
+    for (const u of allActiveUsers) {
+      let count = 0;
+      if (u.role === 'dept_manager') {
+        const key = `${u.company}:${u.department}`;
+        count = (usersByCompanyDept.get(key)?.length || 0) - 1; // -1 for self
+      } else if (u.role === 'section_head' && u.section) {
+        const key = `${u.company}:${u.department}:${u.section}`;
+        const sectionUsers = usersByCompanyDeptSection.get(key) || [];
+        count = sectionUsers.filter(x => x.id !== u.id && x.role !== 'dept_manager').length;
+      } else if (u.role === 'shift_supervisor' && u.section && u.shift) {
+        const key = `${u.company}:${u.department}:${u.section}:${u.shift}`;
+        const shiftUsers = usersByCompanyDeptSectionShift.get(key) || [];
+        count = shiftUsers.filter(x => x.id !== u.id && !['dept_manager', 'section_head'].includes(x.role)).length;
+      }
+      subordinateCountByUser.set(u.id, count);
+    }
+
+    // =========== Filter users for display ===========
+    let filteredUsers = allActiveUsers;
+    if (companyFilter !== 'all') filteredUsers = filteredUsers.filter(u => u.company === companyFilter);
+    if (departmentFilter !== 'all') filteredUsers = filteredUsers.filter(u => u.department === departmentFilter);
+    if (sectionFilter !== 'all') filteredUsers = filteredUsers.filter(u => u.section === sectionFilter);
+    if (shiftFilter !== 'all') filteredUsers = filteredUsers.filter(u => u.shift === shiftFilter);
+
+    // Sort
+    filteredUsers.sort((a, b) => {
+      if (a.company !== b.company) return a.company.localeCompare(b.company);
+      if (a.department !== b.department) return a.department.localeCompare(b.department);
+      if ((a.section || '') !== (b.section || '')) return (a.section || '').localeCompare(b.section || '');
+      return a.firstName.localeCompare(b.firstName);
+    });
+
+    // =========== Build cascading filter options (optimized) ===========
+    const uniqueDepts = new Set<string>();
+    const uniqueSects = new Set<string>();
+    const uniqueShifts = new Set<string>();
+
+    for (const u of allActiveUsers) {
+      if (companyFilter === 'all' || u.company === companyFilter) {
+        uniqueDepts.add(u.department);
+        if (departmentFilter === 'all' || u.department === departmentFilter) {
+          if (u.section) uniqueSects.add(u.section);
+          if (sectionFilter === 'all' || u.section === sectionFilter) {
+            if (u.shift) uniqueShifts.add(u.shift);
+          }
+        }
+      }
+    }
+
+    // =========== Transform data (optimized: O(n)) ===========
+    const result = filteredUsers.map(user => {
+      // หาหัวหน้าจาก pre-built index (O(1) lookup)
+      const supervisors: SubordinateUser[] = [];
+      if (!['dept_manager', 'admin', 'hr_manager', 'hr'].includes(user.role)) {
+        // หา section_head
+        if (user.section && ['employee', 'shift_supervisor'].includes(user.role)) {
+          const sectionHead = sectionHeadsByDeptSection.get(`${user.department}:${user.section}`);
+          if (sectionHead && sectionHead.id !== user.id) {
+            supervisors.push(sectionHead);
+          }
+        }
+        // หา dept_manager
+        const deptManager = deptManagersByDept.get(user.department);
+        if (deptManager && deptManager.id !== user.id) {
+          supervisors.push(deptManager);
+        }
+      }
+
       return {
         id: user.id,
         employeeId: user.employeeId,
@@ -169,8 +194,8 @@ export async function GET(request: NextRequest) {
         sectionName: user.section ? (sectMap.get(user.section) || user.section) : null,
         shift: user.shift,
         avatar: user.avatar,
-        // ใช้หัวหน้าจาก organization structure แทน approval flow
-        approvers: orgSupervisors.map((sup, index) => ({
+        // ใช้หัวหน้าจาก pre-built index
+        approvers: supervisors.map((sup, index) => ({
           level: index + 1,
           approver: {
             id: sup.id,
@@ -184,13 +209,10 @@ export async function GET(request: NextRequest) {
             avatar: sup.avatar,
           },
         })),
-        hasApprover: orgSupervisors.length > 0,
-        // Calculate subordinates based on organization structure
-        // dept_manager: ลูกน้องคือทุกคนในฝ่ายเดียวกัน
-        // section_head: ลูกน้องคือทุกคนในฝ่ายและแผนกเดียวกัน
-        // shift_supervisor: ลูกน้องคือทุกคนในฝ่าย แผนก และกะเดียวกัน
-        subordinates: getSubordinates(user, allActiveUsers, companyMap, deptMap, sectMap),
-        subordinateCount: getSubordinateCount(user, allActiveUsers),
+        hasApprover: supervisors.length > 0,
+        // =========== OPTIMIZED: Only send count, load details on-demand ===========
+        subordinates: [], // Empty - load on demand via separate API
+        subordinateCount: subordinateCountByUser.get(user.id) || 0,
       };
     });
 
@@ -213,14 +235,14 @@ export async function GET(request: NextRequest) {
         companies: companies.map(c => ({ code: c.code, name: c.name })),
         // Cascading departments
         departments: allDepartments
-          .filter(d => filteredDepartments.includes(d.code))
+          .filter(d => uniqueDepts.has(d.code))
           .map(d => ({ code: d.code, name: d.name })),
         // Cascading sections
         sections: allSections
-          .filter(s => filteredSections.includes(s.code))
+          .filter(s => uniqueSects.has(s.code))
           .map(s => ({ code: s.code, name: s.name })),
         // Cascading shifts
-        shifts: filteredShifts.sort(),
+        shifts: Array.from(uniqueShifts).sort(),
       },
     });
   } catch (error) {
@@ -324,16 +346,16 @@ function getSubordinates(
 
   // dept_manager: ลูกน้องคือทุกคนในฝ่ายเดียวกัน (ยกเว้นตัวเอง)
   if (user.role === 'dept_manager') {
-    subordinates = allUsers.filter(u => 
-      u.id !== user.id && 
+    subordinates = allUsers.filter(u =>
+      u.id !== user.id &&
       u.company === user.company &&
       u.department === user.department
     );
   }
   // section_head: ลูกน้องคือทุกคนในฝ่ายและแผนกเดียวกัน (ยกเว้นตัวเอง และ dept_manager)
   else if (user.role === 'section_head') {
-    subordinates = allUsers.filter(u => 
-      u.id !== user.id && 
+    subordinates = allUsers.filter(u =>
+      u.id !== user.id &&
       u.company === user.company &&
       u.department === user.department &&
       u.section === user.section &&
@@ -342,8 +364,8 @@ function getSubordinates(
   }
   // shift_supervisor: ลูกน้องคือทุกคนในฝ่าย แผนก และกะเดียวกัน (ยกเว้นตัวเอง และ role ที่สูงกว่า)
   else if (user.role === 'shift_supervisor') {
-    subordinates = allUsers.filter(u => 
-      u.id !== user.id && 
+    subordinates = allUsers.filter(u =>
+      u.id !== user.id &&
       u.company === user.company &&
       u.department === user.department &&
       u.section === user.section &&
@@ -375,16 +397,16 @@ function getSubordinates(
 function getSubordinateCount(user: CurrentUser, allUsers: SubordinateUser[]): number {
   // dept_manager: นับทุกคนในฝ่ายเดียวกัน
   if (user.role === 'dept_manager') {
-    return allUsers.filter(u => 
-      u.id !== user.id && 
+    return allUsers.filter(u =>
+      u.id !== user.id &&
       u.company === user.company &&
       u.department === user.department
     ).length;
   }
   // section_head: นับทุกคนในฝ่ายและแผนกเดียวกัน
   else if (user.role === 'section_head') {
-    return allUsers.filter(u => 
-      u.id !== user.id && 
+    return allUsers.filter(u =>
+      u.id !== user.id &&
       u.company === user.company &&
       u.department === user.department &&
       u.section === user.section &&
@@ -393,8 +415,8 @@ function getSubordinateCount(user: CurrentUser, allUsers: SubordinateUser[]): nu
   }
   // shift_supervisor: นับทุกคนในฝ่าย แผนก และกะเดียวกัน
   else if (user.role === 'shift_supervisor') {
-    return allUsers.filter(u => 
-      u.id !== user.id && 
+    return allUsers.filter(u =>
+      u.id !== user.id &&
       u.company === user.company &&
       u.department === user.department &&
       u.section === user.section &&
@@ -402,7 +424,7 @@ function getSubordinateCount(user: CurrentUser, allUsers: SubordinateUser[]): nu
       !['dept_manager', 'section_head'].includes(u.role)
     ).length;
   }
-  
+
   return 0;
 }
 

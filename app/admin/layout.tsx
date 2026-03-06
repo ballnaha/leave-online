@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
+import Link from 'next/link';
 import {
     Box,
     Drawer,
@@ -47,6 +48,7 @@ import {
     SecuritySafe,
     ShieldSearch,
     PlayCircle,
+    DocumentUpload,
 } from 'iconsax-react';
 import { ChevronDown, ChevronUp, Bell, History, Users, Send, Timer, FileText } from 'lucide-react';
 import { signOut } from 'next-auth/react';
@@ -151,6 +153,18 @@ const menuGroups: MenuGroup[] = [
                 icon: DocumentText1,
                 iconColor: '#6C63FF',
                 path: '/admin/leave-reports',
+            },
+            {
+                text: 'สถิติรายบุคคล',
+                icon: People,
+                iconColor: '#6C63FF',
+                path: '/admin/employee-stats',
+            },
+            {
+                text: 'นำเข้าข้อมูลใบลา',
+                icon: DocumentUpload,
+                iconColor: '#22C55E',
+                path: '/admin/leave-import',
             },
         ],
     },
@@ -444,11 +458,13 @@ export default function AdminLayout({
                                 <ListItem disablePadding sx={{ mb: 0.75, position: 'relative' }}>
                                     <Tooltip title={collapsed ? item.text : ''} placement="right">
                                         <ListItemButton
+                                            component={item.path && !item.children ? Link : 'div'}
+                                            href={(item.path && !item.children ? item.path : undefined) as any}
                                             onClick={() => {
                                                 if (item.children) {
                                                     toggleSubmenu(item.text);
                                                 } else if (item.path) {
-                                                    handleNavigate(item.path);
+                                                    if (isMobile) setMobileOpen(false);
                                                 }
                                             }}
                                             sx={{
@@ -527,7 +543,11 @@ export default function AdminLayout({
                                             {item.children.map((child) => (
                                                 <ListItem key={child.path} disablePadding sx={{ mb: 0.5 }}>
                                                     <ListItemButton
-                                                        onClick={() => handleNavigate(child.path)}
+                                                        component={Link}
+                                                        href={child.path}
+                                                        onClick={() => {
+                                                            if (isMobile) setMobileOpen(false);
+                                                        }}
                                                         sx={{
                                                             borderRadius: 2,
                                                             py: 0.75,
@@ -577,7 +597,11 @@ export default function AdminLayout({
             {/* Back to Main App */}
             <Box sx={{ p: collapsed ? 0.5 : 2, transition: 'padding 0.35s cubic-bezier(0.4, 0, 0.2, 1)' }}>
                 <ListItemButton
-                    onClick={() => router.push('/')}
+                    component={Link}
+                    href="/"
+                    onClick={() => {
+                        if (isMobile) setMobileOpen(false);
+                    }}
                     sx={{
                         borderRadius: 3,
                         justifyContent: collapsed ? 'center' : 'flex-start',
@@ -876,13 +900,13 @@ export default function AdminLayout({
                                 },
                             }}
                         >
-                            <MenuItem onClick={() => { handleMenuClose(); router.push('/profile'); }}>
+                            <MenuItem component={Link} href="/profile" onClick={handleMenuClose}>
                                 <ListItemIcon>
                                     <UserTick size={18} color="#6C63FF" />
                                 </ListItemIcon>
                                 <ListItemText>โปรไฟล์</ListItemText>
                             </MenuItem>
-                            <MenuItem onClick={() => { handleMenuClose(); router.push('/admin/settings'); }}>
+                            <MenuItem component={Link} href="/admin/settings" onClick={handleMenuClose}>
                                 <ListItemIcon>
                                     <Setting2 size={18} color="#6C63FF" />
                                 </ListItemIcon>

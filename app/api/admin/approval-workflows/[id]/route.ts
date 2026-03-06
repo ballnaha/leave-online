@@ -76,43 +76,32 @@ export async function PUT(
   }
 
   try {
-    // Transaction to update workflow and replace steps
-    const workflow = await prisma.$transaction(async (tx) => {
-      const updated = await tx.approvalWorkflow.update({
-        where: { id },
-        data: {
-          name,
-          description,
-          company,
-          department,
-          section,
-        }
-      });
-
-      // Delete existing steps
-      await tx.approvalWorkflowStep.deleteMany({
-        where: { workflowId: id }
-      });
-
-      // Create new steps
-      if (steps && steps.length > 0) {
-        await tx.approvalWorkflowStep.createMany({
-          data: steps.map((step) => ({
-            workflowId: id,
+    const updatedWorkflow = await prisma.approvalWorkflow.update({
+      where: { id },
+      data: {
+        name,
+        description,
+        company,
+        department,
+        section,
+        steps: {
+          deleteMany: {},
+          create: (steps ?? []).map((step) => ({
             level: step.level,
             approverRole:
               step.approverRole && isUserRole(step.approverRole)
                 ? step.approverRole
                 : null,
             approverId: step.approverId || null,
-          }))
-        });
+          })),
+        }
+      },
+      include: {
+        steps: true
       }
-
-      return updated;
     });
 
-    return NextResponse.json(workflow);
+    return NextResponse.json(updatedWorkflow);
   } catch (error) {
     console.error('Error updating workflow:', error);
     return NextResponse.json({ error: 'Failed to update workflow' }, { status: 500 });

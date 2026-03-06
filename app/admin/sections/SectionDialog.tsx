@@ -102,7 +102,7 @@ export default function SectionDialog({
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, checked, type } = e.target;
-    
+
     // ป้องกันการลบ prefix ออกจากรหัสแผนก
     if (name === 'code') {
       const company = getSelectedCompany();
@@ -119,7 +119,7 @@ export default function SectionDialog({
         }
       }
     }
-    
+
     setFormData((prev) => ({
       ...prev,
       [name]: type === 'checkbox' ? checked : value,
@@ -131,13 +131,13 @@ export default function SectionDialog({
 
   const handleSelectChange = (e: any) => {
     const { name, value } = e.target;
-    
+
     if (name === 'departmentId') {
       // หา company จาก department ที่เลือก
       const selectedDept = departments.find(d => d.id.toString() === value);
       const company = selectedDept?.company || '';
       const prefix = getCompanyPrefix(company);
-      
+
       // ถ้าเป็นการสร้างใหม่ ให้ใส่ prefix อัตโนมัติ
       if (!section) {
         setFormData((prev) => ({
@@ -157,7 +157,7 @@ export default function SectionDialog({
         [name]: value,
       }));
     }
-    
+
     if (errors[name]) {
       setErrors((prev) => ({ ...prev, [name]: '' }));
     }
@@ -210,13 +210,13 @@ export default function SectionDialog({
   // Company display config
   const companyConfig: Record<string, { name: string; color: string }> = {
     'PSC': { name: 'พูนทรัพย์แคน (PSC)', color: theme.palette.primary.main },
-    'PS': { name: 'พูนทรัพย์โลหะภัณฑ์ (PS)', color: theme.palette.secondary.main },
+    'PS': { name: 'พูนทรัพย์โลหะการพิมพ์ (PS)', color: theme.palette.secondary.main },
   };
 
   // Prefix mapping for each company
   const COMPANY_PREFIXES: Record<string, string> = {
     'PSC': '2',  // พูนทรัพย์แคน
-    'PS': '3',   // พูนทรัพย์โลหะภัณฑ์
+    'PS': '3',   // พูนทรัพย์โลหะการพิมพ์
   };
 
   // Get company from selected department
@@ -246,10 +246,10 @@ export default function SectionDialog({
   const sortedCompanies = companyOrder.filter(c => groupedDepartments[c]);
 
   return (
-    <Dialog 
-      open={open} 
-      onClose={onClose} 
-      maxWidth="sm" 
+    <Dialog
+      open={open}
+      onClose={onClose}
+      maxWidth="sm"
       fullWidth
       PaperProps={{
         sx: {
@@ -257,9 +257,9 @@ export default function SectionDialog({
         }
       }}
     >
-      <DialogTitle sx={{ 
-        display: 'flex', 
-        alignItems: 'center', 
+      <DialogTitle sx={{
+        display: 'flex',
+        alignItems: 'center',
         gap: 1,
         pb: 1,
         borderBottom: '1px solid',
@@ -268,7 +268,7 @@ export default function SectionDialog({
         <FolderTree size={24} />
         {section ? 'แก้ไขแผนก' : 'เพิ่มแผนกใหม่'}
       </DialogTitle>
-      <DialogContent sx={{ p: 2 , mt:2}}>
+      <DialogContent sx={{ p: 2, mt: 2 }}>
         <Box sx={{ pt: 1, display: 'flex', flexDirection: 'column', gap: 2 }}>
           {errors.submit && (
             <Box sx={{ color: 'error.main', mb: 1 }}>{errors.submit}</Box>
@@ -290,11 +290,11 @@ export default function SectionDialog({
               {sortedCompanies.map((company, index) => {
                 const config = companyConfig[company] || { name: company, color: theme.palette.grey[600] };
                 const depts = groupedDepartments[company] || [];
-                
+
                 return [
-                  <ListSubheader 
-                    key={company} 
-                    sx={{ 
+                  <ListSubheader
+                    key={company}
+                    sx={{
                       bgcolor: alpha(config.color, 0.08),
                       borderLeft: `4px solid ${config.color}`,
                       fontWeight: 700,
@@ -309,22 +309,22 @@ export default function SectionDialog({
                   >
                     <Building2 size={14} color={config.color} />
                     {config.name}
-                    <Chip 
-                      label={`${depts.length} ฝ่าย`} 
-                      size="small" 
-                      sx={{ 
+                    <Chip
+                      label={`${depts.length} ฝ่าย`}
+                      size="small"
+                      sx={{
                         ml: 'auto',
                         height: 20,
                         fontSize: '0.7rem',
                         bgcolor: alpha(config.color, 0.15),
                         color: config.color,
                         fontWeight: 600,
-                      }} 
+                      }}
                     />
                   </ListSubheader>,
                   ...depts.map((dept) => (
-                    <MenuItem 
-                      key={dept.id} 
+                    <MenuItem
+                      key={dept.id}
                       value={dept.id.toString()}
                       sx={{
                         pl: 4,
@@ -343,23 +343,23 @@ export default function SectionDialog({
                       }}
                     >
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, width: '100%' }}>
-                        <Box 
-                          sx={{ 
-                            width: 6, 
-                            height: 6, 
-                            borderRadius: '50%', 
+                        <Box
+                          sx={{
+                            width: 6,
+                            height: 6,
+                            borderRadius: '50%',
                             bgcolor: config.color,
                             opacity: 0.6,
-                          }} 
+                          }}
                         />
                         <Box sx={{ flex: 1 }}>
                           <Box component="span" sx={{ fontWeight: 500 }}>
                             {dept.name}
                           </Box>
-                          <Box 
-                            component="span" 
-                            sx={{ 
-                              ml: 1, 
+                          <Box
+                            component="span"
+                            sx={{
+                              ml: 1,
                               color: 'text.secondary',
                               fontSize: '0.8rem',
                             }}
@@ -394,10 +394,10 @@ export default function SectionDialog({
             InputProps={{
               startAdornment: getSelectedCompany() ? (
                 <InputAdornment position="start">
-                  <Typography 
-                    variant="body2" 
-                    sx={{ 
-                      color: 'primary.main', 
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      color: 'primary.main',
                       fontWeight: 600,
                       bgcolor: 'primary.50',
                       px: 1,

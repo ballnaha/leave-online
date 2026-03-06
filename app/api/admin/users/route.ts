@@ -55,6 +55,10 @@ export async function GET(request: NextRequest) {
         startDate: true,
         managedDepartments: true,
         managedSections: true,
+        devices: {
+          where: { isActive: true },
+          select: { id: true }
+        }
       },
     });
 
@@ -73,6 +77,8 @@ export async function GET(request: NextRequest) {
       ...user,
       departmentName: deptMap.get(user.department) || user.department,
       sectionName: user.section ? (sectionMap.get(user.section) || user.section) : null,
+      deviceCount: user.devices?.length || 0,
+      devices: undefined, // Remove the raw devices list to keep response clean
     }));
 
     return NextResponse.json(usersWithNames);

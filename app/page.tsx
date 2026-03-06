@@ -39,7 +39,7 @@ interface LeaveType {
 
 // กำหนด icon และสีสำหรับแต่ละประเภทการลา
 const leaveTypeConfig: Record<string, { icon: any; color: string; gradient: string; image?: string }> = {
-  sick: { icon: Health, color: '#5E72E4', gradient: 'linear-gradient(135deg, #5E72E4 0%, #825EE4 100%)', image: '/images/icon-stechoscope.png' },
+  sick: { icon: Health, color: '#5E72E4', gradient: 'linear-gradient(135deg, #5E72E4 0%, #825EE4 100%)', image: '/images/icon-sick1.png' },
   personal: { icon: Briefcase, color: '#8965E0', gradient: 'linear-gradient(135deg, #8965E0 0%, #BC65E0 100%)', image: '/images/icon-business.png' },
   vacation: { icon: Sun1, color: '#11CDEF', gradient: 'linear-gradient(135deg, #11CDEF 0%, #1171EF 100%)', image: '/images/icon-vacation.png' },
   annual: { icon: Sun1, color: '#2DCECC', gradient: 'linear-gradient(135deg, #2DCECC 0%, #2D8BCC 100%)' },
@@ -55,6 +55,9 @@ const leaveTypeConfig: Record<string, { icon: any; color: string; gradient: stri
   business: { icon: Car, color: '#8965E0', gradient: 'linear-gradient(135deg, #8965E0 0%, #BC65E0 100%)' },
   unpaid: { icon: MoneySend, color: '#8898AA', gradient: 'linear-gradient(135deg, #8898AA 0%, #6A7A8A 100%)', image: '/images/icon-unpaid1.png' },
   other: { icon: HelpCircle, color: '#5E72E4', gradient: 'linear-gradient(135deg, #8898AA 0%, #6A7A8A 100%)', image: '/images/icon-other.png' },
+  sick_no_pay: { icon: Health, color: '#F5365C', gradient: 'linear-gradient(135deg, #F5365C 0%, #F56036 100%)', image: '/images/icon-sick3.png' },
+  personal_no_pay: { icon: Briefcase, color: '#F5365C', gradient: 'linear-gradient(135deg, #F5365C 0%, #F56036 100%)', image: '/images/icon-business3.png' },
+  paternity_care: { icon: Lovely, color: '#2DCECC', gradient: 'linear-gradient(135deg, #2DCECC 0%, #2D8BCC 100%)', image: '/images/icon-dad.png' },
   default: { icon: Calendar2, color: '#5E72E4', gradient: 'linear-gradient(135deg, #5E72E4 0%, #825EE4 100%)' },
 };
 
@@ -84,28 +87,78 @@ export default function Home() {
     return years;
   };
 
-  // Filter leave types based on gender and years of service
+  const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>([]);
+
+  // Filter leave types based on gender, years of service, and used quota
   const filteredLeaveTypes = useMemo(() => {
     const yearsOfService = getYearsOfService(user?.startDate);
 
-    return leaveTypes.filter(leave => {
+    // Function to calculate used days for a specific leave type
+    const getUsedDays = (code: string) => {
+      return leaveRequests
+        .filter(req => (req.leaveType === code || req.leaveCode === code) &&
+          ['approved', 'pending', 'in_progress', 'completed'].includes(req.status))
+        .reduce((sum, req) => sum + (req.totalDays || 0), 0);
+    };
+
+    return leaveTypes.map(leave => {
       // ถ้าเป็นเพศชาย ไม่แสดงลาคลอด (maternity)
       if (user?.gender === 'male' && leave.code === 'maternity') {
-        return false;
+        return null;
       }
-      // ถ้าเป็นเพศหญิง ไม่แสดงลาบวช (ordination)
-      if (user?.gender === 'female' && leave.code === 'ordination') {
-        return false;
+      // ถ้าเป็นเพศหญิง ไม่แสดงลาบวช (ordination) และลาเลี้ยงดูบุตร (paternity_care)
+      if (user?.gender === 'female' && (leave.code === 'ordination' || leave.code === 'paternity_care')) {
+        return null;
       }
       // ลาบวช ต้องมีอายุงาน >= 1 ปี
       if (leave.code === 'ordination' && yearsOfService < 1) {
-        return false;
+        return null;
       }
-      return true;
-    });
-  }, [leaveTypes, user?.gender, user?.startDate]);
 
-  const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>([]);
+      let isDisabled = false;
+      let disabledReason = "";
+
+      // ฟังก์ชันสำหรับตรวจสอบว่าลาพักร้อนหมดหรือยัง
+      const isVacationExhausted = () => {
+        const vacationType = leaveTypes.find(t => t.code === 'annual' || t.code === 'vacation');
+        if (vacationType && vacationType.maxDaysPerYear !== null) {
+          const usedVacationDays = getUsedDays(vacationType.code);
+          return usedVacationDays >= vacationType.maxDaysPerYear;
+        }
+        return true; // ถ้าไม่มีประเภทลาพักร้อน ถือว่าหมดแล้ว
+      };
+
+      // เงื่อนไขลาป่วยไม่รับค่าจ้าง: ต้องใช้ลาป่วยปกติใช้สิทธิ์ครบแล้ว
+      if (leave.code === 'sick_no_pay') {
+        const sickType = leaveTypes.find(t => t.code === 'sick');
+        if (sickType && sickType.maxDaysPerYear !== null) {
+          const usedSickDays = getUsedDays('sick');
+          if (usedSickDays < sickType.maxDaysPerYear) {
+            isDisabled = true;
+            disabledReason = t('must_exhaust_regular_sick', '(ใช้สิทธิ์ลาป่วยปกติก่อน)');
+          }
+        }
+      }
+
+      // เงื่อนไขลากิจไม่รับค่าจ้าง: ต้องใช้ลากิจปกติและลาพักร้อนใช้สิทธิ์ครบแล้ว
+      if (leave.code === 'personal_no_pay') {
+        const personalType = leaveTypes.find(t => t.code === 'personal');
+        if (personalType && personalType.maxDaysPerYear !== null) {
+          const usedPersonalDays = getUsedDays('personal');
+          if (usedPersonalDays < personalType.maxDaysPerYear) {
+            isDisabled = true;
+            disabledReason = t('must_exhaust_regular_personal', '(ใช้สิทธิ์ลากิจปกติก่อน)');
+          } else if (!isVacationExhausted()) {
+            isDisabled = true;
+            disabledReason = t('must_exhaust_vacation', '(ใช้สิทธิ์ลาพักร้อนให้หมดก่อน)');
+          }
+        }
+      }
+
+      return { ...leave, isDisabled, disabledReason };
+    }).filter((leave): leave is any => leave !== null);
+  }, [leaveTypes, user?.gender, user?.startDate, leaveRequests]);
+
   const [selectedLeave, setSelectedLeave] = useState<LeaveRequest | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
@@ -193,6 +246,7 @@ export default function Home() {
     const statusLower = status.toLowerCase();
     switch (statusLower) {
       case 'approved':
+      case 'completed':
         return 'Approved';
       case 'rejected':
         return 'Rejected';
@@ -417,16 +471,25 @@ export default function Home() {
                 const config = getLeaveTypeConfig(type.code);
                 const IconComponent = config.icon;
 
+                const usedDays = leaveRequests
+                  .filter(req => (req.leaveType === type.code || req.leaveCode === type.code) &&
+                    ['approved', 'pending', 'in_progress', 'completed'].includes(req.status))
+                  .reduce((sum, req) => sum + (req.totalDays || 0), 0);
+
+                const isQuotaFull = type.maxDaysPerYear !== null && usedDays >= type.maxDaysPerYear;
+
                 return (
                   <Box
                     key={type.id}
-                    onClick={() => router.push(`/leave/${type.code}`)}
+                    onClick={() => !isQuotaFull && !type.isDisabled && router.push(`/leave/${type.code}`)}
                     sx={{
                       display: 'flex',
                       flexDirection: 'column',
                       alignItems: 'center',
                       gap: 1,
-                      cursor: 'pointer'
+                      cursor: (isQuotaFull || type.isDisabled) ? 'default' : 'pointer',
+                      opacity: (isQuotaFull || type.isDisabled) ? 0.6 : 1,
+                      filter: (isQuotaFull || type.isDisabled) ? 'grayscale(100%)' : 'none',
                     }}
                   >
                     <Box
@@ -440,7 +503,7 @@ export default function Home() {
                         justifyContent: 'center',
                         boxShadow: config.image ? 'none' : `0 4px 16px ${config.color}40`,
                         transition: 'transform 0.2s, box-shadow 0.2s',
-                        '&:hover': {
+                        '&:hover': (isQuotaFull || type.isDisabled) ? {} : {
                           transform: 'scale(1.1)',
                           boxShadow: config.image ? 'none' : `0 6px 20px ${config.color}50`,
                         }
@@ -450,8 +513,8 @@ export default function Home() {
                         <Image
                           src={config.image}
                           alt={type.name}
-                          width={40}
-                          height={40}
+                          width={50}
+                          height={50}
                           priority
                           style={{ objectFit: 'contain' }}
                         />
@@ -461,6 +524,16 @@ export default function Home() {
                     </Box>
                     <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary', textAlign: 'center', lineHeight: 1.2 }}>
                       {t(`leave_${type.code}`, type.name)}
+                      {isQuotaFull && (
+                        <Typography component="span" sx={{ display: 'block', fontSize: '0.65rem', color: 'error.main', mt: 0.5 }}>
+                          (เต็ม)
+                        </Typography>
+                      )}
+                      {type.isDisabled && (
+                        <Typography component="span" sx={{ display: 'block', fontSize: '0.6rem', color: 'warning.main', mt: 0.5 }}>
+                          {type.disabledReason}
+                        </Typography>
+                      )}
                     </Typography>
                   </Box>
                 );

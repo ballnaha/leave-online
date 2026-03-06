@@ -1,6 +1,7 @@
 /**
  * Escalation Service
- * ตรวจสอบใบลาที่เกิน 2 วัน และส่งต่อไป HR Manager โดยอัตโนมัติ
+ * ตรวจสอบใบลาที่รอนานเกินไป และส่งต่อไป HR Manager โดยอัตโนมัติ
+ * เงื่อนไข: ยื่นวันไหนก็ตาม เมื่อถึง 13:00 ของวันถัดไป จะถูก escalate ทันที
  */
 
 import { prisma } from './prisma';
@@ -10,8 +11,248 @@ import {
   notifyApprovalReminder
 } from './onesignal';
 
-const ESCALATION_HOURS = 48; // 2 วัน = 48 ชั่วโมง
-const REMINDER_HOURS = 24; // เตือนหลัง 24 ชั่วโมง
+// ไม่ใช้ค่าคงที่เป็นชั่วโมงแล้ว เพราะใช้เวลาคงที่ (13:00 ของวันถัดไป)
+const REMINDER_HOURS = 4; // เตือนก่อนหมดเวลา 4 ชั่วโมง (ประมาณ 09:00 ของวันถัดไป)
+
+import { ROLE_WEIGHTS } from '@/types/user-role';
+
+/**
+ * ข้อมูลที่ใช้ในการหาผู้อนุมัติ
+ */
+export interface ApproverResolveContext {
+  /** Role ของผู้อนุมัติที่ต้องการหา */
+  approverRole: string;
+  /** Company scope ของ workflow (หรือของ user ที่ยื่นใบลา) */
+  company?: string | null;
+  /** Department scope ของ workflow (หรือของ user ที่ยื่นใบลา) */
+  department?: string | null;
+  /** Section scope ของ workflow (หรือของ user ที่ยื่นใบลา) */
+  section?: string | null;
+  /** ID ของ user ที่ต้องการยกเว้น (ป้องกัน self-approval) */
+  excludeUserId?: number;
+}
+
+/**
+ * ผลลัพธ์จากการหาผู้อนุมัติ
+ */
+export interface ResolvedApprover {
+  id: number;
+  firstName: string;
+  lastName: string;
+  role: string;
+  position?: string | null;
+  section?: string | null;
+  department?: string | null;
+}
+
+/**
+ * Shared Function สำหรับหาผู้อนุมัติจาก Role
+ * ใช้ร่วมกันทั้ง:
+ * - หน้า admin/approval-workflows (แสดงรายชื่อ)
+ * - หน้า workflow-test (จำลองการทดสอบ)
+ * - Production logic (สร้าง approval steps จริง)
+ * 
+ * Logic หลัก:
+ * 1. ถ้าเป็น HR/HR Manager จะหาจาก company หรือทั้งระบบ
+ * 2. ถ้าเป็น Role อื่น จะใช้ Direct vs Broad Matching:
+ *    - Direct: ตรงกับ section โดยตรง หรือ managedSections
+ *    - Broad: ตรงกับ department โดยตรง หรือ managedDepartments
+ * 3. Prioritization: ถ้ามี Direct Match ให้ใช้ Direct เท่านั้น
+ */
+export async function resolveApproversByRole(
+  context: ApproverResolveContext
+): Promise<ResolvedApprover[]> {
+  const { approverRole, company, department, section, excludeUserId } = context;
+
+  // กรณี HR Manager หรือ HR - หาจาก company หรือทั้งระบบ
+  if (approverRole === 'hr_manager' || approverRole === 'hr') {
+    // ลองหา HR ใน company ก่อน
+    const hrInCompany = await prisma.user.findFirst({
+      where: {
+        role: approverRole,
+        isActive: true,
+        company: company || undefined,
+        id: excludeUserId ? { not: excludeUserId } : undefined,
+      },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        role: true,
+        position: true,
+        section: true,
+        department: true,
+      },
+    });
+
+    if (hrInCompany) return [hrInCompany];
+
+    // ถ้าไม่เจอใน company ให้หาคนใดก็ได้
+    const anyHr = await prisma.user.findFirst({
+      where: {
+        role: approverRole,
+        isActive: true,
+        id: excludeUserId ? { not: excludeUserId } : undefined,
+      },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        role: true,
+        position: true,
+        section: true,
+        department: true,
+      },
+    });
+
+    return anyHr ? [anyHr] : [];
+  }
+
+  // กรณี Role อื่นๆ (shift_supervisor, section_head, dept_manager, etc.)
+  // ต้องดึง section codes ของ department มาก่อนเพื่อใช้ในการเปรียบเทียบ
+  let deptSectionCodes: string[] = [];
+  if (department) {
+    const deptSections = await prisma.section.findMany({
+      where: { department: { code: department } },
+      select: { code: true },
+    });
+    deptSectionCodes = deptSections.map(s => s.code);
+  }
+
+  // หา potential managers ทั้งหมด
+  const allPotentialManagers = await prisma.user.findMany({
+    where: {
+      role: approverRole as any,
+      isActive: true,
+      id: excludeUserId ? { not: excludeUserId } : undefined,
+      OR: [
+        { department: department || undefined },
+        { managedDepartments: { not: null } },
+        { managedSections: { not: null } },
+        // สำหรับ company-level หรือ global workflow
+        ...(company && !department ? [{ company }] : []),
+        ...(!company && !department && !section ? [{}] : []), // Global
+      ],
+    },
+    select: {
+      id: true,
+      firstName: true,
+      lastName: true,
+      role: true,
+      position: true,
+      section: true,
+      department: true,
+      company: true,
+      managedDepartments: true,
+      managedSections: true,
+    },
+  });
+
+  const directMatches: ResolvedApprover[] = [];
+  const broadMatches: ResolvedApprover[] = [];
+
+  for (const m of allPotentialManagers) {
+    let isDirectMatch = false;
+    let isBroadMatch = false;
+
+    // Parse managed areas safely
+    let managedDepts: string[] = [];
+    let managedSects: string[] = [];
+    try {
+      if (m.managedDepartments) managedDepts = JSON.parse(m.managedDepartments as string);
+      if (m.managedSections) managedSects = JSON.parse(m.managedSections as string);
+    } catch (e) {
+      console.error('Error parsing managed areas for user', m.id, e);
+    }
+
+    // --- Section-level matching ---
+    if (section) {
+      // Direct: ตรงกับ section โดยตรง
+      if (m.section === section) {
+        isDirectMatch = true;
+      }
+      // Direct: ดูแล section นี้ผ่าน managedSections
+      if (!isDirectMatch && managedSects.includes(section)) {
+        isDirectMatch = true;
+      }
+
+      // Broad: เป็น dept manager ที่ดูแลทั้ง department (ไม่มี section เฉพาะ)
+      if (!isDirectMatch && ['dept_manager', 'hr_manager', 'hr'].includes(approverRole)) {
+        // อยู่ใน department เดียวกัน และไม่มี section เฉพาะ
+        if (m.department === department && !m.section) {
+          isBroadMatch = true;
+        }
+        // ดูแล department นี้ และไม่มี section เฉพาะใน department นั้น
+        if (!isBroadMatch && department && managedDepts.includes(department)) {
+          const hasSpecificSectionsInThisDept = managedSects.some(s => deptSectionCodes.includes(s));
+          if (!hasSpecificSectionsInThisDept) {
+            isBroadMatch = true;
+          }
+        }
+      }
+    }
+    // --- Department-level matching (no specific section) ---
+    else if (department) {
+      // Direct: อยู่ใน department เดียวกัน และไม่มี section (หมายถึงดูแลทั้ง dept)
+      if (m.department === department && !m.section) {
+        isDirectMatch = true;
+      }
+      // Direct: ดูแล department นี้ และไม่มี section เฉพาะใน department นั้น
+      if (!isDirectMatch && managedDepts.includes(department)) {
+        const hasSpecificSectionsInThisDept = managedSects.some(s => deptSectionCodes.includes(s));
+        if (!hasSpecificSectionsInThisDept) {
+          isDirectMatch = true;
+        }
+      }
+    }
+    // --- Company-level matching ---
+    else if (company) {
+      if (m.company === company) {
+        isDirectMatch = true;
+      }
+    }
+    // --- Global matching (no scope) ---
+    else {
+      isDirectMatch = true;
+    }
+
+    if (isDirectMatch) {
+      directMatches.push({
+        id: m.id,
+        firstName: m.firstName,
+        lastName: m.lastName,
+        role: m.role,
+        position: m.position,
+        section: m.section,
+        department: m.department,
+      });
+    } else if (isBroadMatch) {
+      broadMatches.push({
+        id: m.id,
+        firstName: m.firstName,
+        lastName: m.lastName,
+        role: m.role,
+        position: m.position,
+        section: m.section,
+        department: m.department,
+      });
+    }
+  }
+
+  // Prioritization: ใช้ Direct ถ้ามี ไม่งั้นใช้ Broad
+  return directMatches.length > 0 ? directMatches : broadMatches;
+}
+
+/**
+ * คำนวณวันสิ้นสุดการรออนุมัติ (Escalation Deadline)
+ * กติกาวันถัดไป เวลา 13:00 น.
+ */
+export function calculateEscalationDeadline(createdAt: Date = new Date()): Date {
+  const deadline = new Date(createdAt);
+  deadline.setDate(deadline.getDate() + 1); // วันถัดไป
+  deadline.setHours(13, 0, 0, 0); // เวลา 13:00 น.
+  return deadline;
+}
 
 /**
  * ตรวจสอบและ escalate ใบลาที่เกินเวลา
@@ -210,8 +451,10 @@ export async function createApprovalSteps(
   const user = await prisma.user.findUnique({ where: { id: userId } });
   if (!user) return;
 
-  // 0. ถ้าเป็น dept_manager ให้ส่งตรงไป HR Manager เลย
-  if (user.role === 'dept_manager') {
+  // 0. ถ้าเป็น dept_manager หรือตำแหน่งสูงกว่า ให้ส่งตรงไป HR Manager เลย
+  const requesterWeight = ROLE_WEIGHTS[user.role] || 0;
+
+  if (requesterWeight >= ROLE_WEIGHTS.dept_manager) {
     const hrManager = await prisma.user.findFirst({
       where: {
         role: 'hr_manager',
@@ -261,8 +504,12 @@ export async function createApprovalSteps(
   });
 
   if (approvalFlows.length > 0) {
-    // กรอง approval flows ที่ไม่ใช่ตัวเอง (ป้องกัน self-approval)
-    const filteredFlows = approvalFlows.filter(flow => flow.approverId !== userId);
+    // กรอง approval flows ที่ไม่ใช่ตัวเอง และ role ต้องไม่ต่ำกว่าตัวเอง
+    const filteredFlows = approvalFlows.filter(flow => {
+      if (flow.approverId === userId) return false;
+      const approverWeight = ROLE_WEIGHTS[flow.approver.role] || 0;
+      return approverWeight > requesterWeight;
+    });
 
     if (filteredFlows.length === 0) {
       // ถ้าไม่มีผู้อนุมัติเลยหลังจากกรอง ให้ส่งตรงไป HR Manager
@@ -367,164 +614,224 @@ export async function createApprovalSteps(
   }
 
   if (workflow && workflow.steps.length > 0) {
-    let firstApproverId: number | null = null;
+    let firstActualLevel: number | null = null;
+    const now = new Date();
 
     for (const step of workflow.steps) {
-      let approverId = step.approverId;
+      let approverIds: number[] = [];
+      if (step.approverId) {
+        // กรณีระบุตัวบุคคล ต้องเช็คว่าตำแหน่งสูงกว่าหรือไม่
+        const specificApprover = await prisma.user.findUnique({
+          where: { id: step.approverId },
+          select: { id: true, role: true }
+        });
 
-      if (!approverId && step.approverRole) {
-        // Resolve Role dynamically
+        if (specificApprover && (ROLE_WEIGHTS[specificApprover.role] || 0) > requesterWeight) {
+          approverIds.push(step.approverId);
+        }
+      } else if (step.approverRole) {
         const role = step.approverRole;
 
-        if (role === 'hr_manager') {
-          // Special handling for HR Manager: Try same company first, then fallback to any HR (Shared Service)
-          // ต้องไม่ใช่ตัวเอง (ป้องกัน self-approval)
+        // ข้ามขั้นตอนถ้า Role ที่ผู้อนุมัติ ต่ำกว่าหรือเท่ากับผู้ขอลา
+        // (ยกเว้น HR Manager ที่เป็นขั้นสุดท้ายเสมอ)
+        if (role !== 'hr_manager' && (ROLE_WEIGHTS[role] || 0) <= requesterWeight) {
+          continue;
+        }
+
+        if (role === 'hr_manager' || role === 'hr') {
           const hrInCompany = await prisma.user.findFirst({
             where: { role, isActive: true, company: user.company, id: { not: userId } }
           });
-
           if (hrInCompany) {
-            approverId = hrInCompany.id;
+            approverIds.push(hrInCompany.id);
           } else {
             const anyHr = await prisma.user.findFirst({
               where: { role, isActive: true, id: { not: userId } }
             });
-            if (anyHr) approverId = anyHr.id;
+            if (anyHr) approverIds.push(anyHr.id);
           }
         } else {
-          // ค้นหาผู้อนุมัติตาม role โดยเช็คทั้ง:
-          // 1. ฝ่าย/แผนกตัวเอง
-          // 2. ฝ่าย/แผนกที่ดูแลเพิ่มเติม (managedDepartments/managedSections)
-          // ต้องไม่ใช่ตัวเอง (ป้องกัน self-approval)
-
-          let approver = null;
-
-          // หา approver ที่อยู่ฝ่าย/แผนกเดียวกัน (primary lookup)
-          if (role === 'section_head' && user.section) {
-            approver = await prisma.user.findFirst({
-              where: { role, isActive: true, section: user.section, id: { not: userId } }
-            });
-          } else if (role === 'dept_manager' && user.department) {
-            approver = await prisma.user.findFirst({
-              where: { role, isActive: true, department: user.department, id: { not: userId } }
-            });
-          } else if (role === 'shift_supervisor' && user.shift) {
-            approver = await prisma.user.findFirst({
-              where: { role, isActive: true, shift: user.shift, id: { not: userId } }
-            });
-          }
-
-          // ถ้าไม่เจอ ให้หาจาก managedDepartments / managedSections (cross-department)
-          if (!approver) {
-            // หา approver ที่มี managedDepartments หรือ managedSections ครอบคลุมพนักงานคนนี้
-            // ต้องไม่ใช่ตัวเอง (ป้องกัน self-approval)
-            const potentialApprovers = await prisma.user.findMany({
+          // Special case: shift_supervisor for users without shift
+          if (role === 'shift_supervisor' && !user.shift) {
+            const supervisors = await prisma.user.findMany({
               where: {
                 role,
                 isActive: true,
                 id: { not: userId },
                 OR: [
+                  { section: user.section || undefined, department: user.department },
+                  { managedSections: user.section ? { contains: user.section } : undefined },
+                  { managedDepartments: { contains: user.department } }
+                ]
+              }
+            });
+
+            for (const sv of supervisors) {
+              let isMatch = false;
+              if (sv.section === user.section || (sv.department === user.department && !sv.section)) {
+                isMatch = true;
+              } else {
+                if (sv.managedSections && user.section) {
+                  try {
+                    const sects = JSON.parse(sv.managedSections);
+                    if (sects.includes(user.section)) isMatch = true;
+                  } catch (e) { }
+                }
+                if (!isMatch && sv.managedDepartments && user.department) {
+                  try {
+                    const depts = JSON.parse(sv.managedDepartments);
+                    if (depts.includes(user.department)) isMatch = true;
+                  } catch (e) { }
+                }
+              }
+              if (isMatch) approverIds.push(sv.id);
+            }
+          } else {
+            // Get all section codes for the user's department to distinguish broad vs section managers
+            const deptSections = await prisma.section.findMany({
+              where: { department: { code: user.department } },
+              select: { code: true }
+            });
+            const deptSectionCodes = deptSections.map(s => s.code);
+
+            // Improved Lookup: Respect Section vs Department boundaries with prioritization
+            const directApproverIds: number[] = [];
+            const broadApproverIds: number[] = [];
+
+            const allPotentialManagers = await prisma.user.findMany({
+              where: {
+                role,
+                isActive: true,
+                id: { not: userId },
+                OR: [
+                  { department: user.department },
                   { managedDepartments: { not: null } },
                   { managedSections: { not: null } },
                 ]
               }
             });
 
-            for (const potential of potentialApprovers) {
-              let manages = false;
+            for (const m of allPotentialManagers) {
+              let isDirectMatch = false;
+              let isBroadMatch = false;
 
-              // เช็ค managedDepartments
-              if (potential.managedDepartments && user.department) {
+              // 1. Check for Direct Match (Specific Section)
+              if (m.section && user.section && m.section === user.section) {
+                isDirectMatch = true;
+              }
+
+              // 2. Check for Direct Match (Managed Sections)
+              if (!isDirectMatch && m.managedSections && user.section) {
                 try {
-                  const depts: string[] = JSON.parse(potential.managedDepartments);
-                  if (depts.includes(user.department)) {
-                    manages = true;
-                  }
+                  const sects = JSON.parse(m.managedSections);
+                  if (Array.isArray(sects) && sects.includes(user.section)) isDirectMatch = true;
                 } catch (e) { }
               }
 
-              // เช็ค managedSections
-              if (!manages && potential.managedSections && user.section) {
-                try {
-                  const sects: string[] = JSON.parse(potential.managedSections);
-                  if (sects.includes(user.section)) {
-                    manages = true;
-                  }
-                } catch (e) { }
+              // 3. Check for Broad Match (Department-wide)
+              if (!isDirectMatch) {
+                if (!m.section && m.department === user.department) {
+                  isBroadMatch = true;
+                } else if (m.managedDepartments && user.department) {
+                  try {
+                    const depts = JSON.parse(m.managedDepartments);
+                    if (Array.isArray(depts) && depts.includes(user.department)) {
+                      // Check if this manager is only a Section Manager for this dept
+                      const mSects = m.managedSections ? JSON.parse(m.managedSections) : [];
+                      const hasSpecificSectionsInThisDept = Array.isArray(mSects) && mSects.some((s: string) => deptSectionCodes.includes(s));
+
+                      if (!hasSpecificSectionsInThisDept) {
+                        isBroadMatch = true;
+                      } else if (user.section && Array.isArray(mSects) && mSects.includes(user.section)) {
+                        // This case is already handled by isDirectMatch, but just to be safe
+                        isBroadMatch = false;
+                      }
+                    }
+                  } catch (e) { }
+                }
               }
 
-              if (manages) {
-                approver = potential;
-                break;
+              if (isDirectMatch) {
+                directApproverIds.push(m.id);
+              } else if (isBroadMatch) {
+                broadApproverIds.push(m.id);
               }
             }
-          }
 
-          if (approver) {
-            approverId = approver.id;
+            // Prioritization: Use Direct Matches if found, otherwise use Broad Matches
+            if (directApproverIds.length > 0) {
+              approverIds.push(...directApproverIds);
+            } else {
+              approverIds.push(...broadApproverIds);
+            }
           }
         }
       }
 
-      // ข้าม step ถ้า approverId เป็นคนเดียวกับผู้ขอลา (ป้องกัน self-approval)
-      if (approverId && approverId !== userId) {
-        await prisma.leaveApproval.create({
-          data: {
-            leaveRequestId,
-            level: step.level,
-            approverId,
-            status: 'pending',
-            notifiedAt: firstApproverId === null ? now : null,
-          },
-        });
-        if (firstApproverId === null) firstApproverId = approverId;
+      // ตรวจสอบว่ามีผู้อนุมัติจริงหรือไม่ (ไม่ใช่เอาตัวเองออกแล้วเหลือ 0)
+      const actualApproverIds = approverIds.filter(id => id !== userId);
+      if (actualApproverIds.length > 0) {
+        if (firstActualLevel === null) firstActualLevel = step.level;
+
+        for (const approverId of actualApproverIds) {
+          await prisma.leaveApproval.create({
+            data: {
+              leaveRequestId,
+              level: step.level,
+              approverId,
+              status: 'pending',
+              notifiedAt: step.level === firstActualLevel ? now : null,
+            },
+          });
+        }
       }
     }
 
-    if (firstApproverId) {
-      // Notify First Approver
+    if (firstActualLevel !== null) {
+      const firstLevelApprovals = await prisma.leaveApproval.findMany({
+        where: { leaveRequestId, level: firstActualLevel, status: 'pending' },
+        include: { approver: true }
+      });
+
       const leaveRequest = await prisma.leaveRequest.findUnique({
         where: { id: leaveRequestId },
         include: { user: true },
       });
+
       if (leaveRequest) {
-        await notifyApprovalPending(
-          firstApproverId,
-          leaveRequestId,
-          `${leaveRequest.user.firstName} ${leaveRequest.user.lastName}`,
-          leaveRequest.leaveType,
-          leaveRequest.totalDays,
-          leaveRequest.startDate?.toISOString(),
-          leaveRequest.endDate?.toISOString(),
-          leaveRequest.reason,
-          leaveRequest.leaveCode || undefined
-        );
+        await prisma.leaveRequest.update({
+          where: { id: leaveRequestId },
+          data: { currentLevel: firstActualLevel }
+        });
+
+        for (const approval of firstLevelApprovals) {
+          await notifyApprovalPending(
+            approval.approverId,
+            leaveRequestId,
+            `${leaveRequest.user.firstName} ${leaveRequest.user.lastName}`,
+            leaveRequest.leaveType,
+            leaveRequest.totalDays,
+            leaveRequest.startDate?.toISOString(),
+            leaveRequest.endDate?.toISOString(),
+            leaveRequest.reason,
+            leaveRequest.leaveCode || undefined
+          );
+        }
       }
       return;
     }
   }
 
-  // 3. Fallback: ถ้าไม่มี flow กำหนดไว้เลย ให้ส่งตรงไป HR Manager (แต่ต้องไม่ใช่ตัวเอง)
+  // Fallback to HR Manager
   const hrManager = await prisma.user.findFirst({
-    where: {
-      role: 'hr_manager',
-      isActive: true,
-      id: { not: userId }, // ป้องกัน self-approval
-    },
+    where: { role: 'hr_manager', isActive: true, id: { not: userId } },
   });
 
   if (hrManager) {
     await prisma.leaveApproval.create({
-      data: {
-        leaveRequestId,
-        level: 99,
-        approverId: hrManager.id,
-        status: 'pending',
-        notifiedAt: new Date(),
-      },
+      data: { leaveRequestId, level: 99, approverId: hrManager.id, status: 'pending', notifiedAt: new Date() },
     });
 
-    // แจ้งเตือน HR
     const leaveRequest = await prisma.leaveRequest.findUnique({
       where: { id: leaveRequestId },
       include: { user: true },
@@ -543,46 +850,6 @@ export async function createApprovalSteps(
         leaveRequest.leaveCode || undefined
       );
     }
-  } else {
-    // กรณี HR Manager ลาเอง และไม่มี HR คนอื่น ให้หา Admin แทน
-    const admin = await prisma.user.findFirst({
-      where: {
-        role: 'admin',
-        isActive: true,
-        id: { not: userId },
-      },
-    });
-
-    if (admin) {
-      await prisma.leaveApproval.create({
-        data: {
-          leaveRequestId,
-          level: 99,
-          approverId: admin.id,
-          status: 'pending',
-          notifiedAt: new Date(),
-        },
-      });
-
-      const leaveRequest = await prisma.leaveRequest.findUnique({
-        where: { id: leaveRequestId },
-        include: { user: true },
-      });
-
-      if (leaveRequest) {
-        await notifyApprovalPending(
-          admin.id,
-          leaveRequestId,
-          `${leaveRequest.user.firstName} ${leaveRequest.user.lastName}`,
-          leaveRequest.leaveType,
-          leaveRequest.totalDays,
-          leaveRequest.startDate?.toISOString(),
-          leaveRequest.endDate?.toISOString(),
-          leaveRequest.reason,
-          leaveRequest.leaveCode || undefined
-        );
-      }
-    }
   }
 }
 
@@ -593,53 +860,58 @@ export async function processNextApproval(
   leaveRequestId: number,
   currentLevel: number
 ): Promise<{ isComplete: boolean; nextApproverId?: number }> {
-  // หา approval level ถัดไป
+  // 1. Mark other pending approvals at current level as 'skipped'
+  await prisma.leaveApproval.updateMany({
+    where: { leaveRequestId, level: currentLevel, status: 'pending' },
+    data: { status: 'skipped', actionAt: new Date() }
+  });
+
+  // 2. Find next level
   const nextApproval = await prisma.leaveApproval.findFirst({
-    where: {
-      leaveRequestId,
-      level: { gt: currentLevel },
-      status: 'pending',
-    },
+    where: { leaveRequestId, level: { gt: currentLevel }, status: 'pending' },
     orderBy: { level: 'asc' },
     include: { approver: true },
   });
 
-  if (!nextApproval) {
-    // ไม่มี level ถัดไป = อนุมัติสมบูรณ์
-    return { isComplete: true };
-  }
+  if (!nextApproval) return { isComplete: true };
 
   const leaveRequest = await prisma.leaveRequest.findUnique({
     where: { id: leaveRequestId },
     include: { user: true },
   });
 
-  // อัพเดต current level
+  // 3. Mark all in next level as notified
+  await prisma.leaveApproval.updateMany({
+    where: { leaveRequestId, level: nextApproval.level, status: 'pending' },
+    data: { notifiedAt: new Date() },
+  });
+
+  const nextLevelApprovals = await prisma.leaveApproval.findMany({
+    where: { leaveRequestId, level: nextApproval.level, status: 'pending' },
+    include: { approver: true }
+  });
+
   await prisma.leaveRequest.update({
     where: { id: leaveRequestId },
     data: { currentLevel: nextApproval.level },
   });
 
-  // อัพเดต notifiedAt
-  await prisma.leaveApproval.update({
-    where: { id: nextApproval.id },
-    data: { notifiedAt: new Date() },
-  });
-
-  // แจ้งเตือนผู้อนุมัติถัดไป
   if (leaveRequest) {
-    await notifyApprovalPending(
-      nextApproval.approverId,
-      leaveRequestId,
-      `${leaveRequest.user.firstName} ${leaveRequest.user.lastName}`,
-      leaveRequest.leaveType,
-      leaveRequest.totalDays,
-      leaveRequest.startDate?.toISOString(),
-      leaveRequest.endDate?.toISOString(),
-      leaveRequest.reason,
-      leaveRequest.leaveCode || undefined
-    );
+    for (const approval of nextLevelApprovals) {
+      await notifyApprovalPending(
+        approval.approverId,
+        leaveRequestId,
+        `${leaveRequest.user.firstName} ${leaveRequest.user.lastName}`,
+        leaveRequest.leaveType,
+        leaveRequest.totalDays,
+        leaveRequest.startDate?.toISOString(),
+        leaveRequest.endDate?.toISOString(),
+        leaveRequest.reason,
+        leaveRequest.leaveCode || undefined
+      );
+    }
   }
 
   return { isComplete: false, nextApproverId: nextApproval.approverId };
 }
+

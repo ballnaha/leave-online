@@ -24,7 +24,9 @@ import { Calendar } from 'iconsax-react';
 // ตัวเลือก leave type ที่กำหนดไว้ในระบบ
 const leaveTypeOptions = [
   { code: 'sick', name: 'ลาป่วย' },
+  { code: 'sick_no_pay', name: 'ลาป่วยไม่รับค่าจ้าง' },
   { code: 'personal', name: 'ลากิจ' },
+  { code: 'personal_no_pay', name: 'ลากิจไม่รับค่าจ้าง' },
   { code: 'vacation', name: 'ลาพักร้อน' },
   { code: 'annual', name: 'ลาพักผ่อนประจำปี' },
   { code: 'maternity', name: 'ลาคลอด' },
@@ -33,6 +35,7 @@ const leaveTypeOptions = [
   { code: 'marriage', name: 'ลาสมรส' },
   { code: 'funeral', name: 'ลางานศพ' },
   { code: 'paternity', name: 'ลาดูแลภรรยาคลอด' },
+  { code: 'paternity_care', name: 'ลาเลี้ยงดูบุตร' },
   { code: 'sterilization', name: 'ลาทำหมัน' },
   { code: 'business', name: 'ลาไปราชการ' },
   { code: 'work_outside', name: 'ทำงานนอกสถานที่' },
@@ -157,10 +160,10 @@ export default function LeaveTypeDialog({
   };
 
   return (
-    <Dialog 
-      open={open} 
-      onClose={onClose} 
-      maxWidth="sm" 
+    <Dialog
+      open={open}
+      onClose={onClose}
+      maxWidth="sm"
       fullWidth
       PaperProps={{
         sx: {
@@ -168,9 +171,9 @@ export default function LeaveTypeDialog({
         }
       }}
     >
-      <DialogTitle sx={{ 
-        display: 'flex', 
-        alignItems: 'center', 
+      <DialogTitle sx={{
+        display: 'flex',
+        alignItems: 'center',
         gap: 1,
         pb: 1,
         borderBottom: '1px solid',

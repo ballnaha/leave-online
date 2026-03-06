@@ -82,6 +82,9 @@ const leaveTypeConfig: Record<string, { icon: any; color: string; lightColor: st
     ordination: { icon: Church, color: '#FB6340', lightColor: '#FFF0EB', label: 'ลาบวช' },
     work_outside: { icon: Car, color: '#2DCECC', lightColor: '#E0F7FA', label: 'ทำงานนอกสถานที่' },
     absent: { icon: XCircle, color: '#F5365C', lightColor: '#FEE2E2', label: 'ขาดงาน' },
+    sick_no_pay: { icon: Stethoscope, color: '#F5365C', lightColor: '#FEE2E2', label: 'ลาป่วยไม่รับค่าจ้าง' },
+    personal_no_pay: { icon: Briefcase, color: '#F5365C', lightColor: '#FEE2E2', label: 'ลากิจไม่รับค่าจ้าง' },
+    paternity_care: { icon: Heart, color: '#2DCECC', lightColor: '#E0F7FA', label: 'ลาเลี้ยงดูบุตร' },
     other: { icon: HelpCircle, color: '#5E72E4', lightColor: '#E9ECFF', label: 'อื่นๆ' },
     default: { icon: Clock, color: '#8898AA', lightColor: '#F0F3F5', label: 'การลา' },
 };
@@ -263,6 +266,10 @@ export default function LeavePage() {
         switch (status) {
             case 'approved':
                 return { label: t('status_approved', 'อนุมัติแล้ว'), color: 'success' as const, icon: CheckCircle, bgColor: '#ECFDF5', textColor: '#059669' };
+            case 'completed':
+                return { label: t('status_completed', 'เสร็จสิ้นแล้ว'), color: 'success' as const, icon: CheckCircle, bgColor: '#F0FDF4', textColor: '#16A34A' };
+            case 'in_progress':
+                return { label: t('status_in_progress', 'กำลังดำเนินการ'), color: 'info' as const, icon: Clock, bgColor: '#EFF6FF', textColor: '#2563EB' };
             case 'rejected':
                 return { label: t('status_rejected', 'ไม่อนุมัติ'), color: 'error' as const, icon: XCircle, bgColor: '#FEF2F2', textColor: '#DC2626' };
             case 'cancelled':
@@ -345,10 +352,15 @@ export default function LeavePage() {
     const mapStatus = (status: string): 'Approved' | 'Pending' | 'Rejected' | 'Cancelled' => {
         const statusLower = status.toLowerCase();
         switch (statusLower) {
-            case 'approved': return 'Approved';
-            case 'rejected': return 'Rejected';
-            case 'cancelled': return 'Cancelled';
-            default: return 'Pending';
+            case 'approved':
+            case 'completed':
+                return 'Approved';
+            case 'rejected':
+                return 'Rejected';
+            case 'cancelled':
+                return 'Cancelled';
+            default:
+                return 'Pending';
         }
     };
 

@@ -63,10 +63,13 @@ export async function POST(request: NextRequest) {
     }
 
     if (playerIds.length === 0) {
-      return NextResponse.json(
-        { error: 'ไม่พบอุปกรณ์ที่ลงทะเบียน', playerIds: [] },
-        { status: 400 }
-      );
+      // เพื่อให้หน้า Workflow Test ทำงานได้ต่อเนื่อง แม้ไม่มีเครื่องก็ให้ตอบกลับสำเร็จแต่แจ้งว่าไม่พบเครื่อง
+      return NextResponse.json({
+        success: true,
+        notificationId: 'no_device_simulation',
+        recipientCount: 0,
+        message: 'จำลองการส่งสำเร็จ (แต่พนักงานคนนี้ยังไม่ได้ลงทะเบียนหน้าเว็บ/แอป)',
+      });
     }
 
     // ส่ง notification ไปยัง OneSignal
@@ -88,14 +91,24 @@ export async function POST(request: NextRequest) {
     const result = await response.json();
 
     if (response.ok && result.id) {
-      // บันทึก log
+      // บันทึก log สำหรับผู้รับ (เพื่อให้ปรากฏใน Notification Box ของคนรับ)
+      let logUserId = parseInt(session.user.id);
+      if (targetType === 'user' && targetUserId) {
+        logUserId = parseInt(targetUserId);
+      }
+
       await prisma.notificationLog.create({
         data: {
-          userId: parseInt(session.user.id),
+          userId: logUserId,
           type: 'test',
           title,
           message,
-          data: { targetType, playerIds },
+          data: {
+            targetType,
+            playerIds,
+            senderId: session.user.id,
+            senderName: session.user.name
+          },
           oneSignalId: result.id,
           status: 'sent',
         },
@@ -121,9 +134,9 @@ export async function POST(request: NextRequest) {
       }
 
       return NextResponse.json(
-        { 
-          error: errorMessage, 
-          details: result 
+        {
+          error: errorMessage,
+          details: result
         },
         { status: 500 }
       );

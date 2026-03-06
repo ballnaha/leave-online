@@ -23,9 +23,11 @@ import {
   alpha,
   useTheme,
   useMediaQuery,
+  Tooltip,
+  InputAdornment,
 } from '@mui/material';
 import type { Theme } from '@mui/material/styles';
-import { Add, Trash, Hierarchy } from 'iconsax-react';
+import { Add, Trash, Hierarchy, Magicpen } from 'iconsax-react';
 import DragIndicatorIcon from '@mui/icons-material/DragIndicator';
 import { DndContext, closestCenter } from '@dnd-kit/core';
 import type { DragEndEvent } from '@dnd-kit/core';
@@ -267,6 +269,7 @@ const ROLES = [
   { value: 'section_head', label: 'หัวหน้าแผนก (Section Head)' },
   { value: 'dept_manager', label: 'ผจก.ฝ่าย (Dept Manager)' },
   { value: 'hr_manager', label: 'ผจก.บุคคล (HR Manager)' },
+  { value: 'hr', label: 'เจ้าหน้าที่บุคคล (HR)' },
   { value: 'admin', label: 'Admin' },
 ];
 
@@ -402,6 +405,29 @@ export default function WorkflowDialog({ open, onClose, onSave, workflow }: Work
     setSteps(newSteps);
   };
 
+  const handleGenerateName = () => {
+    const parts: string[] = [];
+    if (company) parts.push(company);
+    if (department) parts.push(department);
+    if (section) {
+      parts.push(section);
+      const sect = sections.find(s => s.code === section);
+      if (sect) parts.push(sect.name);
+    } else if (department) {
+      const dept = departments.find(d => d.code === department);
+      if (dept) parts.push(dept.name);
+    } else if (company) {
+      const comp = companies.find(c => c.code === company);
+      if (comp) parts.push(comp.name);
+    }
+
+    if (parts.length > 0) {
+      setName(parts.join('-'));
+    } else {
+      setName('Global Workflow');
+    }
+  };
+
   const toastr = useToastr();
 
   const handleSubmit = async () => {
@@ -532,7 +558,23 @@ export default function WorkflowDialog({ open, onClose, onSave, workflow }: Work
               value={name}
               onChange={(e) => setName(e.target.value)}
               required
-              placeholder="เช่น Workflow สำหรับฝ่ายผลิต"
+              placeholder="เช่น PS-31400-31430-ชื่อแผนก"
+              InputProps={{
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <Tooltip title="สร้างชื่ออัตโนมัติตามขอบเขตที่เลือก">
+                      <IconButton
+                        onClick={handleGenerateName}
+                        edge="end"
+                        size="small"
+                        sx={{ color: 'primary.main' }}
+                      >
+                        <Magicpen size={18} variant="Bold" color="#6C63FF" />
+                      </IconButton>
+                    </Tooltip>
+                  </InputAdornment>
+                ),
+              }}
             />
             <TextField
               label="รายละเอียด"

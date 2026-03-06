@@ -15,7 +15,21 @@ export async function GET(request: NextRequest) {
     const userId = searchParams.get('userId');
 
     // Admin/HR สามารถดู flow ของคนอื่นได้
-    const isAdmin = ['admin', 'hr_manager'].includes(session.user.role);
+    const isAdmin = ['admin', 'hr_manager', 'hr'].includes(session.user.role || '');
+
+    // If no userId and is admin, return list of all user IDs that have custom flows (excluding default HR level 99)
+    if (!userId && isAdmin) {
+      const flows = await prisma.userApprovalFlow.findMany({
+        where: {
+          isActive: true,
+          level: { lt: 99 }
+        },
+        select: { userId: true },
+        distinct: ['userId'],
+      });
+      return NextResponse.json(flows);
+    }
+
     const targetUserId = userId && isAdmin ? parseInt(userId) : parseInt(session.user.id);
 
     const approvalFlows = await prisma.userApprovalFlow.findMany({

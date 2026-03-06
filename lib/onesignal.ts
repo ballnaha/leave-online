@@ -435,15 +435,27 @@ export async function notifyEscalated(
   return notifyUser(userId, 'escalated', {
     title: {
       en: '⚡ Leave Escalated',
-      th: '⚡ ใบลาถูกส่งต่อ',
+      th: '⚡ ใบลาถูกส่งต่อถึงฝ่ายบุคคล',
       my: '⚡ ခွင့်တိုးမြှင့်တင်ပြပြီး'
     },
     message: {
-      en: `Your ${enLeaveType} has been escalated to HR Manager due to timeout`,
-      th: `${thLeaveType}ของคุณถูกส่งไปยังผู้จัดการฝ่ายบุคคลเนื่องจากเกินเวลากำหนด`,
-      my: `သင်၏ ${myLeaveType} ကို အချိန်လွန်သောကြောင့် HR Manager ထံ တင်ပြလိုက်သည်`
+      en: `Leave request from ${leaveCode || 'employee'} has been escalated to you due to timeout`,
+      th: `ใบลาเลขที่ ${leaveCode || ''} ถูกส่งต่อถึงคุณเนื่องจากผู้อนุมัติเดิมไม่ได้ดำเนินการในเวลาที่กำหนด`,
+      my: `ခွင့်တောင်းဆိုမှု ${leaveCode || ''} ကို အချိန်လွန်သောကြောင့် သင့်ထံ တင်ပြလိုက်သည်`
     },
-    url: `${APP_URL}/leave`,
+    url: `${APP_URL}/approval/${leaveRequestId}?action=approve`,
+    buttons: [
+      {
+        id: 'approve',
+        text: '✅ อนุมัติ',
+        url: `${APP_URL}/approval/${leaveRequestId}?action=approve`,
+      },
+      {
+        id: 'reject',
+        text: '❌ ปฏิเสธ',
+        url: `${APP_URL}/approval/${leaveRequestId}?action=reject`,
+      },
+    ],
     data: {
       type: 'escalated',
       leaveRequestId,

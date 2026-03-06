@@ -43,21 +43,27 @@ type TabType = 'all' | 'action_required' | 'my_leaves' | 'system';
 const getNotificationCategory = (
     type: string,
     realTimeStatus?: string,
-    hasUserActed?: boolean
+    hasUserActed?: boolean,
+    isWaitingForCurrentUser?: boolean
 ): 'action_required' | 'my_leaves' | 'system' => {
     // สำหรับ notification ประเภท action_required (approval_pending, reminder)
     if (type === 'approval_pending' || type === 'reminder') {
         // 1. ถ้า user ได้ทำ action (approve/reject) ไปแล้ว ให้ย้ายไป system tab
         if (hasUserActed) {
-            return 'system'; // ย้ายไป tab "ข้อความระบบ" เพราะไม่ต้องดำเนินการแล้ว
+            return 'system';
         }
 
-        // 2. ถ้าใบลาถูก approve, reject, หรือ cancelled โดยคนอื่น ก็ย้ายไป system tab
+        // 2. ถ้าใบลาเสร็จสิ้นแล้ว หรือ ไม่ใช่คิวของ user คนนี้แล้ว ให้ย้ายไป system tab
         if (realTimeStatus && ['approved', 'rejected', 'cancelled'].includes(realTimeStatus)) {
-            return 'system'; // ย้ายไป tab "ข้อความระบบ"
+            return 'system';
         }
 
-        return 'action_required'; // ยังต้องดำเนินการ
+        // ถ้าใบลาอยู่ในสถานะ in_progress แต่ระบบระบุว่า "ไม่ใช่คิวเราแล้ว" (เช่น มีคนอื่นกดแทน หรือข้ามเลเวล)
+        if (realTimeStatus === 'in_progress' && isWaitingForCurrentUser === false) {
+            return 'system';
+        }
+
+        return 'action_required';
     }
 
     switch (type) {
@@ -193,7 +199,7 @@ export default function NotificationsPage() {
     const filteredNotifications = useMemo(() => {
         if (activeTab === 'all') return notifications;
         return notifications.filter(n =>
-            getNotificationCategory(n.type, n.data?.realTimeStatus, n.data?.hasUserActed) === activeTab
+            getNotificationCategory(n.type, n.data?.realTimeStatus, n.data?.hasUserActed, n.data?.isWaitingForCurrentUser) === activeTab
         );
     }, [notifications, activeTab]);
 
@@ -208,7 +214,7 @@ export default function NotificationsPage() {
         notifications.forEach(n => {
             if (!n.isRead) {
                 counts.all++;
-                counts[getNotificationCategory(n.type, n.data?.realTimeStatus, n.data?.hasUserActed)]++;
+                counts[getNotificationCategory(n.type, n.data?.realTimeStatus, n.data?.hasUserActed, n.data?.isWaitingForCurrentUser)]++;
             }
         });
         return counts;

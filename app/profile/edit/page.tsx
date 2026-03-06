@@ -900,7 +900,12 @@ export default function EditProfilePage() {
                 const sec = sections.find(s => s.code === formData.sectionId || s.name === formData.sectionId);
                 return sec?.name || profile?.sectionName || '';
             case 'shift':
-                const shifts: Record<string, string> = { shift_a: t('shift_day', 'กะ A'), shift_b: t('shift_night', 'กะ B') };
+                const shifts: Record<string, string> = {
+                    shift_a: t('shift_day', 'กะ A'),
+                    shift_b: t('shift_night', 'กะ B'),
+                    day: t('shift_day', 'กะ A'),
+                    night: t('shift_night', 'กะ B')
+                };
                 return formData.shift ? shifts[formData.shift] || formData.shift : '';
             case 'gender':
                 const genders: Record<string, string> = { male: t('gender_male', 'ชาย'), female: t('gender_female', 'หญิง') };

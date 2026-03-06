@@ -2,7 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import { notifyLeaveApproved } from '@/lib/onesignal';
+import { notifyLeaveApproved, notifyLeaveSubmitted } from '@/lib/onesignal';
+import { createApprovalSteps, calculateEscalationDeadline } from '@/lib/escalation';
+import { calculateVacationDays } from '@/lib/vacationCalculator';
 
 // Map leave type to short code
 const leaveTypeCodeMap: Record<string, string> = {
@@ -15,6 +17,9 @@ const leaveTypeCodeMap: Record<string, string> = {
     absent: 'AB',
     other: 'OT',
 };
+
+// ประเภทการลาที่ไม่จำกัดวัน
+const unlimitedLeaveTypes = ['unpaid', 'other', 'sick_no_pay', 'personal_no_pay', 'paternity_care'];
 
 // Generate leave code: SK2511001 (type + year + month + running)
 async function generateLeaveCode(leaveType: string, date: Date): Promise<string> {
@@ -79,6 +84,8 @@ export async function POST(
         const { id } = await params;
         const originalLeaveId = parseInt(id);
         const approverId = parseInt(session.user.id);
+        const isAdmin = ['admin', 'hr', 'hr_manager'].includes(session.user.role);
+
         const body = await request.json();
         const { splits, comment } = body as { splits: SplitPart[]; comment?: string };
 
@@ -113,12 +120,111 @@ export async function POST(
             );
         }
 
-        // ตรวจสอบว่าเป็น hr_manager เท่านั้นที่แยกใบลาได้
-        if (session.user.role !== 'hr_manager') {
+        // ตรวจสอบสิทธิ์การอนุมัติ (เหมือนกับ approve route)
+        const pendingApproval = isAdmin
+            ? originalLeave.approvals.find(
+                (a) => a.level === originalLeave.currentLevel && a.status === 'pending'
+            )
+            : originalLeave.approvals.find(
+                (a) =>
+                    a.approverId === approverId &&
+                    a.level === originalLeave.currentLevel &&
+                    a.status === 'pending'
+            );
+
+        if (!pendingApproval) {
             return NextResponse.json(
-                { error: 'เฉพาะ HR Manager เท่านั้นที่สามารถแยกใบลาได้' },
+                { error: 'คุณไม่มีสิทธิ์ในการจัดการใบลาใบนี้' },
                 { status: 403 }
             );
+        }
+
+        // ============ ตรวจสอบประเภทการลาที่ถูกต้อง ============
+        // ดึงประเภทการลาทั้งหมดที่ active
+        const activeLeaveTypes = await prisma.leaveType.findMany({
+            where: { isActive: true },
+            select: { code: true, name: true, maxDaysPerYear: true }
+        });
+        const activeLeaveTypeCodes = activeLeaveTypes.map(t => t.code);
+
+        // ตรวจสอบว่าทุก split ใช้ประเภทการลาที่มีอยู่จริง
+        for (const split of splits) {
+            if (!activeLeaveTypeCodes.includes(split.leaveType)) {
+                return NextResponse.json(
+                    { error: `ประเภทการลา "${split.leaveType}" ไม่มีในระบบหรือถูกปิดใช้งาน` },
+                    { status: 400 }
+                );
+            }
+        }
+
+        // ============ ตรวจสอบวันลาคงเหลือ ============
+        // คำนวณปีที่เกี่ยวข้อง (ใช้ปีของวันเริ่มลา)
+        const leaveYear = new Date(originalLeave.startDate).getFullYear();
+
+        // ดึงวันลาที่ใช้ไปแล้วในปีนี้สำหรับแต่ละประเภท (เฉพาะ approved และ pending/in_progress ไม่รวมใบลาเดิม)
+        const usedLeaves = await prisma.leaveRequest.groupBy({
+            by: ['leaveType'],
+            where: {
+                userId: originalLeave.userId,
+                status: { in: ['approved', 'pending', 'in_progress', 'completed'] },
+                id: { not: originalLeaveId }, // ไม่นับใบลาเดิมที่กำลังจะถูกยกเลิก
+                startDate: {
+                    gte: new Date(leaveYear, 0, 1),
+                    lt: new Date(leaveYear + 1, 0, 1)
+                }
+            },
+            _sum: { totalDays: true }
+        });
+
+        // สร้าง map ของวันลาที่ใช้ไป
+        const usedDaysMap: Record<string, number> = {};
+        usedLeaves.forEach(leave => {
+            usedDaysMap[leave.leaveType] = leave._sum.totalDays || 0;
+        });
+
+        // รวมวันลาที่จะแยกใหม่ตามประเภท
+        const newDaysByType: Record<string, number> = {};
+        for (const split of splits) {
+            newDaysByType[split.leaveType] = (newDaysByType[split.leaveType] || 0) + split.totalDays;
+        }
+
+        // ตรวจสอบโควต้าสำหรับแต่ละประเภทที่ไม่ใช่ Unlimited
+        for (const [leaveTypeCode, newDays] of Object.entries(newDaysByType)) {
+            // ข้ามประเภทที่ไม่จำกัดวัน
+            if (unlimitedLeaveTypes.includes(leaveTypeCode)) {
+                continue;
+            }
+
+            const leaveTypeInfo = activeLeaveTypes.find(t => t.code === leaveTypeCode);
+            if (!leaveTypeInfo) continue;
+
+            // คำนวณ maxDays (พิเศษสำหรับ vacation)
+            let maxDays = leaveTypeInfo.maxDaysPerYear || 0;
+            if (leaveTypeCode === 'vacation' && originalLeave.user.startDate) {
+                maxDays = calculateVacationDays(
+                    originalLeave.user.startDate,
+                    leaveYear,
+                    leaveTypeInfo.maxDaysPerYear || 6
+                );
+            }
+
+            // ถ้า maxDays = 0 หรือ null ถือว่าไม่จำกัด
+            if (!maxDays || maxDays === 0) {
+                continue;
+            }
+
+            const usedDays = usedDaysMap[leaveTypeCode] || 0;
+            const totalAfterSplit = usedDays + newDays;
+
+            if (totalAfterSplit > maxDays) {
+                const remainingDays = Math.max(0, maxDays - usedDays);
+                return NextResponse.json(
+                    {
+                        error: `วันลาประเภท "${leaveTypeInfo.name}" ไม่เพียงพอ (ใช้ไปแล้ว ${usedDays} วัน, ต้องการ ${newDays} วัน, เหลือ ${remainingDays} วัน จากทั้งหมด ${maxDays} วัน)`
+                    },
+                    { status: 400 }
+                );
+            }
         }
 
         // ตรวจสอบวันที่ของ splits ว่าครอบคลุมวันที่เดิมทั้งหมด
@@ -136,6 +242,9 @@ export async function POST(
 
         const now = new Date();
         const createdLeaves: number[] = [];
+        // ถ้าเป็น HR Manager หรือ Admin ให้ Auto Approve เลย
+        // ถ้าเป็นหัวหน้างานทั่วไป ให้เริ่มกระบวนการอนุมัติใหม่ (Pending Level 1)
+        const shouldAutoApprove = isAdmin;
 
         // ใช้ transaction เพื่อความปลอดภัย
         await prisma.$transaction(async (tx) => {
@@ -157,15 +266,12 @@ export async function POST(
                 },
                 data: {
                     status: 'cancelled',
-                    comment: `แยกใบลาโดย HR Manager: ${session.user.firstName} ${session.user.lastName}${comment ? ` - ${comment}` : ''}`,
+                    comment: `แยกใบลาโดยผู้อนุมัติ: ${session.user.firstName} ${session.user.lastName}${comment ? ` - ${comment}` : ''}`,
                     actionAt: now,
                 },
             });
 
             // 3. สร้างใบลาใหม่ตาม splits
-            // hr_manager สามารถอนุมัติทันทีสำหรับทุกประเภทใบลา เพราะเป็นผู้อนุมัติคนสุดท้าย
-            const shouldAutoApprove = true; // hr_manager แยกใบลาจะอนุมัติทันทีเสมอ
-
             for (let i = 0; i < splits.length; i++) {
                 const split = splits[i];
                 const splitStart = new Date(split.startDate);
@@ -174,10 +280,8 @@ export async function POST(
                 // สร้างรหัสใบลาใหม่
                 const newLeaveCode = await generateLeaveCode(split.leaveType, splitStart);
 
-                // คำนวณ escalation deadline (+2 วัน เวลา 08:00 น.)
-                const escalationDeadline = new Date();
-                escalationDeadline.setDate(escalationDeadline.getDate() + 2);
-                escalationDeadline.setHours(8, 0, 0, 0);
+                // คำนวณ escalation deadline (13:00 ของวันถัดไป)
+                const escalationDeadline = calculateEscalationDeadline();
 
                 // สร้างใบลาใหม่
                 const newLeave = await tx.leaveRequest.create({
@@ -209,13 +313,20 @@ export async function POST(
                     await tx.leaveApproval.create({
                         data: {
                             leaveRequestId: newLeave.id,
-                            level: 99, // HR Manager level
+                            level: 99, // HR Manager/Admin level override
                             approverId: approverId,
                             status: 'approved',
                             comment: `อนุมัติอัตโนมัติจากการแยกใบลา${comment ? `: ${comment}` : ''}`,
                             actionAt: now,
                         },
                     });
+                } else {
+                    // ถ้าไม่อนุมัติทันที ให้สร้าง Approval Steps เริ่มต้นใหม่ (จะทำนอก transaction loop เพื่อเลี่ยงปัญหา async ซ้อน หรือต้องเรียก function ที่รองรับ tx)
+                    // เนื่องจาก createApprovalSteps ใน lib/escalation ใช้ prisma instance หลัก ไม่ได้รับ tx
+                    // ดังนั้นเราจะเรียก createApprovalSteps หลังจาก transaction commit แล้วสำหรับใบลาที่สร้างใหม่
+                    // แต่เพื่อความถูกต้องของข้อมูล เราควรทำใน transaction เดียวกัน
+                    // แต่ในที่นี้ architecture ของ lib แยกออกมา จึงจำใจต้องทำหลัง transaction หรือต้องแก้ lib
+                    // เราจะเลือกทำหลัง transaction loop (ใน block ถัดไป)
                 }
 
                 // Copy attachments ถ้ามี
@@ -233,7 +344,7 @@ export async function POST(
             }
         });
 
-        // แจ้งเตือนผู้ขอลาว่าใบลาได้รับการอนุมัติแล้ว (เฉพาะ hr_manager)
+        // ดำเนินการต่อหลังจาก Transaction เสร็จสิ้น
         for (const leaveId of createdLeaves) {
             const newLeave = await prisma.leaveRequest.findUnique({
                 where: { id: leaveId },
@@ -241,19 +352,35 @@ export async function POST(
             });
 
             if (newLeave) {
-                // แจ้งเตือนผู้ขอลา
-                await notifyLeaveApproved(
-                    newLeave.userId,
-                    leaveId,
-                    `${session.user.firstName} ${session.user.lastName}`,
-                    newLeave.leaveType
-                );
+                if (shouldAutoApprove) {
+                    // แจ้งเตือนผู้ขอลาว่าใบลาได้รับการอนุมัติแล้ว (HR Manager/Admin)
+                    await notifyLeaveApproved(
+                        newLeave.userId,
+                        leaveId,
+                        `${session.user.firstName} ${session.user.lastName}`,
+                        newLeave.leaveType
+                    );
+                } else {
+                    // สร้าง Approval Steps สำหรับใบลาใหม่ (หัวหน้างานแยกใบลา)
+                    await createApprovalSteps(leaveId, newLeave.userId);
+
+                    // แจ้งเตือนผู้ขอลาว่าใบลาถูกแยกและสร้างใหม่ (สถานะ Pending)
+                    await notifyLeaveSubmitted(
+                        newLeave.userId,
+                        leaveId,
+                        newLeave.leaveType,
+                        newLeave.totalDays,
+                        newLeave.startDate.toISOString(),
+                        newLeave.endDate.toISOString(),
+                        newLeave.leaveCode || undefined
+                    );
+                }
             }
         }
 
         return NextResponse.json({
             success: true,
-            message: `แยกและอนุมัติใบลาสำเร็จ สร้างใบลาใหม่ ${createdLeaves.length} รายการ (อนุมัติแล้ว)`,
+            message: `แยกใบลาสำเร็จ สร้างใบลาใหม่ ${createdLeaves.length} รายการ (${shouldAutoApprove ? 'อนุมัติแล้ว' : 'รออนุมัติ'})`,
             originalLeaveId,
             newLeaveIds: createdLeaves,
         });

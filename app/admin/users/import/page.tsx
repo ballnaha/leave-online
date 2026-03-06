@@ -297,6 +297,16 @@ export default function ImportUsersPage() {
                 return;
             }
 
+            // First, build sets of codes for quick lookup
+            const deptCodesFull = new Set<string>();
+            const sectionCodesFull = new Set<string>();
+            allDepartments.forEach(dept => {
+                deptCodesFull.add(dept.code.trim().toLowerCase());
+                dept.sections?.forEach((sec: any) => {
+                    sectionCodesFull.add(sec.code.trim().toLowerCase());
+                });
+            });
+
             // Find header row (look for 'ชื่อ' column)
             let headerRowIndex = 0;
             let currentDepartment = '';
@@ -306,14 +316,17 @@ export default function ImportUsersPage() {
                 const row = rawData[i];
                 if (row && Array.isArray(row)) {
                     // Check if any cell in this row has department or section info before headers
-                    const possibleHeader = row.find(cell => String(cell || '').trim().startsWith('ฝ่าย'));
-                    if (possibleHeader) {
-                        currentDepartment = String(possibleHeader).trim();
-                    }
-                    const possibleSection = row.find(cell => String(cell || '').trim().startsWith('แผนก'));
-                    if (possibleSection) {
-                        currentSection = String(possibleSection).trim();
-                    }
+                    // Now checking both "ฝ่าย/แผนก" prefix AND exact code match
+                    row.forEach(cell => {
+                        const cellStr = String(cell || '').trim();
+                        const cellLower = cellStr.toLowerCase();
+
+                        if (cellStr.startsWith('ฝ่าย') || deptCodesFull.has(cellLower)) {
+                            currentDepartment = cellStr;
+                        } else if (cellStr.startsWith('แผนก') || sectionCodesFull.has(cellLower)) {
+                            currentSection = cellStr;
+                        }
+                    });
 
                     // Check if this is the header row
                     if (row.some(cell => String(cell).includes('ชื่อ'))) {
@@ -339,14 +352,29 @@ export default function ImportUsersPage() {
             let departmentFromData = currentDepartment;
             let sectionFromData = currentSection;
 
-            // Build lookup map from allDepartments
+            // Build lookup maps from allDepartments
             const sectionToDeptMap = new Map<string, { deptName: string; deptCode: string }>();
+            const deptCodes = new Set<string>();
+            const sectionCodes = new Set<string>();
+
             allDepartments.forEach(dept => {
+                const dCode = dept.code.trim();
+                deptCodes.add(dCode);
+                deptCodes.add(dCode.toLowerCase());
+
                 dept.sections?.forEach((sec: any) => {
                     const secName = sec.name.trim();
+                    const secCode = sec.code.trim();
+                    sectionCodes.add(secCode);
+                    sectionCodes.add(secCode.toLowerCase());
+
                     const info = { deptName: dept.name, deptCode: dept.code };
 
-                    // Add variations
+                    // Add by code
+                    sectionToDeptMap.set(secCode, info);
+                    sectionToDeptMap.set(secCode.toLowerCase(), info);
+
+                    // Add by name
                     sectionToDeptMap.set(secName, info);
                     sectionToDeptMap.set(secName.toLowerCase(), info);
 
@@ -369,16 +397,18 @@ export default function ImportUsersPage() {
                 const row = rawData[i] as unknown[];
                 if (!row || row.length === 0) continue;
 
-                // Check for hierarchical headers in the name column (as seen in user image)
+                // Check for hierarchical headers in the name column
                 const nameValueRaw = String(row[nameIndex] || '').trim();
 
-                if (nameValueRaw.startsWith('ฝ่าย')) {
+                // Detect if it's a Department (by "ฝ่าย" prefix or by Code match)
+                if (nameValueRaw.startsWith('ฝ่าย') || deptCodes.has(nameValueRaw) || deptCodes.has(nameValueRaw.toLowerCase())) {
                     departmentFromData = nameValueRaw;
                     sectionFromData = ''; // Reset section when new department starts
                     continue;
                 }
 
-                if (nameValueRaw.startsWith('แผนก')) {
+                // Detect if it's a Section (by "แผนก" prefix or by Code match)
+                if (nameValueRaw.startsWith('แผนก') || sectionCodes.has(nameValueRaw) || sectionCodes.has(nameValueRaw.toLowerCase())) {
                     sectionFromData = nameValueRaw;
                     continue;
                 }

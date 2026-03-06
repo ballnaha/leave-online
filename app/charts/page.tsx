@@ -76,6 +76,9 @@ const leaveTypeConfig: Record<string, { icon: any; gradient: string; color: stri
     sterilization: { icon: Health, gradient: 'linear-gradient(135deg, #2DCECC 0%, #2D8BCC 100%)', color: '#2DCECC', glassColor: 'rgba(45, 206, 204, 0.15)' },
     business: { icon: Car, gradient: 'linear-gradient(135deg, #8965E0 0%, #BC65E0 100%)', color: '#8965E0', glassColor: 'rgba(137, 101, 224, 0.15)' },
     unpaid: { icon: MoneySend, gradient: 'linear-gradient(135deg, #F5365C 0%, #F56036 100%)', color: '#F5365C', glassColor: 'rgba(245, 54, 92, 0.15)' },
+    sick_no_pay: { icon: Health, gradient: 'linear-gradient(135deg, #F5365C 0%, #F56036 100%)', color: '#F5365C', glassColor: 'rgba(245, 54, 92, 0.15)' },
+    personal_no_pay: { icon: Briefcase, gradient: 'linear-gradient(135deg, #F5365C 0%, #F56036 100%)', color: '#F5365C', glassColor: 'rgba(245, 54, 92, 0.15)' },
+    paternity_care: { icon: Lovely, gradient: 'linear-gradient(135deg, #2DCECC 0%, #2D8BCC 100%)', color: '#2DCECC', glassColor: 'rgba(45, 206, 204, 0.15)' },
     other: { icon: MessageQuestion, gradient: 'linear-gradient(135deg, #5E72E4 0%, #825EE4 100%)', color: '#8898AA', glassColor: 'rgba(136, 152, 170, 0.15)' },
     default: { icon: MessageQuestion, gradient: 'linear-gradient(135deg, #8898AA 0%, #6A7A8A 100%)', color: '#8898AA', glassColor: 'rgba(136, 152, 170, 0.15)' },
 };

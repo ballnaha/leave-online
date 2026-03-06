@@ -43,6 +43,7 @@ export async function GET(request: NextRequest) {
         select: {
           id: true,
           status: true,
+          currentLevel: true,
           approvals: {
             include: { approver: { select: { id: true, firstName: true, lastName: true } } },
             orderBy: { level: 'asc' },
@@ -56,12 +57,19 @@ export async function GET(request: NextRequest) {
         let userActionStatus: string | undefined;
         let isWaitingForCurrentUser = false;
 
-        // หา pending approval ปัจจุบัน
-        const pendingApproval = lr.approvals.find(a => a.status === 'pending');
-        if (pendingApproval) {
-          waitingFor = `${pendingApproval.approver.firstName} ${pendingApproval.approver.lastName}`;
-          // ตรวจสอบว่าผู้อนุมัติในคิวปัจจุบันเป็น user นี้หรือไม่
-          isWaitingForCurrentUser = pendingApproval.approverId === userId;
+        // หา pending approval ใน level ปัจจุบันทั้งกลุ่ม
+        const currentLevelApprovals = lr.approvals.filter(a => a.level === lr.currentLevel && a.status === 'pending');
+
+        if (currentLevelApprovals.length > 0) {
+          // รายชื่อคนที่รออนุมัติ (ถ้ามีคนเดียวโชว์ชื่อ ถ้ามีหลายคนโชว์ชื่อคนแรก + และคนอื่นๆ)
+          if (currentLevelApprovals.length === 1) {
+            waitingFor = `${currentLevelApprovals[0].approver.firstName} ${currentLevelApprovals[0].approver.lastName}`;
+          } else {
+            waitingFor = `${currentLevelApprovals[0].approver.firstName} และคนอื่นๆ`;
+          }
+
+          // ตรวจสอบว่า user นี้อยู่ในกลุ่มที่ต้องอนุมัติใน Level นี้หรือไม่
+          isWaitingForCurrentUser = currentLevelApprovals.some(a => a.approverId === userId);
         }
 
         // ตรวจสอบว่า user นี้ได้ทำ action กับใบลานี้ไปแล้วหรือยัง

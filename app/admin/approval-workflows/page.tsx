@@ -31,6 +31,13 @@ import {
   MenuItem,
   Stack,
   Switch,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
+  Fade,
+  ToggleButton,
+  ToggleButtonGroup,
+  Divider,
 } from '@mui/material';
 import {
   Add,
@@ -43,6 +50,9 @@ import {
   Layer,
   People,
   ArrowRight2,
+  RowVertical,
+  ArrowDown2,
+  RowHorizontal,
 } from 'iconsax-react';
 import WorkflowDialog from './WorkflowDialog';
 import ConfirmDialog from '../components/ConfirmDialog';
@@ -70,6 +80,7 @@ interface ApprovalWorkflowStep {
     firstName: string;
     lastName: string;
   };
+  roleNames?: string[];
 }
 
 interface Company {
@@ -105,7 +116,12 @@ const formatDateShort = (iso: string | undefined) => {
 };
 
 const getStepLabel = (step: ApprovalWorkflowStep) => {
-  if (step.approverRole) return formatRole(step.approverRole);
+  const roleLabel = step.approverRole ? formatRole(step.approverRole) : '';
+  const names = step.roleNames && step.roleNames.length > 0
+    ? ` (${step.roleNames.join(', ')})`
+    : '';
+
+  if (step.approverRole) return `${roleLabel}${names}`;
   if (step.approver) return `${step.approver.firstName}`;
   return '?';
 };
@@ -247,6 +263,11 @@ export default function ApprovalWorkflowsPage() {
   const [selectedWorkflow, setSelectedWorkflow] = useState<ApprovalWorkflow | undefined>(undefined);
   const [searchQuery, setSearchQuery] = useState('');
   const [companyFilter, setCompanyFilter] = useState<string>('all');
+  const [deptFilter, setDeptFilter] = useState<string>('all');
+  const [sectionFilter, setSectionFilter] = useState<string>('all');
+
+  // View Mode: 'list' or 'tree'
+  const [viewMode, setViewMode] = useState<'list' | 'tree'>('list');
 
   // Pagination State
   const [page, setPage] = useState(0);
@@ -414,15 +435,22 @@ export default function ApprovalWorkflowsPage() {
   // Filter workflows based on search and filters
   const filteredWorkflows = workflows.filter((workflow) => {
     const companyName = getCompanyName(workflow.company) || '';
+    const departmentName = getDepartmentName(workflow.department) || '';
+    const sectionName = getSectionName(workflow.section) || '';
+
     const matchesSearch =
       workflow.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (workflow.description?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false) ||
       companyName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      departmentName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      sectionName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (workflow.department?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false);
 
     const matchesCompany = companyFilter === 'all' || workflow.company === companyFilter;
+    const matchesDept = deptFilter === 'all' || workflow.department === deptFilter;
+    const matchesSection = sectionFilter === 'all' || workflow.section === sectionFilter;
 
-    return matchesSearch && matchesCompany;
+    return matchesSearch && matchesCompany && matchesDept && matchesSection;
   });
 
   // Paginated workflows
@@ -445,7 +473,30 @@ export default function ApprovalWorkflowsPage() {
   // Reset page when filters change
   useEffect(() => {
     setPage(0);
-  }, [searchQuery, companyFilter]);
+  }, [searchQuery, companyFilter, deptFilter, sectionFilter]);
+
+  // Cascading filter logic
+  const handleCompanyChange = (value: string) => {
+    setCompanyFilter(value);
+    setDeptFilter('all');
+    setSectionFilter('all');
+  };
+
+  const handleDeptChange = (value: string) => {
+    setDeptFilter(value);
+    setSectionFilter('all');
+  };
+
+  const filteredDepts = departments.filter(d => companyFilter === 'all' || d.company === companyFilter);
+  const filteredSects = sections.filter(s => {
+    if (deptFilter !== 'all') {
+      return s.departmentCode === deptFilter;
+    }
+    if (companyFilter !== 'all') {
+      return s.companyCode === companyFilter;
+    }
+    return true;
+  });
 
   // Stats
   const totalWorkflows = workflows.length;
@@ -478,22 +529,56 @@ export default function ApprovalWorkflowsPage() {
             </Box>
           </Box>
         </Box>
-        <Button
-          variant="contained"
-          startIcon={<Add size={18} color="#fff" />}
-          onClick={handleCreate}
-          sx={{
-            borderRadius: 1,
-            px: 3,
-            py: 1.25,
-            boxShadow: `0 4px 14px ${alpha(theme.palette.primary.main, 0.4)}`,
-            '&:hover': {
-              boxShadow: `0 6px 20px ${alpha(theme.palette.primary.main, 0.5)}`,
-            },
-          }}
-        >
-          เพิ่ม Workflow
-        </Button>
+        <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+          <ToggleButtonGroup
+            value={viewMode}
+            exclusive
+            onChange={(_e, val) => val && setViewMode(val)}
+            size="small"
+            sx={{
+              bgcolor: 'background.paper',
+              border: '1px solid',
+              borderColor: 'divider',
+              '& .MuiToggleButton-root': {
+                border: 'none',
+                px: 2,
+                '&.Mui-selected': {
+                  bgcolor: alpha(theme.palette.primary.main, 0.1),
+                  color: 'primary.main',
+                  '&:hover': {
+                    bgcolor: alpha(theme.palette.primary.main, 0.15),
+                  },
+                },
+              },
+            }}
+          >
+            <ToggleButton value="list">
+              <RowVertical size={18} variant="Bold" color="#6C63FF" style={{ marginRight: 8 }} />
+              รายการ
+            </ToggleButton>
+            <ToggleButton value="tree">
+              <Hierarchy size={18} variant="Bold" color="#6C63FF" style={{ marginRight: 8 }} />
+              แบ่งกลุ่ม
+            </ToggleButton>
+          </ToggleButtonGroup>
+
+          <Button
+            variant="contained"
+            startIcon={<Add size={18} color="#fff" />}
+            onClick={handleCreate}
+            sx={{
+              borderRadius: 1,
+              px: 3,
+              py: 1.25,
+              boxShadow: `0 4px 14px ${alpha(theme.palette.primary.main, 0.4)}`,
+              '&:hover': {
+                boxShadow: `0 6px 20px ${alpha(theme.palette.primary.main, 0.5)}`,
+              },
+            }}
+          >
+            เพิ่ม Workflow
+          </Button>
+        </Box>
       </Box>
 
       {/* Error Alert */}
@@ -562,13 +647,17 @@ export default function ApprovalWorkflowsPage() {
         <Box
           sx={{
             display: 'grid',
-            gridTemplateColumns: { xs: '1fr auto', sm: '2fr 1fr auto' },
+            gridTemplateColumns: {
+              xs: '1fr',
+              sm: 'repeat(2, 1fr)',
+              md: '1.5fr 1fr 1fr 1fr auto'
+            },
             gap: 2,
             alignItems: 'center',
           }}
         >
           <TextField
-            placeholder="ค้นหา..."
+            placeholder="ค้นหาชื่อ หรือรายละเอียด..."
             size="small"
             fullWidth
             value={searchQuery}
@@ -582,22 +671,44 @@ export default function ApprovalWorkflowsPage() {
             }}
           />
 
-          <FormControl
-            size="small"
-            fullWidth
-            sx={{
-              gridColumn: { xs: '1 / -1', sm: 'auto' },
-            }}
-          >
+          <FormControl size="small" fullWidth>
             <InputLabel>บริษัท</InputLabel>
             <Select
               value={companyFilter}
               label="บริษัท"
-              onChange={(e) => setCompanyFilter(e.target.value)}
+              onChange={(e) => handleCompanyChange(e.target.value)}
             >
               <MenuItem value="all">ทั้งหมด</MenuItem>
               {companies.map((company) => (
                 <MenuItem key={company.code} value={company.code}>{company.name}</MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+
+          <FormControl size="small" fullWidth disabled={companyFilter === 'all' && filteredDepts.length === 0}>
+            <InputLabel>ฝ่าย</InputLabel>
+            <Select
+              value={deptFilter}
+              label="ฝ่าย"
+              onChange={(e) => handleDeptChange(e.target.value)}
+            >
+              <MenuItem value="all">ทั้งหมด</MenuItem>
+              {filteredDepts.map((dept) => (
+                <MenuItem key={dept.code} value={dept.code}>{dept.code} - {dept.name}</MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+
+          <FormControl size="small" fullWidth disabled={deptFilter === 'all'}>
+            <InputLabel>แผนก</InputLabel>
+            <Select
+              value={sectionFilter}
+              label="แผนก"
+              onChange={(e) => setSectionFilter(e.target.value)}
+            >
+              <MenuItem value="all">ทั้งหมด</MenuItem>
+              {filteredSects.map((section) => (
+                <MenuItem key={section.code} value={section.code}>{section.code} - {section.name}</MenuItem>
               ))}
             </Select>
           </FormControl>
@@ -609,11 +720,9 @@ export default function ApprovalWorkflowsPage() {
               sx={{
                 bgcolor: alpha(theme.palette.primary.main, 0.1),
                 '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.2) },
-                width: { xs: 44, sm: 'auto' },
-                height: { xs: 44, sm: 'auto' },
-                justifySelf: { xs: 'end', sm: 'auto' },
-                gridRow: { xs: 1, sm: 'auto' },
-                gridColumn: { xs: 2, sm: 'auto' },
+                width: 40,
+                height: 40,
+                ml: { md: 1 }
               }}
             >
               <Refresh2 size={18} color="#6C63FF" className={loading ? 'animate-spin' : ''} />
@@ -622,10 +731,134 @@ export default function ApprovalWorkflowsPage() {
         </Box>
       </Paper>
 
-      {/* Mobile/Tablet Card View (Visible on xs, sm) */}
+      {/* Tree View - Grouped by structure */}
+      {viewMode === 'tree' && (
+        <Fade in={viewMode === 'tree'}>
+          <Box sx={{ mb: 4 }}>
+            {/* Global Workflows Section */}
+            {filteredWorkflows.filter(w => !w.company && !w.department && !w.section).length > 0 && (
+              <Box sx={{ mb: 3 }}>
+                <Typography variant="subtitle1" fontWeight={700} color="success.main" sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+                  <People size={20} variant="Bold" />
+                  Global Workflows (ใช้ทั้งองค์กร)
+                </Typography>
+                <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(2, 1fr)', lg: 'repeat(3, 1fr)' }, gap: 2 }}>
+                  {filteredWorkflows.filter(w => !w.company && !w.department && !w.section).map(workflow => (
+                    <WorkflowSmallCard
+                      key={workflow.id}
+                      workflow={workflow}
+                      onEdit={() => handleEdit(workflow)}
+                      onDelete={() => handleDelete(workflow)}
+                      onToggle={() => handleToggleActive(workflow)}
+                      isLoading={toggleLoadingId === workflow.id}
+                    />
+                  ))}
+                </Box>
+              </Box>
+            )}
+
+            {/* Grouped by Company > Dept */}
+            {companies
+              .filter(c => companyFilter === 'all' || c.code === companyFilter)
+              .map(company => {
+                const companyWorkflows = filteredWorkflows.filter(w => w.company === company.code);
+                if (companyWorkflows.length === 0) return null;
+
+                return (
+                  <Accordion
+                    key={company.code}
+                    sx={{
+                      mb: 2,
+                      borderRadius: 1,
+                      overflow: 'hidden',
+                      '&:before': { display: 'none' },
+                      border: '1px solid',
+                      borderColor: 'divider',
+                      boxShadow: 'none',
+                    }}
+                  >
+                    <AccordionSummary
+                      expandIcon={<ArrowDown2 size={20} variant="Bold" color="#6C63FF" />}
+                      sx={{
+                        bgcolor: alpha(theme.palette.primary.main, 0.03),
+                        '& .MuiAccordionSummary-content': { alignItems: 'center', gap: 1 }
+                      }}
+                    >
+                      <Building size={20} color={theme.palette.primary.main} variant="Bold" />
+                      <Typography fontWeight={700}>
+                        {company.name} ({company.code})
+                      </Typography>
+                      <Chip
+                        label={`${companyWorkflows.length} Workflows`}
+                        size="small"
+                        sx={{ ml: 2, height: 20, fontSize: '0.7rem', bgcolor: alpha(theme.palette.primary.main, 0.1), color: 'primary.main' }}
+                      />
+                    </AccordionSummary>
+                    <AccordionDetails sx={{ p: 2 }}>
+                      {/* Workflows directly for this company */}
+                      {companyWorkflows.filter(w => !w.department).length > 0 && (
+                        <Box sx={{ mb: 3 }}>
+                          <Typography variant="caption" color="text.secondary" fontWeight={600} gutterBottom display="block">
+                            แบบร่างระดับบริษัท
+                          </Typography>
+                          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(2, 1fr)', lg: 'repeat(3, 1fr)' }, gap: 2 }}>
+                            {companyWorkflows.filter(w => !w.department).map(workflow => (
+                              <WorkflowSmallCard
+                                key={workflow.id}
+                                workflow={workflow}
+                                onEdit={() => handleEdit(workflow)}
+                                onDelete={() => handleDelete(workflow)}
+                                onToggle={() => handleToggleActive(workflow)}
+                                isLoading={toggleLoadingId === workflow.id}
+                              />
+                            ))}
+                          </Box>
+                        </Box>
+                      )}
+
+                      {/* Grouped by Departments */}
+                      {departments
+                        .filter(d => d.company === company.code)
+                        .map(dept => {
+                          const deptWorkflows = companyWorkflows.filter(w => w.department === dept.code);
+                          if (deptWorkflows.length === 0) return null;
+
+                          return (
+                            <Box key={dept.code} sx={{ mb: 3, pl: { md: 2 } }}>
+                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 }}>
+                                <Layer size={18} color={theme.palette.secondary.main} variant="Bold" />
+                                <Typography variant="subtitle2" fontWeight={700} color="secondary.main">
+                                  ฝ่าย: {dept.name} ({dept.code})
+                                </Typography>
+                              </Box>
+
+                              <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(2, 1fr)', lg: 'repeat(3, 1fr)' }, gap: 2, ml: { md: 3 } }}>
+                                {deptWorkflows.map(workflow => (
+                                  <WorkflowSmallCard
+                                    key={workflow.id}
+                                    workflow={workflow}
+                                    onEdit={() => handleEdit(workflow)}
+                                    onDelete={() => handleDelete(workflow)}
+                                    onToggle={() => handleToggleActive(workflow)}
+                                    isLoading={toggleLoadingId === workflow.id}
+                                  />
+                                ))}
+                              </Box>
+                            </Box>
+                          );
+                        })}
+                    </AccordionDetails>
+                  </Accordion>
+                );
+              })}
+          </Box>
+        </Fade>
+      )}
+
+      {/* Mobile/Tablet Card View (Visible on xs, sm when list mode) */}
       <Box
         sx={{
-          display: { xs: 'grid', md: 'none' },
+          display: viewMode === 'list' ? { xs: 'grid', md: 'none' } : 'none',
           gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)' },
           gap: 2,
         }}
@@ -737,7 +970,7 @@ export default function ApprovalWorkflowsPage() {
                   {workflow.steps.map((step, index) => (
                     <React.Fragment key={step.id}>
                       {index > 0 && (
-                        <ArrowRight2 size={12} color={theme.palette.text.disabled} />
+                        <ArrowRight2 size={12} color={theme.palette.primary.main} variant="Bold" />
                       )}
                       <Chip
                         label={
@@ -790,10 +1023,10 @@ export default function ApprovalWorkflowsPage() {
         )}
       </Box>
 
-      {/* Desktop Table View (Hidden on xs, sm) */}
+      {/* Desktop Table View (Hidden on xs, sm when list mode) */}
       <Paper
         sx={{
-          display: { xs: 'none', md: 'block' },
+          display: viewMode === 'list' ? { xs: 'none', md: 'block' } : 'none',
           borderRadius: 1,
           border: '1px solid',
           borderColor: 'divider',
@@ -861,7 +1094,7 @@ export default function ApprovalWorkflowsPage() {
                         </Box>
                       </TableCell>
                       <TableCell>
-                        <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap>
+                        <Stack direction="column" spacing={0.5} alignItems="flex-start">
                           {workflow.company && (
                             <Chip
                               label={getCompanyName(workflow.company)}
@@ -898,49 +1131,53 @@ export default function ApprovalWorkflowsPage() {
                           )}
                         </Stack>
                       </TableCell>
-                      <TableCell>
-                        <Tooltip
-                          title={
-                            <Stack direction="row" spacing={0.5} alignItems="center" flexWrap="wrap" useFlexGap>
-                              {workflow.steps
-                                .slice()
-                                .sort((a, b) => (a.level ?? 0) - (b.level ?? 0))
-                                .map((step, index) => (
-                                  <React.Fragment key={step.id}>
-                                    {index > 0 && (
-                                      <ArrowRight2 size={14} color="white" style={{ flexShrink: 0 }} />
-                                    )}
-                                    <Chip
-                                      label={getStepLabel(step)}
-                                      size="small"
-                                      variant="filled"
-                                      sx={{
-                                        bgcolor: alpha('#000000', 0.1),
-                                        color: 'white',
-                                        fontWeight: 500,
-                                      }}
-                                    />
-                                  </React.Fragment>
-                                ))}
-                            </Stack>
-                          }
-                          placement="top"
-                          arrow
-                        >
-                          <Typography
-                            variant="body2"
-                            sx={{
-                              maxWidth: 460,
-                              whiteSpace: 'nowrap',
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis',
-                              color: 'text.primary',
-                              cursor: 'help',
-                            }}
-                          >
-                            {getWorkflowStepsPreview(workflow.steps)}
-                          </Typography>
-                        </Tooltip>
+                      <TableCell sx={{ py: 2, minWidth: 300 }}>
+                        <Stack spacing={1}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 0.5 }}>
+                            {workflow.steps
+                              .slice()
+                              .sort((a, b) => (a.level ?? 0) - (b.level ?? 0))
+                              .map((step, index) => (
+                                <React.Fragment key={step.id}>
+                                  {index > 0 && (
+                                    <ArrowRight2 size={14} color={theme.palette.primary.main} variant="Bold" />
+                                  )}
+                                  <Typography variant="body2" fontWeight={700} sx={{ color: 'primary.main' }}>
+                                    {step.approverRole ? formatRole(step.approverRole) : (step.approver?.firstName ?? '?')}
+                                  </Typography>
+                                </React.Fragment>
+                              ))}
+                          </Box>
+                          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.25 }}>
+                            {workflow.steps
+                              .slice()
+                              .sort((a, b) => (a.level ?? 0) - (b.level ?? 0))
+                              .map((step) => {
+                                if (!step.roleNames || step.roleNames.length === 0) return null;
+                                return (
+                                  <Typography
+                                    key={step.id}
+                                    variant="body2"
+                                    sx={{
+                                      color: 'text.secondary',
+                                      lineHeight: 1.4,
+                                      display: 'flex',
+                                      alignItems: 'flex-start',
+                                      gap: 0.5,
+                                      fontSize: '0.875rem',
+                                    }}
+                                  >
+                                    <Box component="span" sx={{ color: 'primary.main', fontWeight: 600 }}>•</Box>
+                                    <Box component="span">
+                                      <Box component="span" sx={{ fontWeight: 600, color: 'text.primary' }}>
+                                        {step.approverRole ? formatRole(step.approverRole) : 'ผู้อนุมัติ'}:
+                                      </Box> {step.roleNames.join(', ')}
+                                    </Box>
+                                  </Typography>
+                                );
+                              })}
+                          </Box>
+                        </Stack>
                       </TableCell>
                       <TableCell align="center">
                         <Chip
@@ -1051,5 +1288,96 @@ export default function ApprovalWorkflowsPage() {
         type="delete"
       />
     </Box>
+  );
+}
+// Small Card for Tree View
+function WorkflowSmallCard({
+  workflow,
+  onEdit,
+  onDelete,
+  onToggle,
+  isLoading
+}: {
+  workflow: ApprovalWorkflow;
+  onEdit: () => void;
+  onDelete: () => void;
+  onToggle: () => void;
+  isLoading: boolean;
+}) {
+  const theme = useTheme();
+
+  return (
+    <Paper
+      elevation={0}
+      sx={{
+        p: 2,
+        borderRadius: 1,
+        border: '1px solid',
+        borderColor: 'divider',
+        transition: 'all 0.2s',
+        '&:hover': {
+          borderColor: 'primary.main',
+          boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
+        }
+      }}
+    >
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1.5 }}>
+        <Box sx={{ maxWidth: 'calc(100% - 40px)' }}>
+          <Typography variant="body2" fontWeight={700} sx={{
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis'
+          }}>
+            {workflow.name}
+          </Typography>
+          {workflow.section && (
+            <Chip
+              label={`แผนก: ${workflow.section}`}
+              size="small"
+              variant="outlined"
+              sx={{ height: 18, fontSize: '0.65rem', mt: 0.5 }}
+            />
+          )}
+        </Box>
+        <Switch
+          size="small"
+          checked={workflow.isActive}
+          disabled={isLoading}
+          onChange={onToggle}
+        />
+      </Box>
+
+      <Box sx={{ bgcolor: alpha(theme.palette.background.default, 0.5), p: 1.5, borderRadius: 1, mb: 1.5 }}>
+        <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600, display: 'block', mb: 0.5 }}>
+          ลำดับการอนุมัติ:
+        </Typography>
+        <Stack spacing={0.5}>
+          {workflow.steps
+            .slice()
+            .sort((a, b) => (a.level ?? 0) - (b.level ?? 0))
+            .map((step) => (
+              <Box key={step.id}>
+                <Typography variant="caption" fontWeight={700} color="primary.main" display="block">
+                  {step.approverRole ? formatRole(step.approverRole) : (step.approver?.firstName ?? '?')}
+                </Typography>
+                {step.roleNames && step.roleNames.length > 0 && (
+                  <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.65rem', display: 'block', pl: 1, borderLeft: '1px solid', borderColor: 'divider', ml: 0.5 }}>
+                    {step.roleNames.join(', ')}
+                  </Typography>
+                )}
+              </Box>
+            ))}
+        </Stack>
+      </Box>
+
+      <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
+        <IconButton size="small" onClick={onEdit} sx={{ color: 'primary.main' }}>
+          <Edit2 size={16} />
+        </IconButton>
+        <IconButton size="small" onClick={onDelete} sx={{ color: 'error.main' }}>
+          <Trash size={16} />
+        </IconButton>
+      </Box>
+    </Paper>
   );
 }

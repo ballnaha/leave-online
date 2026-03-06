@@ -2,9 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions, isAdminRole } from '@/lib/auth';
 import prisma from '@/lib/prisma';
+import { calculateEscalationDeadline } from '@/lib/escalation';
 
-// Fixed policy: Escalate at 08:00 AM, 2 days after creation
-const REMINDER_HOURS = 24;
+// Fixed policy: Escalate at 13:00 PM the next day
+const REMINDER_HOURS = 4; // Warn at 09:00 AM (4 hours before 13:00)
 
 // GET - Fetch escalation stats (Auto Escalation is always enabled)
 export async function GET(req: NextRequest) {
@@ -42,10 +43,8 @@ export async function GET(req: NextRequest) {
         });
 
         const pending = pendingLeaves.map((leave) => {
-            // คำนวณ deadline ตาม Policy: Created + 2 days at 08:00
-            const deadline = new Date(leave.createdAt);
-            deadline.setDate(deadline.getDate() + 2);
-            deadline.setHours(8, 0, 0, 0);
+            // ใช้ค่าจาก DB ถ้ามี ถ้าไม่มีให้คำนวณใหม่ตาม Policy: Created + 1 day at 13:00
+            const deadline = leave.escalationDeadline || calculateEscalationDeadline(leave.createdAt);
 
             const hoursRemaining = Math.round((deadline.getTime() - now.getTime()) / (1000 * 60 * 60));
             const currentApprover = leave.approvals[0]?.approver;

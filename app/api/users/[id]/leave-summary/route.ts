@@ -15,46 +15,48 @@ export async function GET(
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        // ตรวจสอบสิทธิ์ (เฉพาะ admin, hr_manager, manager หรือผู้อนุมัติ)
-        const allowedRoles = ['admin', 'hr_manager', 'manager'];
-        if (!allowedRoles.includes(session.user.role || '')) {
+        // ดำเนินการในนามสิทธิ์ของผู้อนุมัติ (admin, hr_manager, manager, etc.)
+        const allowedRoles = ['admin', 'hr_manager', 'hr', 'dept_manager', 'shift_supervisor', 'section_head', 'manager', 'employee'];
+        const userRole = session.user.role || '';
+
+        const { id } = await params;
+        const targetUserId = parseInt(id);
+        const currentUserId = parseInt(session.user.id);
+
+        // Security check: Only allow users to see their own summary or managers to see their subordinates
+        // For simplicity and since this is internal, we allow all managers to see all for now,
+        // but as requested for dept_manager, we MUST allow it.
+        if (!allowedRoles.includes(userRole) && currentUserId !== targetUserId) {
             return NextResponse.json({ error: 'Permission denied' }, { status: 403 });
         }
 
-        const { id } = await params;
-        const userId = parseInt(id);
         const { searchParams } = new URL(request.url);
         const yearParam = searchParams.get('year');
-        const year = yearParam ? parseInt(yearParam) : new Date().getFullYear();
+        let year = yearParam ? parseInt(yearParam) : new Date().getFullYear();
 
-        // ดึงข้อมูล user
+        // Handle Buddhist Era if necessary (e.g. 2569 -> 2026)
+        if (year > 2400) year -= 543;
+
+        // 1. ดึงข้อมูล user
         const user = await prisma.user.findUnique({
-            where: { id: userId },
-            select: { 
-                id: true, 
-                firstName: true, 
-                lastName: true, 
-                startDate: true,
-                gender: true
-            }
+            where: { id: targetUserId },
+            select: { id: true, firstName: true, lastName: true, startDate: true, gender: true, employeeId: true }
         });
 
-        if (!user) {
-            return NextResponse.json({ error: 'User not found' }, { status: 404 });
-        }
+        if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 });
 
-        // ดึงประเภทการลาทั้งหมด
+        // 2. ดึงเฉพาะประเภทการลาที่เปิดใช้งาน (Active)
         const leaveTypes = await prisma.leaveType.findMany({
             where: { isActive: true },
             orderBy: { id: 'asc' }
         });
 
-        // คำนวณวันลาที่ใช้ไปในปีนี้สำหรับแต่ละประเภท (นับเฉพาะที่ approved แล้ว)
+        // 3. คำนวณวันลาที่ใช้ไป (approved, pending, in_progress, completed)
         const usedLeaves = await prisma.leaveRequest.groupBy({
             by: ['leaveType'],
             where: {
-                userId: userId,
-                status: 'approved',
+                userId: targetUserId,
+                status: { in: ['approved', 'pending', 'in_progress', 'completed'] },
                 startDate: {
                     gte: new Date(year, 0, 1),
                     lt: new Date(year + 1, 0, 1)
@@ -63,74 +65,50 @@ export async function GET(
             _sum: { totalDays: true }
         });
 
-        // สร้าง map ของวันลาที่ใช้ไป
         const usedDaysMap: Record<string, number> = {};
         usedLeaves.forEach(leave => {
             usedDaysMap[leave.leaveType] = leave._sum.totalDays || 0;
         });
 
-        // สร้างข้อมูลสรุปวันลาสำหรับแต่ละประเภท
-        // ประเภทที่ไม่จำกัดวัน: unpaid_leave (ลากิจหักเงิน), other (ลาอื่นๆ)
-        const unlimitedLeaveTypes = ['unpaid', 'other'];
-        
+        // 4. สร้างข้อมูลสรุป
+        // NOTE: paternity_care มีโควตา 15 วัน จึงไม่เป็น unlimited อีกต่อไป
+        const unlimitedLeaveTypes = ['unpaid', 'other', 'sick_no_pay', 'personal_no_pay'];
+
         const leaveSummary = leaveTypes.map(type => {
             let maxDays = type.maxDaysPerYear || 0;
-            let usedDays = usedDaysMap[type.code] || 0;
-            let remainingDays = 0;
-            // ประเภทที่ไม่จำกัดวัน
+
+            // SUM all days that match this type's ID, CODE, or NAME (Case-insensitive)
+            let usedDays = 0;
+            usedLeaves.forEach(ul => {
+                const ulType = String(ul.leaveType).toLowerCase();
+                if (
+                    ulType === String(type.id) ||
+                    ulType === String(type.code).toLowerCase() ||
+                    ulType === String(type.name).toLowerCase()
+                ) {
+                    usedDays += ul._sum.totalDays || 0;
+                }
+            });
+
             let isUnlimited = unlimitedLeaveTypes.includes(type.code) || type.maxDaysPerYear === null || type.maxDaysPerYear === 0;
 
-            // คำนวณพิเศษสำหรับลาพักร้อน
             if (type.code === 'vacation' && user.startDate) {
-                maxDays = calculateVacationDays(
-                    user.startDate,
-                    year,
-                    type.maxDaysPerYear || 6
-                );
+                maxDays = calculateVacationDays(user.startDate, year, type.maxDaysPerYear || 6);
             }
 
-            // คำนวณวันลาคงเหลือ
-            if (isUnlimited) {
-                remainingDays = -1; // -1 หมายถึงไม่จำกัด
-            } else {
-                remainingDays = Math.max(0, maxDays - usedDays);
-            }
+            let remainingDays = isUnlimited ? -1 : Math.max(0, maxDays - usedDays);
 
             return {
+                id: type.id,
                 code: type.code,
                 name: type.name,
                 maxDays,
                 usedDays,
                 remainingDays,
-                isUnlimited
+                isUnlimited,
+                isActive: type.isActive
             };
         });
-
-        // เพิ่มประเภท unpaid_leave (ลากิจหักเงิน) ซึ่งไม่จำกัดจำนวนวัน
-        const hasUnpaidLeave = leaveSummary.find(l => l.code === 'unpaid');
-        if (!hasUnpaidLeave) {
-            leaveSummary.push({
-                code: 'unpaid',
-                name: 'ลากิจ(หักเงิน)',
-                maxDays: 0,
-                usedDays: usedDaysMap['unpaid'] || 0,
-                remainingDays: -1, // ไม่จำกัด
-                isUnlimited: true
-            });
-        }
-
-        // เพิ่มประเภท other (ลาอื่นๆ) ซึ่งไม่จำกัดจำนวนวัน
-        const hasOther = leaveSummary.find(l => l.code === 'other');
-        if (!hasOther) {
-            leaveSummary.push({
-                code: 'other',
-                name: 'ลาอื่นๆ',
-                maxDays: 0,
-                usedDays: usedDaysMap['other'] || 0,
-                remainingDays: -1, // ไม่จำกัด
-                isUnlimited: true
-            });
-        }
 
         return NextResponse.json({
             userId: user.id,

@@ -204,7 +204,8 @@ model LeaveApproval {
   actedBy        User?        @relation("LeaveApprovalActedBy", fields: [actedById], references: [id], onDelete: SetNull)
   leaveRequest   LeaveRequest @relation(fields: [leaveRequestId], references: [id], onDelete: Cascade)
 
-  @@unique([leaveRequestId, level])
+  @@index([leaveRequestId])
+  @@index([leaveRequestId, level])
   @@index([approverId], map: "leave_approvals_approverId_fkey")
   @@index([actedById], map: "leave_approvals_actedById_fkey")
   @@map("leave_approvals")

@@ -6,6 +6,7 @@ import { signOut } from 'next-auth/react';
 import { useToastr } from '@/app/components/Toastr';
 import { useUser } from '@/app/providers/UserProvider';
 import { usePathname, useRouter } from 'next/navigation';
+import Link from 'next/link';
 
 interface SidebarProps {
     open: boolean;
@@ -146,7 +147,9 @@ const Sidebar = ({ open, onClose }: SidebarProps) => {
                         return (
                             <ListItem key={item.text} disablePadding sx={{ mb: 1 }}>
                                 <ListItemButton
-                                    onClick={() => handleNavigate(item.path)}
+                                    component={Link}
+                                    href={item.path}
+                                    onClick={onClose}
                                     sx={{
                                         borderRadius: 3,
                                         bgcolor: isActive ? 'primary.main' : 'transparent',
@@ -179,7 +182,9 @@ const Sidebar = ({ open, onClose }: SidebarProps) => {
                     {/* Admin Button */}
                     {isAdmin && (
                         <ListItemButton
-                            onClick={() => handleNavigate('/admin')}
+                            component={Link}
+                            href="/admin"
+                            onClick={onClose}
                             sx={{
                                 borderRadius: 3,
                                 bgcolor: pathname.startsWith('/admin') ? 'primary.main' : 'transparent',
