@@ -180,13 +180,41 @@ export default function Home() {
     }
   }, [year]);
 
+  const fetchLeaveTypes = useCallback(async (selectedYear: number) => {
+    try {
+      const response = await fetch(`/api/leave-types?year=${selectedYear}`);
+      if (!response.ok) throw new Error('Failed to fetch leave types');
+      const data = await response.json();
+      setLeaveTypes(data);
+    } catch (error) {
+      console.error('Error fetching leave types:', error);
+    }
+  }, []);
+
+  const fetchLeaveRequests = useCallback(async (selectedYear: number) => {
+    try {
+      const response = await fetch(`/api/my-leaves?year=${selectedYear}`);
+      if (!response.ok) throw new Error('Failed to fetch leave requests');
+      const data = await response.json();
+      if (data.success && data.data) {
+        setLeaveRequests(data.data);
+      }
+    } catch (error) {
+      console.error('Error fetching leave requests:', error);
+    }
+  }, []);
+
+  // โหลดข้อมูลครั้งแรก + เมื่อเปลี่ยนปี (รวมเป็น effect เดียว ไม่ดึงซ้ำ)
   useEffect(() => {
     setMounted(true);
 
     const loadData = async () => {
       try {
-        await fetchLeaveTypes(year);
-        // fetchLeaveRequests will be called by the year effect
+        // ดึงข้อมูลทั้งสองพร้อมกัน (parallel)
+        await Promise.all([
+          fetchLeaveTypes(year),
+          fetchLeaveRequests(year),
+        ]);
       } catch (error) {
         console.error('Error loading data:', error);
       } finally {
@@ -199,50 +227,18 @@ export default function Home() {
     const hasLoaded = sessionStorage.getItem('home_loaded') === 'true';
 
     if (hasLoaded) {
-      // Already loaded before, skip loading animation
       setLoading(false);
     } else {
-      // First time load, show loading animation
       const timer = setTimeout(() => {
         setLoading(false);
         sessionStorage.setItem('home_loaded', 'true');
       }, 600);
       return () => clearTimeout(timer);
     }
-  }, []);
+  }, [year, fetchLeaveTypes, fetchLeaveRequests]);
 
-  useEffect(() => {
-    fetchLeaveRequests(year);
-    fetchLeaveTypes(year);
-  }, [year]);
-
-  const fetchLeaveTypes = async (selectedYear: number) => {
-    try {
-      const response = await fetch(`/api/leave-types?year=${selectedYear}`);
-      if (!response.ok) throw new Error('Failed to fetch leave types');
-      const data = await response.json();
-      // แสดงทั้งหมด
-      setLeaveTypes(data);
-    } catch (error) {
-      console.error('Error fetching leave types:', error);
-    }
-  };
-
-  const fetchLeaveRequests = async (selectedYear: number) => {
-    try {
-      const response = await fetch(`/api/my-leaves?year=${selectedYear}`);
-      if (!response.ok) throw new Error('Failed to fetch leave requests');
-      const data = await response.json();
-      if (data.success && data.data) {
-        setLeaveRequests(data.data);
-      }
-    } catch (error) {
-      console.error('Error fetching leave requests:', error);
-    }
-  };
-
-  // Format date for display
-  const formatDate = (startDate: string, endDate: string) => {
+  // Format date for display (memoized)
+  const formatDate = useCallback((startDate: string, endDate: string) => {
     const start = new Date(startDate);
     const end = new Date(endDate);
     const options: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'short', year: 'numeric' };
@@ -251,10 +247,10 @@ export default function Home() {
       return start.toLocaleDateString('th-TH', options);
     }
     return `${start.toLocaleDateString('th-TH', { day: 'numeric', month: 'short' })} - ${end.toLocaleDateString('th-TH', options)}`;
-  };
+  }, []);
 
-  // Map status to RecentActivityCard format
-  const mapStatus = (status: string): 'Approved' | 'Pending' | 'Rejected' | 'Cancelled' => {
+  // Map status to RecentActivityCard format (memoized)
+  const mapStatus = useCallback((status: string): 'Approved' | 'Pending' | 'Rejected' | 'Cancelled' => {
     const statusLower = status.toLowerCase();
     switch (statusLower) {
       case 'approved':
@@ -267,17 +263,16 @@ export default function Home() {
       default:
         return 'Pending';
     }
-  };
+  }, []);
 
-  // Get approval status text
-  const getApprovalStatusText = (leave: LeaveRequest) => {
+  // Get approval status text (memoized)
+  const getApprovalStatusText = useCallback((leave: LeaveRequest) => {
     const status = leave.status.toLowerCase();
     if (status === 'approved') return t('status_approved', 'อนุมัติแล้ว');
     if (status === 'rejected') return t('status_rejected', 'ถูกปฏิเสธ');
     if (status === 'cancelled') return t('status_cancelled', 'ยกเลิกแล้ว');
 
     if (leave.approvals && leave.approvals.length > 0) {
-      // Find the first pending approval
       const pendingApproval = leave.approvals.find(a => a.status === 'pending');
       if (pendingApproval) {
         return `${t('status_waiting_for', 'รอการอนุมัติจาก')} ${pendingApproval.approver?.firstName || t('supervisor', 'หัวหน้างาน')}`;
@@ -285,7 +280,7 @@ export default function Home() {
     }
 
     return t('status_pending', 'รอการอนุมัติ');
-  };
+  }, [t]);
 
   // แสดง 5 รายการล่าสุด: ใบลาที่พนักงานลาเองก่อน ตามด้วยบังคับพักร้อน (FL)
   const recentLeaveRequests = useMemo(() => {
@@ -294,19 +289,19 @@ export default function Home() {
     return [...userLeaves, ...forcedLeaves].slice(0, 5);
   }, [leaveRequests]);
 
-  const getLeaveTypeConfig = (code: string) => {
+  const getLeaveTypeConfig = useCallback((code: string) => {
     return leaveTypeConfig[code] || leaveTypeConfig.default;
-  };
+  }, []);
 
-  const handleLeaveClick = (leave: LeaveRequest) => {
+  const handleLeaveClick = useCallback((leave: LeaveRequest) => {
     setSelectedLeave(leave);
     setDrawerOpen(true);
-  };
+  }, []);
 
-  const handleCloseDrawer = () => {
+  const handleCloseDrawer = useCallback(() => {
     setDrawerOpen(false);
     setTimeout(() => setSelectedLeave(null), 300);
-  };
+  }, []);
 
   const handleCancelLeave = async () => {
     if (!selectedLeave) return;

@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
             endDate = new Date(year, month, 0, 23, 59, 59);
         }
 
-        // ดึง leave requests และ leave types แยกกัน
+        // ดึง leave requests (select เฉพาะ field ที่จำเป็น) และ leave types พร้อมกัน
         const [leaves, leaveTypes] = await Promise.all([
             prisma.leaveRequest.findMany({
                 where: {
@@ -36,10 +36,36 @@ export async function GET(request: NextRequest) {
                     },
                 },
                 orderBy: { startDate: 'desc' },
-                include: {
-                    attachments: true,
+                select: {
+                    id: true,
+                    leaveCode: true,
+                    leaveType: true,
+                    startDate: true,
+                    endDate: true,
+                    startTime: true,
+                    endTime: true,
+                    totalDays: true,
+                    reason: true,
+                    status: true,
+                    createdAt: true,
+                    cancelReason: true,
+                    cancelledAt: true,
+                    currentLevel: true,
+                    attachments: {
+                        select: {
+                            id: true,
+                            fileName: true,
+                            filePath: true,
+                            fileSize: true,
+                            mimeType: true,
+                        }
+                    },
                     approvals: {
-                        include: {
+                        select: {
+                            id: true,
+                            level: true,
+                            status: true,
+                            comment: true,
                             approver: {
                                 select: {
                                     id: true,
@@ -58,12 +84,19 @@ export async function GET(request: NextRequest) {
                                 },
                             },
                         },
-                        orderBy: { level: 'asc' },
+                        orderBy: { level: 'asc' as const },
                     },
                 },
             }),
             prisma.leaveType.findMany({
                 where: { isActive: true },
+                select: {
+                    id: true,
+                    code: true,
+                    name: true,
+                    maxDaysPerYear: true,
+                    isPaid: true,
+                },
             }),
         ]);
 
