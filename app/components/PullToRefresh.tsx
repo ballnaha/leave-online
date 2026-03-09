@@ -136,41 +136,13 @@ export default function PullToRefresh({
                         pointerEvents: isRefreshing ? 'auto' : 'none',
                     }}
                 >
-                    <Box
+                    <CircularProgress
+                        size={40}
+                        thickness={4}
                         sx={{
-                            display: 'flex',
-                            flexDirection: 'column',
-                            alignItems: 'center',
-                            gap: 2,
-                            p: 4,
-                            borderRadius: 4,
-                            bgcolor: 'rgba(255, 255, 255, 0.9)',
-                            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.08)',
-                            animation: 'pullRefreshFadeIn 0.3s ease',
-                            '@keyframes pullRefreshFadeIn': {
-                                from: { opacity: 0, transform: 'scale(0.9)' },
-                                to: { opacity: 1, transform: 'scale(1)' },
-                            },
+                            color: '#667eea',
                         }}
-                    >
-                        <CircularProgress
-                            size={40}
-                            thickness={4}
-                            sx={{
-                                color: '#667eea',
-                            }}
-                        />
-                        <Typography
-                            variant="body2"
-                            sx={{
-                                color: '#64748B',
-                                fontWeight: 600,
-                                fontSize: '0.85rem',
-                            }}
-                        >
-                            กำลังรีเฟรช...
-                        </Typography>
-                    </Box>
+                    />
                 </Box>
             </Fade>
 
