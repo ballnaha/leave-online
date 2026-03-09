@@ -1,7 +1,6 @@
 'use client';
 import React, { useRef, useState, useCallback, useEffect } from 'react';
-import { Box, CircularProgress, Typography } from '@mui/material';
-import { ArrowDownward, Refresh } from '@mui/icons-material';
+import { Box, CircularProgress, Typography, Fade, Backdrop } from '@mui/material';
 
 interface PullToRefreshProps {
     onRefresh: () => Promise<void>;
@@ -9,8 +8,6 @@ interface PullToRefreshProps {
     disabled?: boolean;
     /** Threshold in px to trigger refresh */
     threshold?: number;
-    /** Max pull distance in px */
-    maxPull?: number;
 }
 
 export default function PullToRefresh({
@@ -18,7 +15,6 @@ export default function PullToRefresh({
     children,
     disabled = false,
     threshold = 80,
-    maxPull = 120,
 }: PullToRefreshProps) {
     const containerRef = useRef<HTMLDivElement>(null);
     const touchStartY = useRef(0);
@@ -30,7 +26,6 @@ export default function PullToRefresh({
 
     // Check if the container is scrolled to top
     const checkScrollPosition = useCallback(() => {
-        // Check if the page is scrolled to top
         isScrolledToTop.current = window.scrollY <= 0;
     }, []);
 
@@ -86,21 +81,20 @@ export default function PullToRefresh({
         }
 
         if (diffY > 0) {
-            // Apply resistance - the further you pull, the harder it gets
-            const resistance = Math.min(diffY * 0.5, maxPull);
+            // Track pull distance (for threshold detection only, no visual pull)
+            const resistance = Math.min(diffY * 0.5, threshold * 1.5);
             setPullDistance(resistance);
         }
-    }, [disabled, isRefreshing, isPulling, maxPull, pullDistance, isOverlayOpen]);
+    }, [disabled, isRefreshing, isPulling, threshold, pullDistance, isOverlayOpen]);
 
     const handleTouchEnd = useCallback(async () => {
         if (disabled || isRefreshing) return;
 
         if (pullDistance >= threshold) {
-            // Trigger refresh
+            // Trigger refresh — show overlay spinner
             setIsRefreshing(true);
-            setPullDistance(threshold * 0.6); // Show loading spinner at reduced height
+            setPullDistance(0);
             try {
-                // รอทั้ง refresh และ minimum delay เพื่อให้ loading แสดงอย่างน้อย 800ms
                 await Promise.all([
                     onRefresh(),
                     new Promise(resolve => setTimeout(resolve, 800)),
@@ -109,17 +103,12 @@ export default function PullToRefresh({
                 console.error('Refresh failed:', error);
             } finally {
                 setIsRefreshing(false);
-                setPullDistance(0);
             }
         } else {
-            // Reset
             setPullDistance(0);
         }
         setIsPulling(false);
     }, [disabled, isRefreshing, pullDistance, threshold, onRefresh]);
-
-    const progress = Math.min((pullDistance / threshold) * 100, 100);
-    const isAtThreshold = pullDistance >= threshold;
 
     return (
         <Box
@@ -129,91 +118,64 @@ export default function PullToRefresh({
             onTouchEnd={handleTouchEnd}
             sx={{ position: 'relative', touchAction: isPulling && pullDistance > 5 ? 'none' : 'auto' }}
         >
-            {/* Pull indicator */}
-            <Box
-                sx={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    height: `${pullDistance}px`,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    overflow: 'hidden',
-                    transition: isPulling ? 'none' : 'height 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                    zIndex: 100,
-                    pointerEvents: 'none',
-                }}
-            >
+            {/* Loading Overlay */}
+            <Fade in={isRefreshing} timeout={{ enter: 300, exit: 400 }}>
                 <Box
                     sx={{
+                        position: 'fixed',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        zIndex: 1200,
                         display: 'flex',
                         flexDirection: 'column',
                         alignItems: 'center',
-                        gap: 0.5,
-                        opacity: Math.min(pullDistance / (threshold * 0.5), 1),
-                        transition: isPulling ? 'none' : 'opacity 0.3s ease',
+                        justifyContent: 'center',
+                        bgcolor: 'transparent',
+                        pointerEvents: isRefreshing ? 'auto' : 'none',
                     }}
                 >
-                    {isRefreshing ? (
+                    <Box
+                        sx={{
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            gap: 2,
+                            p: 4,
+                            borderRadius: 4,
+                            bgcolor: 'rgba(255, 255, 255, 0.9)',
+                            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.08)',
+                            animation: 'pullRefreshFadeIn 0.3s ease',
+                            '@keyframes pullRefreshFadeIn': {
+                                from: { opacity: 0, transform: 'scale(0.9)' },
+                                to: { opacity: 1, transform: 'scale(1)' },
+                            },
+                        }}
+                    >
                         <CircularProgress
-                            size={28}
+                            size={40}
                             thickness={4}
                             sx={{
                                 color: '#667eea',
                             }}
                         />
-                    ) : (
-                        <Box
+                        <Typography
+                            variant="body2"
                             sx={{
-                                width: 36,
-                                height: 36,
-                                borderRadius: '50%',
-                                bgcolor: isAtThreshold ? '#667eea' : 'rgba(102, 126, 234, 0.1)',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                transition: isPulling ? 'background-color 0.2s ease' : 'all 0.3s ease',
-                                transform: `rotate(${isAtThreshold ? 180 : 0}deg)`,
+                                color: '#64748B',
+                                fontWeight: 600,
+                                fontSize: '0.85rem',
                             }}
                         >
-                            <ArrowDownward
-                                sx={{
-                                    fontSize: 20,
-                                    color: isAtThreshold ? 'white' : '#667eea',
-                                    transition: 'color 0.2s ease',
-                                }}
-                            />
-                        </Box>
-                    )}
-                    <Typography
-                        variant="caption"
-                        sx={{
-                            color: isAtThreshold ? '#667eea' : '#94A3B8',
-                            fontWeight: 500,
-                            fontSize: '0.7rem',
-                            transition: 'color 0.2s ease',
-                        }}
-                    >
-                        {isRefreshing
-                            ? 'กำลังรีเฟรช...'
-                            : isAtThreshold
-                                ? 'ปล่อยเพื่อรีเฟรช'
-                                : 'ดึงลงเพื่อรีเฟรช'}
-                    </Typography>
+                            กำลังรีเฟรช...
+                        </Typography>
+                    </Box>
                 </Box>
-            </Box>
+            </Fade>
 
-            {/* Content with translation */}
-            <Box
-                sx={{
-                    transform: `translateY(${pullDistance}px)`,
-                    transition: isPulling ? 'none' : 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                }}
-            >
-                {children}
-            </Box>
+            {/* Content — no transform, header stays in place */}
+            {children}
         </Box>
     );
 }
