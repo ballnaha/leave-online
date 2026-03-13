@@ -32,6 +32,10 @@ import {
     Divider,
     CircularProgress,
     useMediaQuery,
+    FormControl,
+    InputLabel,
+    Select,
+    MenuItem,
 } from '@mui/material';
 import {
     SearchNormal1,
@@ -49,8 +53,9 @@ import {
     Paperclip2,
     Image as ImageIconsax,
     DocumentDownload,
-    Calendar as CalendarIcon,
     User as UserIcon,
+    Filter as FilterIcon,
+    FilterRemove,
 } from 'iconsax-react';
 import { useToastr } from '@/app/components/Toastr';
 
@@ -136,6 +141,33 @@ interface Stats {
     overdue2Days: number;
     overdue3Days: number;
     overdue7Days: number;
+}
+
+interface Company {
+    id: number;
+    code: string;
+    name: string;
+}
+
+interface Department {
+    id: number;
+    code: string;
+    name: string;
+    company: string;
+}
+
+interface Section {
+    id: number;
+    code: string;
+    name: string;
+    departmentCode: string;
+    companyCode: string;
+}
+
+interface LeaveType {
+    id: number;
+    code: string;
+    name: string;
 }
 
 const roleLabels: Record<string, string> = {
@@ -254,6 +286,21 @@ export default function EscalationPage() {
     const [stats, setStats] = useState<Stats>({ total: 0, overdue2Days: 0, overdue3Days: 0, overdue7Days: 0 });
     const [searchQuery, setSearchQuery] = useState('');
 
+    // Master data
+    const [companies, setCompanies] = useState<Company[]>([]);
+    const [departments, setDepartments] = useState<Department[]>([]);
+    const [sections, setSections] = useState<Section[]>([]);
+    const [leaveTypes, setLeaveTypes] = useState<LeaveType[]>([]);
+
+    // Filter states
+    const [companyFilter, setCompanyFilter] = useState<string>('all');
+    const [departmentFilter, setDepartmentFilter] = useState<string>('all');
+    const [sectionFilter, setSectionFilter] = useState<string>('all');
+    const [leaveTypeFilter, setLeaveTypeFilter] = useState<string>('all');
+
+    // Filter toggle for mobile
+    const [showFilters, setShowFilters] = useState(false);
+
     // Pagination
     const [page, setPage] = useState(0);
     const [rowsPerPage, setRowsPerPage] = useState(10);
@@ -289,6 +336,24 @@ export default function EscalationPage() {
         }
     };
 
+    const fetchMasterData = useCallback(async () => {
+        try {
+            const [companiesRes, departmentsRes, sectionsRes, leaveTypesRes] = await Promise.all([
+                fetch('/api/companies'),
+                fetch('/api/departments'),
+                fetch('/api/sections'),
+                fetch('/api/leave-types'),
+            ]);
+
+            if (companiesRes.ok) setCompanies(await companiesRes.json());
+            if (departmentsRes.ok) setDepartments(await departmentsRes.json());
+            if (sectionsRes.ok) setSections(await sectionsRes.json());
+            if (leaveTypesRes.ok) setLeaveTypes(await leaveTypesRes.json());
+        } catch (error) {
+            console.error('Error fetching master data:', error);
+        }
+    }, []);
+
     const fetchLeaves = useCallback(async () => {
         try {
             setLoading(true);
@@ -306,19 +371,67 @@ export default function EscalationPage() {
     }, [toastr]);
 
     useEffect(() => {
+        fetchMasterData();
         fetchLeaves();
-    }, [fetchLeaves]);
+    }, [fetchMasterData, fetchLeaves]);
+
+    // Derived filtered master data
+    const filteredDepartments = (companyFilter === 'all'
+        ? departments
+        : departments.filter(d => d.company === companyFilter)
+    ).sort((a, b) => a.code.localeCompare(b.code));
+
+    const filteredSections = (() => {
+        let filtered = sections;
+        if (companyFilter !== 'all') {
+            filtered = filtered.filter(s => s.companyCode === companyFilter);
+        }
+        if (departmentFilter !== 'all') {
+            filtered = filtered.filter(s => s.departmentCode === departmentFilter);
+        }
+        return [...filtered].sort((a, b) => a.code.localeCompare(b.code));
+    })();
+
+    const handleCompanyChange = (value: string) => {
+        setCompanyFilter(value);
+        setDepartmentFilter('all');
+        setSectionFilter('all');
+    };
+
+    const handleDepartmentChange = (value: string) => {
+        setDepartmentFilter(value);
+        setSectionFilter('all');
+    };
+
+    const handleResetFilters = () => {
+        setSearchQuery('');
+        setCompanyFilter('all');
+        setDepartmentFilter('all');
+        setSectionFilter('all');
+        setLeaveTypeFilter('all');
+    };
 
     // Filter by search
+    // Filter logic
     const filteredLeaves = leaves.filter(leave => {
-        if (!searchQuery) return true;
-        const query = searchQuery.toLowerCase();
-        return (
-            leave.user.firstName.toLowerCase().includes(query) ||
-            leave.user.lastName.toLowerCase().includes(query) ||
-            leave.user.employeeId.toLowerCase().includes(query) ||
-            leave.leaveCode.toLowerCase().includes(query)
-        );
+        // Search filter
+        const matchesSearch = !searchQuery || (() => {
+            const query = searchQuery.toLowerCase();
+            return (
+                leave.user.firstName.toLowerCase().includes(query) ||
+                leave.user.lastName.toLowerCase().includes(query) ||
+                leave.user.employeeId.toLowerCase().includes(query) ||
+                leave.leaveCode.toLowerCase().includes(query)
+            );
+        })();
+
+        // Metadata filters
+        const matchesCompany = companyFilter === 'all' || leave.user.company === companyFilter;
+        const matchesDepartment = departmentFilter === 'all' || leave.user.department === departmentFilter;
+        const matchesSection = sectionFilter === 'all' || leave.user.section === sectionFilter;
+        const matchesLeaveType = leaveTypeFilter === 'all' || leave.leaveType === leaveTypeFilter;
+
+        return matchesSearch && matchesCompany && matchesDepartment && matchesSection && matchesLeaveType;
     });
 
     // Paginated leaves
@@ -431,7 +544,7 @@ export default function EscalationPage() {
                                 ส่งต่อใบลา (Escalation)
                             </Typography>
                             <Typography variant="body2" color="text.secondary">
-                                ใบลาที่รอดำเนินการเกิน 2 วัน - ส่งต่อไป HR Manager เพื่ออนุมัติ
+                                ใบลาที่รอดำเนินการจนถึงเวลา 13:00 น. ของวันถัดไป จะถูกส่งต่อไป HR Manager โดยอัตโนมัติ
                             </Typography>
                         </Box>
                     </Box>
@@ -490,7 +603,7 @@ export default function EscalationPage() {
                     color="primary"
                 />
                 <StatCard
-                    title="รอเกิน 2 วัน"
+                    title="ถึงกำหนดส่งต่อ"
                     value={stats.overdue2Days}
                     icon={<ClockIcon size={20} variant="Bold" color="currentColor" />}
                     color="warning"
@@ -509,7 +622,7 @@ export default function EscalationPage() {
                 />
             </Box>
 
-            {/* Search & Actions */}
+            {/* Search & Filters */}
             <Paper
                 elevation={0}
                 sx={{
@@ -521,13 +634,84 @@ export default function EscalationPage() {
                     bgcolor: 'background.paper',
                 }}
             >
-                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2, flexWrap: 'wrap' }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <FilterIcon size={18} color={theme.palette.primary.main} variant="Bold" />
+                        <Typography variant="subtitle1" fontWeight={600}>
+                            ค้นหาและตัวกรอง
+                        </Typography>
+                    </Box>
+                    {isMobile && (
+                        <Button
+                            size="small"
+                            onClick={() => setShowFilters(!showFilters)}
+                            sx={{ textTransform: 'none' }}
+                        >
+                            {showFilters ? 'ซ่อนตัวกรอง' : 'ตัวกรองเพิ่มเติม'}
+                        </Button>
+                    )}
+                </Box>
+
+                <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(4, 1fr)' }, gap: 2, mb: (showFilters || !isMobile) ? 2 : 1 }}>
+                    {(showFilters || !isMobile) && (
+                        <>
+                            <FormControl size="small" fullWidth>
+                                <InputLabel>บริษัท</InputLabel>
+                                <Select
+                                    value={companyFilter}
+                                    label="บริษัท"
+                                    onChange={(e: any) => handleCompanyChange(e.target.value)}
+                                >
+                                    <MenuItem value="all">ทั้งหมด</MenuItem>
+                                    {companies.map(c => <MenuItem key={c.id} value={c.code}>{c.name}</MenuItem>)}
+                                </Select>
+                            </FormControl>
+
+                            <FormControl size="small" fullWidth>
+                                <InputLabel>ฝ่าย</InputLabel>
+                                <Select
+                                    value={departmentFilter}
+                                    label="ฝ่าย"
+                                    onChange={(e: any) => handleDepartmentChange(e.target.value)}
+                                >
+                                    <MenuItem value="all">ทั้งหมด</MenuItem>
+                                    {filteredDepartments.map(d => <MenuItem key={d.id} value={d.code}>{d.code} {d.name}</MenuItem>)}
+                                </Select>
+                            </FormControl>
+
+                            <FormControl size="small" fullWidth>
+                                <InputLabel>แผนก</InputLabel>
+                                <Select
+                                    value={sectionFilter}
+                                    label="แผนก"
+                                    onChange={(e: any) => setSectionFilter(e.target.value)}
+                                >
+                                    <MenuItem value="all">ทั้งหมด</MenuItem>
+                                    {filteredSections.map(s => <MenuItem key={s.id} value={s.code}>{s.code} {s.name}</MenuItem>)}
+                                </Select>
+                            </FormControl>
+
+                            <FormControl size="small" fullWidth>
+                                <InputLabel>ประเภทลา</InputLabel>
+                                <Select
+                                    value={leaveTypeFilter}
+                                    label="ประเภทลา"
+                                    onChange={(e: any) => setLeaveTypeFilter(e.target.value)}
+                                >
+                                    <MenuItem value="all">ทั้งหมด</MenuItem>
+                                    {leaveTypes.map(lt => <MenuItem key={lt.id} value={lt.code}>{lt.name}</MenuItem>)}
+                                </Select>
+                            </FormControl>
+                        </>
+                    )}
+
                     <TextField
-                        placeholder="ค้นหาชื่อ, รหัสพนักงาน, รหัสใบลา..."
+                        placeholder="ชื่อ, รหัสพนักงาน, รหัสใบลา..."
                         value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
+                        onChange={(e: any) => setSearchQuery(e.target.value)}
                         size="small"
-                        sx={{ minWidth: 300 }}
+                        fullWidth
+                        sx={{ gridColumn: { md: 'span 4' } }}
                         InputProps={{
                             startAdornment: (
                                 <InputAdornment position="start">
@@ -536,19 +720,33 @@ export default function EscalationPage() {
                             ),
                         }}
                     />
-                    {selectedIds.length > 0 && (
-                        <Button
-                            variant="contained"
-                            color="warning"
-                            startIcon={<Send2 size={18} color="#fff" />}
-                            onClick={() => setConfirmDialogOpen(true)}
-                            disabled={isEscalating}
-                            sx={{ borderRadius: 1, textTransform: 'none' }}
-                        >
-                            ส่งต่อที่เลือก ({selectedIds.length})
-                        </Button>
-                    )}
                 </Box>
+
+                {(showFilters || !isMobile) && (
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 2 }}>
+                        <Button
+                            startIcon={<FilterRemove size={18} />}
+                            onClick={handleResetFilters}
+                            sx={{ textTransform: 'none', color: 'text.secondary' }}
+                        >
+                            ล้างตัวกรอง
+                        </Button>
+                        <Box sx={{ display: 'flex', gap: 1 }}>
+                            {selectedIds.length > 0 && (
+                                <Button
+                                    variant="contained"
+                                    color="warning"
+                                    startIcon={<Send2 size={18} color="#fff" />}
+                                    onClick={() => setConfirmDialogOpen(true)}
+                                    disabled={isEscalating}
+                                    sx={{ borderRadius: 1, textTransform: 'none' }}
+                                >
+                                    ส่งต่อที่เลือก ({selectedIds.length})
+                                </Button>
+                            )}
+                        </Box>
+                    </Box>
+                )}
             </Paper>
 
             {/* Table - Desktop */}
@@ -598,7 +796,7 @@ export default function EscalationPage() {
                                                 ไม่มีใบลาที่ต้องส่งต่อ
                                             </Typography>
                                             <Typography variant="body2" color="text.disabled">
-                                                ใบลาทั้งหมดได้รับการดำเนินการแล้ว หรือยังไม่เกิน 2 วัน
+                                                ใบลาทั้งหมดได้รับการดำเนินการแล้ว หรือยังไม่ถึงเวลา 13:00 น. ของวันถัดไป
                                             </Typography>
                                         </Box>
                                     </TableCell>
@@ -722,15 +920,15 @@ export default function EscalationPage() {
                     component="div"
                     count={filteredLeaves.length}
                     page={page}
-                    onPageChange={(_, newPage) => setPage(newPage)}
+                    onPageChange={(_: any, newPage: number) => setPage(newPage)}
                     rowsPerPage={rowsPerPage}
-                    onRowsPerPageChange={(e) => {
+                    onRowsPerPageChange={(e: any) => {
                         setRowsPerPage(parseInt(e.target.value, 10));
                         setPage(0);
                     }}
                     rowsPerPageOptions={[5, 10, 25, 50]}
                     labelRowsPerPage="แสดง"
-                    labelDisplayedRows={({ from, to, count }) => `${from}-${to} จาก ${count}`}
+                    labelDisplayedRows={({ from, to, count }: any) => `${from}-${to} จาก ${count}`}
                 />
             </Paper>
 

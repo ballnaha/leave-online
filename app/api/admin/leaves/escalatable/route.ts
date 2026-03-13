@@ -4,7 +4,6 @@ import { getServerSession } from 'next-auth';
 import { authOptions, isAdminRole } from '@/lib/auth';
 import { notifyApprovalPending, notifyEscalated } from '@/lib/onesignal';
 
-const ESCALATION_HOURS = 48; // 2 วัน = 48 ชั่วโมง
 
 // GET - ดึงใบลาที่สามารถ escalate ได้ (รอเกิน 2 วัน และยังไม่ถูก escalate)
 export async function GET(request: NextRequest) {
@@ -15,14 +14,13 @@ export async function GET(request: NextRequest) {
         }
 
         const now = new Date();
-        const escalationThreshold = new Date(now.getTime() - ESCALATION_HOURS * 60 * 60 * 1000);
 
-        // หาใบลาที่รอเกิน 2 วัน และยังไม่ถูก escalate
+        // หาใบลาที่รอจนเลยกำหนดส่งต่อ (13:00 ของวันถัดไป) และยังไม่ถูก escalate
         const escalatableLeaves = await prisma.leaveRequest.findMany({
             where: {
                 status: { in: ['pending', 'in_progress'] },
                 isEscalated: false,
-                createdAt: { lte: escalationThreshold },
+                escalationDeadline: { lte: now },
             },
             orderBy: { createdAt: 'asc' },
             include: {
