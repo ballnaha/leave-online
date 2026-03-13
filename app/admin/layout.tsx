@@ -115,6 +115,31 @@ const menuGroups: MenuGroup[] = [
             },
         ],
     },
+
+
+    {
+        groupLabel: 'รายงาน',
+        items: [
+            {
+                text: 'รายงานใบลา',
+                icon: DocumentText1,
+                iconColor: '#6C63FF',
+                path: '/admin/leave-reports',
+            },
+            {
+                text: 'สถิติรายบุคคล',
+                icon: People,
+                iconColor: '#6C63FF',
+                path: '/admin/employee-stats',
+            },
+            {
+                text: 'นำเข้าข้อมูลใบลา',
+                icon: DocumentUpload,
+                iconColor: '#22C55E',
+                path: '/admin/leave-import',
+            },
+        ],
+    },
     {
         groupLabel: 'การอนุมัติ',
         items: [
@@ -144,31 +169,6 @@ const menuGroups: MenuGroup[] = [
             },
         ],
     },
-
-    {
-        groupLabel: 'รายงาน',
-        items: [
-            {
-                text: 'รายงานใบลา',
-                icon: DocumentText1,
-                iconColor: '#6C63FF',
-                path: '/admin/leave-reports',
-            },
-            {
-                text: 'สถิติรายบุคคล',
-                icon: People,
-                iconColor: '#6C63FF',
-                path: '/admin/employee-stats',
-            },
-            {
-                text: 'นำเข้าข้อมูลใบลา',
-                icon: DocumentUpload,
-                iconColor: '#22C55E',
-                path: '/admin/leave-import',
-            },
-        ],
-    },
-
     {
         groupLabel: 'Admin',
         items: [
