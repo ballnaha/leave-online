@@ -25,6 +25,7 @@ import {
   TableCell,
   TableContainer,
   TableHead,
+  TablePagination,
   TableRow,
   TextField,
   Typography,
@@ -36,6 +37,7 @@ import { useToastr } from '@/app/components/Toastr';
 
 type ReportRow = {
   id: number;
+  leaveCode: string;
   employeeId: string;
   employeeName: string;
   position: string;
@@ -72,6 +74,12 @@ type LeaveReportResponse = {
   companies?: CompanyOption[];
   departments?: DeptOption[];
   sections?: SectionOption[];
+  pagination?: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  };
 };
 
 const LEAVE_REPORT_CACHE_TTL_MS = 2000;
@@ -197,6 +205,7 @@ function TableSkeleton() {
       {[1, 2, 3, 4, 5].map((row) => (
         <TableRow key={row}>
           <TableCell><Skeleton variant="text" width={30} /></TableCell>
+          <TableCell><Skeleton variant="text" width={40} /></TableCell>
           <TableCell>
             <Box>
               <Skeleton variant="text" width={120} />
@@ -232,6 +241,7 @@ export default function AdminLeaveReportsPage() {
   const [rows, setRows] = useState<ReportRow[]>([]);
   const [stats, setStats] = useState<Stats>({ total: 0, totalDays: 0, pending: 0, approved: 0, rejected: 0, cancelled: 0 });
   const [loading, setLoading] = useState(true);
+  const [excelLoading, setExcelLoading] = useState(false);
   const reportRef = useRef<HTMLDivElement | null>(null);
   const isMountedRef = useRef(true);
 
@@ -244,6 +254,11 @@ export default function AdminLeaveReportsPage() {
   const [companyFilter, setCompanyFilter] = useState<string>('all');
   const [departmentFilter, setDepartmentFilter] = useState<string>('all');
   const [sectionFilter, setSectionFilter] = useState<string>('all');
+
+  // Pagination
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(25);
+  const [totalRows, setTotalRows] = useState(0);
 
   // Master data for filters
   const [companies, setCompanies] = useState<CompanyOption[]>([]);
@@ -296,6 +311,12 @@ export default function AdminLeaveReportsPage() {
     if (companyFilter !== 'all') params.set('company', companyFilter);
     if (departmentFilter !== 'all') params.set('department', departmentFilter);
     if (sectionFilter !== 'all') params.set('section', sectionFilter);
+    
+    // Pagination parameters
+    params.set('page', String(page + 1));
+    if (rowsPerPage > 0) {
+      params.set('limit', String(rowsPerPage));
+    }
 
     const url = `/api/admin/leave-reports?${params.toString()}`;
 
@@ -307,6 +328,7 @@ export default function AdminLeaveReportsPage() {
       if (cached.data?.companies) setCompanies(cached.data.companies);
       if (cached.data?.departments) setDepartments(cached.data.departments);
       if (cached.data?.sections) setSections(cached.data.sections);
+      setTotalRows(cached.data?.pagination?.total || 0);
       setLoading(false);
       return;
     }
@@ -351,6 +373,7 @@ export default function AdminLeaveReportsPage() {
       if (data?.companies) setCompanies(data.companies);
       if (data?.departments) setDepartments(data.departments);
       if (data?.sections) setSections(data.sections);
+      setTotalRows(data?.pagination?.total || 0);
     } catch (err: any) {
       if (!isMountedRef.current) return;
       if (err?.name === 'AbortError') {
@@ -365,14 +388,20 @@ export default function AdminLeaveReportsPage() {
     } finally {
       if (isMountedRef.current) setLoading(false);
     }
-  }, [status, month, year, debouncedSearch, companyFilter, departmentFilter, sectionFilter, toastError]);
+  }, [status, month, year, debouncedSearch, companyFilter, departmentFilter, sectionFilter, page, rowsPerPage, toastError]);
 
   useEffect(() => {
     fetchRows();
-  }, [fetchRows]);
+  }, [fetchRows, page, rowsPerPage]);
+
+  useEffect(() => {
+    // Reset to first page when any major filter changes
+    setPage(0);
+  }, [status, month, year, debouncedSearch, companyFilter, departmentFilter, sectionFilter]);
 
   const exportRows = useMemo(() => {
     return rows.map((r) => ({
+      leaveCode: r.leaveCode,
       employeeId: r.employeeId,
       employeeName: r.employeeName,
       position: r.position,
@@ -388,6 +417,7 @@ export default function AdminLeaveReportsPage() {
   }, [rows]);
 
   const exportExcel = async () => {
+    setExcelLoading(true);
     try {
       const ExcelJS = await import('exceljs');
       const workbook = new ExcelJS.Workbook();
@@ -396,6 +426,7 @@ export default function AdminLeaveReportsPage() {
       // Set column widths
       worksheet.columns = [
         { width: 6 },  // ลำดับ
+        { width: 10 }, // รหัสใบลา
         { width: 12 }, // รหัสพนักงาน
         { width: 20 }, // ชื่อพนักงาน
         { width: 15 }, // ตำแหน่ง
@@ -410,7 +441,7 @@ export default function AdminLeaveReportsPage() {
       ];
 
       // Add header row
-      const header = ['ลำดับ', 'รหัสพนักงาน', 'ชื่อพนักงาน', 'ตำแหน่ง', 'ฝ่าย', 'แผนก', 'วันที่หยุด', 'จำนวนวัน', 'ประเภท', 'เหตุผลการลา', 'สถานะ', 'หมายเหตุ'];
+      const header = ['ลำดับ', 'รหัสใบลา', 'รหัสพนักงาน', 'ชื่อพนักงาน', 'ตำแหน่ง', 'ฝ่าย', 'แผนก', 'วันที่หยุด', 'จำนวนวัน', 'ประเภท', 'เหตุผลการลา', 'สถานะ', 'หมายเหตุ'];
       const headerRow = worksheet.addRow(header);
       headerRow.font = { bold: true };
       headerRow.eachCell((cell) => {
@@ -431,6 +462,7 @@ export default function AdminLeaveReportsPage() {
       exportRows.forEach((r, i) => {
         const row = worksheet.addRow([
           i + 1,
+          r.leaveCode,
           r.employeeId,
           r.employeeName,
           r.position,
@@ -465,97 +497,8 @@ export default function AdminLeaveReportsPage() {
       URL.revokeObjectURL(url);
     } catch {
       toastError('Export Excel ไม่สำเร็จ');
-    }
-  };
-
-  const exportPDF = async () => {
-    try {
-      const html2pdfModule: any = await import('html2pdf.js');
-      const html2pdf = html2pdfModule?.default || html2pdfModule;
-
-      // Build a separate HTML table matching Excel columns (landscape, separate fields)
-      const title = month === 0
-        ? `รายงานใบลา ปี ${year + 543}`
-        : `รายงานใบลา ${monthOptions.find(m => m.value === month)?.label} ${year + 543}`;
-
-      const headerCells = ['#', 'รหัสพนักงาน', 'ชื่อพนักงาน', 'ตำแหน่ง', 'ฝ่าย', 'แผนก', 'วันที่หยุด', 'จำนวนวัน', 'ประเภท', 'เหตุผลการลา', 'สถานะ', 'หมายเหตุ'];
-      const bodyRows = exportRows.map((r, i) => [
-        i + 1,
-        r.employeeId,
-        r.employeeName,
-        r.position,
-        r.department,
-        r.section,
-        r.leaveDate,
-        r.totalDays,
-        r.leaveTypeName,
-        r.reason,
-        r.statusLabel,
-        // Convert semicolon separator to <br> for PDF line breaks
-        (r.note || '-').replace(/;\s*/g, '<br>'),
-      ]);
-
-      const printDate = new Date().toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' });
-
-      const htmlContent = `
-        <div style="font-family: 'Sarabun', 'Tahoma', sans-serif; padding: 12px 16px; color: #000000;">
-          <h2 style="margin: 0 0 14px 0; font-size: 14pt; font-weight: 600; color: #000000; text-align: center; border-bottom: 2px solid #333; padding-bottom: 8px;">${title}</h2>
-          <table style="width: 100%; border-collapse: collapse;">
-            <thead>
-              <tr>
-                ${headerCells.map(h => `<th style="border: 1.5px solid #333; padding: 6px 4px; text-align: center; white-space: nowrap; background-color: #e0e0e0; color: #000000; font-weight: 600; font-size: 8pt;">${h}</th>`).join('')}
-              </tr>
-            </thead>
-            <tbody>
-              ${bodyRows.map((row, rowIdx) => `
-                <tr style="background-color: ${rowIdx % 2 === 0 ? '#ffffff' : '#f5f5f5'};">
-                  ${row.map((cell, idx) => {
-        // idx 9 = เหตุผลการลา, idx 11 = หมายเหตุ - allow wrap
-        const isWrapColumn = idx === 9 || idx === 11;
-        const isCenterColumn = idx === 0 || idx === 7;
-        return `<td style="border: 1px solid #444; padding: 5px 4px; color: #000000; font-size: 7.5pt; ${isCenterColumn ? 'text-align: center;' : ''} ${isWrapColumn ? 'max-width: 140px; word-wrap: break-word; white-space: normal;' : 'white-space: nowrap;'}">${cell}</td>`;
-      }).join('')}
-                </tr>
-              `).join('')}
-            </tbody>
-          </table>
-          <div style="margin-top: 16px; padding-top: 8px; border-top: 1px solid #ccc; display: flex; justify-content: space-between; font-size: 7pt; color: #333;">
-            <span>พิมพ์เมื่อ: ${printDate}</span>
-            <span>จำนวน ${exportRows.length} รายการ</span>
-          </div>
-        </div>
-      `;
-
-      const today = new Date().toISOString().slice(0, 10);
-      await html2pdf()
-        .from(htmlContent)
-        .set({
-          margin: [10, 10, 10, 10],
-          filename: `leave-report-${today}.pdf`,
-          image: { type: 'jpeg', quality: 0.98 },
-          html2canvas: { scale: 2, useCORS: true, logging: false },
-          jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' },
-          pagebreak: { mode: ['avoid-all', 'css', 'legacy'] },
-        })
-        .toPdf()
-        .get('pdf')
-        .then((pdf: any) => {
-          const totalPages = pdf.internal.getNumberOfPages();
-          const pageWidth = pdf.internal.pageSize.getWidth();
-          const pageHeight = pdf.internal.pageSize.getHeight();
-
-          for (let i = 1; i <= totalPages; i++) {
-            pdf.setPage(i);
-            pdf.setFontSize(8);
-            pdf.setTextColor(80, 80, 80);
-
-            // Bottom right: page number (English to avoid Thai font issue)
-            pdf.text(`${i} / ${totalPages}`, pageWidth - 10, pageHeight - 5, { align: 'right' });
-          }
-        })
-        .save();
-    } catch {
-      toastError('Export PDF ไม่สำเร็จ');
+    } finally {
+      setExcelLoading(false);
     }
   };
 
@@ -575,7 +518,7 @@ export default function AdminLeaveReportsPage() {
           </Avatar>
           <Box>
             <Typography variant="h4" component="h1" fontWeight={700}>รายงานใบลา</Typography>
-            <Typography variant="body2" color="text.secondary">Export เป็น Excel หรือ PDF</Typography>
+            <Typography variant="body2" color="text.secondary">Export เป็น Excel</Typography>
           </Box>
         </Box>
 
@@ -592,21 +535,11 @@ export default function AdminLeaveReportsPage() {
           <Button
             variant="contained"
             onClick={exportExcel}
-            startIcon={<DocumentDownload size={18} color="white" />}
-            disabled={loading || rows.length === 0}
+            startIcon={excelLoading ? <CircularProgress size={18} color="inherit" /> : <DocumentDownload size={18} color="white" />}
+            disabled={loading || rows.length === 0 || excelLoading}
             sx={{ borderRadius: 1 }}
           >
-            {isMobile ? 'Excel' : 'Export Excel'}
-          </Button>
-          <Button
-            variant="contained"
-            color="secondary"
-            onClick={exportPDF}
-            startIcon={<DocumentDownload size={18} color="white" />}
-            disabled={loading || rows.length === 0}
-            sx={{ borderRadius: 1 }}
-          >
-            {isMobile ? 'PDF' : 'Export PDF'}
+            {isMobile ? 'Excel' : (excelLoading ? 'กำลังสร้าง...' : 'Export Excel')}
           </Button>
         </Stack>
       </Box>
@@ -870,14 +803,16 @@ export default function AdminLeaveReportsPage() {
 
       {/* Table */}
       <Fade in={true} timeout={300}>
-        <TableContainer
-          component={Paper}
-          sx={{
+        <Box>
+          <TableContainer
+            component={Paper}
+            sx={{
             borderRadius: 1,
             border: '1px solid',
             borderColor: 'divider',
             boxShadow: 'none',
             overflow: 'hidden',
+            mb: 2,
           }}
         >
           <Box ref={reportRef} sx={{ p: 2 }}>
@@ -889,6 +824,7 @@ export default function AdminLeaveReportsPage() {
               <TableHead>
                 <TableRow sx={{ bgcolor: alpha(theme.palette.primary.main, 0.04) }}>
                   <TableCell sx={{ fontWeight: 600, color: 'text.secondary', py: 2, whiteSpace: 'nowrap', width: 50 }}>#</TableCell>
+                  <TableCell sx={{ fontWeight: 600, color: 'text.secondary', py: 2, whiteSpace: 'nowrap' }}>รหัสใบลา</TableCell>
                   <TableCell sx={{ fontWeight: 600, color: 'text.secondary', py: 2, whiteSpace: 'nowrap' }}>พนักงาน</TableCell>
                   <TableCell sx={{ fontWeight: 600, color: 'text.secondary', py: 2, whiteSpace: 'nowrap' }}>สังกัด</TableCell>
                   <TableCell sx={{ fontWeight: 600, color: 'text.secondary', py: 2, whiteSpace: 'nowrap' }}>วันที่หยุด</TableCell>
@@ -904,7 +840,7 @@ export default function AdminLeaveReportsPage() {
               ) : rows.length === 0 ? (
                 <TableBody>
                   <TableRow>
-                    <TableCell colSpan={8} align="center" sx={{ py: 10 }}>
+                    <TableCell colSpan={9} align="center" sx={{ py: 10 }}>
                       <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1.5 }}>
                         <Avatar
                           sx={{
@@ -934,7 +870,8 @@ export default function AdminLeaveReportsPage() {
                         '&:last-child td': { border: 0 },
                       }}
                     >
-                      <TableCell sx={{ whiteSpace: 'nowrap', color: 'text.secondary' }}>{index + 1}</TableCell>
+                      <TableCell sx={{ whiteSpace: 'nowrap', color: 'text.secondary' }}>{index + 1 + (page * (rowsPerPage > 0 ? rowsPerPage : totalRows))}</TableCell>
+                      <TableCell sx={{ fontWeight: 600 }}>{r.leaveCode}</TableCell>
                       <TableCell>
                         <Box>
                           <Typography variant="body2" fontWeight={600}>{r.employeeName}</Typography>
@@ -964,7 +901,30 @@ export default function AdminLeaveReportsPage() {
             </Table>
           </Box>
         </TableContainer>
-      </Fade>
+
+        <TablePagination
+          component="div"
+          count={totalRows}
+          page={page}
+          onPageChange={(_, newPage) => setPage(newPage)}
+          rowsPerPage={rowsPerPage}
+          onRowsPerPageChange={(e) => {
+            setRowsPerPage(parseInt(e.target.value, 10));
+            setPage(0);
+          }}
+          rowsPerPageOptions={[10, 25, 50, 100, { label: 'ทั้งหมด', value: -1 }]}
+          labelRowsPerPage="จำนวนแถวต่อหน้า:"
+          labelDisplayedRows={({ from, to, count }) => `${from}-${to} จาก ${count}`}
+          sx={{ 
+            border: '1px solid', 
+            borderColor: 'divider',
+            borderRadius: 1,
+            bgcolor: alpha(theme.palette.background.paper, 0.8),
+          }}
+        />
+      </Box>
+    </Fade>
+    <Box sx={{ mb: 4 }} />
     </Box>
   );
 }

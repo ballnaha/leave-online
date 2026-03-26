@@ -791,7 +791,7 @@ export default function AdminLeavesPage() {
           }}
         >
           <TextField
-            placeholder="ค้นหาชื่อ, รหัสพนักงาน..."
+            placeholder="ค้นหาชื่อ, รหัสพนักงาน, รหัสใบลา..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             fullWidth

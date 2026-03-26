@@ -100,7 +100,7 @@ const menuGroups: MenuGroup[] = [
                 iconColor: '#6C63FF',
                 children: [
                     {
-                        text: 'รายการใบลา',
+                        text: 'ข้อมูลใบลา',
                         icon: FileText,
                         iconColor: '#6C63FF',
                         path: '/admin/leaves',

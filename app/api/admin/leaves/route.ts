@@ -76,37 +76,35 @@ export async function GET(request: NextRequest) {
       const trimmedSearch = search.trim();
       const searchParts = trimmedSearch.split(/\s+/);
 
+      const searchConditions: any[] = [
+        { leaveCode: { contains: trimmedSearch } },
+        { user: { employeeId: { contains: trimmedSearch } } },
+        { user: { firstName: { contains: trimmedSearch } } },
+        { user: { lastName: { contains: trimmedSearch } } },
+      ];
+
       if (searchParts.length > 1) {
-        where.user = {
-          ...where.user,
-          OR: [
-            {
+        searchConditions.push(
+          {
+            user: {
               AND: [
                 { firstName: { contains: searchParts[0] } },
                 { lastName: { contains: searchParts.slice(1).join(' ') } },
               ]
-            },
-            {
+            }
+          },
+          {
+            user: {
               AND: [
                 { firstName: { contains: searchParts.slice(0, -1).join(' ') } },
                 { lastName: { contains: searchParts[searchParts.length - 1] } },
               ]
-            },
-            { employeeId: { contains: trimmedSearch } },
-            { firstName: { contains: trimmedSearch } },
-            { lastName: { contains: trimmedSearch } },
-          ],
-        };
-      } else {
-        where.user = {
-          ...where.user,
-          OR: [
-            { employeeId: { contains: trimmedSearch } },
-            { firstName: { contains: trimmedSearch } },
-            { lastName: { contains: trimmedSearch } },
-          ],
-        };
+            }
+          }
+        );
       }
+
+      where.OR = searchConditions;
     }
 
     const leaves = await prisma.leaveRequest.findMany({

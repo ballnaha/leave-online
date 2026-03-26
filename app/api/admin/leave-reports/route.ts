@@ -29,6 +29,12 @@ export async function GET(request: NextRequest) {
     const department = searchParams.get('department');
     const section = searchParams.get('section');
 
+    const pageParam = searchParams.get('page');
+    const limitParam = searchParams.get('limit');
+    const page = pageParam ? Number(pageParam) : 1;
+    const limit = limitParam ? Number(limitParam) : 50;
+    const skip = (page - 1) * limit;
+
     const where: any = {};
 
     if (status && status !== 'all') {
@@ -98,12 +104,24 @@ export async function GET(request: NextRequest) {
       where.endDate = { ...where.endDate, lte: new Date(endDate) };
     }
 
+    // We need total count for ALL matching leaves for stats, but we only return a subset for rows
+    const allMatchingLeavesForStats = await prisma.leaveRequest.findMany({
+      where,
+      select: {
+        totalDays: true,
+        status: true,
+      },
+    });
+
     const [leaveRequests, leaveTypes, companies, departments, sections] = await Promise.all([
       prisma.leaveRequest.findMany({
         where,
         orderBy: [{ startDate: 'desc' }, { id: 'desc' }],
+        skip: limitParam ? skip : undefined, // Only paginate if limit is provided
+        take: limitParam ? limit : undefined,
         select: {
           id: true,
+          leaveCode: true,
           startDate: true,
           endDate: true,
           totalDays: true,
@@ -149,16 +167,15 @@ export async function GET(request: NextRequest) {
     const leaveTypeMap = new Map(leaveTypes.map((lt) => [lt.code, lt.name]));
     const deptMap = new Map(departments.map((d) => [d.code, d.name]));
     const sectionMap = new Map(sections.map((s: any) => [s.code, s.name]));
-    const sectionDeptMap = new Map(sections.map((s: any) => [s.code, s.department?.code]));
 
-    // Calculate stats
+    // Calculate stats using allMatchingLeavesForStats
     const stats = {
-      total: leaveRequests.length,
-      totalDays: leaveRequests.reduce((sum, lr) => sum + lr.totalDays, 0),
-      pending: leaveRequests.filter((lr) => (lr.status || '').toLowerCase() === 'pending' || (lr.status || '').toLowerCase() === 'in_progress').length,
-      approved: leaveRequests.filter((lr) => (lr.status || '').toLowerCase() === 'approved').length,
-      rejected: leaveRequests.filter((lr) => (lr.status || '').toLowerCase() === 'rejected').length,
-      cancelled: leaveRequests.filter((lr) => (lr.status || '').toLowerCase() === 'cancelled').length,
+      total: allMatchingLeavesForStats.length,
+      totalDays: allMatchingLeavesForStats.reduce((sum, lr) => sum + lr.totalDays, 0),
+      pending: allMatchingLeavesForStats.filter((lr) => (lr.status || '').toLowerCase() === 'pending' || (lr.status || '').toLowerCase() === 'in_progress').length,
+      approved: allMatchingLeavesForStats.filter((lr) => (lr.status || '').toLowerCase() === 'approved').length,
+      rejected: allMatchingLeavesForStats.filter((lr) => (lr.status || '').toLowerCase() === 'rejected').length,
+      cancelled: allMatchingLeavesForStats.filter((lr) => (lr.status || '').toLowerCase() === 'cancelled').length,
     };
 
     const rows = leaveRequests.map((lr: any) => {
@@ -166,11 +183,9 @@ export async function GET(request: NextRequest) {
       const normalizedStatus = (lr.status || '').toLowerCase();
       const statusLabel = statusLabelMap[normalizedStatus] || statusLabelMap[lr.status] || lr.status;
       
-      // Combine approval comments with reject/cancel reason (include approver name)
       const approvalComments = (lr.approvals || [])
         .filter((a: any) => a.comment && a.comment.trim())
         .map((a: any) => {
-          // Use actedBy first, then approver as fallback
           const person = a.actedBy || a.approver;
           const name = person ? `${person.firstName}` : `L${a.level}`;
           return `[${name}] ${a.comment.trim()}`;
@@ -182,6 +197,7 @@ export async function GET(request: NextRequest) {
 
       return {
         id: lr.id,
+        leaveCode: lr.leaveCode || `L-${lr.id}`,
         employeeId: lr.user.employeeId,
         employeeName: `${lr.user.firstName} ${lr.user.lastName}`,
         position: lr.user.position || '-',
@@ -205,7 +221,19 @@ export async function GET(request: NextRequest) {
     const departmentList = departments.map((d: any) => ({ code: d.code, name: d.name, companyCode: d.company }));
     const sectionList = sections.map((s: any) => ({ code: s.code, name: s.name, departmentCode: s.department?.code }));
 
-    return NextResponse.json({ rows, stats, companies: companyList, departments: departmentList, sections: sectionList });
+    return NextResponse.json({ 
+      rows, 
+      stats, 
+      companies: companyList, 
+      departments: departmentList, 
+      sections: sectionList,
+      pagination: {
+        total: allMatchingLeavesForStats.length,
+        page,
+        limit,
+        totalPages: Math.ceil(allMatchingLeavesForStats.length / limit)
+      }
+    });
   } catch (error) {
     console.error('Error fetching leave reports:', error);
     return NextResponse.json({ error: 'Failed to fetch leave reports' }, { status: 500 });
