@@ -249,7 +249,7 @@ export default function UsersPage() {
   const [departments, setDepartments] = useState<{ code: string; name: string; company: string }[]>([]);
   const [sections, setSections] = useState<{ code: string; name: string; departmentCode: string; departmentName: string }[]>([]);
 
-  const fetchDepartmentsAndSections = async () => {
+  const fetchDepartmentsAndSections = useCallback(async () => {
     try {
       const [deptRes, sectRes] = await Promise.all([
         fetch('/api/departments'),
@@ -272,9 +272,9 @@ export default function UsersPage() {
     } catch (err) {
       console.error('Error fetching departments/sections:', err);
     }
-  };
+  }, []);
 
-  const fetchUsers = async () => {
+  const fetchUsers = useCallback(async () => {
     try {
       setLoading(true);
       setError('');
@@ -291,11 +291,14 @@ export default function UsersPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  const initFetched = React.useRef(false);
 
   useEffect(() => {
-    if (!userLoading && user) {
+    if (!userLoading && user && !initFetched.current) {
       if (hasPermission(user.role, PERMISSIONS.CAN_MANAGE_USERS)) {
+        initFetched.current = true;
         fetchUsers();
         fetchDepartmentsAndSections();
       } else {
@@ -303,7 +306,7 @@ export default function UsersPage() {
         router.replace('/unauthorized');
       }
     }
-  }, [user, userLoading, router]);
+  }, [user, userLoading, router, fetchUsers, fetchDepartmentsAndSections]);
 
   const handleCreate = useCallback(() => {
     setSelectedUser(undefined);

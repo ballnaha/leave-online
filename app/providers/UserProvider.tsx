@@ -1,5 +1,5 @@
 'use client';
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { useSession, signOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import type { UserRole } from '@/types/user-role';
@@ -113,8 +113,15 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return () => clearInterval(intervalId);
     }, [status, session, fetchUser]);
 
+    const value = useMemo(() => ({
+        user,
+        loading,
+        error,
+        refetch: fetchUser
+    }), [user, loading, error, fetchUser]);
+
     return (
-        <UserContext.Provider value={{ user, loading, error, refetch: fetchUser }}>
+        <UserContext.Provider value={value}>
             {children}
         </UserContext.Provider>
     );
