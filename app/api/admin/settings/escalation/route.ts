@@ -17,7 +17,10 @@ export async function GET(req: NextRequest) {
 
         const now = new Date();
 
-        // Get pending leaves with escalation info
+        // Get last run info from system config
+        const lastRunConfig = await prisma.systemConfig.findUnique({
+            where: { key: 'last_escalation_run' }
+        });
         const pendingLeaves = await prisma.leaveRequest.findMany({
             where: {
                 status: { in: ['pending', 'in_progress'] },
@@ -104,6 +107,7 @@ export async function GET(req: NextRequest) {
         return NextResponse.json({
             config: {
                 enabled: true, // Always enabled
+                lastRun: lastRunConfig?.value || null,
                 cronConfigured: !!process.env.CRON_SECRET,
             },
             pending,

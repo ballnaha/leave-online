@@ -166,8 +166,8 @@ const Header = () => {
         return parts.length > 0 ? parts.join(' ') : `0 ${t('day', 'วัน')}`;
     };
 
-    // แสดง Sidebar สำหรับทุกคนยกเว้น employee
-    const showSidebar = !!user && user.role !== 'employee';
+    // แสดง Sidebar สำหรับทุกคน
+    const showSidebar = !!user;
 
     return (
         <>

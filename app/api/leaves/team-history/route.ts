@@ -263,8 +263,14 @@ export async function GET(request: NextRequest) {
           byType: {},
         };
       }
-      employeeSummaryMap[r.user.id].totalDays += r.totalDays;
-      employeeSummaryMap[r.user.id].leaveCount += 1;
+      // If viewing all, only count approved status for total days
+      // If viewing a specific status, count everything in that status
+      const shouldSum = status === 'all' ? r.status === 'approved' : true;
+      
+      if (shouldSum) {
+        employeeSummaryMap[r.user.id].totalDays += r.totalDays;
+        employeeSummaryMap[r.user.id].leaveCount += 1;
+      }
       employeeSummaryMap[r.user.id].byType[r.leaveType] =
         (employeeSummaryMap[r.user.id].byType[r.leaveType] || 0) + r.totalDays;
     });

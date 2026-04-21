@@ -2,13 +2,14 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { hash } from 'bcryptjs';
 import { getServerSession } from 'next-auth';
-import { authOptions, isAdminRole } from '@/lib/auth';
+import { authOptions } from '@/lib/auth';
+import { hasPermission, PERMISSIONS } from '@/lib/permissions';
 
 // GET all users
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session || !isAdminRole(session.user.role)) {
+    if (!session || !hasPermission(session.user.role, PERMISSIONS.CAN_MANAGE_USERS)) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -95,7 +96,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session || !isAdminRole(session.user.role)) {
+    if (!session || !hasPermission(session.user.role, PERMISSIONS.CAN_MANAGE_USERS)) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 

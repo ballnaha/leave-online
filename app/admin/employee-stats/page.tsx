@@ -30,6 +30,11 @@ import {
     InputAdornment,
     TablePagination,
     TableSortLabel,
+    Dialog,
+    DialogTitle,
+    DialogContent,
+    DialogActions,
+    CircularProgress,
 } from '@mui/material';
 import {
     People,
@@ -57,7 +62,7 @@ interface EmployeeLeaveStat {
 
 interface FilterOptions {
     companies: { code: string; name: string }[];
-    departments: { code: string; name: string }[];
+    departments: { code: string; name: string; companyCode: string }[];
     sections: { code: string; name: string; departmentCode: string }[];
     availableYears: number[];
 }
@@ -87,6 +92,14 @@ export default function EmployeeStatsPage() {
     // Sorting state
     const [sortBy, setSortBy] = useState<string>('employeeId');
     const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+    const [selectedDetail, setSelectedDetail] = useState<{
+        userName: string;
+        leaveType: string;
+        leaves: any[];
+    } | null>(null);
+    const [detailLoading, setDetailLoading] = useState(false);
+    const [detailModalOpen, setDetailModalOpen] = useState(false);
+    const [allLeaveTypes, setAllLeaveTypes] = useState<{ code: string; name: string }[]>([]);
 
     const fetchFilters = async () => {
         try {
@@ -97,6 +110,18 @@ export default function EmployeeStatsPage() {
             }
         } catch (error) {
             console.error('Failed to fetch filter options', error);
+        }
+    };
+
+    const fetchLeaveTypes = async () => {
+        try {
+            const res = await fetch('/api/leave-types');
+            if (res.ok) {
+                const data = await res.json();
+                setAllLeaveTypes(data);
+            }
+        } catch (error) {
+            console.error('Failed to fetch leave types', error);
         }
     };
 
@@ -147,6 +172,7 @@ export default function EmployeeStatsPage() {
     // Initial load for filters
     useEffect(() => {
         fetchFilters();
+        fetchLeaveTypes();
     }, []);
 
     // Single source of truth for fetching stats
@@ -189,6 +215,43 @@ export default function EmployeeStatsPage() {
         setPage(newPage);
     };
 
+    const handleOpenDetails = async (stat: EmployeeLeaveStat, typeName: string) => {
+        const isAll = typeName === 'all';
+        const typeCode = isAll ? 'all' : (allLeaveTypes.find(lt => lt.name === typeName)?.code || typeName);
+        
+        setSelectedDetail({ userName: stat.name, leaveType: isAll ? 'รายการลาทั้งหมด' : typeName, leaves: [] });
+        setDetailModalOpen(true);
+        setDetailLoading(true);
+
+        try {
+            const params = new URLSearchParams();
+            params.append('userId', stat.id.toString());
+            if (!isAll) params.append('leaveType', typeCode);
+            params.append('startDate', `${selectedYear}-01-01`);
+            params.append('endDate', `${selectedYear}-12-31`);
+            params.append('status', 'approved');
+
+            const res = await fetch(`/api/admin/leaves?${params.toString()}`);
+            if (res.ok) {
+                const result = await res.json();
+                setSelectedDetail(prev => prev ? { ...prev, leaves: result.leaves } : null);
+            }
+        } catch (error) {
+            console.error('Failed to fetch leave details', error);
+        } finally {
+            setDetailLoading(false);
+        }
+    };
+
+    const formatThaiDate = (dateStr: string) => {
+        const date = new Date(dateStr);
+        return date.toLocaleDateString('th-TH', { 
+            day: 'numeric', 
+            month: 'short', 
+            year: '2-digit' 
+        });
+    };
+
     const typeColors: { [key: string]: string } = {
         'ลาป่วย': '#5E72E4',
         'ลากิจ': '#8965E0',
@@ -213,7 +276,7 @@ export default function EmployeeStatsPage() {
                 <Stack direction="row" spacing={1.5}>
                     <Button
                         variant="contained"
-                        startIcon={<DocumentUpload size={18} />}
+                        startIcon={<DocumentUpload size={18} color="white" />}
                         onClick={() => router.push('/admin/leave-import')}
                         sx={{
                             borderRadius: 1.5,
@@ -277,7 +340,7 @@ export default function EmployeeStatsPage() {
                             label="ปีงบประมาณ"
                             onChange={(e) => handleYearChange(Number(e.target.value))}
                         >
-                            {filterOptions?.availableYears.map(year => (
+                            {filterOptions?.availableYears?.map(year => (
                                 <MenuItem key={year} value={year}>{year + 543}</MenuItem>
                             ))}
                         </Select>
@@ -291,7 +354,7 @@ export default function EmployeeStatsPage() {
                             onChange={(e) => handleCompanyChange(e.target.value)}
                         >
                             <MenuItem value="all">ทุกบริษัท</MenuItem>
-                            {filterOptions?.companies.map(c => (
+                            {filterOptions?.companies?.map(c => (
                                 <MenuItem key={c.code} value={c.code}>{c.code} - {c.name}</MenuItem>
                             ))}
                         </Select>
@@ -305,9 +368,12 @@ export default function EmployeeStatsPage() {
                             onChange={(e) => handleDeptChange(e.target.value)}
                         >
                             <MenuItem value="all">ทุกฝ่าย</MenuItem>
-                            {filterOptions?.departments.map(d => (
-                                <MenuItem key={d.code} value={d.code}>{d.code} - {d.name}</MenuItem>
-                            ))}
+                            {filterOptions?.departments
+                                ?.filter(d => selectedCompany === 'all' || d.companyCode === selectedCompany)
+                                .map(d => (
+                                    <MenuItem key={d.code} value={d.code}>{d.code} - {d.name}</MenuItem>
+                                ))
+                            }
                         </Select>
                     </FormControl>
 
@@ -320,7 +386,7 @@ export default function EmployeeStatsPage() {
                         >
                             <MenuItem value="all">ทุกแผนก</MenuItem>
                             {filterOptions?.sections
-                                .filter(s => s.departmentCode === selectedDept)
+                                ?.filter(s => s.departmentCode === selectedDept)
                                 .map(s => (
                                     <MenuItem key={s.code} value={s.code}>{s.code} - {s.name}</MenuItem>
                                 ))
@@ -480,13 +546,18 @@ export default function EmployeeStatsPage() {
                                                     <Chip
                                                         label={`${stat.leaveDetails[type]} วัน`}
                                                         size="small"
+                                                        onClick={() => handleOpenDetails(stat, type)}
                                                         sx={{
                                                             height: 28,
                                                             fontWeight: 700,
                                                             bgcolor: alpha(typeColors[type] || typeColors.default, 0.12),
                                                             color: typeColors[type] || typeColors.default,
                                                             borderRadius: 1,
-                                                            px: 0.5
+                                                            px: 0.5,
+                                                            cursor: 'pointer',
+                                                            '&:hover': {
+                                                                bgcolor: alpha(typeColors[type] || typeColors.default, 0.2),
+                                                            }
                                                         }}
                                                     />
                                                 ) : (
@@ -503,16 +574,26 @@ export default function EmployeeStatsPage() {
                                             borderLeft: '1px solid',
                                             borderColor: 'divider'
                                         }}>
-                                            <Box sx={{
-                                                display: 'inline-flex',
-                                                bgcolor: alpha(theme.palette.primary.main, 0.08),
-                                                color: 'primary.main',
-                                                borderRadius: 1,
-                                                px: 2,
-                                                py: 0.75,
-                                                fontWeight: 800,
-                                                fontSize: '0.95rem'
-                                            }}>
+                                            <Box 
+                                                onClick={() => handleOpenDetails(stat, 'all')}
+                                                sx={{
+                                                    display: 'inline-flex',
+                                                    bgcolor: alpha(theme.palette.primary.main, 0.08),
+                                                    color: 'primary.main',
+                                                    borderRadius: 1,
+                                                    px: 2,
+                                                    py: 0.75,
+                                                    fontWeight: 800,
+                                                    fontSize: '0.95rem',
+                                                    cursor: 'pointer',
+                                                    transition: 'all 0.2s',
+                                                    '&:hover': {
+                                                        bgcolor: alpha(theme.palette.primary.main, 0.15),
+                                                        transform: 'translateY(-1px)',
+                                                        boxShadow: `0 2px 8px ${alpha(theme.palette.primary.main, 0.15)}`
+                                                    }
+                                                }}
+                                            >
                                                 {stat.totalDays} วัน
                                             </Box>
                                         </TableCell>
@@ -554,6 +635,113 @@ export default function EmployeeStatsPage() {
                     }}
                 />
             </Box>
+
+            {/* Leave Details Modal */}
+            <Dialog 
+                open={detailModalOpen} 
+                onClose={() => setDetailModalOpen(false)}
+                maxWidth="md"
+                fullWidth
+                PaperProps={{
+                    sx: { borderRadius: 1.5 }
+                }}
+            >
+                <DialogTitle sx={{ fontWeight: 800, pb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Box>
+                        {selectedDetail?.leaveType}
+                        <Typography variant="body2" color="text.secondary" fontWeight={500}>
+                            พนักงาน: {selectedDetail?.userName} (ปี {selectedYear + 543})
+                        </Typography>
+                    </Box>
+                    {!detailLoading && selectedDetail && (
+                        <Chip 
+                            label={`รวม ${selectedDetail.leaves.reduce((sum, l) => sum + l.totalDays, 0)} วัน`}
+                            color="primary"
+                            variant="outlined"
+                            sx={{ fontWeight: 700 }}
+                        />
+                    )}
+                </DialogTitle>
+                <DialogContent sx={{ minHeight: 400, py: 0, bgcolor: alpha(theme.palette.background.default, 0.4) }}>
+                    {detailLoading ? (
+                        <Box sx={{ display: 'flex', justifyContent: 'center', py: 12 }}>
+                            <CircularProgress size={40} thickness={4} />
+                        </Box>
+                    ) : selectedDetail?.leaves.length === 0 ? (
+                        <Box sx={{ py: 12, textAlign: 'center', opacity: 0.5 }}>
+                            <DocumentUpload size={64} variant="Outline" />
+                            <Typography variant="h6" sx={{ mt: 2 }}>ไม่พบข้อมูลใบลา</Typography>
+                        </Box>
+                    ) : (
+                        <Box sx={{ py: 1 }}>
+                            {(() => {
+                                const grouped = (selectedDetail?.leaves || []).reduce((acc: Record<string, any[]>, curr: any) => {
+                                    const type = curr.leaveTypeName || curr.leaveType;
+                                    if (!acc[type]) acc[type] = [];
+                                    acc[type].push(curr);
+                                    return acc;
+                                }, {});
+
+                                return Object.entries(grouped).map(([typeName, leaves], index) => (
+                                <Box key={typeName} sx={{ mb: index === Object.keys(leaves).length - 1 ? 0 : 4 }}>
+                                    <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1.5, px: 0.5 }}>
+                                        <Typography variant="overline" fontSize="0.75rem" fontWeight={800} color="primary" sx={{ letterSpacing: '0.1em' }}>
+                                            {typeName}
+                                        </Typography>
+                                        <Box sx={{ flexGrow: 1, height: '1px', bgcolor: alpha(theme.palette.divider, 0.5) }} />
+                                        <Typography variant="caption" color="text.secondary" fontWeight={600}>
+                                            รวม {leaves.reduce((sum, l) => sum + l.totalDays, 0)} วัน
+                                        </Typography>
+                                    </Stack>
+
+                                    <Table size="small">
+                                        <TableBody>
+                                            {leaves.map((l: any) => (
+                                                <TableRow key={l.id} sx={{ '& td': { border: 0, py: 1.25, px: 0.5 } }}>
+                                                    <TableCell sx={{ width: '100px' }}>
+                                                        <Typography variant="body2" fontWeight={600} color="text.primary">
+                                                            {formatThaiDate(l.startDate)}
+                                                        </Typography>
+                                                    </TableCell>
+                                                    <TableCell sx={{ width: '120px' }}>
+                                                        <Typography variant="caption" sx={{ 
+                                                            fontFamily: 'monospace', 
+                                                            bgcolor: alpha(theme.palette.text.secondary, 0.05),
+                                                            px: 0.8, py: 0.3, borderRadius: 0.5,
+                                                            color: 'text.secondary'
+                                                        }}>
+                                                            {l.leaveCode}
+                                                        </Typography>
+                                                    </TableCell>
+                                                    <TableCell sx={{ width: '60px', textAlign: 'center' }}>
+                                                        <Typography variant="body2" fontWeight={800} color="primary">
+                                                            {l.totalDays}
+                                                        </Typography>
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.5 }}>
+                                                            {l.reason || '-'}
+                                                        </Typography>
+                                                    </TableCell>
+                                                </TableRow>
+                                            ))}
+                                        </TableBody>
+                                    </Table>
+                                </Box>
+                            ))})()}
+                        </Box>
+                    )}
+                </DialogContent>
+                <DialogActions sx={{ p: 2.5 }}>
+                    <Button 
+                        onClick={() => setDetailModalOpen(false)}
+                        variant="outlined"
+                        sx={{ borderRadius: 1.5, textTransform: 'none' }}
+                    >
+                        ปิดหน้าต่าง
+                    </Button>
+                </DialogActions>
+            </Dialog>
         </Box>
     );
 }

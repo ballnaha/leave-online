@@ -70,6 +70,9 @@ import ConfirmDialog from '../components/ConfirmDialog';
 import { useToastr } from '@/app/components/Toastr';
 import dayjs from 'dayjs';
 import 'dayjs/locale/th';
+import { useRouter } from 'next/navigation';
+import { PERMISSIONS, hasPermission } from '@/lib/permissions';
+
 
 interface UserData {
   id: number;
@@ -198,9 +201,13 @@ function TableSkeleton() {
   );
 }
 
+import { useUser } from '@/app/providers/UserProvider';
+
 export default function UsersPage() {
   const theme = useTheme();
   const toastr = useToastr();
+  const router = useRouter();
+  const { user, loading: userLoading } = useUser();
   const [users, setUsers] = useState<UserData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -287,9 +294,16 @@ export default function UsersPage() {
   };
 
   useEffect(() => {
-    fetchUsers();
-    fetchDepartmentsAndSections();
-  }, []);
+    if (!userLoading && user) {
+      if (hasPermission(user.role, PERMISSIONS.CAN_MANAGE_USERS)) {
+        fetchUsers();
+        fetchDepartmentsAndSections();
+      } else {
+        // If no permission, redirect or show error
+        router.replace('/unauthorized');
+      }
+    }
+  }, [user, userLoading, router]);
 
   const handleCreate = useCallback(() => {
     setSelectedUser(undefined);
@@ -599,11 +613,25 @@ export default function UsersPage() {
         <Box sx={{ display: 'flex', gap: 1.5 }}>
           <Button
             variant="outlined"
+            startIcon={<ShieldTick size={18} color={theme.palette.warning.main} />}
+            onClick={() => router.push('/admin/roles')}
+            sx={{
+              borderRadius: 1,
+              px: { xs: 1.5, sm: 3 },
+              py: 1.25,
+              borderColor: alpha(theme.palette.warning.main, 0.5),
+              color: 'warning.main',
+            }}
+          >
+            ดูสิทธิ์ใช้งาน
+          </Button>
+          <Button
+            variant="outlined"
             startIcon={<DocumentUpload size={18} color={theme.palette.primary.main} />}
             onClick={() => window.location.href = '/admin/users/import'}
             sx={{
               borderRadius: 1,
-              px: 3,
+              px: { xs: 1.5, sm: 3 },
               py: 1.25,
             }}
           >

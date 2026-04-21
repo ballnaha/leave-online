@@ -232,6 +232,8 @@ export default function OrganizationStructurePage() {
   const [selectedUser, setSelectedUser] = useState<UserData | null>(null);
   const [subordinatesDialogOpen, setSubordinatesDialogOpen] = useState(false);
   const [subordinateSearch, setSubordinateSearch] = useState('');
+  const [subordinatePage, setSubordinatePage] = useState(0);
+  const [subordinateRowsPerPage, setSubordinateRowsPerPage] = useState(10);
 
   // Handle cascading filter reset
   const handleCompanyChange = (value: string) => {
@@ -374,6 +376,7 @@ export default function OrganizationStructurePage() {
     setSelectedUser(user);
     setSubordinatesDialogOpen(true);
     setSubordinateSearch('');
+    setSubordinatePage(0);
     setLoadedSubordinates([]);
     setSubordinatesLoading(true);
 
@@ -390,7 +393,6 @@ export default function OrganizationStructurePage() {
     }
   };
 
-  // Filtered subordinates (use loaded data instead of pre-loaded)
   const filteredSubordinates = useMemo(() => {
     if (!subordinateSearch) return loadedSubordinates;
 
@@ -402,6 +404,14 @@ export default function OrganizationStructurePage() {
         sub.position?.toLowerCase().includes(query)
     );
   }, [loadedSubordinates, subordinateSearch]);
+
+  // Paginated subordinates
+  const paginatedSubordinates = useMemo(() => {
+    return filteredSubordinates.slice(
+      subordinatePage * subordinateRowsPerPage,
+      subordinatePage * subordinateRowsPerPage + subordinateRowsPerPage
+    );
+  }, [filteredSubordinates, subordinatePage, subordinateRowsPerPage]);
 
   return (
     <Box>
@@ -766,7 +776,10 @@ export default function OrganizationStructurePage() {
                     size="small"
                     placeholder="ค้นหาชื่อ, รหัสพนักงาน..."
                     value={subordinateSearch}
-                    onChange={(e) => setSubordinateSearch(e.target.value)}
+                    onChange={(e) => {
+                      setSubordinateSearch(e.target.value);
+                      setSubordinatePage(0);
+                    }}
                     disabled={subordinatesLoading}
                     InputProps={{
                       startAdornment: (
@@ -826,7 +839,7 @@ export default function OrganizationStructurePage() {
                     <>
                       {/* Mobile Card Layout */}
                       <Box sx={{ display: { xs: 'flex', md: 'none' }, flexDirection: 'column', gap: 1.5 }}>
-                        {filteredSubordinates.map(sub => (
+                        {paginatedSubordinates.map(sub => (
                           <Card key={sub.id} elevation={0} sx={{ borderRadius: 1, border: '1px solid #E2E8F0' }}>
                             <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
                               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1.5 }}>
@@ -887,7 +900,7 @@ export default function OrganizationStructurePage() {
                             </TableRow>
                           </TableHead>
                           <TableBody>
-                            {filteredSubordinates.map(sub => (
+                            {paginatedSubordinates.map(sub => (
                               <TableRow key={sub.id} hover>
                                 <TableCell>
                                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
@@ -936,6 +949,23 @@ export default function OrganizationStructurePage() {
                           </TableBody>
                         </Table>
                       </TableContainer>
+
+                      {/* Pagination */}
+                      <TablePagination
+                        component="div"
+                        count={filteredSubordinates.length}
+                        page={subordinatePage}
+                        onPageChange={(_, newPage) => setSubordinatePage(newPage)}
+                        rowsPerPage={subordinateRowsPerPage}
+                        onRowsPerPageChange={(e) => {
+                          setSubordinateRowsPerPage(parseInt(e.target.value, 10));
+                          setSubordinatePage(0);
+                        }}
+                        rowsPerPageOptions={[5, 10, 25, 50]}
+                        labelRowsPerPage="จำนวนต่อหน้า:"
+                        labelDisplayedRows={({ from, to, count }) => `${from}-${to} จาก ${count}`}
+                        sx={{ mt: 1, borderTop: '1px solid #F1F5F9' }}
+                      />
                     </>
                   ) : (
                     <Box sx={{

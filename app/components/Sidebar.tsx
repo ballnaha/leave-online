@@ -1,12 +1,14 @@
 'use client';
 import React, { useState } from 'react';
 import { Drawer, Box, List, ListItem, ListItemButton, ListItemIcon, ListItemText, Typography, Avatar, Divider, IconButton, CircularProgress, Skeleton } from '@mui/material';
-import { Home2, Calendar, Setting2, Logout, User, CloseSquare, Task } from 'iconsax-react';
+import { Home2, Calendar, Setting2, Logout, User, CloseSquare, Task, ShieldTick } from 'iconsax-react';
 import { signOut } from 'next-auth/react';
 import { useToastr } from '@/app/components/Toastr';
 import { useUser } from '@/app/providers/UserProvider';
 import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { canAccessAdmin } from '@/lib/permissions';
+
 
 interface SidebarProps {
     open: boolean;
@@ -68,11 +70,11 @@ const Sidebar = ({ open, onClose }: SidebarProps) => {
     const menuItems = [
         { text: 'หน้าหลัก', icon: <Home2 size={20} variant="Outline" color="#6C63FF" />, activeIcon: <Home2 size={20} variant="Bold" color="#fff" />, path: '/' },
         { text: 'จัดการใบลา', icon: <Task size={20} variant="Outline" color="#6C63FF" />, activeIcon: <Task size={20} variant="Bold" color="#fff" />, path: '/approval' },
+        { text: 'สิทธิ์การใช้งาน', icon: <ShieldTick size={20} variant="Outline" color="#6C63FF" />, activeIcon: <ShieldTick size={20} variant="Bold" color="#fff" />, path: '/admin/roles' },
     ];
 
     // Admin roles that can access admin settings
-    const adminRoles = ['admin', 'hr', 'hr_manager'];
-    const isAdmin = adminRoles.includes(user?.role || '');
+    const isAdmin = canAccessAdmin(user?.role);
 
     const handleNavigate = (path: string) => {
         if (path) {

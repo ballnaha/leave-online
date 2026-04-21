@@ -34,6 +34,9 @@ import {
 } from '@mui/material';
 import { DocumentDownload, Refresh2, DocumentText, TickCircle, CloseCircle, Clock, Calendar, SearchNormal1, CloseSquare } from 'iconsax-react';
 import { useToastr } from '@/app/components/Toastr';
+import { useUser } from '@/app/providers/UserProvider';
+import { PERMISSIONS, hasPermission } from '@/lib/permissions';
+import { useRouter } from 'next/navigation';
 
 type ReportRow = {
   id: number;
@@ -52,6 +55,7 @@ type ReportRow = {
   reason: string;
   status: string;
   statusLabel: string;
+  pendingApprover: string | null;
   note: string;
 };
 
@@ -71,6 +75,7 @@ type CompanyOption = { code: string; name: string };
 type LeaveReportResponse = {
   rows?: ReportRow[];
   stats?: Stats;
+  flStats?: { totalRequests: number; uniqueEmployees: number; approvedDays: number };
   companies?: CompanyOption[];
   departments?: DeptOption[];
   sections?: SectionOption[];
@@ -131,6 +136,15 @@ const formatThaiDateRange = (startDate: string, endDate: string) => {
   const sameDay = start.toDateString() === end.toDateString();
   if (sameDay) return formatThaiDate(startDate);
   return `${formatThaiDate(startDate)} - ${formatThaiDate(endDate)}`;
+};
+
+const escapeHtml = (value: string | number | null | undefined) => {
+  return String(value ?? '-')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 };
 
 // Stat Card Component
@@ -236,12 +250,15 @@ function TableSkeleton() {
 
 export default function AdminLeaveReportsPage() {
   const theme = useTheme();
+  const router = useRouter();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const { error: toastError } = useToastr();
+  const { user, loading: userLoading } = useUser();
   const [rows, setRows] = useState<ReportRow[]>([]);
   const [stats, setStats] = useState<Stats>({ total: 0, totalDays: 0, pending: 0, approved: 0, rejected: 0, cancelled: 0 });
   const [loading, setLoading] = useState(true);
   const [excelLoading, setExcelLoading] = useState(false);
+  const [pdfLoading, setPdfLoading] = useState(false);
   const reportRef = useRef<HTMLDivElement | null>(null);
   const isMountedRef = useRef(true);
 
@@ -311,7 +328,7 @@ export default function AdminLeaveReportsPage() {
     if (companyFilter !== 'all') params.set('company', companyFilter);
     if (departmentFilter !== 'all') params.set('department', departmentFilter);
     if (sectionFilter !== 'all') params.set('section', sectionFilter);
-    
+
     // Pagination parameters
     params.set('page', String(page + 1));
     if (rowsPerPage > 0) {
@@ -391,8 +408,14 @@ export default function AdminLeaveReportsPage() {
   }, [status, month, year, debouncedSearch, companyFilter, departmentFilter, sectionFilter, page, rowsPerPage, toastError]);
 
   useEffect(() => {
-    fetchRows();
-  }, [fetchRows, page, rowsPerPage]);
+    if (!userLoading && user) {
+      if (hasPermission(user.role, PERMISSIONS.CAN_VIEW_REPORTS)) {
+        fetchRows();
+      } else {
+        router.replace('/unauthorized');
+      }
+    }
+  }, [fetchRows, page, rowsPerPage, user, userLoading, router]);
 
   useEffect(() => {
     // Reset to first page when any major filter changes
@@ -415,6 +438,238 @@ export default function AdminLeaveReportsPage() {
       note: r.note,
     }));
   }, [rows]);
+
+  const openPrintPreview = async () => {
+    setPdfLoading(true);
+    try {
+      const params = new URLSearchParams();
+      params.set('status', status);
+      params.set('month', String(month));
+      params.set('year', String(year));
+      if (debouncedSearch) params.set('search', debouncedSearch);
+      if (companyFilter !== 'all') params.set('company', companyFilter);
+      if (departmentFilter !== 'all') params.set('department', departmentFilter);
+      if (sectionFilter !== 'all') params.set('section', sectionFilter);
+
+      const res = await fetch(`/api/admin/leave-reports?${params.toString()}`, { cache: 'no-store' });
+      if (!res.ok) throw new Error('fetch failed');
+      const data = (await res.json()) as LeaveReportResponse;
+      // กรองบังคับพักร้อน (leaveCode ขึ้นต้นด้วย FL) ออกจาก PDF
+      // (API กรอง FL ไว้แล้ว เพิ่มการกรองซ้ำ client-side เพื่อความปลอดภัย)
+      const allRows: ReportRow[] = (Array.isArray(data.rows) ? data.rows : []).filter(
+        (r) => !r.leaveCode?.startsWith('FL'),
+      );
+      const flStats = data.flStats;
+
+      if (allRows.length === 0) {
+        toastError('ไม่มีข้อมูลสำหรับเปิดตัวอย่างก่อนพิมพ์');
+        return;
+      }
+
+      const deptList: DeptOption[] = data.departments || departments;
+      const compList: CompanyOption[] = data.companies || companies;
+      const deptMap = new Map(deptList.map((d) => [d.code, d]));
+      const compMap = new Map(compList.map((c) => [c.code, c.name]));
+
+      type GroupedEmployee = { employeeId: string; rows: ReportRow[] };
+      type GroupedPosition = Map<string, GroupedEmployee[]>;
+      type GroupedSection = Map<string, GroupedPosition>;
+      type GroupedDept = Map<string, GroupedSection>;
+      type GroupedCompany = Map<string, GroupedDept>;
+
+      const grouped: GroupedCompany = new Map();
+
+      for (const row of allRows) {
+        const deptInfo = deptMap.get(row.departmentCode);
+        const companyName = deptInfo ? (compMap.get(deptInfo.companyCode) || deptInfo.companyCode) : 'ไม่ระบุบริษัท';
+        const deptName = row.departmentCode
+          ? `${row.departmentCode} - ${row.department || row.departmentCode}`
+          : (row.department || 'ไม่ระบุฝ่าย');
+        const sectionName = row.sectionCode
+          ? `${row.sectionCode} - ${row.section || row.sectionCode}`
+          : (row.section || 'ไม่ระบุแผนก');
+        const posName = row.position || 'ไม่ระบุตำแหน่ง';
+        if (!grouped.has(companyName)) grouped.set(companyName, new Map());
+        const byDept = grouped.get(companyName)!;
+        if (!byDept.has(deptName)) byDept.set(deptName, new Map());
+        const bySect = byDept.get(deptName)!;
+        if (!bySect.has(sectionName)) bySect.set(sectionName, new Map());
+        const byPos = bySect.get(sectionName)!;
+        if (!byPos.has(posName)) byPos.set(posName, []);
+        const empList = byPos.get(posName)!;
+        let empEntry = empList.find((e) => e.employeeId === row.employeeId);
+        if (!empEntry) {
+          empEntry = { employeeId: row.employeeId, rows: [] };
+          empList.push(empEntry);
+        }
+        empEntry.rows.push(row);
+      }
+
+      const approvedLeaveDays = allRows.reduce(
+        (sum, row) => ((row.status || '').toLowerCase() === 'approved' ? sum + (row.totalDays || 0) : sum),
+        0,
+      );
+
+      const periodLabel = month === 0
+        ? `ปี ${year + 543}`
+        : `${monthOptions.find((m) => m.value === month)?.label} ${year + 543}`;
+
+      const filterParts = [
+        companyFilter !== 'all' ? `บริษัท: ${escapeHtml(compMap.get(companyFilter) || companyFilter)}` : '',
+        departmentFilter !== 'all' ? `ฝ่าย: ${escapeHtml(deptMap.get(departmentFilter)?.name || departmentFilter)}` : '',
+        sectionFilter !== 'all' ? `แผนก: ${escapeHtml(sectionFilter)}` : '',
+        status !== 'all' ? `สถานะ: ${escapeHtml(statusOptions.find((s) => s.value === status)?.label || status)}` : '',
+      ].filter(Boolean);
+
+      // Single flat table with group-header rows — most space-efficient layout
+      const docDate = new Date().toLocaleDateString('th-TH', { dateStyle: 'long' });
+      const headerLine = [
+        `<strong>รายงานการลา</strong>`,
+        `ช่วงเวลา: ${escapeHtml(periodLabel)}`,
+        `${escapeHtml(allRows.length)} รายการ`,
+        `วันลาที่อนุมัติ ${escapeHtml(approvedLeaveDays.toFixed(1))} วัน`,
+        ...filterParts,
+        `ออกเอกสาร: ${escapeHtml(docDate)}`,
+      ].join(' &nbsp;|&nbsp; ');
+
+      let rowSeq = 0;
+      let tableRows = '';
+      for (const [companyName, byDept] of grouped) {
+        tableRows += `<tr class="grp-company"><td colspan="8">บริษัท: ${escapeHtml(companyName)}</td></tr>`;
+        for (const [deptName, bySect] of byDept) {
+          tableRows += `<tr class="grp-dept"><td colspan="8">ฝ่าย: ${escapeHtml(deptName)}</td></tr>`;
+          for (const [sectionName, byPos] of bySect) {
+            tableRows += `<tr class="grp-sect"><td colspan="8">แผนก: ${escapeHtml(sectionName)}</td></tr>`;
+            for (const [posName, empList] of byPos) {
+              tableRows += `<tr class="grp-pos"><td colspan="8">ตำแหน่ง: ${escapeHtml(posName)}</td></tr>`;
+              for (const emp of empList) {
+                const empDisplayName = emp.rows[0]?.employeeName || emp.employeeId;
+                const totalEmpDays = emp.rows.reduce(
+                  (sum, r) => ((r.status || '').toLowerCase() === 'approved' ? sum + (r.totalDays || 0) : sum),
+                  0,
+                );
+                tableRows += `<tr class="grp-emp"><td colspan="5">${escapeHtml(empDisplayName)} (${escapeHtml(emp.employeeId)})</td><td colspan="3" class="tr">วันลาที่อนุมัติ ${escapeHtml(totalEmpDays.toFixed(1))} วัน</td></tr>`;
+                emp.rows.forEach((r) => {
+                  rowSeq += 1;
+                  const statusText = statusThaiMap[(r.status || '').toLowerCase()] || r.statusLabel || r.status;
+                  tableRows += `<tr class="data-row">
+                    <td class="tc">${rowSeq}</td>
+                    <td>${escapeHtml(r.leaveCode)}</td>
+                    <td class="nw">${escapeHtml(formatThaiDateRange(r.startDate, r.endDate))}</td>
+                    <td class="tc">${escapeHtml(r.totalDays)}</td>
+                    <td>${escapeHtml(r.leaveTypeName)}</td>
+                    <td>${escapeHtml(r.reason || '-')}</td>
+                    <td class="nw fw">${escapeHtml(statusText)}${r.pendingApprover && (r.status === 'pending' || r.status === 'in_progress') ? `<br><span class="pending-who">รอ: ${escapeHtml(r.pendingApprover)}</span>` : ''}</td>
+                    <td>${escapeHtml(r.note || '-')}</td>
+                  </tr>`;
+                });
+              }
+            }
+          }
+        }
+      }
+
+      const reportBody = `
+        <div class="doc-header">${headerLine}</div>
+        <table>
+          <colgroup>
+            <col style="width:26px">
+            <col style="width:66px">
+            <col style="width:86px">
+            <col style="width:30px">
+            <col style="width:72px">
+            <col style="width:80px">
+            <col style="width:56px">
+            <col style="width:68px">
+          </colgroup>
+          <thead>
+            <tr class="col-head">
+              <th>#</th><th>รหัสใบลา</th><th>วันที่ลา</th><th>วัน</th><th>ประเภท</th><th>เหตุผล</th><th>สถานะ</th><th>หมายเหตุ</th>
+            </tr>
+          </thead>
+          <tbody>${tableRows}</tbody>
+        </table>
+        <div class="doc-footer">รวม ${escapeHtml(allRows.length)} รายการ &nbsp;|&nbsp; วันลาที่อนุมัติ ${escapeHtml(approvedLeaveDays.toFixed(1))} วัน</div>
+        
+      `;
+
+      const previewWindow = window.open('', '_blank');
+      if (!previewWindow) {
+        toastError('เบราว์เซอร์บล็อกหน้าต่างตัวอย่าง กรุณาอนุญาต pop-up แล้วลองใหม่');
+        return;
+      }
+
+      const previewHtml = `<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<title>รายงานใบลา</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Sarabun',Tahoma,sans-serif;font-size:9px;background:#dce6ec;color:#111}
+.toolbar{position:sticky;top:0;z-index:9;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 16px;background:#3b5068;color:#fff}
+.tbar-left{display:flex;flex-direction:column;gap:2px}
+.tbar-title{font-size:13px;font-weight:700}
+.tbar-sub{font-size:10px;opacity:.75}
+.tbar-btns{display:flex;gap:8px}
+.tbar-btns button{border:1px solid rgba(255,255,255,.6);border-radius:3px;padding:7px 14px;font-size:11px;font-weight:700;cursor:pointer;background:transparent;color:#fff}
+.tbar-btns .btn-print{background:#fff;color:#3b5068}
+.shell{padding:20px}
+.page{width:210mm;min-height:297mm;margin:0 auto;padding:9mm 10mm;background:#fff;box-shadow:0 8px 24px rgba(0,0,0,.14)}
+.doc-header{border:1.5px solid #111;padding:5px 8px;margin-bottom:6px;font-size:9px;line-height:1.6;word-break:break-word}
+table{width:100%;border-collapse:collapse;table-layout:fixed}
+th,td{border:1px solid #999;padding:3px 4px;font-size:8.5px;vertical-align:top;text-align:left;word-break:break-word;line-height:1.35}
+th{background:#e8edf2;font-weight:700;white-space:nowrap}
+.col-head th{background:#3b5068;color:#fff;font-size:8.5px}
+.grp-company td{background:#3b5068;color:#fff;font-weight:700;font-size:9px;padding:4px 6px;border-color:#2d3e52}
+.grp-dept td{background:#4a7c6f;color:#fff;font-weight:700;font-size:8.5px;padding:3px 6px;border-color:#3a6155}
+.grp-sect td{background:#d0dfe6;color:#1a2d3a;font-size:8px;padding:2px 6px;border-color:#aac0cc}
+.grp-pos td{background:#eaf2ef;color:#1a3028;font-weight:700;font-size:8px;padding:2px 6px;font-style:italic}
+.grp-emp td{background:#f4f8f6;font-weight:700;font-size:8.5px;padding:3px 6px;border-top:1.5px solid #4a7c6f}
+.data-row:nth-child(even) td{background:#f7fafb}
+.tc{text-align:center}
+.nw{white-space:nowrap}
+.tr{text-align:right}
+.fw{font-weight:700}
+.doc-footer{margin-top:6px;font-size:8.5px;text-align:right;color:#444;border-top:1px solid #aaa;padding-top:4px}
+.fl-note{margin-top:5px;padding:4px 7px;border:1px dashed #888;font-size:8px;color:#555;background:#f9f9f9}
+.fl-note{margin-top:5px;padding:4px 7px;border:1px dashed #777;font-size:8px;color:#444;background:#f9f9f9}
+.pending-who{font-weight:400;font-style:italic;font-size:7.5px;color:#555}
+@page{size:A4 portrait;margin:8mm 7mm}
+@media print{
+body{background:#fff}
+.toolbar{display:none}
+.shell{padding:0}
+.page{width:auto;min-height:auto;box-shadow:none;padding:0}
+.grp-company td,.grp-dept td,.grp-sect td,.grp-pos td,.grp-emp td{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+}
+</style>
+</head>
+<body>
+<div class="toolbar">
+  <div class="tbar-left">
+    <div class="tbar-title">ตัวอย่างก่อนพิมพ์รายงานใบลา</div>
+    <div class="tbar-sub">เลือก Microsoft Print to PDF เพื่อบันทึกเป็น PDF</div>
+  </div>
+  <div class="tbar-btns">
+    <button class="btn-print" onclick="window.print()">พิมพ์ / Save as PDF</button>
+    <button onclick="window.close()">ปิด</button>
+  </div>
+</div>
+<div class="shell"><main class="page">${reportBody}</main></div>
+</body>
+</html>`;
+
+      previewWindow.document.open();
+      previewWindow.document.write(previewHtml);
+      previewWindow.document.close();
+      previewWindow.focus();
+    } catch {
+      toastError('เปิดตัวอย่างก่อนพิมพ์ไม่สำเร็จ');
+    } finally {
+      setPdfLoading(false);
+    }
+  };
 
   const exportExcel = async () => {
     setExcelLoading(true);
@@ -518,7 +773,7 @@ export default function AdminLeaveReportsPage() {
           </Avatar>
           <Box>
             <Typography variant="h4" component="h1" fontWeight={700}>รายงานใบลา</Typography>
-            <Typography variant="body2" color="text.secondary">Export เป็น Excel</Typography>
+            <Typography variant="body2" color="text.secondary">Export เป็น Excel / PDF</Typography>
           </Box>
         </Box>
 
@@ -540,6 +795,16 @@ export default function AdminLeaveReportsPage() {
             sx={{ borderRadius: 1 }}
           >
             {isMobile ? 'Excel' : (excelLoading ? 'กำลังสร้าง...' : 'Export Excel')}
+          </Button>
+          <Button
+            variant="outlined"
+            color="error"
+            onClick={openPrintPreview}
+            startIcon={pdfLoading ? <CircularProgress size={18} color="inherit" /> : <DocumentText size={18} color={theme.palette.error.main} />}
+            disabled={loading || rows.length === 0 || pdfLoading}
+            sx={{ borderRadius: 1, borderColor: theme.palette.error.main, color: theme.palette.error.main }}
+          >
+            {isMobile ? 'Preview' : (pdfLoading ? 'กำลังเตรียม...' : 'Preview / Print')}
           </Button>
         </Stack>
       </Box>
@@ -807,124 +1072,133 @@ export default function AdminLeaveReportsPage() {
           <TableContainer
             component={Paper}
             sx={{
-            borderRadius: 1,
-            border: '1px solid',
-            borderColor: 'divider',
-            boxShadow: 'none',
-            overflow: 'hidden',
-            mb: 2,
-          }}
-        >
-          <Box ref={reportRef} sx={{ p: 2 }}>
-            <Typography variant="h6" sx={{ fontWeight: 600, mb: 1 }}>
-              รายงานใบลา {month === 0 ? `ปี ${year + 543}` : `${monthOptions.find(m => m.value === month)?.label} ${year + 543}`}
-            </Typography>
+              borderRadius: 1,
+              border: '1px solid',
+              borderColor: 'divider',
+              boxShadow: 'none',
+              overflow: 'hidden',
+              mb: 2,
+            }}
+          >
+            <Box ref={reportRef} sx={{ p: 2 }}>
+              <Typography variant="h6" sx={{ fontWeight: 600, mb: 1 }}>
+                รายงานใบลา {month === 0 ? `ปี ${year + 543}` : `${monthOptions.find(m => m.value === month)?.label} ${year + 543}`}
+              </Typography>
 
-            <Table size="small">
-              <TableHead>
-                <TableRow sx={{ bgcolor: alpha(theme.palette.primary.main, 0.04) }}>
-                  <TableCell sx={{ fontWeight: 600, color: 'text.secondary', py: 2, whiteSpace: 'nowrap', width: 50 }}>#</TableCell>
-                  <TableCell sx={{ fontWeight: 600, color: 'text.secondary', py: 2, whiteSpace: 'nowrap' }}>รหัสใบลา</TableCell>
-                  <TableCell sx={{ fontWeight: 600, color: 'text.secondary', py: 2, whiteSpace: 'nowrap' }}>พนักงาน</TableCell>
-                  <TableCell sx={{ fontWeight: 600, color: 'text.secondary', py: 2, whiteSpace: 'nowrap' }}>สังกัด</TableCell>
-                  <TableCell sx={{ fontWeight: 600, color: 'text.secondary', py: 2, whiteSpace: 'nowrap' }}>วันที่หยุด</TableCell>
-                  <TableCell sx={{ fontWeight: 600, color: 'text.secondary', py: 2, whiteSpace: 'nowrap' }}>ประเภท</TableCell>
-                  <TableCell sx={{ fontWeight: 600, color: 'text.secondary', py: 2, whiteSpace: 'nowrap' }}>เหตุผลการลา</TableCell>
-                  <TableCell sx={{ fontWeight: 600, color: 'text.secondary', py: 2, whiteSpace: 'nowrap' }}>สถานะ</TableCell>
-                  <TableCell sx={{ fontWeight: 600, color: 'text.secondary', py: 2, whiteSpace: 'nowrap' }}>หมายเหตุ</TableCell>
-                </TableRow>
-              </TableHead>
-
-              {loading ? (
-                <TableSkeleton />
-              ) : rows.length === 0 ? (
-                <TableBody>
-                  <TableRow>
-                    <TableCell colSpan={9} align="center" sx={{ py: 10 }}>
-                      <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1.5 }}>
-                        <Avatar
-                          sx={{
-                            width: 72,
-                            height: 72,
-                            bgcolor: alpha(theme.palette.text.secondary, 0.1),
-                            color: theme.palette.text.secondary,
-                            fontWeight: 800,
-                          }}
-                        >
-                          <DocumentText size={32} variant="Bold" />
-                        </Avatar>
-                        <Typography variant="h6" fontWeight={700}>ไม่พบข้อมูล</Typography>
-                        <Typography variant="body2" color="text.secondary">ลองเปลี่ยนตัวกรองเพื่อค้นหาข้อมูล</Typography>
-                      </Box>
-                    </TableCell>
+              <Table size="small">
+                <TableHead>
+                  <TableRow sx={{ bgcolor: alpha(theme.palette.primary.main, 0.04) }}>
+                    <TableCell sx={{ fontWeight: 600, color: 'text.secondary', py: 2, whiteSpace: 'nowrap', width: 50 }}>#</TableCell>
+                    <TableCell sx={{ fontWeight: 600, color: 'text.secondary', py: 2, whiteSpace: 'nowrap' }}>รหัสใบลา</TableCell>
+                    <TableCell sx={{ fontWeight: 600, color: 'text.secondary', py: 2, whiteSpace: 'nowrap' }}>พนักงาน</TableCell>
+                    <TableCell sx={{ fontWeight: 600, color: 'text.secondary', py: 2, whiteSpace: 'nowrap' }}>สังกัด</TableCell>
+                    <TableCell sx={{ fontWeight: 600, color: 'text.secondary', py: 2, whiteSpace: 'nowrap' }}>วันที่หยุด</TableCell>
+                    <TableCell sx={{ fontWeight: 600, color: 'text.secondary', py: 2, whiteSpace: 'nowrap' }}>ประเภท</TableCell>
+                    <TableCell sx={{ fontWeight: 600, color: 'text.secondary', py: 2, whiteSpace: 'nowrap' }}>เหตุผลการลา</TableCell>
+                    <TableCell sx={{ fontWeight: 600, color: 'text.secondary', py: 2, whiteSpace: 'nowrap' }}>สถานะ</TableCell>
+                    <TableCell sx={{ fontWeight: 600, color: 'text.secondary', py: 2, whiteSpace: 'nowrap' }}>หมายเหตุ</TableCell>
                   </TableRow>
-                </TableBody>
-              ) : (
-                <TableBody>
-                  {rows.map((r, index) => (
-                    <TableRow
-                      key={r.id}
-                      sx={{
-                        transition: 'background-color 0.2s ease',
-                        '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.04) },
-                        '&:last-child td': { border: 0 },
-                      }}
-                    >
-                      <TableCell sx={{ whiteSpace: 'nowrap', color: 'text.secondary' }}>{index + 1 + (page * (rowsPerPage > 0 ? rowsPerPage : totalRows))}</TableCell>
-                      <TableCell sx={{ fontWeight: 600 }}>{r.leaveCode}</TableCell>
-                      <TableCell>
-                        <Box>
-                          <Typography variant="body2" fontWeight={600}>{r.employeeName}</Typography>
-                          <Typography variant="caption" color="text.secondary">{r.employeeId} • {r.position}</Typography>
-                        </Box>
-                      </TableCell>
-                      <TableCell>
-                        <Box>
-                          <Typography variant="body2">{r.department}</Typography>
-                          <Typography variant="caption" color="text.secondary">{r.section}</Typography>
-                        </Box>
-                      </TableCell>
-                      <TableCell>
-                        <Box>
-                          <Typography variant="body2" sx={{ whiteSpace: 'nowrap' }}>{formatThaiDateRange(r.startDate, r.endDate)}</Typography>
-                          <Typography variant="caption" color="text.secondary">{r.totalDays} วัน</Typography>
-                        </Box>
-                      </TableCell>
-                      <TableCell sx={{ whiteSpace: 'nowrap' }}>{r.leaveTypeName}</TableCell>
-                      <TableCell sx={{ minWidth: 200 }}>{r.reason}</TableCell>
-                      <TableCell>{statusThaiMap[(r.status || '').toLowerCase()] || r.statusLabel || r.status}</TableCell>
-                      <TableCell sx={{ minWidth: 150 }}>{r.note || '-'}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              )}
-            </Table>
-          </Box>
-        </TableContainer>
+                </TableHead>
 
-        <TablePagination
-          component="div"
-          count={totalRows}
-          page={page}
-          onPageChange={(_, newPage) => setPage(newPage)}
-          rowsPerPage={rowsPerPage}
-          onRowsPerPageChange={(e) => {
-            setRowsPerPage(parseInt(e.target.value, 10));
-            setPage(0);
-          }}
-          rowsPerPageOptions={[10, 25, 50, 100, { label: 'ทั้งหมด', value: -1 }]}
-          labelRowsPerPage="จำนวนแถวต่อหน้า:"
-          labelDisplayedRows={({ from, to, count }) => `${from}-${to} จาก ${count}`}
-          sx={{ 
-            border: '1px solid', 
-            borderColor: 'divider',
-            borderRadius: 1,
-            bgcolor: alpha(theme.palette.background.paper, 0.8),
-          }}
-        />
-      </Box>
-    </Fade>
-    <Box sx={{ mb: 4 }} />
+                {loading ? (
+                  <TableSkeleton />
+                ) : rows.length === 0 ? (
+                  <TableBody>
+                    <TableRow>
+                      <TableCell colSpan={9} align="center" sx={{ py: 10 }}>
+                        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1.5 }}>
+                          <Avatar
+                            sx={{
+                              width: 72,
+                              height: 72,
+                              bgcolor: alpha(theme.palette.text.secondary, 0.1),
+                              color: theme.palette.text.secondary,
+                              fontWeight: 800,
+                            }}
+                          >
+                            <DocumentText size={32} variant="Bold" />
+                          </Avatar>
+                          <Typography variant="h6" fontWeight={700}>ไม่พบข้อมูล</Typography>
+                          <Typography variant="body2" color="text.secondary">ลองเปลี่ยนตัวกรองเพื่อค้นหาข้อมูล</Typography>
+                        </Box>
+                      </TableCell>
+                    </TableRow>
+                  </TableBody>
+                ) : (
+                  <TableBody>
+                    {rows.map((r, index) => (
+                      <TableRow
+                        key={r.id}
+                        sx={{
+                          transition: 'background-color 0.2s ease',
+                          '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.04) },
+                          '&:last-child td': { border: 0 },
+                        }}
+                      >
+                        <TableCell sx={{ whiteSpace: 'nowrap', color: 'text.secondary' }}>{index + 1 + (page * (rowsPerPage > 0 ? rowsPerPage : totalRows))}</TableCell>
+                        <TableCell sx={{ fontWeight: 600 }}>{r.leaveCode}</TableCell>
+                        <TableCell>
+                          <Box>
+                            <Typography variant="body2" fontWeight={600}>{r.employeeName}</Typography>
+                            <Typography variant="caption" color="text.secondary">{r.employeeId} • {r.position}</Typography>
+                          </Box>
+                        </TableCell>
+                        <TableCell>
+                          <Box>
+                            <Typography variant="body2">{r.department}</Typography>
+                            <Typography variant="caption" color="text.secondary">{r.section}</Typography>
+                          </Box>
+                        </TableCell>
+                        <TableCell>
+                          <Box>
+                            <Typography variant="body2" sx={{ whiteSpace: 'nowrap' }}>{formatThaiDateRange(r.startDate, r.endDate)}</Typography>
+                            <Typography variant="caption" color="text.secondary">{r.totalDays} วัน</Typography>
+                          </Box>
+                        </TableCell>
+                        <TableCell sx={{ whiteSpace: 'nowrap' }}>{r.leaveTypeName}</TableCell>
+                        <TableCell sx={{ minWidth: 200 }}>{r.reason}</TableCell>
+                        <TableCell>
+                          <Box>
+                            <Typography variant="body2">{statusThaiMap[(r.status || '').toLowerCase()] || r.statusLabel || r.status}</Typography>
+                            {r.pendingApprover && (r.status === 'pending' || r.status === 'in_progress') && (
+                              <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                                รอ: {r.pendingApprover}
+                              </Typography>
+                            )}
+                          </Box>
+                        </TableCell>
+                        <TableCell sx={{ minWidth: 150 }}>{r.note || '-'}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                )}
+              </Table>
+            </Box>
+          </TableContainer>
+
+          <TablePagination
+            component="div"
+            count={totalRows}
+            page={page}
+            onPageChange={(_, newPage) => setPage(newPage)}
+            rowsPerPage={rowsPerPage}
+            onRowsPerPageChange={(e) => {
+              setRowsPerPage(parseInt(e.target.value, 10));
+              setPage(0);
+            }}
+            rowsPerPageOptions={[10, 25, 50, 100, { label: 'ทั้งหมด', value: -1 }]}
+            labelRowsPerPage="จำนวนแถวต่อหน้า:"
+            labelDisplayedRows={({ from, to, count }) => `${from}-${to} จาก ${count}`}
+            sx={{
+              border: '1px solid',
+              borderColor: 'divider',
+              borderRadius: 1,
+              bgcolor: alpha(theme.palette.background.paper, 0.8),
+            }}
+          />
+        </Box>
+      </Fade>
+      <Box sx={{ mb: 4 }} />
     </Box>
   );
 }

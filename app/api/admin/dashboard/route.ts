@@ -159,7 +159,7 @@ export async function GET(request: NextRequest) {
         const companies = await prisma.company.findMany({ select: { code: true, name: true } });
 
         // Get Department names mapping
-        const departments = await prisma.department.findMany({ select: { code: true, name: true } });
+        const departments = await prisma.department.findMany({ select: { code: true, name: true, company: true } });
         const deptMap = new Map(departments.map(d => [d.code, d.name]));
 
         const allSections = await prisma.section.findMany({
@@ -290,7 +290,7 @@ export async function GET(request: NextRequest) {
             topLeaveTakers: formattedTopLeaveTakers,
             filterOptions: {
                 companies: companies.map(c => ({ code: c.code, name: c.name })),
-                departments: departments.map(d => ({ code: d.code, name: d.name })),
+                departments: departments.map(d => ({ code: d.code, name: d.name, companyCode: d.company })),
                 sections: allSections.map(s => ({
                     code: s.code,
                     name: s.name,

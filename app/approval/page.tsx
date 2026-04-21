@@ -307,7 +307,7 @@ export default function ApprovalPage() {
   const [teamHistoryCounts, setTeamHistoryCounts] = useState({ total: 0, approved: 0, rejected: 0, pending: 0, cancelled: 0 });
   const [teamHistorySummary, setTeamHistorySummary] = useState<Array<{ code: string; name: string; totalDays: number; count: number }>>([]);
   const [teamHistoryEmployeeSummary, setTeamHistoryEmployeeSummary] = useState<Array<{
-    user: { id: number; firstName: string; lastName: string; department: string; section?: string; position?: string; avatar?: string };
+    user: { id: number; employeeId: string; firstName: string; lastName: string; department: string; section?: string; position?: string; avatar?: string };
     totalDays: number;
     leaveCount: number;
     byType: Record<string, number>;
@@ -317,11 +317,12 @@ export default function ApprovalPage() {
   // Employee detail dialog state
   const [employeeDetailOpen, setEmployeeDetailOpen] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState<{
-    user: { id: number; firstName: string; lastName: string; department: string; section?: string; position?: string; avatar?: string };
+    user: { id: number; employeeId?: string; firstName: string; lastName: string; department: string; section?: string; position?: string; avatar?: string };
     totalDays: number;
     leaveCount: number;
     byType: Record<string, number>;
   } | null>(null);
+  const [drawerStatusFilter, setDrawerStatusFilter] = useState('all');
 
   // โหลดข้อมูลครั้งแรกเมื่อ mount เท่านั้น (เพราะ fetch all แล้ว filter client-side)
   useEffect(() => {
@@ -424,10 +425,17 @@ export default function ApprovalPage() {
           byType: {},
         };
       }
-      employeeMap[item.user.id].totalDays += item.totalDays;
-      employeeMap[item.user.id].leaveCount += 1;
-      employeeMap[item.user.id].byType[item.leaveType] =
-        (employeeMap[item.user.id].byType[item.leaveType] || 0) + item.totalDays;
+
+      // If viewing all, only count approved status for summary
+      // Otherwise, count what is in the filtered list
+      const shouldSum = teamHistoryFilterStatus === 'all' ? item.status === 'approved' : true;
+
+      if (shouldSum) {
+        employeeMap[item.user.id].totalDays += item.totalDays;
+        employeeMap[item.user.id].leaveCount += 1;
+        employeeMap[item.user.id].byType[item.leaveType] =
+          (employeeMap[item.user.id].byType[item.leaveType] || 0) + item.totalDays;
+      }
     });
 
     return Object.values(employeeMap).sort((a, b) => b.totalDays - a.totalDays);
@@ -1687,85 +1695,106 @@ export default function ApprovalPage() {
                   ))}
                 </Box>
 
-                {/* Employee Summary - Clickable to show details */}
-                <Paper elevation={0} sx={{ p: 2, borderRadius: 1, border: '1px solid #E2E8F0' }}>
-                  {filteredEmployeeSummary.length > 0 ? (
-                    <>
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5 }}>
-                        <Typography variant="caption" fontWeight={600} color="text.secondary">
-                          {t('employee_summary_filtered', 'สรุปตามพนักงาน')} ({teamHistoryFilterStatus === 'all' ? t('filter_all', 'ทั้งหมด') : teamHistoryFilterStatus === 'approved' ? t('status_approved', 'อนุมัติ') : teamHistoryFilterStatus === 'pending' ? t('status_pending', 'รออนุมัติ') : teamHistoryFilterStatus === 'rejected' ? t('status_rejected', 'ปฏิเสธ') : t('status_cancelled', 'ยกเลิก')})
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary">
-                          {t('click_to_view_detail', 'คลิกเพื่อดูรายละเอียด')}
-                        </Typography>
-                      </Box>
-                      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                        {filteredEmployeeSummary.map((item, index) => (
-                          <Box
-                            key={item.user.id}
-                            onClick={() => {
-                              setSelectedEmployee(item);
-                              setEmployeeDetailOpen(true);
-                            }}
-                            sx={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: 1.5,
-                              p: 1,
-                              mx: -1,
-                              borderRadius: 1,
-                              cursor: 'pointer',
-                              transition: 'all 0.2s',
-                              '&:hover': {
-                                bgcolor: '#F8FAFC',
-                              },
-                              '&:active': {
-                                bgcolor: '#F1F5F9',
-                              }
-                            }}
-                          >
-                            <Typography sx={{ fontSize: '0.75rem', color: '#94A3B8', fontWeight: 600, width: 20 }}>
-                              #{index + 1}
-                            </Typography>
-                            <Avatar
-                              src={item.user.avatar}
-                              sx={{ width: 32, height: 32, fontSize: '0.75rem', bgcolor: PRIMARY_COLOR }}
-                            >
-                              {item.user.firstName?.[0]}
-                            </Avatar>
-                            <Box sx={{ flex: 1, minWidth: 0 }}>
-                              <Typography sx={{ fontSize: '0.85rem', fontWeight: 600, color: '#1E293B' }} noWrap>
-                                {item.user.firstName} {item.user.lastName}
-                              </Typography>
-                              <Typography sx={{ fontSize: '0.7rem', color: '#64748B' }} noWrap>
-                                {item.user.department}
-                              </Typography>
-                            </Box>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                              <Box sx={{ textAlign: 'right' }}>
-                                <Typography sx={{ fontSize: '0.85rem', fontWeight: 700, color: PRIMARY_COLOR }}>
-                                  {item.totalDays} {t('days_unit', 'วัน')}
-                                </Typography>
-                                <Typography sx={{ fontSize: '0.65rem', color: '#94A3B8' }}>
-                                  {item.leaveCount} {t('times_unit', 'ครั้ง')}
-                                </Typography>
+                {/* Employee Summary - Grouped by Section for better readability */}
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                  {(() => {
+                    const sections: Record<string, typeof filteredEmployeeSummary> = {};
+                    filteredEmployeeSummary.forEach(emp => {
+                      const sectionName = emp.user.section || 'อื่น ๆ / ไม่ระบุแผนก';
+                      if (!sections[sectionName]) sections[sectionName] = [];
+                      sections[sectionName].push(emp);
+                    });
+
+                    const groupedSections = Object.entries(sections).sort((a, b) => a[0].localeCompare(b[0]));
+
+                    if (groupedSections.length === 0) {
+                      return (
+                        <Paper elevation={0} sx={{
+                          p: 4, textAlign: 'center', borderRadius: 1, border: '1px solid #E2E8F0', bgcolor: '#F8FAFC',
+                          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                          minHeight: 250
+                        }}>
+                          <Profile2User size={56} color="#94A3B8" variant="Bulk" style={{ marginBottom: 16 }} />
+                          <Typography sx={{ fontSize: '0.9rem', color: '#64748B', fontWeight: 600 }}>
+                            {t('no_data_for_status', 'ไม่พบข้อมูลสำหรับสถานะที่เลือก')}
+                          </Typography>
+                        </Paper>
+                      );
+                    }
+
+                    return groupedSections.map(([sectionName, employees]) => (
+                      <Box key={sectionName}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1, px: 0.5 }}>
+                          <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#475569', fontSize: '0.85rem', textTransform: 'uppercase' }}>
+                            {sectionName}
+                          </Typography>
+                          <Chip
+                            label={`${employees.length} คน`}
+                            size="small"
+                            sx={{ height: 18, fontSize: '0.85rem', bgcolor: '#F1F5F9', color: '#64748B', fontWeight: 700 }}
+                          />
+                        </Box>
+                        <Paper elevation={0} sx={{ p: 2, borderRadius: 1, border: '1px solid #E2E8F0' }}>
+                          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                            {employees.map((item, index) => (
+                              <Box
+                                key={item.user.id}
+                                onClick={() => {
+                                  setSelectedEmployee(item);
+                                  setEmployeeDetailOpen(true);
+                                }}
+                                sx={{
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: 1.5,
+                                  p: 1,
+                                  mx: -1,
+                                  borderRadius: 1,
+                                  cursor: 'pointer',
+                                  transition: 'all 0.2s',
+                                  '&:hover': {
+                                    bgcolor: '#F8FAFC',
+                                    '& .arrow-icon': { transform: 'translateX(4px)' }
+                                  },
+                                  '&:active': {
+                                    bgcolor: '#F1F5F9',
+                                  }
+                                }}
+                              >
+                                <Avatar
+                                  src={item.user.avatar}
+                                  sx={{ width: 36, height: 36, fontSize: '0.85rem', bgcolor: PRIMARY_COLOR, boxShadow: '0 2px 4px rgba(108, 99, 255, 0.2)' }}
+                                >
+                                  {item.user.firstName?.[0]}
+                                </Avatar>
+                                <Box sx={{ flex: 1, minWidth: 0 }}>
+                                  <Typography sx={{ fontSize: '0.9rem', fontWeight: 600, color: '#1E293B' }} noWrap>
+                                    {item.user.firstName} {item.user.lastName}
+                                  </Typography>
+                                  <Typography sx={{ fontSize: '0.75rem', color: '#64748B' }} noWrap>
+                                    {item.user.position || '-'}
+                                  </Typography>
+                                </Box>
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                                  <Box sx={{ textAlign: 'right' }}>
+                                    <Typography sx={{ fontSize: '0.9rem', fontWeight: 800, color: PRIMARY_COLOR }}>
+                                      {item.totalDays}
+                                      <Typography component="span" sx={{ fontSize: '0.7rem', ml: 0.3, fontWeight: 500 }}>วัน</Typography>
+                                    </Typography>
+                                    <Typography sx={{ fontSize: '0.65rem', color: '#94A3B8' }}>
+                                      {item.leaveCount} ครั้ง
+                                    </Typography>
+                                  </Box>
+                                  <ArrowRight2 className="arrow-icon" size={16} color="#CBD5E1" style={{ transition: 'transform 0.2s' }} />
+                                </Box>
                               </Box>
-                              <ArrowRight2 size={16} color="#94A3B8" />
-                            </Box>
+                            ))}
                           </Box>
-                        ))}
+                        </Paper>
                       </Box>
-                    </>
-                  ) : (
-                    /* No data for selected status */
-                    <Box sx={{ textAlign: 'center', py: 4, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-                      <Profile2User size={40} color="#94A3B8" variant="Bulk" />
-                      <Typography sx={{ fontSize: '0.9rem', color: '#64748B', mt: 1 }}>
-                        {t('no_data_for_status', 'ไม่พบข้อมูลสำหรับสถานะที่เลือก')}
-                      </Typography>
-                    </Box>
-                  )}
-                </Paper>
+                    ));
+                  })()}
+                </Box>
               </Box>
             </Box>
           )
@@ -3819,351 +3848,206 @@ export default function ApprovalPage() {
               bottom: 0,
               left: 0,
               right: 0,
-              backgroundColor: '#FAFBFC',
-              borderTopLeftRadius: 24,
-              borderTopRightRadius: 24,
-              maxHeight: '90vh',
+              backgroundColor: '#F8FAFC',
+              borderTopLeftRadius: 32,
+              borderTopRightRadius: 32,
+              maxHeight: '92vh',
               zIndex: 1300,
               display: 'flex',
               flexDirection: 'column',
               outline: 'none',
-              boxShadow: '0 -10px 50px rgba(0,0,0,0.15)',
+              boxShadow: '0 -20px 60px rgba(0,0,0,0.12)',
             }}
           >
             {selectedEmployee && (
-              <Box sx={{ display: 'flex', flexDirection: 'column', height: '90vh' }}>
-                {/* Vaul Handle - Drag indicator */}
-                <Box sx={{
-                  display: 'flex',
-                  justifyContent: 'center',
-                  pt: 1.5,
-                  pb: 1,
-                  bgcolor: 'white',
-                  borderTopLeftRadius: 24,
-                  borderTopRightRadius: 24,
-                }}>
-                  <VaulDrawer.Handle
-                    style={{
-                      width: 48,
-                      height: 5,
-                      borderRadius: 3,
-                      backgroundColor: '#E2E8F0',
-                    }}
-                  />
+              <Box sx={{ display: 'flex', flexDirection: 'column', height: '92vh', overflow: 'hidden' }}>
+                {/* Pull Handle */}
+                <Box sx={{ display: 'flex', justifyContent: 'center', pt: 1.5, pb: 0.5, bgcolor: 'white' }}>
+                  <VaulDrawer.Handle style={{ width: 40, height: 4, borderRadius: 2, backgroundColor: '#E2E8F0' }} />
                 </Box>
 
-                {/* Fixed Header */}
-                <Box sx={{
-                  bgcolor: 'white',
-                  px: 2.5,
-                  pb: 2,
-                  borderBottom: '1px solid #F1F5F9',
-                }}>
-                  {/* Employee Info */}
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
-                    <Avatar
-                      src={selectedEmployee.user.avatar}
-                      sx={{
-                        width: 60,
-                        height: 60,
-                        fontSize: '1.5rem',
-                        bgcolor: PRIMARY_COLOR,
-                        boxShadow: '0 4px 12px rgba(108, 99, 255, 0.3)',
-                      }}
-                    >
-                      {selectedEmployee.user.firstName?.[0]}
-                    </Avatar>
-                    <Box sx={{ flex: 1 }}>
-                      <VaulDrawer.Title asChild>
-                        <Typography sx={{ fontSize: '1.15rem', fontWeight: 700, color: '#1E293B' }}>
-                          {selectedEmployee.user.firstName} {selectedEmployee.user.lastName}
-                        </Typography>
-                      </VaulDrawer.Title>
-                      <VaulDrawer.Description asChild>
-                        <Typography sx={{ fontSize: '0.85rem', color: '#64748B' }}>
-                          {selectedEmployee.user.position || selectedEmployee.user.department}
-                        </Typography>
-                      </VaulDrawer.Description>
-                      {selectedEmployee.user.section && (
-                        <Typography sx={{ fontSize: '0.75rem', color: '#94A3B8' }}>
-                          {selectedEmployee.user.department} • {selectedEmployee.user.section}
-                        </Typography>
-                      )}
-                    </Box>
-                    <IconButton
-                      onClick={() => {
-                        setEmployeeDetailOpen(false);
-                        setSelectedEmployee(null);
-                      }}
-                      sx={{
-                        bgcolor: '#F1F5F9',
-                        '&:hover': { bgcolor: '#E2E8F0' }
-                      }}
-                    >
-                      <CloseCircle size={22} color="#64748B" />
-                    </IconButton>
-                  </Box>
-
-                  {/* Summary Stats */}
+                {/* --- REFINED HEADER SECTION --- */}
+                <Box sx={{ position: 'relative', bgcolor: 'white' }}>
+                  {/* Subtle Profile Banner Accent */}
                   <Box sx={{
-                    display: 'flex',
-                    gap: 1.5,
-                  }}>
-                    <Paper elevation={0} sx={{
-                      flex: 1,
-                      p: 1.5,
-                      borderRadius: 2,
-                      bgcolor: PRIMARY_LIGHT,
-                      textAlign: 'center',
-                    }}>
-                      <Typography sx={{ fontSize: '1.75rem', fontWeight: 800, color: PRIMARY_COLOR, lineHeight: 1 }}>
-                        {selectedEmployee.totalDays}
-                      </Typography>
-                      <Typography sx={{ fontSize: '0.7rem', color: '#64748B', mt: 0.5 }}>
-                        {t('total_days_leave', 'วันลารวม')}
-                      </Typography>
-                    </Paper>
-                    <Paper elevation={0} sx={{
-                      flex: 1,
-                      p: 1.5,
-                      borderRadius: 2,
-                      bgcolor: '#FFF3E0',
-                      textAlign: 'center',
-                    }}>
-                      <Typography sx={{ fontSize: '1.75rem', fontWeight: 800, color: '#E65100', lineHeight: 1 }}>
-                        {selectedEmployee.leaveCount}
-                      </Typography>
-                      <Typography sx={{ fontSize: '0.7rem', color: '#64748B', mt: 0.5 }}>
-                        {t('total_leave_times', 'จำนวนครั้ง')}
-                      </Typography>
-                    </Paper>
-                    <Paper elevation={0} sx={{
-                      flex: 1,
-                      p: 1.5,
-                      borderRadius: 2,
-                      bgcolor: '#E8F5E9',
-                      textAlign: 'center',
-                    }}>
-                      <Typography sx={{ fontSize: '1.75rem', fontWeight: 800, color: '#2E7D32', lineHeight: 1 }}>
-                        {Object.keys(selectedEmployee.byType || {}).length}
-                      </Typography>
-                      <Typography sx={{ fontSize: '0.7rem', color: '#64748B', mt: 0.5 }}>
-                        {t('leave_types_count', 'ประเภทลา')}
-                      </Typography>
-                    </Paper>
-                  </Box>
-                </Box>
+                    position: 'absolute',
+                    top: 0, left: 0, right: 0,
+                    height: 80,
+                    background: `linear-gradient(135deg, ${PRIMARY_COLOR}08 0%, ${PRIMARY_COLOR}15 100%)`,
+                    zIndex: 0
+                  }} />
 
-                {/* Scrollable Content */}
-                <Box sx={{
-                  flex: 1,
-                  overflow: 'auto',
-                  px: 2.5,
-                  py: 2,
-                }}>
-                  {/* Leave by Type Summary */}
-                  <Typography sx={{ fontSize: '0.8rem', fontWeight: 700, color: '#1E293B', mb: 1.5, textTransform: 'uppercase', letterSpacing: 0.5 }}>
-                    {t('leave_breakdown', 'รายละเอียดการลาแต่ละประเภท')} ({filterYear + 543})
-                  </Typography>
-
-                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, mb: 3 }}>
-                    {selectedEmployee.byType && Object.entries(selectedEmployee.byType).map(([leaveType, days]) => {
-                      const config = leaveTypeConfig[leaveType] || leaveTypeConfig.default;
-                      const LeaveIcon = config.icon;
-                      const leaveTypeName = teamHistorySummary.find(s => s.code === leaveType)?.name || leaveType;
-
-                      return (
-                        <Paper
-                          key={leaveType}
-                          elevation={0}
+                  <Box sx={{ px: 3, pt: 4, pb: 3, position: 'relative', zIndex: 1 }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 3 }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2.5 }}>
+                        <Avatar
+                          src={selectedEmployee.user.avatar}
                           sx={{
-                            p: 1.5,
-                            borderRadius: 2,
-                            bgcolor: 'white',
-                            border: '1px solid #F1F5F9',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 1.5,
+                            width: 64,
+                            height: 64,
+                            fontSize: '1.5rem',
+                            bgcolor: PRIMARY_COLOR,
+                            border: '3px solid white',
+                            boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+                            borderRadius: 1
                           }}
                         >
-                          <Box sx={{
-                            width: 44,
-                            height: 44,
-                            borderRadius: 2,
-                            bgcolor: config.lightColor,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                          }}>
-                            <LeaveIcon size={24} color={config.color} variant="Bold" />
-                          </Box>
-                          <Box sx={{ flex: 1 }}>
-                            <Typography sx={{ fontSize: '0.9rem', fontWeight: 600, color: '#1E293B' }}>
-                              {leaveTypeName}
+                          {selectedEmployee.user.firstName?.[0]}
+                        </Avatar>
+                        <Box>
+                          <VaulDrawer.Title asChild>
+                            <Typography sx={{ fontSize: '1.15rem', fontWeight: 900, color: '#0F172A', letterSpacing: '-0.01em' }}>
+                              {selectedEmployee.user.firstName} {selectedEmployee.user.lastName}
                             </Typography>
+                          </VaulDrawer.Title>
+                          <Typography sx={{ fontSize: '0.8rem', color: '#64748B', mt: 0.25, fontWeight: 600 }}>
+                            {selectedEmployee.user.employeeId && `${selectedEmployee.user.employeeId} • `}
+                            {selectedEmployee.user.position || 'ตำแหน่ง -'}
+                          </Typography>
+                          <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
+                            <Box sx={{ px: 1, py: 0.25, bgcolor: PRIMARY_LIGHT, color: PRIMARY_COLOR, borderRadius: 0.5, fontSize: '0.65rem', fontWeight: 800 }}>{selectedEmployee.user.department}</Box>
+                            {selectedEmployee.user.section && <Box sx={{ px: 1, py: 0.25, bgcolor: '#F1F5F9', color: '#64748B', borderRadius: 0.5, fontSize: '0.65rem', fontWeight: 800 }}>{selectedEmployee.user.section}</Box>}
                           </Box>
-                          <Box sx={{
-                            bgcolor: config.lightColor,
-                            px: 1.5,
-                            py: 0.5,
-                            borderRadius: 2,
+                        </Box>
+                      </Box>
+                      <IconButton
+                        onClick={() => setEmployeeDetailOpen(false)}
+                        sx={{ bgcolor: '#F1F5F9', '&:hover': { bgcolor: '#E2E8F0' }, borderRadius: 1 }}
+                      >
+                        <CloseCircle size={20} color="#64748B" />
+                      </IconButton>
+                    </Box>
+
+                  </Box>
+                </Box>
+
+                {/* --- CONTENT AREA --- */}
+                <Box sx={{ flex: 1, overflow: 'auto', px: 3, py: 3, bgcolor: '#F8FAFC' }}>
+
+                  {/* Elegant Leave Breakdown */}
+                  <Box sx={{ mb: 4 }}>
+                    <Typography sx={{ fontSize: '0.75rem', fontWeight: 900, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.05em', mb: 2 }}>สถิติแยกประเภท</Typography>
+                    <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1.5 }}>
+                      {Object.entries(selectedEmployee.byType || {}).map(([leaveType, days]) => {
+                        const config = leaveTypeConfig[leaveType] || leaveTypeConfig.default;
+                        const leaveTypeName = teamHistorySummary.find(s => s.code === leaveType)?.name || leaveType;
+
+                        return (
+                          <Box key={leaveType} sx={{
+                            bgcolor: 'white', p: 1.25, borderRadius: 0, border: '1px solid #F1F5F9',
+                            display: 'flex', flexDirection: 'column', gap: 1
                           }}>
-                            <Typography sx={{ fontSize: '1rem', fontWeight: 700, color: config.color }}>
-                              {days} {t('days_unit', 'วัน')}
-                            </Typography>
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                <config.icon size={14} color={config.color} variant="Bold" />
+                                <Typography sx={{ fontSize: '0.75rem', fontWeight: 700, color: '#475569' }}>{leaveTypeName}</Typography>
+                              </Box>
+                              <Typography sx={{ fontSize: '0.8rem', fontWeight: 900, color: config.color }}>{days}</Typography>
+                            </Box>
+                            <Box sx={{ height: 3, width: '100%', bgcolor: '#F1F5F9', borderRadius: 1 }}>
+                              <Box sx={{ height: '100%', width: '100%', bgcolor: config.color, borderRadius: 1 }} />
+                            </Box>
                           </Box>
-                        </Paper>
-                      );
-                    })}
+                        );
+                      })}
+                    </Box>
                   </Box>
 
-                  {/* Leave History List */}
-                  {selectedEmployee && (
-                    <>
-                      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1.5 }}>
-                        <Typography sx={{ fontSize: '0.8rem', fontWeight: 700, color: '#1E293B', textTransform: 'uppercase', letterSpacing: 0.5 }}>
-                          {t('leave_history_detail', 'ประวัติการลา')}
-                        </Typography>
-                        <Chip
-                          size="small"
-                          label={teamHistoryFilterStatus === 'all' ? t('filter_all', 'ทั้งหมด') : teamHistoryFilterStatus === 'approved' ? t('status_approved', 'อนุมัติ') : teamHistoryFilterStatus === 'pending' ? t('status_pending', 'รออนุมัติ') : teamHistoryFilterStatus === 'rejected' ? t('status_rejected', 'ปฏิเสธ') : t('status_cancelled', 'ยกเลิก')}
+                  {/* Clean History List with Status Tabs */}
+                  <Box>
+                    <Typography sx={{ fontSize: '0.75rem', fontWeight: 900, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.05em', mb: 1.5 }}>ประวัติการทำรายการ</Typography>
+
+                    {/* Compact Inner Tabs - 5 TABS */}
+                    <Box sx={{ mb: 2, display: 'flex', gap: 0.5, bgcolor: '#F1F5F9', p: 0.5, borderRadius: 1 }}>
+                      {[
+                        { label: 'ทั้งหมด', value: 'all' },
+                        { label: 'อนุมัติ', value: 'approved' },
+                        { label: 'รออนุมัติ', value: 'pending' },
+                        { label: 'ไม่อนุมัติ', value: 'rejected' },
+                        { label: 'ยกเลิก', value: 'cancelled' },
+                      ].map((item) => (
+                        <Box
+                          key={item.value}
+                          onClick={() => setDrawerStatusFilter(item.value)}
                           sx={{
-                            height: 22,
-                            fontSize: '0.7rem',
-                            fontWeight: 600,
-                            bgcolor: teamHistoryFilterStatus === 'approved' ? '#E8F5E9' : teamHistoryFilterStatus === 'pending' ? '#FFF3E0' : teamHistoryFilterStatus === 'rejected' ? '#FFEBEE' : teamHistoryFilterStatus === 'cancelled' ? '#ECEFF1' : '#F1F5F9',
-                            color: teamHistoryFilterStatus === 'approved' ? '#2E7D32' : teamHistoryFilterStatus === 'pending' ? '#E65100' : teamHistoryFilterStatus === 'rejected' ? '#D32F2F' : teamHistoryFilterStatus === 'cancelled' ? '#757575' : '#64748B',
+                            flex: 1, textAlign: 'center', py: 0.75, borderRadius: 1,
+                            fontSize: '0.75rem', fontWeight: 800, cursor: 'pointer',
+                            whiteSpace: 'nowrap',
+                            bgcolor: drawerStatusFilter === item.value ? 'white' : 'transparent',
+                            color: drawerStatusFilter === item.value ? PRIMARY_COLOR : '#64748B',
+                            boxShadow: drawerStatusFilter === item.value ? '0 2px 6px rgba(0,0,0,0.05)' : 'none',
+                            transition: 'all 0.2s',
+                            '&:hover': { bgcolor: drawerStatusFilter === item.value ? 'white' : 'rgba(0,0,0,0.02)' }
                           }}
-                        />
-                      </Box>
-
-                      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-                        {filteredTeamHistory
-                          .filter(leave => leave.user.id === selectedEmployee.user.id)
-                          .map((leave) => {
-                            const config = leaveTypeConfig[leave.leaveType] || leaveTypeConfig.default;
-                            const LeaveIcon = config.icon;
-                            const statusInfo = statusConfig[leave.status] || statusConfig.pending;
-                            const StatusIcon = statusInfo.icon;
-
-                            return (
-                              <Paper
-                                key={leave.id}
-                                elevation={0}
-                                sx={{
-                                  p: 2,
-                                  borderRadius: 1,
-                                  bgcolor: 'white',
-                                  border: '1px solid #F1F5F9',
-                                }}
-                              >
-                                {/* Header: Leave Type + Status */}
-                                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1.5 }}>
-                                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                    <Box sx={{
-                                      width: 32,
-                                      height: 32,
-                                      borderRadius: 1.5,
-                                      bgcolor: config.lightColor,
-                                      display: 'flex',
-                                      alignItems: 'center',
-                                      justifyContent: 'center',
-                                    }}>
-                                      <LeaveIcon size={18} color={config.color} variant="Bold" />
-                                    </Box>
-                                    <Box>
-                                      <Typography sx={{ fontSize: '0.9rem', fontWeight: 600, color: '#1E293B' }}>
-                                        {leave.leaveTypeName}
-                                      </Typography>
-                                      {leave.leaveCode && (
-                                        <Typography sx={{ fontSize: '0.7rem', color: '#94A3B8' }}>
-                                          {leave.leaveCode}
-                                        </Typography>
-                                      )}
-                                    </Box>
-                                  </Box>
-                                  <Chip
-                                    icon={<StatusIcon size={12} variant="Bold" />}
-                                    label={statusInfo.label}
-                                    size="small"
-                                    sx={{
-                                      height: 24,
-                                      bgcolor: statusInfo.bgcolor,
-                                      color: statusInfo.color,
-                                      fontWeight: 600,
-                                      fontSize: '0.7rem',
-                                      '& .MuiChip-icon': { color: statusInfo.color },
-                                    }}
-                                  />
-                                </Box>
-
-                                {/* Date & Days */}
-                                <Box sx={{
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  gap: 2,
-                                  bgcolor: '#F8FAFC',
-                                  borderRadius: 1.5,
-                                  px: 1.5,
-                                  py: 1,
-                                }}>
-                                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flex: 1 }}>
-                                    <Calendar size={16} color="#64748B" />
-                                    <Typography sx={{ fontSize: '0.8rem', color: '#475569' }}>
-                                      {formatDate(leave.startDate)}
-                                      {leave.startDate !== leave.endDate && ` - ${formatDate(leave.endDate)}`}
-                                    </Typography>
-                                  </Box>
-                                  <Chip
-                                    label={`${leave.totalDays} ${t('days_unit', 'วัน')}`}
-                                    size="small"
-                                    sx={{
-                                      height: 24,
-                                      bgcolor: config.lightColor,
-                                      color: config.color,
-                                      fontWeight: 700,
-                                      fontSize: '0.75rem',
-                                    }}
-                                  />
-                                </Box>
-
-                                {/* Reason */}
-                                {leave.reason && (
-                                  <Typography sx={{
-                                    fontSize: '0.8rem',
-                                    color: '#64748B',
-                                    mt: 1.5,
-                                    fontStyle: 'italic',
-                                    borderLeft: '3px solid #E2E8F0',
-                                    pl: 1.5,
-                                  }}>
-                                    {leave.reason}
-                                  </Typography>
-                                )}
-                              </Paper>
-                            );
-                          })}
-                      </Box>
-
-                      {/* No history for this employee */}
-                      {filteredTeamHistory.filter(leave => leave.user.id === selectedEmployee.user.id).length === 0 && (
-                        <Box sx={{ textAlign: 'center', py: 4 }}>
-                          <Typography color="text.secondary">
-                            {t('no_leave_history_for_status', 'ไม่พบประวัติการลาสำหรับสถานะที่เลือก')}
-                          </Typography>
+                        >
+                          {item.label}
                         </Box>
-                      )}
-                    </>
-                  )}
-
-                  {/* No leave data */}
-                  {(!selectedEmployee.byType || Object.keys(selectedEmployee.byType).length === 0) && (
-                    <Box sx={{ textAlign: 'center', py: 4 }}>
-                      <Typography color="text.secondary">
-                        {t('no_leave_data', 'ไม่มีข้อมูลการลา')}
-                      </Typography>
+                      ))}
                     </Box>
-                  )}
+
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.25 }}>
+                      {teamHistory
+                        .filter(leave => {
+                          const isSameUser = leave.user.id === selectedEmployee.user.id;
+                          if (!isSameUser) return false;
+
+                          if (drawerStatusFilter === 'all') return true;
+                          return leave.status === drawerStatusFilter;
+                        })
+                        .map((leave) => {
+                          const config = leaveTypeConfig[leave.leaveType] || leaveTypeConfig.default;
+                          const statusInfo = statusConfig[leave.status] || statusConfig.pending;
+                          const startDate = dayjs(leave.startDate);
+
+                          return (
+                            <Paper key={leave.id} elevation={0} sx={{
+                              p: 1.5, borderRadius: 1, border: '1px solid #F1F5F9', bgcolor: 'white',
+                              borderLeft: `3px solid ${config.color}`,
+                              transition: 'all 0.2s',
+                              '&:hover': { bgcolor: '#F8FAFC', transform: 'translateX(4px)' }
+                            }}>
+                              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                  <Typography sx={{ fontSize: '0.85rem', fontWeight: 800, color: '#1E293B' }}>{leave.leaveTypeName}</Typography>
+                                  <Box sx={{ px: 0.75, py: 0.25, bgcolor: statusInfo.bgcolor, color: statusInfo.color, borderRadius: 0.5, fontSize: '0.6rem', fontWeight: 900 }}>
+                                    {statusInfo.label}
+                                  </Box>
+                                </Box>
+                                <Typography sx={{ fontSize: '1rem', fontWeight: 900, color: config.color }}>
+                                  {leave.totalDays} <span style={{ fontSize: '0.65rem', color: '#94A3B8' }}>วัน</span>
+                                </Typography>
+                              </Box>
+
+                              <Typography sx={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748B', mb: 0.5 }}>
+                                {startDate.locale('th').format('DD MMM')} {leave.startDate !== leave.endDate && `- ${dayjs(leave.endDate).locale('th').format('DD MMM')}`}
+                                <Typography component="span" sx={{ fontSize: '0.7rem', ml: 0.5, fontWeight: 500, color: '#CBD5E1' }}>{startDate.year() + 543}</Typography>
+                              </Typography>
+
+                              {leave.reason && (
+                                <Typography sx={{ fontSize: '0.75rem', color: '#94A3B8', fontStyle: 'italic', lineHeight: 1.2 }}>
+                                  &quot;{leave.reason}&quot;
+                                </Typography>
+                              )}
+                              <Typography sx={{ fontSize: '0.6rem', color: '#E2E8F0', mt: 0.5, textAlign: 'right', fontWeight: 600 }}>{leave.leaveCode || '#' + leave.id}</Typography>
+                            </Paper>
+                          );
+                        })}
+                    </Box>
+                  </Box>
+
+                  {/* Filtered Empty State for History */}
+                  {teamHistory.filter(leave => {
+                    const isSameUser = leave.user.id === selectedEmployee.user.id;
+                    if (!isSameUser) return false;
+                    if (drawerStatusFilter === 'all') return true;
+                    if (drawerStatusFilter === 'rejected') return leave.status === 'rejected';
+                    return leave.status === drawerStatusFilter;
+                  }).length === 0 && (
+                      <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: 250, py: 4 }}>
+                        <Profile2User size={56} color="#CBD5E1" variant="Bulk" style={{ marginBottom: 16 }} />
+                        <Typography color="text.secondary" sx={{ fontSize: '0.9rem' }}>ไม่พบรายการในหมวดนี้</Typography>
+                      </Box>
+                    )}
                 </Box>
               </Box>
             )}

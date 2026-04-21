@@ -161,7 +161,7 @@ interface DashboardData {
     topLeaveTakers?: TopLeaveTaker[];
     filterOptions: {
         companies: { code: string; name: string }[];
-        departments: { code: string; name: string }[];
+        departments: { code: string; name: string; companyCode: string }[];
         sections: { code: string; name: string; departmentCode: string }[];
         availableYears: number[];
     };
@@ -463,7 +463,7 @@ export default function AdminDashboardPage() {
                             <FormControl size="small" fullWidth sx={{ minWidth: { lg: 120 } }}>
                                 <InputLabel>ปี</InputLabel>
                                 <Select value={selectedYear} label="ปี" onChange={handleYearChange}>
-                                    {data?.filterOptions?.availableYears.map(year => (
+                                    {data?.filterOptions?.availableYears?.map(year => (
                                         <MenuItem key={year} value={year}>{year + 543}</MenuItem>
                                     ))}
                                 </Select>
@@ -472,7 +472,7 @@ export default function AdminDashboardPage() {
                                 <InputLabel>บริษัท</InputLabel>
                                 <Select value={selectedCompany} label="บริษัท" onChange={handleCompanyChange}>
                                     <MenuItem value="all">ทุกบริษัท</MenuItem>
-                                    {data?.filterOptions?.companies.map(c => (
+                                    {data?.filterOptions?.companies?.map(c => (
                                         <MenuItem key={c.code} value={c.code}>{c.code} - {c.name}</MenuItem>
                                     ))}
                                 </Select>
@@ -481,18 +481,21 @@ export default function AdminDashboardPage() {
                                 <InputLabel>ฝ่าย</InputLabel>
                                 <Select value={selectedDept} label="ฝ่าย" onChange={handleDeptChange}>
                                     <MenuItem value="all">ทุกฝ่าย</MenuItem>
-                                    {data?.filterOptions?.departments.map(d => (
-                                        <MenuItem key={d.code} value={d.code}>{d.code} - {d.name}</MenuItem>
-                                    ))}
+                                    {data?.filterOptions?.departments?.
+                                        filter(d => selectedCompany === 'all' || d.companyCode === selectedCompany).
+                                        map(d => (
+                                            <MenuItem key={d.code} value={d.code}>{d.code} - {d.name}</MenuItem>
+                                        ))
+                                    }
                                 </Select>
                             </FormControl>
                             <FormControl size="small" fullWidth sx={{ minWidth: { lg: 150 } }} disabled={selectedDept === 'all'}>
                                 <InputLabel>แผนก</InputLabel>
                                 <Select value={selectedSection} label="แผนก" onChange={handleSectionChange}>
                                     <MenuItem value="all">ทุกแผนก</MenuItem>
-                                    {data?.filterOptions?.sections
-                                        .filter(s => s.departmentCode === selectedDept)
-                                        .map(s => (
+                                    {data?.filterOptions?.sections?.
+                                        filter(s => s.departmentCode === selectedDept).
+                                        map(s => (
                                             <MenuItem key={s.code} value={s.code}>{s.code} - {s.name}</MenuItem>
                                         ))
                                     }

@@ -49,12 +49,15 @@ import {
     ShieldSearch,
     PlayCircle,
     DocumentUpload,
+    ShieldTick,
 } from 'iconsax-react';
 import { ChevronDown, ChevronUp, Bell, History, Users, Send, Timer, FileText } from 'lucide-react';
 import { signOut } from 'next-auth/react';
 import { useUser } from '@/app/providers/UserProvider';
 import { useToastr } from '@/app/components/Toastr';
 import { CalendarDays } from 'lucide-react';
+import { canAccessAdmin } from '@/lib/permissions';
+
 
 const drawerWidth = 280;
 const collapsedDrawerWidth = 72;
@@ -64,6 +67,7 @@ interface MenuItem {
     icon: Icon | React.FC<{ size?: number; color?: string }>;
     iconColor: string;
     path?: string;
+    permission?: string;
     children?: SubMenuItem[];
 }
 
@@ -78,6 +82,8 @@ interface MenuGroup {
     groupLabel?: string;
     items: MenuItem[];
 }
+
+import { PERMISSIONS } from '@/lib/permissions';
 
 const menuGroups: MenuGroup[] = [
     {
@@ -98,6 +104,7 @@ const menuGroups: MenuGroup[] = [
                 text: 'ใบลาทั้งหมด',
                 icon: DocumentText,
                 iconColor: '#6C63FF',
+                permission: PERMISSIONS.CAN_VIEW_ALL_LEAVES,
                 children: [
                     {
                         text: 'ข้อมูลใบลา',
@@ -125,18 +132,21 @@ const menuGroups: MenuGroup[] = [
                 icon: DocumentText1,
                 iconColor: '#6C63FF',
                 path: '/admin/leave-reports',
+                permission: PERMISSIONS.CAN_VIEW_REPORTS,
             },
             {
                 text: 'สถิติรายบุคคล',
                 icon: People,
                 iconColor: '#6C63FF',
                 path: '/admin/employee-stats',
+                permission: PERMISSIONS.CAN_VIEW_REPORTS,
             },
             {
                 text: 'นำเข้าข้อมูลใบลา',
                 icon: DocumentUpload,
                 iconColor: '#22C55E',
                 path: '/admin/leave-import',
+                permission: PERMISSIONS.CAN_EXPORT_DATA,
             },
         ],
     },
@@ -148,24 +158,28 @@ const menuGroups: MenuGroup[] = [
                 icon: Hierarchy,
                 iconColor: '#6C63FF',
                 path: '/admin/approval-workflows',
+                permission: PERMISSIONS.CAN_MANAGE_ORGANIZATION,
             },
             {
                 text: 'ผู้อนุมัติรายบุคคล',
                 icon: UserTick,
                 iconColor: '#6C63FF',
                 path: '/admin/user-approval-flow',
+                permission: PERMISSIONS.CAN_MANAGE_ORGANIZATION,
             },
             {
                 text: 'โครงสร้างองค์กร',
                 icon: People,
                 iconColor: '#6C63FF',
                 path: '/admin/organization-structure',
+                permission: PERMISSIONS.CAN_MANAGE_ORGANIZATION,
             },
             {
                 text: 'ทดสอบ Workflow',
                 icon: PlayCircle,
                 iconColor: '#22C55E',
                 path: '/admin/workflow-test',
+                permission: PERMISSIONS.CAN_MANAGE_ORGANIZATION,
             },
         ],
     },
@@ -177,30 +191,35 @@ const menuGroups: MenuGroup[] = [
                 icon: CalendarDays,
                 iconColor: '#6C63FF',
                 path: '/admin/leave-types',
+                permission: PERMISSIONS.CAN_MANAGE_CONFIG,
             },
             {
                 text: 'วันหยุด',
                 icon: Calendar,
                 iconColor: '#6C63FF',
                 path: '/admin/holidays',
+                permission: PERMISSIONS.CAN_MANAGE_CONFIG,
             },
             {
                 text: 'บริษัท',
                 icon: Building,
                 iconColor: '#6C63FF',
                 path: '/admin/companies',
+                permission: PERMISSIONS.CAN_MANAGE_CONFIG,
             },
             {
                 text: 'ฝ่าย',
                 icon: ShieldSearch,
                 iconColor: '#6C63FF',
                 path: '/admin/departments',
+                permission: PERMISSIONS.CAN_MANAGE_CONFIG,
             },
             {
                 text: 'แผนก',
                 icon: Layer,
                 iconColor: '#6C63FF',
                 path: '/admin/sections',
+                permission: PERMISSIONS.CAN_MANAGE_CONFIG,
             },
         ],
     },
@@ -212,6 +231,13 @@ const menuGroups: MenuGroup[] = [
                 icon: People,
                 iconColor: '#6C63FF',
                 path: '/admin/users',
+                permission: PERMISSIONS.CAN_MANAGE_USERS,
+            },
+            {
+                text: 'สิทธิ์การใช้งาน',
+                icon: ShieldTick,
+                iconColor: '#FF9800',
+                path: '/admin/roles',
             },
         ],
     },
@@ -222,6 +248,7 @@ const menuGroups: MenuGroup[] = [
                 text: 'Notifications',
                 icon: Notification,
                 iconColor: '#6C63FF',
+                permission: PERMISSIONS.CAN_MANAGE_CONFIG,
                 children: [
                     {
                         text: 'Dashboard',
@@ -259,6 +286,7 @@ const menuGroups: MenuGroup[] = [
                 icon: Timer,
                 iconColor: '#F59E0B',
                 path: '/admin/settings/escalation',
+                permission: PERMISSIONS.CAN_MANAGE_CONFIG,
             },
         ],
     },
@@ -300,16 +328,21 @@ export default function AdminLayout({
     // Check if any child is active - moved below isActiveRoute definition
     // const hasActiveChild = ... see below after isActiveRoute
 
-    // Admin roles that can access admin pages
-    const ADMIN_ROLES = ['admin', 'hr', 'hr_manager'];
-    const isAdminRole = (role: string | undefined) => ADMIN_ROLES.includes(role || '');
-
     // Check access and redirect if not authorized
     useEffect(() => {
-        if (!userLoading && user && !isAdminRole(user.role)) {
-            router.replace('/unauthorized');
+        if (pathname === '/admin/roles' || pathname === '/unauthorized') return;
+        
+        if (!userLoading && user && !canAccessAdmin(user.role)) {
+            // Allow access to admin if they have AT LEAST ONE admin-level permission
+            // but for safety, we still redirect them if they attempt sensitive paths
+            const sensitivePaths = ['/admin/users', '/admin/settings', '/admin/companies', '/admin/departments', '/admin/sections'];
+            const isSensitive = sensitivePaths.some(p => pathname.startsWith(p));
+            
+            if (isSensitive) {
+                router.replace('/unauthorized');
+            }
         }
-    }, [user, userLoading, router]);
+    }, [user, userLoading, router, pathname]);
 
     // Load collapsed state from localStorage and set loading complete
     useEffect(() => {
@@ -379,6 +412,14 @@ export default function AdminLayout({
         return pathname === path || pathname.startsWith(path + '/');
     };
 
+    const canSeeItem = (item: MenuItem | SubMenuItem) => {
+        if (!user) return false;
+        if (!('permission' in item) || !item.permission) return true;
+        
+        const { hasPermission, PERMISSIONS } = require('@/lib/permissions');
+        return hasPermission(user.role, item.permission);
+    };
+
     // Check if any child is active (use exact match for children)
     const hasActiveChild = (children?: SubMenuItem[]) => {
         if (!children) return false;
@@ -425,10 +466,14 @@ export default function AdminLayout({
 
             {/* Menu Items */}
             <List sx={{ flex: 1, px: collapsed ? 0.5 : 2, py: 2, transition: 'padding 0.35s cubic-bezier(0.4, 0, 0.2, 1)', overflowY: 'auto' }}>
-                {menuGroups.map((group, groupIndex) => (
-                    <React.Fragment key={group.groupLabel || `group-${groupIndex}`}>
-                        {/* Group Label */}
-                        {group.groupLabel && !collapsed && (
+                {menuGroups.map((group, groupIndex) => {
+                    const visibleItems = group.items.filter(canSeeItem);
+                    if (visibleItems.length === 0) return null;
+
+                    return (
+                        <React.Fragment key={group.groupLabel || `group-${groupIndex}`}>
+                            {/* Group Label */}
+                            {group.groupLabel && !collapsed && (
                             <Typography
                                 variant="caption"
                                 sx={{
@@ -452,7 +497,7 @@ export default function AdminLayout({
                             <Divider sx={{ my: 0.75 }} />
                         )}
                         {/* Menu Items in Group */}
-                        {group.items.map((item) => (
+                        {visibleItems.map((item) => (
                             <React.Fragment key={item.text}>
                                 {/* Parent menu item */}
                                 <ListItem disablePadding sx={{ mb: 0.75, position: 'relative' }}>
@@ -586,10 +631,11 @@ export default function AdminLayout({
                                         </List>
                                     </Collapse>
                                 )}
-                            </React.Fragment>
-                        ))}
-                    </React.Fragment>
-                ))}
+                                </React.Fragment>
+                            ))}
+                        </React.Fragment>
+                    );
+                })}
             </List>
 
             <Divider sx={{ mx: collapsed ? 0.5 : 1.5, transition: 'margin 0.35s cubic-bezier(0.4, 0, 0.2, 1)' }} />

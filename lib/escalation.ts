@@ -273,6 +273,15 @@ export async function checkAndEscalate(options?: { force?: boolean; leaveId?: nu
     const isForce = options?.force || false;
     const targetLeaveId = options?.leaveId;
 
+    // บันทึกเวลาที่รัน (ถ้าเป็นการรันปกติ ไม่ใช่การระบุรายใบ)
+    if (!targetLeaveId) {
+      await prisma.systemConfig.upsert({
+        where: { key: 'last_escalation_run' },
+        update: { value: now.toISOString() },
+        create: { key: 'last_escalation_run', value: now.toISOString() },
+      });
+    }
+
     // Build query condition
     const whereCondition: any = {
       status: { in: ['pending', 'in_progress'] },

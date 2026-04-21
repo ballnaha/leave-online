@@ -12,6 +12,7 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url);
+    const userId = searchParams.get('userId');
     const status = searchParams.get('status');
     const leaveType = searchParams.get('leaveType');
     const company = searchParams.get('company');
@@ -22,6 +23,9 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get('search');
 
     const where: any = {};
+    if (userId) {
+      where.userId = parseInt(userId);
+    }
 
     // Filter by status
     if (status && status !== 'all') {
