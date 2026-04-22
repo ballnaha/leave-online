@@ -312,12 +312,16 @@ export default function AdminLeaveReportsPage() {
   useEffect(() => {
     if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
     searchTimerRef.current = setTimeout(() => {
-      setDebouncedSearch(search.trim());
+      const nextSearch = search.trim();
+      if (nextSearch !== debouncedSearch) {
+        setDebouncedSearch(nextSearch);
+        setPage(0);
+      }
     }, 500);
     return () => {
       if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
     };
-  }, [search]);
+  }, [search, debouncedSearch]);
 
   const fetchRows = useCallback(async () => {
     const params = new URLSearchParams();
@@ -342,9 +346,11 @@ export default function AdminLeaveReportsPage() {
       if (!isMountedRef.current) return;
       setRows(Array.isArray(cached.data?.rows) ? (cached.data.rows as ReportRow[]) : []);
       setStats(cached.data?.stats || { total: 0, totalDays: 0, pending: 0, approved: 0, rejected: 0, cancelled: 0 });
-      if (cached.data?.companies) setCompanies(cached.data.companies);
-      if (cached.data?.departments) setDepartments(cached.data.departments);
-      if (cached.data?.sections) setSections(cached.data.sections);
+      
+      if (cached.data?.companies && companies.length === 0) setCompanies(cached.data.companies);
+      if (cached.data?.departments && departments.length === 0) setDepartments(cached.data.departments);
+      if (cached.data?.sections && sections.length === 0) setSections(cached.data.sections);
+      
       setTotalRows(cached.data?.pagination?.total || 0);
       setLoading(false);
       return;
@@ -387,9 +393,12 @@ export default function AdminLeaveReportsPage() {
 
       setRows(Array.isArray(data?.rows) ? (data.rows as ReportRow[]) : []);
       setStats(data?.stats || { total: 0, totalDays: 0, pending: 0, approved: 0, rejected: 0, cancelled: 0 });
-      if (data?.companies) setCompanies(data.companies);
-      if (data?.departments) setDepartments(data.departments);
-      if (data?.sections) setSections(data.sections);
+      
+      // Only set these if they haven't been loaded or are empty to prevent filter flicker
+      if (data?.companies && companies.length === 0) setCompanies(data.companies);
+      if (data?.departments && departments.length === 0) setDepartments(data.departments);
+      if (data?.sections && sections.length === 0) setSections(data.sections);
+      
       setTotalRows(data?.pagination?.total || 0);
     } catch (err: any) {
       if (!isMountedRef.current) return;
@@ -407,6 +416,7 @@ export default function AdminLeaveReportsPage() {
     }
   }, [status, month, year, debouncedSearch, companyFilter, departmentFilter, sectionFilter, page, rowsPerPage, toastError]);
 
+  const userKey = `${user?.id}-${user?.role}`;
   useEffect(() => {
     if (!userLoading && user) {
       if (hasPermission(user.role, PERMISSIONS.CAN_VIEW_REPORTS)) {
@@ -415,12 +425,7 @@ export default function AdminLeaveReportsPage() {
         router.replace('/unauthorized');
       }
     }
-  }, [fetchRows, page, rowsPerPage, user, userLoading, router]);
-
-  useEffect(() => {
-    // Reset to first page when any major filter changes
-    setPage(0);
-  }, [status, month, year, debouncedSearch, companyFilter, departmentFilter, sectionFilter]);
+  }, [fetchRows, userKey, userLoading, router]);
 
   const exportRows = useMemo(() => {
     return rows.map((r) => ({
@@ -614,8 +619,8 @@ body{font-family:'Sarabun',Tahoma,sans-serif;font-size:9px;background:#dce6ec;co
 .tbar-btns{display:flex;gap:8px}
 .tbar-btns button{border:1px solid rgba(255,255,255,.6);border-radius:3px;padding:7px 14px;font-size:11px;font-weight:700;cursor:pointer;background:transparent;color:#fff}
 .tbar-btns .btn-print{background:#fff;color:#3b5068}
-.shell{padding:20px}
-.page{width:210mm;min-height:297mm;margin:0 auto;padding:9mm 10mm;background:#fff;box-shadow:0 8px 24px rgba(0,0,0,.14)}
+.shell{padding:20px;display:flex;justify-content:center}
+.page{width:210mm;min-height:297mm;padding:12mm 15mm;background:#fff;box-shadow:0 8px 24px rgba(0,0,0,.14);position:relative}
 .doc-header{border:1.5px solid #111;padding:5px 8px;margin-bottom:6px;font-size:9px;line-height:1.6;word-break:break-word}
 table{width:100%;border-collapse:collapse;table-layout:fixed}
 th,td{border:1px solid #999;padding:3px 4px;font-size:8.5px;vertical-align:top;text-align:left;word-break:break-word;line-height:1.35}
@@ -632,15 +637,14 @@ th{background:#e8edf2;font-weight:700;white-space:nowrap}
 .tr{text-align:right}
 .fw{font-weight:700}
 .doc-footer{margin-top:6px;font-size:8.5px;text-align:right;color:#444;border-top:1px solid #aaa;padding-top:4px}
-.fl-note{margin-top:5px;padding:4px 7px;border:1px dashed #888;font-size:8px;color:#555;background:#f9f9f9}
 .fl-note{margin-top:5px;padding:4px 7px;border:1px dashed #777;font-size:8px;color:#444;background:#f9f9f9}
 .pending-who{font-weight:400;font-style:italic;font-size:7.5px;color:#555}
-@page{size:A4 portrait;margin:8mm 7mm}
+@page{size:A4 portrait;margin:0}
 @media print{
 body{background:#fff}
 .toolbar{display:none}
 .shell{padding:0}
-.page{width:auto;min-height:auto;box-shadow:none;padding:0}
+.page{width:210mm;min-height:297mm;box-shadow:none;margin:0;padding:12mm 15mm}
 .grp-company td,.grp-dept td,.grp-sect td,.grp-pos td,.grp-emp td{-webkit-print-color-adjust:exact;print-color-adjust:exact}
 }
 </style>
@@ -674,71 +678,190 @@ body{background:#fff}
   const exportExcel = async () => {
     setExcelLoading(true);
     try {
+      // Fetch all data for excel export (not just current page)
+      const params = new URLSearchParams();
+      params.set('status', status);
+      params.set('month', String(month));
+      params.set('year', String(year));
+      if (debouncedSearch) params.set('search', debouncedSearch);
+      if (companyFilter !== 'all') params.set('company', companyFilter);
+      if (departmentFilter !== 'all') params.set('department', departmentFilter);
+      if (sectionFilter !== 'all') params.set('section', sectionFilter);
+
+      const res = await fetch(`/api/admin/leave-reports?${params.toString()}`, { cache: 'no-store' });
+      if (!res.ok) throw new Error('fetch failed');
+      const data = (await res.json()) as LeaveReportResponse;
+      const allRows: ReportRow[] = (Array.isArray(data.rows) ? data.rows : []).filter(
+        (r) => !r.leaveCode?.startsWith('FL'),
+      );
+
+      if (allRows.length === 0) {
+        toastError('ไม่มีข้อมูลสำหรับ Export');
+        return;
+      }
+
       const ExcelJS = await import('exceljs');
       const workbook = new ExcelJS.Workbook();
-      const worksheet = workbook.addWorksheet('LeaveReport');
+      const worksheet = workbook.addWorksheet('LeaveReport', {
+        pageSetup: {
+          paperSize: 9, // A4
+          orientation: 'portrait',
+          fitToPage: true,
+          fitToWidth: 1,
+          fitToHeight: 0, // Auto
+          margins: { left: 0.3, right: 0.3, top: 0.5, bottom: 0.5, header: 0.3, footer: 0.3 }
+        }
+      });
 
-      // Set column widths
+      // Set column widths (8 columns like PDF)
       worksheet.columns = [
-        { width: 6 },  // ลำดับ
-        { width: 10 }, // รหัสใบลา
-        { width: 12 }, // รหัสพนักงาน
-        { width: 20 }, // ชื่อพนักงาน
-        { width: 15 }, // ตำแหน่ง
-        { width: 15 }, // ฝ่าย
-        { width: 15 }, // แผนก
-        { width: 25 }, // วันที่หยุด
-        { width: 10 }, // จำนวนวัน
+        { width: 6 },  // #
+        { width: 12 }, // รหัสใบลา
+        { width: 22 }, // วันที่ลา
+        { width: 8 },  // วัน
         { width: 15 }, // ประเภท
-        { width: 40 }, // เหตุผลการลา
-        { width: 12 }, // สถานะ
+        { width: 30 }, // เหตุผล
+        { width: 15 }, // สถานะ
         { width: 30 }, // หมายเหตุ
       ];
 
-      // Add header row
-      const header = ['ลำดับ', 'รหัสใบลา', 'รหัสพนักงาน', 'ชื่อพนักงาน', 'ตำแหน่ง', 'ฝ่าย', 'แผนก', 'วันที่หยุด', 'จำนวนวัน', 'ประเภท', 'เหตุผลการลา', 'สถานะ', 'หมายเหตุ'];
-      const headerRow = worksheet.addRow(header);
-      headerRow.font = { bold: true };
-      headerRow.eachCell((cell) => {
-        cell.fill = {
-          type: 'pattern',
-          pattern: 'solid',
-          fgColor: { argb: 'FFE0E0E0' },
-        };
-        cell.border = {
-          top: { style: 'thin' },
-          left: { style: 'thin' },
-          bottom: { style: 'thin' },
-          right: { style: 'thin' },
-        };
+      // Styling helpers
+      const groupStyle = (fg: string, fontColor = 'FFFFFFFF', fontSize = 10, bold = true) => ({
+        font: { bold, color: { argb: fontColor }, size: fontSize },
+        fill: { type: 'pattern' as const, pattern: 'solid' as const, fgColor: { argb: fg } },
+        border: {
+          top: { style: 'thin' as const },
+          left: { style: 'thin' as const },
+          bottom: { style: 'thin' as const },
+          right: { style: 'thin' as const },
+        },
       });
 
-      // Add data rows
-      exportRows.forEach((r, i) => {
-        const row = worksheet.addRow([
-          i + 1,
-          r.leaveCode,
-          r.employeeId,
-          r.employeeName,
-          r.position,
-          r.department,
-          r.section,
-          r.leaveDate,
-          r.totalDays,
-          r.leaveTypeName,
-          r.reason,
-          r.statusLabel,
-          r.note,
-        ]);
-        row.eachCell((cell) => {
-          cell.border = {
-            top: { style: 'thin' },
-            left: { style: 'thin' },
-            bottom: { style: 'thin' },
-            right: { style: 'thin' },
-          };
-        });
+      // Add main header
+      const periodLabel = month === 0
+        ? `ปี ${year + 543}`
+        : `${monthOptions.find((m) => m.value === month)?.label} ${year + 543}`;
+      
+      const titleRow = worksheet.addRow([`รายงานการลา - ช่วงเวลา: ${periodLabel}`]);
+      titleRow.font = { bold: true, size: 14 };
+      worksheet.mergeCells(1, 1, 1, 8);
+
+      const subHeaderRow = worksheet.addRow([`ออกเอกสารเมื่อ: ${new Date().toLocaleDateString('th-TH', { dateStyle: 'long' })}`]);
+      subHeaderRow.font = { italic: true, size: 10 };
+      worksheet.mergeCells(2, 1, 2, 8);
+      worksheet.addRow([]); // empty row
+
+      // Add table header
+      const header = ['#', 'รหัสใบลา', 'วันที่ลา', 'วัน', 'ประเภท', 'เหตุผล', 'สถานะ', 'หมายเหตุ'];
+      const headerRow = worksheet.addRow(header);
+      headerRow.eachCell((cell) => {
+        const style = groupStyle('FF3B5068', 'FFFFFFFF', 10, true);
+        cell.font = style.font;
+        cell.fill = style.fill;
+        cell.border = style.border;
+        cell.alignment = { horizontal: 'center' };
       });
+
+      // Grouping data logic (same as PDF)
+      const deptList: DeptOption[] = data.departments || departments;
+      const compList: CompanyOption[] = data.companies || companies;
+      const deptMap = new Map(deptList.map((d) => [d.code, d]));
+      const compMap = new Map(compList.map((c) => [c.code, c.name]));
+
+      type GroupedEmployee = { employeeId: string; rows: ReportRow[] };
+      type GroupedPosition = Map<string, GroupedEmployee[]>;
+      type GroupedSection = Map<string, GroupedPosition>;
+      type GroupedDept = Map<string, GroupedSection>;
+      type GroupedCompany = Map<string, GroupedDept>;
+      const grouped: GroupedCompany = new Map();
+
+      for (const row of allRows) {
+        const deptInfo = deptMap.get(row.departmentCode);
+        const companyName = deptInfo ? (compMap.get(deptInfo.companyCode) || deptInfo.companyCode) : 'ไม่ระบุบริษัท';
+        const deptName = row.departmentCode ? `${row.departmentCode} - ${row.department || row.departmentCode}` : (row.department || 'ไม่ระบุฝ่าย');
+        const sectionName = row.sectionCode ? `${row.sectionCode} - ${row.section || row.sectionCode}` : (row.section || 'ไม่ระบุแผนก');
+        const posName = row.position || 'ไม่ระบุตำแหน่ง';
+        if (!grouped.has(companyName)) grouped.set(companyName, new Map());
+        const byDept = grouped.get(companyName)!;
+        if (!byDept.has(deptName)) byDept.set(deptName, new Map());
+        const bySect = byDept.get(deptName)!;
+        if (!bySect.has(sectionName)) bySect.set(sectionName, new Map());
+        const byPos = bySect.get(sectionName)!;
+        if (!byPos.has(posName)) byPos.set(posName, []);
+        const empList = byPos.get(posName)!;
+        let empEntry = empList.find((e) => e.employeeId === row.employeeId);
+        if (!empEntry) {
+          empEntry = { employeeId: row.employeeId, rows: [] };
+          empList.push(empEntry);
+        }
+        empEntry.rows.push(row);
+      }
+
+      // Add grouped rows to worksheet
+      let rowSeq = 0;
+      for (const [companyName, byDept] of grouped) {
+        const row = worksheet.addRow([`บริษัท: ${companyName}`]);
+        worksheet.mergeCells(row.number, 1, row.number, 8);
+        row.eachCell((cell) => { Object.assign(cell, groupStyle('FF3B5068', 'FFFFFFFF', 11)); });
+
+        for (const [deptName, bySect] of byDept) {
+          const row = worksheet.addRow([`  ฝ่าย: ${deptName}`]);
+          worksheet.mergeCells(row.number, 1, row.number, 8);
+          row.eachCell((cell) => { Object.assign(cell, groupStyle('FF4A7C6F', 'FFFFFFFF', 10)); });
+
+          for (const [sectionName, byPos] of bySect) {
+            const row = worksheet.addRow([`    แผนก: ${sectionName}`]);
+            worksheet.mergeCells(row.number, 1, row.number, 8);
+            row.eachCell((cell) => { Object.assign(cell, groupStyle('FFD0DFE6', 'FF1A2D3A', 9)); });
+
+            for (const [posName, empList] of byPos) {
+              const row = worksheet.addRow([`      ตำแหน่ง: ${posName}`]);
+              worksheet.mergeCells(row.number, 1, row.number, 8);
+              row.eachCell((cell) => { Object.assign(cell, groupStyle('FFEAF2EF', 'FF1A3028', 9, false)); cell.font.italic = true; });
+
+              for (const emp of empList) {
+                const empDisplayName = emp.rows[0]?.employeeName || emp.employeeId;
+                const totalEmpDays = emp.rows.reduce(
+                  (sum, r) => ((r.status || '').toLowerCase() === 'approved' ? sum + (r.totalDays || 0) : sum),
+                  0,
+                );
+                const row = worksheet.addRow([`        ${empDisplayName} (${emp.employeeId})`, '', '', '', '', '', '', `วันลาที่อนุมัติ ${totalEmpDays.toFixed(1)} วัน`]);
+                worksheet.mergeCells(row.number, 1, row.number, 5);
+                worksheet.mergeCells(row.number, 6, row.number, 8);
+                row.eachCell((cell) => { Object.assign(cell, groupStyle('FFF4F8F6', 'FF000000', 10, true)); });
+                row.getCell(6).alignment = { horizontal: 'right' };
+
+                emp.rows.forEach((r) => {
+                  rowSeq += 1;
+                  const statusText = statusThaiMap[(r.status || '').toLowerCase()] || r.statusLabel || r.status;
+                  const dataRow = worksheet.addRow([
+                    rowSeq,
+                    r.leaveCode,
+                    formatThaiDateRange(r.startDate, r.endDate),
+                    r.totalDays,
+                    r.leaveTypeName,
+                    r.reason || '-',
+                    statusText + (r.pendingApprover && (r.status === 'pending' || r.status === 'in_progress') ? ` (รอ: ${r.pendingApprover})` : ''),
+                    r.note || '-'
+                  ]);
+                  dataRow.eachCell((cell) => {
+                    cell.border = {
+                      top: { style: 'thin' },
+                      left: { style: 'thin' },
+                      bottom: { style: 'thin' },
+                      right: { style: 'thin' },
+                    };
+                    cell.font = { size: 9 };
+                    cell.alignment = { vertical: 'top', wrapText: true };
+                  });
+                  dataRow.getCell(1).alignment = { horizontal: 'center' };
+                  dataRow.getCell(4).alignment = { horizontal: 'center' };
+                });
+              }
+            }
+          }
+        }
+      }
 
       // Generate buffer and download
       const buffer = await workbook.xlsx.writeBuffer();
@@ -750,7 +873,8 @@ body{background:#fff}
       a.download = `leave-report-${today}.xlsx`;
       a.click();
       URL.revokeObjectURL(url);
-    } catch {
+    } catch (err) {
+      console.error(err);
       toastError('Export Excel ไม่สำเร็จ');
     } finally {
       setExcelLoading(false);
@@ -833,7 +957,7 @@ body{background:#fff}
             size="small"
             placeholder="ค้นหาชื่อ/รหัสพนักงาน"
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => { setSearch(e.target.value); setPage(0); }}
             onKeyDown={(e) => e.key === 'Enter' && fetchRows()}
             sx={{ gridColumn: { xs: '1 / -1', md: 'auto' } }}
             InputProps={{
@@ -848,7 +972,7 @@ body{background:#fff}
           {/* Month */}
           <FormControl size="small">
             <InputLabel>เดือน</InputLabel>
-            <Select value={month} label="เดือน" onChange={(e) => setMonth(Number(e.target.value))} sx={{ borderRadius: 1 }}>
+            <Select value={month} label="เดือน" onChange={(e) => { setMonth(Number(e.target.value)); setPage(0); }} sx={{ borderRadius: 1 }}>
               {monthOptions.map((o) => (
                 <MenuItem key={o.value} value={o.value}>{o.label}</MenuItem>
               ))}
@@ -858,7 +982,7 @@ body{background:#fff}
           {/* Year */}
           <FormControl size="small">
             <InputLabel>ปี</InputLabel>
-            <Select value={year} label="ปี" onChange={(e) => setYear(Number(e.target.value))} sx={{ borderRadius: 1 }}>
+            <Select value={year} label="ปี" onChange={(e) => { setYear(Number(e.target.value)); setPage(0); }} sx={{ borderRadius: 1 }}>
               {yearOptions.map((y) => (
                 <MenuItem key={y} value={y}>{y + 543}</MenuItem>
               ))}
@@ -885,6 +1009,7 @@ body{background:#fff}
                 setCompanyFilter(next);
                 setDepartmentFilter('all');
                 setSectionFilter('all');
+                setPage(0);
               }}
               sx={{ borderRadius: 1 }}
             >
@@ -905,6 +1030,7 @@ body{background:#fff}
                 const next = String(e.target.value);
                 setDepartmentFilter(next);
                 setSectionFilter('all');
+                setPage(0);
               }}
               sx={{ borderRadius: 1 }}
             >
@@ -918,7 +1044,7 @@ body{background:#fff}
           {/* Section */}
           <FormControl size="small">
             <InputLabel>แผนก</InputLabel>
-            <Select value={sectionFilter} label="แผนก" onChange={(e) => setSectionFilter(String(e.target.value))} sx={{ borderRadius: 1 }}>
+            <Select value={sectionFilter} label="แผนก" onChange={(e) => { setSectionFilter(String(e.target.value)); setPage(0); }} sx={{ borderRadius: 1 }}>
               <MenuItem value="all">ทุกแผนก</MenuItem>
               {filteredSections.map((s) => (
                 <MenuItem key={s.code} value={s.code}>{s.code} - {s.name}</MenuItem>
@@ -929,7 +1055,7 @@ body{background:#fff}
           {/* Status */}
           <FormControl size="small">
             <InputLabel>สถานะ</InputLabel>
-            <Select value={status} label="สถานะ" onChange={(e) => setStatus(String(e.target.value))} sx={{ borderRadius: 1 }}>
+            <Select value={status} label="สถานะ" onChange={(e) => { setStatus(String(e.target.value)); setPage(0); }} sx={{ borderRadius: 1 }}>
               {statusOptions.map((o) => (
                 <MenuItem key={o.value} value={o.value}>{o.label}</MenuItem>
               ))}

@@ -1,5 +1,5 @@
 'use client';
-import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useCallback, useMemo, ReactNode } from 'react';
 import { Snackbar, Alert, AlertColor, Slide, SlideProps } from '@mui/material';
 import { CheckCircle, XCircle, AlertTriangle, Info } from 'lucide-react';
 
@@ -77,8 +77,10 @@ export function ToastrProvider({ children }: { children: ReactNode }) {
         addMessage(message, 'info', duration);
     }, [addMessage]);
 
+    const value = useMemo(() => ({ success, error, warning, info }), [success, error, warning, info]);
+
     return (
-        <ToastrContext.Provider value={{ success, error, warning, info }}>
+        <ToastrContext.Provider value={value}>
             {children}
             {messages.map((msg, index) => (
                 <Snackbar

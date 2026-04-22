@@ -11,7 +11,7 @@ import NotificationRequiredModal from "../components/NotificationRequiredModal";
 
 export default function AppProviders({ children, initialLocale }: { children: React.ReactNode; initialLocale?: "th" | "en" | "my" }) {
   return (
-    <SessionProvider>
+    <SessionProvider refetchOnWindowFocus={false}>
       <PWAProvider>
         <UserProvider>
           <OneSignalProvider>
