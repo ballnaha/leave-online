@@ -3999,6 +3999,9 @@ export default function ApprovalPage() {
                           if (!isSameUser) return false;
 
                           if (drawerStatusFilter === 'all') return true;
+                          if (drawerStatusFilter === 'pending') {
+                            return leave.status === 'pending' || leave.status === 'in_progress';
+                          }
                           return leave.status === drawerStatusFilter;
                         })
                         .map((leave) => {
