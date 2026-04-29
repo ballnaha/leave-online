@@ -87,17 +87,6 @@ import { PERMISSIONS } from '@/lib/permissions';
 
 const menuGroups: MenuGroup[] = [
     {
-        // กลุ่มหลัก - ไม่มี label
-        items: [
-            {
-                text: 'แดชบอร์ด',
-                icon: Category2,
-                iconColor: '#6C63FF',
-                path: '/admin',
-            },
-        ],
-    },
-    {
         groupLabel: 'ใบลา',
         items: [
             {

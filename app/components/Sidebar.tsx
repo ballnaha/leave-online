@@ -70,7 +70,6 @@ const Sidebar = ({ open, onClose }: SidebarProps) => {
     const menuItems = [
         { text: 'หน้าหลัก', icon: <Home2 size={20} variant="Outline" color="#6C63FF" />, activeIcon: <Home2 size={20} variant="Bold" color="#fff" />, path: '/' },
         { text: 'จัดการใบลา', icon: <Task size={20} variant="Outline" color="#6C63FF" />, activeIcon: <Task size={20} variant="Bold" color="#fff" />, path: '/approval' },
-        { text: 'สิทธิ์การใช้งาน', icon: <ShieldTick size={20} variant="Outline" color="#6C63FF" />, activeIcon: <ShieldTick size={20} variant="Bold" color="#fff" />, path: '/admin/roles' },
     ];
 
     // Admin roles that can access admin settings

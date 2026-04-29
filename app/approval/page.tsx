@@ -3903,17 +3903,17 @@ export default function ApprovalPage() {
                         </Avatar>
                         <Box>
                           <VaulDrawer.Title asChild>
-                            <Typography sx={{ fontSize: '1.15rem', fontWeight: 900, color: '#0F172A', letterSpacing: '-0.01em' }}>
+                            <Typography sx={{ fontSize: '1.3rem', fontWeight: 900, color: '#0F172A', letterSpacing: '-0.01em' }}>
                               {selectedEmployee.user.firstName} {selectedEmployee.user.lastName}
                             </Typography>
                           </VaulDrawer.Title>
-                          <Typography sx={{ fontSize: '0.8rem', color: '#64748B', mt: 0.25, fontWeight: 600 }}>
+                          <Typography sx={{ fontSize: '0.95rem', color: '#64748B', mt: 0.25, fontWeight: 600 }}>
                             {selectedEmployee.user.employeeId && `${selectedEmployee.user.employeeId} • `}
                             {selectedEmployee.user.position || 'ตำแหน่ง -'}
                           </Typography>
                           <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
-                            <Box sx={{ px: 1, py: 0.25, bgcolor: PRIMARY_LIGHT, color: PRIMARY_COLOR, borderRadius: 0.5, fontSize: '0.65rem', fontWeight: 800 }}>{selectedEmployee.user.department}</Box>
-                            {selectedEmployee.user.section && <Box sx={{ px: 1, py: 0.25, bgcolor: '#F1F5F9', color: '#64748B', borderRadius: 0.5, fontSize: '0.65rem', fontWeight: 800 }}>{selectedEmployee.user.section}</Box>}
+                            <Box sx={{ px: 1, py: 0.25, bgcolor: PRIMARY_LIGHT, color: PRIMARY_COLOR, borderRadius: 0.5, fontSize: '0.8rem', fontWeight: 800 }}>{selectedEmployee.user.department}</Box>
+                            {selectedEmployee.user.section && <Box sx={{ px: 1, py: 0.25, bgcolor: '#F1F5F9', color: '#64748B', borderRadius: 0.5, fontSize: '0.8rem', fontWeight: 800 }}>{selectedEmployee.user.section}</Box>}
                           </Box>
                         </Box>
                       </Box>
@@ -3933,7 +3933,7 @@ export default function ApprovalPage() {
 
                   {/* Elegant Leave Breakdown */}
                   <Box sx={{ mb: 4 }}>
-                    <Typography sx={{ fontSize: '0.75rem', fontWeight: 900, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.05em', mb: 2 }}>สถิติแยกประเภท</Typography>
+                    <Typography sx={{ fontSize: '0.9rem', fontWeight: 900, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.05em', mb: 2 }}>สถิติแยกประเภท</Typography>
                     <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1.5 }}>
                       {Object.entries(selectedEmployee.byType || {}).map(([leaveType, days]) => {
                         const config = leaveTypeConfig[leaveType] || leaveTypeConfig.default;
@@ -3946,10 +3946,10 @@ export default function ApprovalPage() {
                           }}>
                             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                <config.icon size={14} color={config.color} variant="Bold" />
-                                <Typography sx={{ fontSize: '0.75rem', fontWeight: 700, color: '#475569' }}>{leaveTypeName}</Typography>
+                                <config.icon size={16} color={config.color} variant="Bold" />
+                                <Typography sx={{ fontSize: '0.85rem', fontWeight: 700, color: '#475569' }}>{leaveTypeName}</Typography>
                               </Box>
-                              <Typography sx={{ fontSize: '0.8rem', fontWeight: 900, color: config.color }}>{days}</Typography>
+                              <Typography sx={{ fontSize: '1rem', fontWeight: 900, color: config.color }}>{days}</Typography>
                             </Box>
                             <Box sx={{ height: 3, width: '100%', bgcolor: '#F1F5F9', borderRadius: 1 }}>
                               <Box sx={{ height: '100%', width: '100%', bgcolor: config.color, borderRadius: 1 }} />
@@ -3962,7 +3962,7 @@ export default function ApprovalPage() {
 
                   {/* Clean History List with Status Tabs */}
                   <Box>
-                    <Typography sx={{ fontSize: '0.75rem', fontWeight: 900, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.05em', mb: 1.5 }}>ประวัติการทำรายการ</Typography>
+                    <Typography sx={{ fontSize: '0.9rem', fontWeight: 900, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.05em', mb: 1.5 }}>ประวัติการทำรายการ</Typography>
 
                     {/* Compact Inner Tabs - 5 TABS */}
                     <Box sx={{ mb: 2, display: 'flex', gap: 0.5, bgcolor: '#F1F5F9', p: 0.5, borderRadius: 1 }}>
@@ -3978,7 +3978,7 @@ export default function ApprovalPage() {
                           onClick={() => setDrawerStatusFilter(item.value)}
                           sx={{
                             flex: 1, textAlign: 'center', py: 0.75, borderRadius: 1,
-                            fontSize: '0.75rem', fontWeight: 800, cursor: 'pointer',
+                            fontSize: '0.85rem', fontWeight: 800, cursor: 'pointer',
                             whiteSpace: 'nowrap',
                             bgcolor: drawerStatusFilter === item.value ? 'white' : 'transparent',
                             color: drawerStatusFilter === item.value ? PRIMARY_COLOR : '#64748B',
@@ -4015,27 +4015,27 @@ export default function ApprovalPage() {
                             }}>
                               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                  <Typography sx={{ fontSize: '0.85rem', fontWeight: 800, color: '#1E293B' }}>{leave.leaveTypeName}</Typography>
-                                  <Box sx={{ px: 0.75, py: 0.25, bgcolor: statusInfo.bgcolor, color: statusInfo.color, borderRadius: 0.5, fontSize: '0.6rem', fontWeight: 900 }}>
+                                  <Typography sx={{ fontSize: '1rem', fontWeight: 800, color: '#1E293B' }}>{leave.leaveTypeName}</Typography>
+                                  <Box sx={{ px: 0.75, py: 0.25, bgcolor: statusInfo.bgcolor, color: statusInfo.color, borderRadius: 0.5, fontSize: '0.75rem', fontWeight: 900 }}>
                                     {statusInfo.label}
                                   </Box>
                                 </Box>
-                                <Typography sx={{ fontSize: '1rem', fontWeight: 900, color: config.color }}>
-                                  {leave.totalDays} <span style={{ fontSize: '0.65rem', color: '#94A3B8' }}>วัน</span>
+                                <Typography sx={{ fontSize: '1.2rem', fontWeight: 900, color: config.color }}>
+                                  {leave.totalDays} <span style={{ fontSize: '0.8rem', color: '#94A3B8' }}>วัน</span>
                                 </Typography>
                               </Box>
 
-                              <Typography sx={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748B', mb: 0.5 }}>
+                              <Typography sx={{ fontSize: '0.9rem', fontWeight: 700, color: '#64748B', mb: 0.5 }}>
                                 {startDate.locale('th').format('DD MMM')} {leave.startDate !== leave.endDate && `- ${dayjs(leave.endDate).locale('th').format('DD MMM')}`}
-                                <Typography component="span" sx={{ fontSize: '0.7rem', ml: 0.5, fontWeight: 500, color: '#CBD5E1' }}>{startDate.year() + 543}</Typography>
+                                <Typography component="span" sx={{ fontSize: '0.8rem', ml: 0.5, fontWeight: 500, color: '#CBD5E1' }}>{startDate.year() + 543}</Typography>
                               </Typography>
 
                               {leave.reason && (
-                                <Typography sx={{ fontSize: '0.75rem', color: '#94A3B8', fontStyle: 'italic', lineHeight: 1.2 }}>
+                                <Typography sx={{ fontSize: '0.85rem', color: '#94A3B8', fontStyle: 'italic', lineHeight: 1.4 }}>
                                   &quot;{leave.reason}&quot;
                                 </Typography>
                               )}
-                              <Typography sx={{ fontSize: '0.6rem', color: '#E2E8F0', mt: 0.5, textAlign: 'right', fontWeight: 600 }}>{leave.leaveCode || '#' + leave.id}</Typography>
+                              <Typography sx={{ fontSize: '0.7rem', color: '#E2E8F0', mt: 0.5, textAlign: 'right', fontWeight: 600 }}>{leave.leaveCode || '#' + leave.id}</Typography>
                             </Paper>
                           );
                         })}
