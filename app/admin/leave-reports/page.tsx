@@ -346,11 +346,11 @@ export default function AdminLeaveReportsPage() {
       if (!isMountedRef.current) return;
       setRows(Array.isArray(cached.data?.rows) ? (cached.data.rows as ReportRow[]) : []);
       setStats(cached.data?.stats || { total: 0, totalDays: 0, pending: 0, approved: 0, rejected: 0, cancelled: 0 });
-      
+
       if (cached.data?.companies && companies.length === 0) setCompanies(cached.data.companies);
       if (cached.data?.departments && departments.length === 0) setDepartments(cached.data.departments);
       if (cached.data?.sections && sections.length === 0) setSections(cached.data.sections);
-      
+
       setTotalRows(cached.data?.pagination?.total || 0);
       setLoading(false);
       return;
@@ -393,12 +393,12 @@ export default function AdminLeaveReportsPage() {
 
       setRows(Array.isArray(data?.rows) ? (data.rows as ReportRow[]) : []);
       setStats(data?.stats || { total: 0, totalDays: 0, pending: 0, approved: 0, rejected: 0, cancelled: 0 });
-      
+
       // Only set these if they haven't been loaded or are empty to prevent filter flicker
       if (data?.companies && companies.length === 0) setCompanies(data.companies);
       if (data?.departments && departments.length === 0) setDepartments(data.departments);
       if (data?.sections && sections.length === 0) setSections(data.sections);
-      
+
       setTotalRows(data?.pagination?.total || 0);
     } catch (err: any) {
       if (!isMountedRef.current) return;
@@ -741,8 +741,8 @@ body{background:#fff}
       const periodLabel = month === 0
         ? `ปี ${year + 543}`
         : `${monthOptions.find((m) => m.value === month)?.label} ${year + 543}`;
-      
-      const titleRow = worksheet.addRow([`รายงานการลา - ช่วงเวลา: ${periodLabel}`]);
+
+      const titleRow = worksheet.addRow([`รายงานการลา : ${periodLabel}`]);
       titleRow.font = { bold: true, size: 14 };
       worksheet.mergeCells(1, 1, 1, 8);
 
@@ -904,7 +904,16 @@ body{background:#fff}
         <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
           <Button
             variant="outlined"
-            onClick={fetchRows}
+            onClick={() => {
+              fetchRows();
+              setSearch('');
+              setMonth(0);
+              setYear(new Date().getFullYear());
+              setCompanyFilter('all');
+              setDepartmentFilter('all');
+              setSectionFilter('all');
+              setStatus('all');
+            }}
             startIcon={loading ? <CircularProgress size={18} /> : <Refresh2 size={18} color={theme.palette.primary.main} />}
             disabled={loading}
             sx={{ borderRadius: 1 }}

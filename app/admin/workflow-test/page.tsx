@@ -564,6 +564,7 @@ export default function WorkflowTestPage() {
                             fetchUsers();
                             setSimulationResult(null);
                             setSelectedUser(null);
+                            handleClearFilters();
                         }}
                         sx={{
                             bgcolor: alpha(theme.palette.primary.main, 0.1),

@@ -715,7 +715,13 @@ export default function ApprovalWorkflowsPage() {
 
           <Tooltip title="รีเฟรช">
             <IconButton
-              onClick={fetchWorkflows}
+              onClick={() => {
+                fetchWorkflows();
+                setSearchQuery('');
+                setCompanyFilter('all');
+                setDeptFilter('all');
+                setSectionFilter('all');
+              }}
               disabled={loading}
               sx={{
                 bgcolor: alpha(theme.palette.primary.main, 0.1),

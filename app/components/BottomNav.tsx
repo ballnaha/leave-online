@@ -2,6 +2,7 @@
 import React, { useEffect, useRef, useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { Box, Fab, Paper, Typography } from '@mui/material';
+import Image from 'next/image';
 import { useLocale } from '../providers/LocaleProvider';
 import { useUser } from '../providers/UserProvider';
 import { usePWA } from '../providers/PWAProvider';
@@ -46,13 +47,13 @@ interface LeaveType {
 }
 
 // กำหนด icon และสีสำหรับแต่ละประเภทการลา (สีแบบ balloon เหมือนปฏิทิน)
-const leaveTypeConfig: Record<string, { icon: any; color: string; gradient: string }> = {
+const leaveTypeConfig: Record<string, { icon: any; color: string; gradient: string; image?: string }> = {
     sick: { icon: Health, color: '#5E72E4', gradient: 'linear-gradient(135deg, #5E72E4 0%, #825EE4 100%)' },
     personal: { icon: Briefcase, color: '#8965E0', gradient: 'linear-gradient(135deg, #8965E0 0%, #BC65E0 100%)' },
     vacation: { icon: Sun1, color: '#11CDEF', gradient: 'linear-gradient(135deg, #11CDEF 0%, #1171EF 100%)' },
     annual: { icon: Sun1, color: '#2DCECC', gradient: 'linear-gradient(135deg, #2DCECC 0%, #2D8BCC 100%)' },
     maternity: { icon: Lovely, color: '#F5365C', gradient: 'linear-gradient(135deg, #F5365C 0%, #F56036 100%)' },
-    ordination: { icon: Building4, color: '#FB6340', gradient: 'linear-gradient(135deg, #FB6340 0%, #FBB140 100%)' },
+    ordination: { icon: Building4, color: '#FB6340', gradient: 'linear-gradient(135deg, #FB6340 0%, #FBB140 100%)', image: '/images/monk3.png' },
     work_outside: { icon: Car, color: '#2DCECC', gradient: 'linear-gradient(135deg, #2DCECC 0%, #2D8BCC 100%)' },
     absent: { icon: MessageQuestion, color: '#F5365C', gradient: 'linear-gradient(135deg, #F5365C 0%, #F56036 100%)' },
     military: { icon: Shield, color: '#5E72E4', gradient: 'linear-gradient(135deg, #5E72E4 0%, #5E9BE4 100%)' },
@@ -64,7 +65,7 @@ const leaveTypeConfig: Record<string, { icon: any; color: string; gradient: stri
     unpaid: { icon: Clock, color: '#F5365C', gradient: 'linear-gradient(135deg, #F5365C 0%, #F56036 100%)' },
     sick_no_pay: { icon: Health, color: '#F5365C', gradient: 'linear-gradient(135deg, #F5365C 0%, #F56036 100%)' },
     personal_no_pay: { icon: Briefcase, color: '#F5365C', gradient: 'linear-gradient(135deg, #F5365C 0%, #F56036 100%)' },
-    paternity_care: { icon: Lovely, color: '#2DCECC', gradient: 'linear-gradient(135deg, #2DCECC 0%, #2D8BCC 100%)' },
+    paternity_care: { icon: Lovely, color: '#2DCECC', gradient: 'linear-gradient(135deg, #2DCECC 0%, #2D8BCC 100%)', image: '/images/icon-baby3.png' },
     other: { icon: HelpCircle, color: '#5E72E4', gradient: 'linear-gradient(135deg, #5E72E4 0%, #825EE4 100%)' },
     default: { icon: MessageQuestion, color: '#8898AA', gradient: 'linear-gradient(135deg, #8898AA 0%, #6A7A8A 100%)' },
 };
@@ -417,7 +418,20 @@ const BottomNav: React.FC<BottomNavProps> = ({ activePage = 'home' }) => {
                                                     },
                                                 }}
                                             >
-                                                <Icon size={20} color="white" />
+                                                {config.image ? (
+                                                    <Image
+                                                        src={config.image}
+                                                        alt={leave.name}
+                                                        width={24}
+                                                        height={24}
+                                                        style={{ 
+                                                            objectFit: 'contain',
+                                                            filter: 'brightness(0) invert(1)'
+                                                        }}
+                                                    />
+                                                ) : (
+                                                    <Icon size={20} color="white" />
+                                                )}
                                             </Box>
                                             <Typography
                                                 variant="body2"

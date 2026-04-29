@@ -335,7 +335,11 @@ export default function HolidaysPage() {
           <Button
             variant="outlined"
             startIcon={<Refresh2 size={18} color="#6C63FF" />}
-            onClick={fetchHolidays}
+            onClick={() => {
+              fetchHolidays();
+              setSearchQuery('');
+              setSelectedYear(dayjs().year());
+            }}
             sx={{ borderRadius: 1 }}
           >
             รีเฟรช

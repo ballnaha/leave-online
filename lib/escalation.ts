@@ -8,8 +8,10 @@ import { prisma } from './prisma';
 import {
   notifyApprovalPending,
   notifyEscalated,
-  notifyApprovalReminder
+  notifyApprovalReminder,
+  notifyLeaveApproved
 } from './onesignal';
+import { generateLeaveCode } from './leave-utils';
 
 // ไม่ใช้ค่าคงที่เป็นชั่วโมงแล้ว เพราะใช้เวลาคงที่ (13:00 ของวันถัดไป)
 const REMINDER_HOURS = 4; // เตือนก่อนหมดเวลา 4 ชั่วโมง (ประมาณ 09:00 ของวันถัดไป)
@@ -260,11 +262,13 @@ export function calculateEscalationDeadline(createdAt: Date = new Date()): Date 
 export async function checkAndEscalate(options?: { force?: boolean; leaveId?: number }): Promise<{
   escalated: number;
   reminded: number;
+  autoApproved: number;
   errors: string[];
 }> {
   const result = {
     escalated: 0,
     reminded: 0,
+    autoApproved: 0,
     errors: [] as string[],
   };
 
@@ -385,7 +389,87 @@ export async function checkAndEscalate(options?: { force?: boolean; leaveId?: nu
       }
     }
 
-    // ส่งเตือนใบลาที่ใกล้หมดเวลา (เหลือ 24 ชั่วโมง)
+    // 3. Auto-approve for HR Manager (Last step) after 3 days
+    // กฎ: ถ้าครบ 3 วันแล้ว hr_manager ยังไม่กด approve ให้เป็น auto approve เลย
+    const autoApproveThreshold = new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000);
+    
+    const leavesToAutoApprove = await prisma.leaveRequest.findMany({
+      where: {
+        status: { in: ['pending', 'in_progress'] },
+        createdAt: { lte: autoApproveThreshold },
+      },
+      include: {
+        user: true,
+        approvals: {
+          where: { status: 'pending' },
+          orderBy: { level: 'asc' },
+          include: { approver: true },
+        }
+      }
+    });
+
+    for (const leave of leavesToAutoApprove) {
+      try {
+        const currentApprovals = leave.approvals.filter(a => a.level === leave.currentLevel);
+        const isHRManagerPending = currentApprovals.some(a => a.approver.role === 'hr_manager');
+
+        // Check if this is the last step
+        const hasHigherLevels = await prisma.leaveApproval.findFirst({
+          where: {
+            leaveRequestId: leave.id,
+            level: { gt: leave.currentLevel },
+          }
+        });
+
+        if (isHRManagerPending && !hasHigherLevels) {
+          await prisma.$transaction(async (tx) => {
+            await tx.leaveApproval.updateMany({
+              where: {
+                leaveRequestId: leave.id,
+                level: leave.currentLevel,
+                status: 'pending'
+              },
+              data: {
+                status: 'approved',
+                comment: '(Auto Approved after 3 days)',
+                actionAt: now
+              }
+            });
+
+            let leaveCode = leave.leaveCode;
+            if (!leaveCode) {
+              leaveCode = await generateLeaveCode(leave.leaveType, leave.startDate);
+            }
+
+            await tx.leaveRequest.update({
+              where: { id: leave.id },
+              data: {
+                status: 'approved',
+                finalApprovedAt: now,
+                leaveCode,
+              }
+            });
+          });
+
+          await notifyLeaveApproved(
+            leave.userId,
+            leave.id,
+            'System (Auto Approved)',
+            leave.leaveType,
+            leave.totalDays,
+            leave.startDate?.toISOString(),
+            leave.endDate?.toISOString(),
+            leave.leaveCode || undefined
+          );
+
+          result.autoApproved++;
+        }
+      } catch (error) {
+        result.errors.push(`Failed to auto-approve leave ${leave.id}: ${error}`);
+      }
+    }
+
+    // 4. ส่งเตือนใบลาที่ใกล้หมดเวลา (เหลือ 24 ชั่วโมง)
     const reminderThreshold = new Date(now.getTime() + REMINDER_HOURS * 60 * 60 * 1000);
 
     const leavesNeedingReminder = await prisma.leaveRequest.findMany({
@@ -412,7 +496,6 @@ export async function checkAndEscalate(options?: { force?: boolean; leaveId?: nu
     for (const leave of leavesNeedingReminder) {
       for (const approval of leave.approvals) {
         try {
-          // คำนวณเวลาที่เหลือ
           const hoursLeft = Math.round(
             (leave.escalationDeadline!.getTime() - now.getTime()) / (1000 * 60 * 60)
           );
@@ -425,7 +508,6 @@ export async function checkAndEscalate(options?: { force?: boolean; leaveId?: nu
             hoursLeft
           );
 
-          // อัพเดต reminder count
           await prisma.leaveApproval.update({
             where: { id: approval.id },
             data: {

@@ -33,6 +33,10 @@ import {
     Tabs,
     Tab,
     TablePagination,
+    FormControl,
+    InputLabel,
+    Select,
+    MenuItem,
 } from '@mui/material';
 import {
     Timer,
@@ -167,6 +171,33 @@ export default function EscalationSettingsPage() {
         nearDeadline: 0,
     });
 
+    const currentDate = new Date();
+    const currentYear = currentDate.getFullYear();
+    const [selectedYear, setSelectedYear] = useState<number>(currentYear);
+    const [selectedMonth, setSelectedMonth] = useState<number>(0); // 0 = all months
+
+    const startYear = 2025;
+    const yearOptions = Array.from(
+        { length: currentYear - startYear + 1 },
+        (_, i) => startYear + i
+    ).reverse();
+
+    const monthOptions = [
+        { value: 0, label: 'ทุกเดือน' },
+        { value: 1, label: 'มกราคม' },
+        { value: 2, label: 'กุมภาพันธ์' },
+        { value: 3, label: 'มีนาคม' },
+        { value: 4, label: 'เมษายน' },
+        { value: 5, label: 'พฤษภาคม' },
+        { value: 6, label: 'มิถุนายน' },
+        { value: 7, label: 'กรกฎาคม' },
+        { value: 8, label: 'สิงหาคม' },
+        { value: 9, label: 'กันยายน' },
+        { value: 10, label: 'ตุลาคม' },
+        { value: 11, label: 'พฤศจิกายน' },
+        { value: 12, label: 'ธันวาคม' },
+    ];
+
     const [detailModalOpen, setDetailModalOpen] = useState(false);
     const [selectedLeave, setSelectedLeave] = useState<LeaveDetail | null>(null);
     const [loadingDetail, setLoadingDetail] = useState(false);
@@ -229,7 +260,7 @@ export default function EscalationSettingsPage() {
     const fetchData = async () => {
         try {
             setLoading(true);
-            const res = await fetch('/api/admin/settings/escalation');
+            const res = await fetch(`/api/admin/settings/escalation?year=${selectedYear}&month=${selectedMonth}`);
             if (!res.ok) throw new Error('Failed to fetch');
             const data = await res.json();
 
@@ -245,9 +276,15 @@ export default function EscalationSettingsPage() {
         }
     };
 
+    const handleRefresh = () => {
+        setSelectedYear(currentYear);
+        setSelectedMonth(0);
+        // fetchData will be triggered by useEffect
+    };
+
     useEffect(() => {
         fetchData();
-    }, []);
+    }, [selectedYear, selectedMonth]);
 
     const handleRunNow = async () => {
         try {
@@ -364,16 +401,45 @@ export default function EscalationSettingsPage() {
                         </Box>
                     </Box>
                 </Box>
-                <Box sx={{ display: 'flex', gap: 1 }}>
+                <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                    <FormControl size="small" sx={{ minWidth: 120 }}>
+                        <InputLabel id="month-select-label">เดือน</InputLabel>
+                        <Select
+                            labelId="month-select-label"
+                            value={selectedMonth}
+                            label="เดือน"
+                            onChange={(e) => setSelectedMonth(Number(e.target.value))}
+                            disabled={loading}
+                        >
+                            {monthOptions.map((month) => (
+                                <MenuItem key={month.value} value={month.value}>{month.label}</MenuItem>
+                            ))}
+                        </Select>
+                    </FormControl>
+                    <FormControl size="small" sx={{ minWidth: 120 }}>
+                        <InputLabel id="year-select-label">ปี</InputLabel>
+                        <Select
+                            labelId="year-select-label"
+                            value={selectedYear}
+                            label="ปี"
+                            onChange={(e) => setSelectedYear(Number(e.target.value))}
+                            disabled={loading}
+                        >
+                            {yearOptions.map(year => (
+                                <MenuItem key={year} value={year}>
+                                    พ.ศ. {year + 543}
+                                </MenuItem>
+                            ))}
+                        </Select>
+                    </FormControl>
                     <Button
                         variant="outlined"
                         startIcon={<RefreshCw size={18} />}
-                        onClick={fetchData}
+                        onClick={handleRefresh}
                         disabled={loading}
                     >
                         รีเฟรช
                     </Button>
-
                 </Box>
             </Box>
 
@@ -432,110 +498,7 @@ export default function EscalationSettingsPage() {
                 </Card>
             </Box>
 
-            {/* Config Card */}
-            <Card sx={{ mb: 3, borderRadius: 1, border: '1px solid', borderColor: 'divider' }}>
-                <CardContent sx={{ p: 3 }}>
-                    <Typography variant="h6" fontWeight={600} sx={{ mb: 3, display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Settings size={20} />
-                        ตั้งค่า Escalation
-                    </Typography>
 
-                    <Alert severity="success" icon={<CheckCircle size={20} />} sx={{ mb: 2 }}>
-                        <Typography variant="body2" fontWeight={600}>
-                            Auto Escalation เปิดใช้งานเสมอ
-                        </Typography>
-                    </Alert>
-
-                    <Alert severity="info" icon={<Bell size={20} />}>
-                        <Typography variant="body2">
-                            <strong>เงื่อนไข:</strong> ใบลาที่รออนุมัติจะถูกส่งต่อไป HR Manager โดยอัตโนมัติ
-                            เมื่อถึงเวลา <strong>13:00 น.</strong> ของ <strong>วันถัดไป</strong> นับจากวันที่สร้างใบลา
-                        </Typography>
-                    </Alert>
-                </CardContent>
-            </Card>
-
-            {/* Cron Status & Generator */}
-            <Card sx={{ mb: 3, borderRadius: 1, border: '1px solid', borderColor: 'divider' }}>
-                <CardContent sx={{ p: 3 }}>
-                    <Typography variant="h6" fontWeight={600} sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Timer size={20} />
-                        ตั้งค่า Cron Job (สำหรับ aaPanel)
-                    </Typography>
-
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
-                        <Chip
-                            icon={config.cronConfigured ? <CheckCircle size={16} /> : <AlertTriangle size={16} />}
-                            label={config.cronConfigured ? 'System Configured' : 'Missing CRON_SECRET'}
-                            color={config.cronConfigured ? 'success' : 'warning'}
-                            size="small"
-                        />
-                        {config.lastRun && (
-                            <Typography variant="body2" color="text.secondary">
-                                รันล่าสุด: {dayjs(config.lastRun).fromNow()}
-                            </Typography>
-                        )}
-                    </Box>
-
-                    {/* aaPanel Access URL Section */}
-                    <Box sx={{ bgcolor: 'grey.50', p: 2, borderRadius: 1, border: '1px solid', borderColor: 'divider' }}>
-                        <Typography variant="subtitle2" fontWeight={600} gutterBottom>
-                            วิธีตั้งค่าใน aaPanel (โหมด Access URL)
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary" paragraph>
-                            1. ไปที่เมนู <strong>Cron</strong> ใน aaPanel<br />
-                            2. <strong>Type of Task:</strong> เลือก <code>URL Task</code><br />
-                            3. <strong>Name of Task:</strong> ตั้งชื่อ (เช่น Leave Escalation)<br />
-                            4. <strong>Execution Cycle:</strong> เลือกเวลาตามต้องการ (แนะนำ <code>Every Day</code> เวลา 09:00 และ 18:00)<br />
-                            5. <strong>URL Address:</strong> ก็อปปี้ URL ด้านล่างไปวาง
-                        </Typography>
-
-                        <Box sx={{ mt: 2 }}>
-                            <TextField
-                                fullWidth
-                                size="small"
-                                value={`https://leave.poonsubcan.co.th/api/cron/check-escalation?secret=${process.env.NEXT_PUBLIC_CRON_SECRET || 'YOUR_CRON_SECRET'}`}
-                                InputProps={{
-                                    readOnly: true,
-                                    sx: { fontFamily: 'monospace', bgcolor: 'white', fontSize: '0.85rem' },
-                                    endAdornment: (
-                                        <Box sx={{ display: 'flex', gap: 0.5 }}>
-                                            <Tooltip title="ทดสอบทำงาน (Run Now)">
-                                                <IconButton
-                                                    size="small"
-                                                    onClick={handleRunNow}
-                                                    disabled={running || !config.cronConfigured}
-                                                    color="warning"
-                                                >
-                                                    {running ? <CircularProgress size={16} /> : <Play size={16} />}
-                                                </IconButton>
-                                            </Tooltip>
-                                            <Tooltip title="คัดลอก URL">
-                                                <IconButton
-                                                    size="small"
-                                                    onClick={() => {
-                                                        navigator.clipboard.writeText(`https://leave.poonsubcan.co.th/api/cron/check-escalation?secret=${process.env.NEXT_PUBLIC_CRON_SECRET || 'YOUR_CRON_SECRET'}`);
-                                                        toastr.success('คัดลอก URL แล้ว');
-                                                    }}
-                                                    disabled={!config.cronConfigured}
-                                                    color="primary"
-                                                >
-                                                    <Copy size={16} />
-                                                </IconButton>
-                                            </Tooltip>
-                                        </Box>
-                                    )
-                                }}
-                            />
-                        </Box>
-                        {!config.cronConfigured && (
-                            <Typography variant="caption" color="error" sx={{ mt: 1, display: 'block' }}>
-                                * กรุณากำหนด CRON_SECRET ในไฟล์ .env ก่อน
-                            </Typography>
-                        )}
-                    </Box>
-                </CardContent>
-            </Card>
 
             {/* Pending Escalations */}
             {pendingList.length > 0 && (
@@ -741,6 +704,113 @@ export default function EscalationSettingsPage() {
                             />
                         </>
                     )}
+                </CardContent>
+            </Card>
+
+            <Box sx={{ mt: 4 }} />
+
+            {/* Config Card */}
+            <Card sx={{ mb: 3, borderRadius: 1, border: '1px solid', borderColor: 'divider' }}>
+                <CardContent sx={{ p: 3 }}>
+                    <Typography variant="h6" fontWeight={600} sx={{ mb: 3, display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Settings size={20} />
+                        ตั้งค่า Escalation
+                    </Typography>
+
+                    <Alert severity="success" icon={<CheckCircle size={20} />} sx={{ mb: 2 }}>
+                        <Typography variant="body2" fontWeight={600}>
+                            Auto Escalation เปิดใช้งานเสมอ
+                        </Typography>
+                    </Alert>
+
+                    <Alert severity="info" icon={<Bell size={20} />}>
+                        <Typography variant="body2">
+                            <strong>เงื่อนไข:</strong> ใบลาที่รออนุมัติจะถูกส่งต่อไป HR Manager โดยอัตโนมัติ
+                            เมื่อถึงเวลา <strong>13:00 น.</strong> ของ <strong>วันถัดไป</strong> นับจากวันที่สร้างใบลา
+                        </Typography>
+                    </Alert>
+                </CardContent>
+            </Card>
+
+            {/* Cron Status & Generator */}
+            <Card sx={{ mb: 3, borderRadius: 1, border: '1px solid', borderColor: 'divider' }}>
+                <CardContent sx={{ p: 3 }}>
+                    <Typography variant="h6" fontWeight={600} sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Timer size={20} />
+                        ตั้งค่า Cron Job (สำหรับ aaPanel)
+                    </Typography>
+
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
+                        <Chip
+                            icon={config.cronConfigured ? <CheckCircle size={16} /> : <AlertTriangle size={16} />}
+                            label={config.cronConfigured ? 'System Configured' : 'Missing CRON_SECRET'}
+                            color={config.cronConfigured ? 'success' : 'warning'}
+                            size="small"
+                        />
+                        {config.lastRun && (
+                            <Typography variant="body2" color="text.secondary">
+                                รันล่าสุด: {dayjs(config.lastRun).fromNow()}
+                            </Typography>
+                        )}
+                    </Box>
+
+                    {/* aaPanel Access URL Section */}
+                    <Box sx={{ bgcolor: 'grey.50', p: 2, borderRadius: 1, border: '1px solid', borderColor: 'divider' }}>
+                        <Typography variant="subtitle2" fontWeight={600} gutterBottom>
+                            วิธีตั้งค่าใน aaPanel (โหมด Access URL)
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary" paragraph>
+                            1. ไปที่เมนู <strong>Cron</strong> ใน aaPanel<br />
+                            2. <strong>Type of Task:</strong> เลือก <code>URL Task</code><br />
+                            3. <strong>Name of Task:</strong> ตั้งชื่อ (เช่น Leave Escalation)<br />
+                            4. <strong>Execution Cycle:</strong> เลือกเวลาตามต้องการ (แนะนำ <code>Every Day</code> เวลา 09:00 และ 18:00)<br />
+                            5. <strong>URL Address:</strong> ก็อปปี้ URL ด้านล่างไปวาง
+                        </Typography>
+
+                        <Box sx={{ mt: 2 }}>
+                            <TextField
+                                fullWidth
+                                size="small"
+                                value={`https://leave.poonsubcan.co.th/api/cron/check-escalation?secret=${process.env.NEXT_PUBLIC_CRON_SECRET || 'YOUR_CRON_SECRET'}`}
+                                InputProps={{
+                                    readOnly: true,
+                                    sx: { fontFamily: 'monospace', bgcolor: 'white', fontSize: '0.85rem' },
+                                    endAdornment: (
+                                        <Box sx={{ display: 'flex', gap: 0.5 }}>
+                                            <Tooltip title="ทดสอบทำงาน (Run Now)">
+                                                <IconButton
+                                                    size="small"
+                                                    onClick={handleRunNow}
+                                                    disabled={running || !config.cronConfigured}
+                                                    color="warning"
+                                                >
+                                                    {running ? <CircularProgress size={16} /> : <Play size={16} />}
+                                                </IconButton>
+                                            </Tooltip>
+                                            <Tooltip title="คัดลอก URL">
+                                                <IconButton
+                                                    size="small"
+                                                    onClick={() => {
+                                                        navigator.clipboard.writeText(`https://leave.poonsubcan.co.th/api/cron/check-escalation?secret=${process.env.NEXT_PUBLIC_CRON_SECRET || 'YOUR_CRON_SECRET'}`);
+                                                        toastr.success('คัดลอก URL แล้ว');
+                                                    }}
+                                                    disabled={!config.cronConfigured}
+                                                    color="primary"
+                                                >
+                                                    <Copy size={16} />
+                                                </IconButton>
+                                            </Tooltip>
+                                        </Box>
+                                    )
+                                }}
+                            />
+                        </Box>
+                        {!config.cronConfigured && (
+                            <Typography variant="caption" color="error" sx={{ mt: 1, display: 'block' }}>
+                                * กรุณากำหนด CRON_SECRET ในไฟล์ .env ก่อน
+                            </Typography>
+                        )}
+                    </Box>
                 </CardContent>
             </Card>
             {/* Leave Detail Modal */}

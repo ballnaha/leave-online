@@ -566,7 +566,15 @@ export default function UserApprovalFlowPage() {
         </Box>
         <Tooltip title="รีเฟรชข้อมูล">
           <IconButton
-            onClick={() => { fetchUsers(); fetchApprovers(); }}
+            onClick={() => {
+              fetchUsers();
+              fetchApprovers();
+              setSearchQuery('');
+              setRoleTab(0);
+              setCompanyFilter('all');
+              setDepartmentFilter('all');
+              setSectionFilter('all');
+            }}
             disabled={loading}
             sx={{
               bgcolor: 'background.paper',

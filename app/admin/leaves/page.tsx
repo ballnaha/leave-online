@@ -318,7 +318,7 @@ export default function AdminLeavesPage() {
   const [rowsPerPage, setRowsPerPage] = useState(10);
 
   // Filters
-  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [statusFilter, setStatusFilter] = useState<string>('pending');
   const [leaveTypeFilter, setLeaveTypeFilter] = useState<string>('all');
   const [companyFilter, setCompanyFilter] = useState<string>('all');
   const [departmentFilter, setDepartmentFilter] = useState<string>('all');
@@ -355,7 +355,7 @@ export default function AdminLeavesPage() {
   ];
 
   // Status tab
-  const [statusTab, setStatusTab] = useState<number>(0);
+  const [statusTab, setStatusTab] = useState<number>(1);
   const statusTabMap = ['all', 'pending', 'approved', 'rejected', 'cancelled'];
 
   // Master data
@@ -655,7 +655,18 @@ export default function AdminLeavesPage() {
           </Box>
           {isMobile ? (
             <IconButton
-              onClick={fetchLeaves}
+              onClick={() => {
+                fetchLeaves();
+                setSearchQuery('');
+                setSelectedMonth(0);
+                setSelectedYear(currentYear);
+                setStatusFilter('pending');
+                setStatusTab(1);
+                setLeaveTypeFilter('all');
+                setCompanyFilter('all');
+                setDepartmentFilter('all');
+                setSectionFilter('all');
+              }}
               disabled={loading}
               sx={{
                 borderRadius: 1,
@@ -673,7 +684,18 @@ export default function AdminLeavesPage() {
             <Button
               variant="outlined"
               startIcon={<Refresh2 size={18} color={theme.palette.primary.main} />}
-              onClick={fetchLeaves}
+              onClick={() => {
+                fetchLeaves();
+                setSearchQuery('');
+                setSelectedMonth(0);
+                setSelectedYear(currentYear);
+                setStatusFilter('pending');
+                setStatusTab(1);
+                setLeaveTypeFilter('all');
+                setCompanyFilter('all');
+                setDepartmentFilter('all');
+                setSectionFilter('all');
+              }}
               disabled={loading}
               sx={{
                 borderRadius: 1,

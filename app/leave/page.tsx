@@ -121,6 +121,11 @@ export default function LeavePage() {
     const [selectedCalendarDate, setSelectedCalendarDate] = useState<string | null>(null);
     const [showAllLegends, setShowAllLegends] = useState(false);
     const [currentTab, setCurrentTab] = useState('all');
+    const [mounted, setMounted] = useState(false);
+
+    useEffect(() => {
+        setMounted(true);
+    }, []);
 
     // Generate years for dropdown dynamically
     // Shows current year and all previous years from 2024 (พ.ศ. 2567)
@@ -339,6 +344,8 @@ export default function LeavePage() {
 
     // Helper functions for LeaveTimeline
     const formatDate = (startDate: string, endDate: string) => {
+        if (!mounted) return ''; // Prevent hydration mismatch
+
         const start = new Date(startDate);
         const end = new Date(endDate);
         const options: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'short', year: 'numeric' };
@@ -436,7 +443,18 @@ export default function LeavePage() {
             });
         }
 
-        return filtered;
+        // Sort by professional standard: Pending first, then newest startDate first
+        return [...filtered].sort((a, b) => {
+            // 1. Pin 'pending' status at the top
+            const aIsPending = a.status.toLowerCase() === 'pending';
+            const bIsPending = b.status.toLowerCase() === 'pending';
+            
+            if (aIsPending && !bIsPending) return -1;
+            if (!aIsPending && bIsPending) return 1;
+            
+            // 2. Otherwise sort by startDate descending (newest first)
+            return dayjs(b.startDate).valueOf() - dayjs(a.startDate).valueOf();
+        });
     }, [myLeaves, searchQuery, selectedCalendarDate, currentTab]);
 
     const recentLeaves = filteredLeaves.slice(0, 10);
@@ -527,7 +545,7 @@ export default function LeavePage() {
                                     fontSize: '1.1rem',
                                 }}
                             >
-                                {currentDate.locale(locale).format('MMMM')}
+                                {mounted && currentDate.locale(locale).format('MMMM')}
                             </Typography>
                             <Button
                                 onClick={handleYearClick}
@@ -764,7 +782,7 @@ export default function LeavePage() {
                                 fontSize: '1rem',
                             }}
                         >
-                            {t('leave_history_title', 'ประวัติการลา')} ({currentDate.format('MMMM')} {locale === 'th' ? currentDate.year() + 543 : currentDate.year()})
+                            {t('leave_history_title', 'ประวัติการลา')} {mounted && `(${currentDate.locale(locale).format('MMMM')} ${locale === 'th' ? currentDate.year() + 543 : currentDate.year()})`}
                         </Typography>
                         <Box
                             sx={{

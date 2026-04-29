@@ -286,6 +286,7 @@ export default function LeaveImportPage() {
                                 setFile(null);
                                 setPreviewData([]);
                                 setImportResult(null);
+                                setSelectedYear(new Date().getFullYear());
                             }}
                             sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1.5, bgcolor: 'background.paper', height: 48, width: 48 }}
                         >
@@ -378,9 +379,7 @@ export default function LeaveImportPage() {
                     <Typography variant="h6" fontWeight={700} color="text.primary">
                         {file ? file.name : 'คลิกหรือลากไฟล์ Excel (.xlsx) มาวางที่นี่'}
                     </Typography>
-                    <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                        รองรับรูปแบบไฟล์ Microsoft Excel รุ่น 2007 ขึ้นไปเท่านั้น
-                    </Typography>
+
                     {file && (
                         <Chip
                             label="พร้อมนำเข้า"

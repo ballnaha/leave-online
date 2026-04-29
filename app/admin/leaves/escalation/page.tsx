@@ -552,7 +552,10 @@ export default function EscalationPage() {
                         <Button
                             variant="outlined"
                             startIcon={<Refresh2 size={18} color={theme.palette.primary.main} />}
-                            onClick={fetchLeaves}
+                            onClick={() => {
+                                fetchLeaves();
+                                handleResetFilters();
+                            }}
                             disabled={loading}
                             sx={{
                                 borderRadius: 1,

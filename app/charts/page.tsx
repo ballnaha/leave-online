@@ -10,6 +10,7 @@ import {
     MenuItem,
     FormControl,
 } from '@mui/material';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import BottomNav from '@/app/components/BottomNav';
 import { useLocale } from '@/app/providers/LocaleProvider';
@@ -60,13 +61,13 @@ interface LeaveStat {
 }
 
 // Icon and color config - synchronized with BottomNav colors
-const leaveTypeConfig: Record<string, { icon: any; gradient: string; color: string; glassColor: string }> = {
+const leaveTypeConfig: Record<string, { icon: any; gradient: string; color: string; glassColor: string; image?: string }> = {
     sick: { icon: Health, gradient: 'linear-gradient(135deg, #5E72E4 0%, #825EE4 100%)', color: '#5E72E4', glassColor: 'rgba(94, 114, 228, 0.15)' },
     personal: { icon: Briefcase, gradient: 'linear-gradient(135deg, #8965E0 0%, #BC65E0 100%)', color: '#8965E0', glassColor: 'rgba(137, 101, 224, 0.15)' },
     vacation: { icon: Sun1, gradient: 'linear-gradient(135deg, #11CDEF 0%, #1171EF 100%)', color: '#11CDEF', glassColor: 'rgba(17, 205, 239, 0.15)' },
     annual: { icon: Sun1, gradient: 'linear-gradient(135deg, #2DCECC 0%, #2D8BCC 100%)', color: '#2DCECC', glassColor: 'rgba(45, 206, 204, 0.15)' },
     maternity: { icon: Lovely, gradient: 'linear-gradient(135deg, #F5365C 0%, #F56036 100%)', color: '#F5365C', glassColor: 'rgba(245, 54, 92, 0.15)' },
-    ordination: { icon: Building4, gradient: 'linear-gradient(135deg, #FB6340 0%, #FBB140 100%)', color: '#FB6340', glassColor: 'rgba(251, 99, 64, 0.15)' },
+    ordination: { icon: Building4, gradient: 'linear-gradient(135deg, #FB6340 0%, #FBB140 100%)', color: '#FB6340', glassColor: 'rgba(251, 99, 64, 0.15)', image: '/images/monk3.png' },
     work_outside: { icon: Car, gradient: 'linear-gradient(135deg, #2DCECC 0%, #2D8BCC 100%)', color: '#2DCECC', glassColor: 'rgba(45, 206, 204, 0.15)' },
     absent: { icon: MessageQuestion, gradient: 'linear-gradient(135deg, #F5365C 0%, #F56036 100%)', color: '#F5365C', glassColor: 'rgba(245, 54, 92, 0.15)' },
     military: { icon: Shield, gradient: 'linear-gradient(135deg, #5E72E4 0%, #5E9BE4 100%)', color: '#5E72E4', glassColor: 'rgba(94, 114, 228, 0.15)' },
@@ -78,7 +79,7 @@ const leaveTypeConfig: Record<string, { icon: any; gradient: string; color: stri
     unpaid: { icon: MoneySend, gradient: 'linear-gradient(135deg, #F5365C 0%, #F56036 100%)', color: '#F5365C', glassColor: 'rgba(245, 54, 92, 0.15)' },
     sick_no_pay: { icon: Health, gradient: 'linear-gradient(135deg, #F5365C 0%, #F56036 100%)', color: '#F5365C', glassColor: 'rgba(245, 54, 92, 0.15)' },
     personal_no_pay: { icon: Briefcase, gradient: 'linear-gradient(135deg, #F5365C 0%, #F56036 100%)', color: '#F5365C', glassColor: 'rgba(245, 54, 92, 0.15)' },
-    paternity_care: { icon: Lovely, gradient: 'linear-gradient(135deg, #2DCECC 0%, #2D8BCC 100%)', color: '#2DCECC', glassColor: 'rgba(45, 206, 204, 0.15)' },
+    paternity_care: { icon: Lovely, gradient: 'linear-gradient(135deg, #2DCECC 0%, #2D8BCC 100%)', color: '#2DCECC', glassColor: 'rgba(45, 206, 204, 0.15)', image: '/images/icon-baby3.png' },
     other: { icon: MessageQuestion, gradient: 'linear-gradient(135deg, #5E72E4 0%, #825EE4 100%)', color: '#8898AA', glassColor: 'rgba(136, 152, 170, 0.15)' },
     default: { icon: MessageQuestion, gradient: 'linear-gradient(135deg, #8898AA 0%, #6A7A8A 100%)', color: '#8898AA', glassColor: 'rgba(136, 152, 170, 0.15)' },
 };
@@ -419,7 +420,20 @@ export default function ChartsPage() {
                                                         },
                                                     }}
                                                 >
-                                                    <IconComponent size={22} color="white" variant="Bold" />
+                                                    {config.image ? (
+                                                        <Image
+                                                            src={config.image}
+                                                            alt={stat.name}
+                                                            width={28}
+                                                            height={28}
+                                                            style={{
+                                                                objectFit: 'contain',
+                                                                filter: 'brightness(0) invert(1)'
+                                                            }}
+                                                        />
+                                                    ) : (
+                                                        <IconComponent size={22} color="white" variant="Bold" />
+                                                    )}
                                                 </Box>
 
                                                 {/* Title */}

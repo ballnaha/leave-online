@@ -423,7 +423,14 @@ export default function AdminDashboardPage() {
                     </Box>
                     <Stack direction="row" spacing={1.5} sx={{ width: { xs: '100%', sm: 'auto' }, justifyContent: { xs: 'space-between', sm: 'flex-end' } }}>
                         <Tooltip title="รีเฟรชข้อมูล">
-                            <IconButton onClick={() => fetchData()} size="small" sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1, bgcolor: 'background.paper' }}>
+                            <IconButton onClick={() => {
+                                setSelectedCompany('all');
+                                setSelectedDept('all');
+                                setSelectedSection('all');
+                                const currentYear = new Date().getFullYear();
+                                setSelectedYear(currentYear);
+                                fetchData(true, 'all', 'all', 'all', currentYear);
+                            }} size="small" sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1, bgcolor: 'background.paper' }}>
                                 <Refresh2 size={20} color={theme.palette.text.secondary} />
                             </IconButton>
                         </Tooltip>
@@ -1084,7 +1091,7 @@ export default function AdminDashboardPage() {
                                                     width: 8,
                                                     height: 8,
                                                     borderRadius: '50%',
-                                                    bgcolor: '#A78BFA',
+                                                    bgcolor: '#94A3B8',
                                                 }} />
                                                 <Typography variant="body2" sx={{ color: theme.palette.text.secondary, fontWeight: 500 }}>
                                                     ปี {selectedYear + 542}
@@ -1120,8 +1127,8 @@ export default function AdminDashboardPage() {
                                                         {
                                                             label: `ปี ${selectedYear + 542}`,
                                                             data: data.comparisonStats.map(s => s.previous),
-                                                            backgroundColor: '#C4B5FD',
-                                                            hoverBackgroundColor: '#A78BFA',
+                                                            backgroundColor: '#94A3B8',
+                                                            hoverBackgroundColor: '#64748B',
                                                             borderRadius: {
                                                                 topLeft: 6,
                                                                 topRight: 6,
@@ -1206,7 +1213,7 @@ export default function AdminDashboardPage() {
                                                             meta.data.forEach((bar: any, index: number) => {
                                                                 const dataValue = dataset.data[index];
                                                                 if (dataValue > 0) {
-                                                                    ctx.fillStyle = i === 0 ? '#4338CA' : '#7C3AED';
+                                                                    ctx.fillStyle = i === 0 ? '#4338CA' : '#475569';
                                                                     ctx.font = '600 10px Inter, system-ui, sans-serif';
                                                                     ctx.textAlign = 'center';
                                                                     ctx.textBaseline = 'bottom';

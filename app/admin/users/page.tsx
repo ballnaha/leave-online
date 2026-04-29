@@ -972,7 +972,17 @@ export default function UsersPage() {
             />
             <Tooltip title="รีเฟรชข้อมูล">
               <IconButton
-                onClick={fetchUsers}
+                onClick={() => {
+                  fetchUsers();
+                  setSearchQuery('');
+                  setCompanyFilter('all');
+                  setDepartmentFilter('all');
+                  setSectionFilter('all');
+                  setStatusFilter('all');
+                  setShowNewUsersOnly(false);
+                  setRoleTab('all');
+                  setEmployeeTypeFilter('all');
+                }}
                 disabled={loading}
                 size="small"
                 sx={{

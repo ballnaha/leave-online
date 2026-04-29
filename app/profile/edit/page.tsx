@@ -19,6 +19,9 @@ import {
     Skeleton,
     Dialog,
     Slider,
+    Tabs,
+    Tab,
+    Collapse,
 } from '@mui/material';
 import {
     Building,
@@ -159,9 +162,10 @@ export default function EditProfilePage() {
     const [loadingSections, setLoadingSections] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [mounted, setMounted] = useState(false);
+    const [tabValue, setTabValue] = useState(0);
 
     // Password change states
-    const [changePasswordOpen, setChangePasswordOpen] = useState(false);
+
     const [currentPassword, setCurrentPassword] = useState('');
     const [newPassword, setNewPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
@@ -708,7 +712,7 @@ export default function EditProfilePage() {
 
     const handleSubmit = async () => {
         // Check if there's anything to save
-        const wantsPasswordChange = changePasswordOpen || currentPassword || newPassword || confirmPassword;
+        const wantsPasswordChange = tabValue === 1 && (currentPassword || newPassword || confirmPassword);
         const hasAvatarChange = !!pendingAvatarUpload;
 
         if (!wantsPasswordChange && !hasAvatarChange) {
@@ -809,7 +813,7 @@ export default function EditProfilePage() {
             setCurrentPassword('');
             setNewPassword('');
             setConfirmPassword('');
-            setChangePasswordOpen(false);
+
 
             // Delay navigation to allow toastr to show
             setTimeout(() => {
@@ -1040,7 +1044,48 @@ export default function EditProfilePage() {
                             {t('tap_camera_to_change', 'แตะที่ไอคอนกล้องเพื่อเปลี่ยนรูปโปรไฟล์')}
                         </Typography>
 
-                        {/* Profile Information Display - Read Only */}
+                        {/* Tabs Navigation */}
+                        <Box sx={{ mb: 3, borderBottom: '1px solid rgba(0,0,0,0.08)' }}>
+                            <Tabs
+                                value={tabValue}
+                                onChange={(_, newValue) => {
+                                    setTabValue(newValue);
+                                }}
+                                variant="fullWidth"
+                                sx={{
+                                    '& .MuiTabs-indicator': {
+                                        height: 3,
+                                        borderRadius: '3px 3px 0 0',
+                                        background: 'linear-gradient(90deg, #667eea 0%, #764ba2 100%)',
+                                    },
+                                    '& .MuiTab-root': {
+                                        fontWeight: 600,
+                                        fontSize: '0.9rem',
+                                        color: 'text.secondary',
+                                        pb: 1.5,
+                                        '&.Mui-selected': {
+                                            color: '#667eea',
+                                        },
+                                    },
+                                }}
+                            >
+                                <Tab
+                                    icon={<User size={18} variant={tabValue === 0 ? "Bold" : "Outline"} />}
+                                    iconPosition="start"
+                                    label={t('profile_info_tab', 'ข้อมูลโปรไฟล์')}
+                                />
+                                <Tab
+                                    icon={<Eye size={18} variant={tabValue === 1 ? "Bold" : "Outline"} />}
+                                    iconPosition="start"
+                                    label={t('password_tab', 'เปลี่ยนรหัสผ่าน')}
+                                />
+                            </Tabs>
+                        </Box>
+
+                        {/* Tab Content: Profile & Work Info */}
+                        <Collapse in={tabValue === 0} timeout={300} unmountOnExit>
+                            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                                {/* Profile Information Display - Read Only */}
                         <Paper
                             elevation={0}
                             sx={{
@@ -1439,10 +1484,14 @@ export default function EditProfilePage() {
                                         </Typography>
                                     </Box>
                                 </Box>
-                            </Box>
-                        </Paper>
+                                </Box>
+                            </Paper>
+                        </Box>
+                    </Collapse>
 
-                        {/* Change Password Section */}
+                        {/* Tab Content: Change Password */}
+                        <Collapse in={tabValue === 1} timeout={300} unmountOnExit>
+                            {/* Change Password Section */}
                         <Paper
                             elevation={0}
                             sx={{
@@ -1450,10 +1499,17 @@ export default function EditProfilePage() {
                                 borderRadius: 1,
                                 boxShadow: '0 4px 20px rgba(0, 0, 0, 0.06)',
                                 border: '1px solid rgba(0, 0, 0, 0.05)',
-                                mt: 2,
                             }}
                         >
-                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: changePasswordOpen ? 2 : 0 }}>
+                            <Box
+                                sx={{
+                                    display: 'flex',
+                                    justifyContent: 'space-between',
+                                    alignItems: 'center',
+                                    mb: 3,
+                                    userSelect: 'none',
+                                }}
+                            >
                                 <Typography
                                     variant="subtitle2"
                                     sx={{
@@ -1467,25 +1523,9 @@ export default function EditProfilePage() {
                                     <Eye size={18} color="#e74c3c" />
                                     {t('change_password', 'เปลี่ยนรหัสผ่าน')}
                                 </Typography>
-                                <Button
-                                    variant="outlined"
-                                    size="small"
-                                    onClick={() => setChangePasswordOpen((v) => !v)}
-                                    sx={{
-                                        borderColor: '#e74c3c',
-                                        color: '#e74c3c',
-                                        '&:hover': {
-                                            borderColor: '#c0392b',
-                                            bgcolor: 'rgba(231, 76, 60, 0.04)',
-                                        },
-                                    }}
-                                >
-                                    {changePasswordOpen ? t('hide', 'ซ่อน') : t('show', 'แสดง')}
-                                </Button>
                             </Box>
 
-                            {changePasswordOpen && (
-                                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                                     {/* Current Password */}
                                     <Box>
                                         <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, mb: 0.5, display: 'block' }}>
@@ -1582,8 +1622,8 @@ export default function EditProfilePage() {
                                         />
                                     </Box>
                                 </Box>
-                            )}
                         </Paper>
+                    </Collapse>
                     </>
                 )}
             </Box>

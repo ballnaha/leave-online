@@ -11,6 +11,7 @@ import dayjs from 'dayjs';
 import 'dayjs/locale/th';
 import LeaveDetailDrawer from './LeaveDetailDrawer';
 import { LeaveRequest } from '@/types/leave';
+import Image from 'next/image';
 
 // Register Chart.js components
 ChartJS.register(ArcElement, Tooltip, Legend);
@@ -34,13 +35,13 @@ interface DashboardCardProps {
 }
 
 // Config for icons and colors (copied from page.tsx or shared)
-const leaveTypeConfig: Record<string, { icon: any; color: string }> = {
+const leaveTypeConfig: Record<string, { icon: any; color: string; image?: string }> = {
     sick: { icon: Health, color: '#5E72E4' },
     personal: { icon: Briefcase, color: '#8965E0' },
     vacation: { icon: Sun1, color: '#11CDEF' },
     annual: { icon: Sun1, color: '#2DCECC' },
     maternity: { icon: Lovely, color: '#F5365C' },
-    ordination: { icon: Building4, color: '#FB6340' },
+    ordination: { icon: Building4, color: '#FB6340', image: '/images/monk3.png' },
     work_outside: { icon: Car, color: '#2DCECC' },
     absent: { icon: MessageQuestion, color: '#F5365C' },
     military: { icon: Shield, color: '#5E72E4' },
@@ -52,7 +53,7 @@ const leaveTypeConfig: Record<string, { icon: any; color: string }> = {
     unpaid: { icon: MoneySend, color: '#F5365C' },
     sick_no_pay: { icon: Health, color: '#F5365C' },
     personal_no_pay: { icon: Briefcase, color: '#F5365C' },
-    paternity_care: { icon: Lovely, color: '#2DCECC' },
+    paternity_care: { icon: Lovely, color: '#2DCECC', image: '/images/icon-baby3.png' },
     other: { icon: HelpCircle, color: '#5E72E4' },
     default: { icon: MessageQuestion, color: '#8898AA' },
 };
@@ -224,7 +225,7 @@ const DashboardCard: React.FC<DashboardCardProps> = ({ leaveTypes, leaveRequests
     const config = leaveTypeConfig[selectedCode] || leaveTypeConfig.default;
     const ringColors = {
         approved: '#2ECC71',    // Green (outer ring)
-        pending: '#F39C12',     // Orange (middle ring)  
+        pending: '#FFD600',     // Yellow (middle ring)  
         remaining: '#5DADE2',   // Blue (inner ring)
         background: 'rgba(255, 255, 255, 0.15)', // Semi-transparent for unused portion
     };
@@ -646,7 +647,7 @@ const DashboardCard: React.FC<DashboardCardProps> = ({ leaveTypes, leaveRequests
                                         open={activeTooltip === 'pending'}
                                         title={
                                             <Box sx={{ p: 0.5 }}>
-                                                <Typography sx={{ fontWeight: 600, fontSize: '0.85rem', color: '#F39C12' }}>
+                                                <Typography sx={{ fontWeight: 600, fontSize: '0.85rem', color: '#FFD600' }}>
                                                     {t('dashboard_pending_title', 'รออนุมัติ')}
                                                 </Typography>
                                                 <Typography sx={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.9)' }}>
@@ -681,13 +682,13 @@ const DashboardCard: React.FC<DashboardCardProps> = ({ leaveTypes, leaveRequests
                                             <circle
                                                 cx="50" cy="50" r="45"
                                                 fill="none"
-                                                stroke="#F39C12"
+                                                stroke="#FFD600"
                                                 strokeWidth="10"
                                                 strokeLinecap="round"
                                                 strokeDasharray={`${calculatePercentage.pending * 2.83} 283`}
                                                 style={{
                                                     transition: 'stroke-dasharray 0.8s ease-out',
-                                                    filter: 'drop-shadow(0 0 8px rgba(243, 156, 18, 0.8))'
+                                                    filter: 'drop-shadow(0 0 8px rgba(255, 214, 0, 0.8))'
                                                 }}
                                             />
                                         </svg>
@@ -908,8 +909,8 @@ const DashboardCard: React.FC<DashboardCardProps> = ({ leaveTypes, leaveRequests
                                     width: 10,
                                     height: 10,
                                     borderRadius: '50%',
-                                    bgcolor: '#F39C12',
-                                    boxShadow: '0 0 6px rgba(243, 156, 18, 0.6)',
+                                    bgcolor: '#FFD600',
+                                    boxShadow: '0 0 6px rgba(255, 214, 0, 0.6)',
                                     flexShrink: 0
                                 }} />
                                 <Typography variant="body2" sx={{ fontSize: '0.8rem', flex: 1 }}>
@@ -1052,12 +1053,29 @@ const DashboardCard: React.FC<DashboardCardProps> = ({ leaveTypes, leaveRequests
                                         alignItems: 'center',
                                         justifyContent: 'center',
                                         backdropFilter: 'blur(5px)',
+                                        position: 'relative',
+                                        overflow: 'hidden'
                                     }}>
-                                        <Icon
-                                            size={20}
-                                            color={isSelected ? '#6C63FF' : 'white'}
-                                            variant="Bold"
-                                        />
+                                        {typeConfig.image ? (
+                                            <Image
+                                                src={typeConfig.image}
+                                                alt={type.name}
+                                                width={isSelected ? 32 : 28}
+                                                height={isSelected ? 32 : 28}
+                                                style={{
+                                                    objectFit: 'contain',
+                                                    filter: isSelected
+                                                        ? 'brightness(0) invert(43%) sepia(91%) saturate(3015%) hue-rotate(228deg) brightness(101%) contrast(102%)'
+                                                        : 'brightness(0) invert(1)'
+                                                }}
+                                            />
+                                        ) : (
+                                            <Icon
+                                                size={20}
+                                                color={isSelected ? '#6C63FF' : 'white'}
+                                                variant="Bold"
+                                            />
+                                        )}
                                     </Box>
                                     <Typography
                                         variant="caption"

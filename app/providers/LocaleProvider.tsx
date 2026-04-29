@@ -714,6 +714,21 @@ const messages: Record<LocaleCode, Record<string, string>> = {
     terms_notif_enable_step_3: "อนุญาตในเบราว์เซอร์",
     terms_last_updated: "อัปเดตล่าสุด: ธันวาคม 2567",
 
+    // Profile Settings & Change Password
+    profile_settings_title: "ตั้งค่าโปรไฟล์",
+    profile_info_tab: "ข้อมูลโปรไฟล์",
+    password_tab: "เปลี่ยนรหัสผ่าน",
+    personal_info: "ข้อมูลส่วนตัว",
+    work_info: "ข้อมูลการทำงาน",
+    full_name: "ชื่อ - นามสกุล",
+    enter_current_password: "กรอกรหัสผ่านปัจจุบัน",
+    enter_confirm_password: "กรอกยืนยันรหัสผ่านใหม่",
+    move_and_scale: "ย้ายและปรับขนาด",
+    choose: "เลือก",
+    pinch_to_zoom: "ใช้ 2 นิ้ว หนีบเพื่อซูม",
+    no_changes: "ไม่มีการเปลี่ยนแปลง",
+    new_password: "รหัสผ่านใหม่",
+
     // Holiday Names
     holiday_new_year: "วันขึ้นปีใหม่ (New Year's Day)",
     holiday_chinese_new_year: "วันตรุษจีน (Chinese New Year)",
@@ -1433,6 +1448,21 @@ const messages: Record<LocaleCode, Record<string, string>> = {
     terms_notif_enable_step_3: "Allow in browser",
     terms_last_updated: "Last updated: December 2024",
 
+    // Profile Settings & Change Password
+    profile_settings_title: "Profile Settings",
+    profile_info_tab: "Profile Info",
+    password_tab: "Change Password",
+    personal_info: "Personal Information",
+    work_info: "Work Information",
+    full_name: "Full Name",
+    enter_current_password: "Enter current password",
+    enter_confirm_password: "Confirm new password",
+    move_and_scale: "Move and Scale",
+    choose: "Choose",
+    pinch_to_zoom: "Pinch to zoom",
+    no_changes: "No changes",
+    new_password: "New password",
+
     // Holiday Names
     holiday_new_year: "New Year's Day",
     holiday_chinese_new_year: "Chinese New Year",
@@ -2147,6 +2177,21 @@ const messages: Record<LocaleCode, Record<string, string>> = {
     terms_notif_enable_step_2: "အသိပေးချက် Toggle ဖွင့်ပါ",
     terms_notif_enable_step_3: "ဘရောက်ဆာတွင် ခွင့်ပြုပါ",
     terms_last_updated: "နောက်ဆုံးအပ်ဒိတ်: ဒီဇင်ဘာ ၂၀၂၄",
+
+    // Profile Settings & Change Password
+    profile_settings_title: "ပရိုဖိုင်ဆက်တင်များ",
+    profile_info_tab: "ပရိုဖိုင်အချက်အလက်",
+    password_tab: "စကားဝှက်ပြောင်းရန်",
+    personal_info: "ကိုယ်ရေးကိုယ်တာအချက်အလက်",
+    work_info: "အလုပ်အချက်အလက်",
+    full_name: "အမည်အပြည့်အစုံ",
+    enter_current_password: "လက်ရှိစကားဝှက်ထည့်ပါ",
+    enter_confirm_password: "စကားဝှက်အသစ်ကို ထပ်မံအတည်ပြုပါ",
+    move_and_scale: "ရွှေ့ပြီး အရွယ်ညှိပါ",
+    choose: "ရွေးချယ်ပါ",
+    pinch_to_zoom: "ဇူးမ်ချဲ့ရန် လက်နှစ်ချောင်းဖြင့် ဆွဲပါ",
+    no_changes: "ပြောင်းလဲမှုမရှိပါ",
+    new_password: "စကားဝှက်အသစ်",
 
     // Holiday Names
     holiday_new_year: "နှစ်သစ်ကူးနေ့",

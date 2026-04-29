@@ -2364,21 +2364,28 @@ export default function ApprovalPage() {
 
                           {/* Reason - New Column */}
                           <TableCell>
-                            <Tooltip title={approval.leaveRequest.reason || '-'} placement="top">
-                              <Typography
-                                sx={{
-                                  fontSize: '0.875rem',
-                                  color: '#475569',
-                                  overflow: 'hidden',
-                                  textOverflow: 'ellipsis',
-                                  display: '-webkit-box',
-                                  WebkitLineClamp: 2,
-                                  WebkitBoxOrient: 'vertical',
-                                  lineHeight: 1.5,
-                                }}
-                              >
-                                {approval.leaveRequest.reason || '-'}
-                              </Typography>
+                            <Tooltip 
+                              key={`tooltip-reason-${approval.approvalId}`}
+                              title={approval.leaveRequest.reason || '-'} 
+                              placement="top"
+                              arrow
+                            >
+                              <Box sx={{ width: 'fit-content', maxWidth: '100%' }}>
+                                <Typography
+                                  sx={{
+                                    fontSize: '0.875rem',
+                                    color: '#475569',
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                    display: '-webkit-box',
+                                    WebkitLineClamp: 2,
+                                    WebkitBoxOrient: 'vertical',
+                                    lineHeight: 1.5,
+                                  }}
+                                >
+                                  {approval.leaveRequest.reason || '-'}
+                                </Typography>
+                              </Box>
                             </Tooltip>
                           </TableCell>
 

@@ -522,7 +522,13 @@ export default function SectionsPage() {
           />
           <Tooltip title="รีเฟรชข้อมูล">
             <IconButton
-              onClick={fetchSections}
+              onClick={() => {
+                fetchSections();
+                setSearchQuery('');
+                setCompanyFilter('all');
+                setDepartmentFilter('all');
+                setStatusFilter('all');
+              }}
               disabled={loading}
               sx={{
                 bgcolor: 'background.default',

@@ -16,16 +16,43 @@ export async function GET(req: NextRequest) {
         }
 
         const now = new Date();
+        const { searchParams } = new URL(req.url);
+        const yearParam = searchParams.get('year');
+        const monthParam = searchParams.get('month');
+        
+        const selectedYear = yearParam ? parseInt(yearParam) : now.getFullYear();
+        const selectedMonth = monthParam ? parseInt(monthParam) : 0; // 0 = all months
+
+        let start: Date;
+        let end: Date;
+
+        if (selectedMonth === 0) {
+            start = new Date(selectedYear, 0, 1);
+            end = new Date(selectedYear, 11, 31, 23, 59, 59, 999);
+        } else {
+            start = new Date(selectedYear, selectedMonth - 1, 1);
+            end = new Date(selectedYear, selectedMonth, 0, 23, 59, 59, 999);
+        }
 
         // Get last run info from system config
         const lastRunConfig = await prisma.systemConfig.findUnique({
             where: { key: 'last_escalation_run' }
         });
+
+        const wherePending: any = {
+            status: { in: ['pending', 'in_progress'] },
+            isEscalated: false,
+        };
+
+        if (yearParam) {
+            wherePending.createdAt = {
+                gte: start,
+                lte: end,
+            };
+        }
+
         const pendingLeaves = await prisma.leaveRequest.findMany({
-            where: {
-                status: { in: ['pending', 'in_progress'] },
-                isEscalated: false,
-            },
+            where: wherePending,
             include: {
                 user: {
                     select: { firstName: true, lastName: true },
@@ -42,13 +69,11 @@ export async function GET(req: NextRequest) {
                 },
             },
             orderBy: { createdAt: 'asc' },
-            take: 20,
+            take: 100,
         });
 
         const pending = pendingLeaves.map((leave) => {
-            // ใช้ค่าจาก DB ถ้ามี ถ้าไม่มีให้คำนวณใหม่ตาม Policy: Created + 1 day at 13:00
             const deadline = leave.escalationDeadline || calculateEscalationDeadline(leave.createdAt);
-
             const hoursRemaining = Math.round((deadline.getTime() - now.getTime()) / (1000 * 60 * 60));
             const currentApprover = leave.approvals[0]?.approver;
 
@@ -65,8 +90,16 @@ export async function GET(req: NextRequest) {
         });
 
         // Get recent escalated leaves
+        const whereEscalated: any = { isEscalated: true };
+        if (yearParam) {
+            whereEscalated.createdAt = {
+                gte: start,
+                lte: end,
+            };
+        }
+
         const escalatedLeaves = await prisma.leaveRequest.findMany({
-            where: { isEscalated: true },
+            where: whereEscalated,
             include: {
                 user: {
                     select: { firstName: true, lastName: true },
@@ -81,7 +114,7 @@ export async function GET(req: NextRequest) {
                 },
             },
             orderBy: { updatedAt: 'desc' },
-            take: 20,
+            take: 100,
         });
 
         const logs = escalatedLeaves.map((leave) => {
@@ -100,16 +133,19 @@ export async function GET(req: NextRequest) {
 
         // Calculate stats
         const nearDeadline = pending.filter(p => p.hoursRemaining > 0 && p.hoursRemaining <= REMINDER_HOURS).length;
+        
         const totalEscalated = await prisma.leaveRequest.count({
-            where: { isEscalated: true },
+            where: whereEscalated,
         });
 
         return NextResponse.json({
             config: {
-                enabled: true, // Always enabled
+                enabled: true,
                 lastRun: lastRunConfig?.value || null,
                 cronConfigured: !!process.env.CRON_SECRET,
             },
+            selectedYear,
+            selectedMonth,
             pending,
             logs,
             stats: {

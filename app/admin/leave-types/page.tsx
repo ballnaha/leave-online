@@ -484,7 +484,12 @@ export default function LeaveTypesPage() {
           />
           <Tooltip title="รีเฟรชข้อมูล">
             <IconButton
-              onClick={fetchLeaveTypes}
+              onClick={() => {
+                fetchLeaveTypes();
+                setSearchQuery('');
+                setStatusFilter('all');
+                setPaidFilter('all');
+              }}
               disabled={loading}
               sx={{
                 bgcolor: 'background.default',

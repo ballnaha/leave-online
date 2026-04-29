@@ -418,7 +418,10 @@ export default function BannersPage() {
           />
           <Tooltip title="รีเฟรชข้อมูล">
             <IconButton
-              onClick={fetchBanners}
+              onClick={() => {
+                setSearchQuery('');
+                fetchBanners();
+              }}
               disabled={loading}
               sx={{
                 bgcolor: 'background.default',

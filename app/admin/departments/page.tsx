@@ -503,7 +503,12 @@ export default function DepartmentsPage() {
           />
           <Tooltip title="รีเฟรชข้อมูล">
             <IconButton
-              onClick={fetchDepartments}
+              onClick={() => {
+                fetchDepartments();
+                setSearchQuery('');
+                setCompanyFilter('all');
+                setStatusFilter('all');
+              }}
               disabled={loading}
               sx={{
                 bgcolor: 'background.default',

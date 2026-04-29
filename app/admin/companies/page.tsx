@@ -356,7 +356,10 @@ export default function CompaniesPage() {
           />
           <Tooltip title="รีเฟรชข้อมูล">
             <IconButton
-              onClick={fetchCompanies}
+              onClick={() => {
+                fetchCompanies();
+                setSearchQuery('');
+              }}
               disabled={loading}
               sx={{
                 bgcolor: 'background.default',

@@ -227,8 +227,8 @@ export default function EmployeeStatsPage() {
             const params = new URLSearchParams();
             params.append('userId', stat.id.toString());
             if (!isAll) params.append('leaveType', typeCode);
-            params.append('startDate', `${selectedYear}-01-01`);
-            params.append('endDate', `${selectedYear}-12-31`);
+            params.append('startDate', `${selectedYear}-01-01T00:00:00`);
+            params.append('endDate', `${selectedYear}-12-31T23:59:59`);
             params.append('status', 'approved');
 
             const res = await fetch(`/api/admin/leaves?${params.toString()}`);
@@ -289,7 +289,18 @@ export default function EmployeeStatsPage() {
                         นำเข้าข้อมูลย้อนหลัง
                     </Button>
                     <Tooltip title="รีเฟรชข้อมูล">
-                        <IconButton onClick={() => fetchStats(page)} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1.5, bgcolor: 'background.paper' }}>
+                        <IconButton onClick={() => {
+                            const currentYear = new Date().getFullYear();
+                            setSearchQuery('');
+                            setSelectedCompany('all');
+                            setSelectedDept('all');
+                            setSelectedSection('all');
+                            setSelectedYear(currentYear);
+                            setSortBy('employeeId');
+                            setSortOrder('asc');
+                            setPage(0);
+                            fetchStats(0, 'all', 'all', 'all', currentYear, 'employeeId', 'asc', '');
+                        }} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1.5, bgcolor: 'background.paper' }}>
                             <Refresh2 size={24} color={theme.palette.text.secondary} />
                         </IconButton>
                     </Tooltip>
@@ -697,34 +708,45 @@ export default function EmployeeStatsPage() {
                                     <Table size="small">
                                         <TableBody>
                                             {leaves.map((l: any) => (
-                                                <TableRow key={l.id} sx={{ '& td': { border: 0, py: 1.25, px: 0.5 } }}>
-                                                    <TableCell sx={{ width: '100px' }}>
-                                                        <Typography variant="body2" fontWeight={600} color="text.primary">
-                                                            {formatThaiDate(l.startDate)}
-                                                        </Typography>
-                                                    </TableCell>
-                                                    <TableCell sx={{ width: '120px' }}>
-                                                        <Typography variant="caption" sx={{ 
-                                                            fontFamily: 'monospace', 
-                                                            bgcolor: alpha(theme.palette.text.secondary, 0.05),
-                                                            px: 0.8, py: 0.3, borderRadius: 0.5,
-                                                            color: 'text.secondary'
-                                                        }}>
-                                                            {l.leaveCode}
-                                                        </Typography>
-                                                    </TableCell>
-                                                    <TableCell sx={{ width: '60px', textAlign: 'center' }}>
-                                                        <Typography variant="body2" fontWeight={800} color="primary">
-                                                            {l.totalDays}
-                                                        </Typography>
-                                                    </TableCell>
-                                                    <TableCell>
-                                                        <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.5 }}>
-                                                            {l.reason || '-'}
-                                                        </Typography>
-                                                    </TableCell>
-                                                </TableRow>
-                                            ))}
+                                                 <TableRow 
+                                                     key={l.id} 
+                                                     sx={{ 
+                                                         '& td': { border: 0, py: 1.25, px: 0.5 },
+                                                         bgcolor: l.leaveCode?.startsWith('#') ? alpha(theme.palette.info.main, 0.03) : 'transparent'
+                                                     }}
+                                                 >
+                                                     <TableCell sx={{ width: '100px' }}>
+                                                         <Typography variant="body2" fontWeight={600} color="text.primary">
+                                                             {formatThaiDate(l.startDate)}
+                                                         </Typography>
+                                                     </TableCell>
+                                                     <TableCell sx={{ width: '120px' }}>
+                                                         <Stack direction="row" spacing={1} alignItems="center">
+                                                             <Typography variant="caption" sx={{ 
+                                                                 fontFamily: 'monospace', 
+                                                                 bgcolor: alpha(theme.palette.text.secondary, 0.05),
+                                                                 px: 0.8, py: 0.3, borderRadius: 0.5,
+                                                                 color: 'text.secondary'
+                                                             }}>
+                                                                 {l.leaveCode}
+                                                             </Typography>
+                                                             {l.leaveCode?.startsWith('#') && (
+                                                                 <Chip label="ย้อนหลัง" size="small" variant="outlined" sx={{ height: 18, fontSize: '0.65rem', color: 'info.main', borderColor: 'info.main' }} />
+                                                             )}
+                                                         </Stack>
+                                                     </TableCell>
+                                                     <TableCell sx={{ width: '60px', textAlign: 'center' }}>
+                                                         <Typography variant="body2" fontWeight={800} color="primary">
+                                                             {l.totalDays}
+                                                         </Typography>
+                                                     </TableCell>
+                                                     <TableCell>
+                                                         <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.5, fontSize: '0.8rem' }}>
+                                                             {l.reason || '-'}
+                                                         </Typography>
+                                                     </TableCell>
+                                                 </TableRow>
+                                             ))}
                                         </TableBody>
                                     </Table>
                                 </Box>
