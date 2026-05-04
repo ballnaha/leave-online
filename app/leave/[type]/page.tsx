@@ -198,7 +198,12 @@ export default function LeaveFormPage() {
     const [processingAttachments, setProcessingAttachments] = useState(false);
     const [errors, setErrors] = useState<Record<string, string>>({});
     const [previewImage, setPreviewImage] = useState<string | null>(null);
+    const [mounted, setMounted] = useState(false);
     const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+
+    useEffect(() => {
+        setMounted(true);
+    }, []);
 
     // ค่าคงที่สำหรับลาย้อนหลัง
     const MAX_BACKDATE_DAYS = 3; // จำนวนวันทำการที่อนุญาตให้ลาย้อนหลัง (นับจากวันถัดจากวันสิ้นสุดลา)
@@ -1435,7 +1440,13 @@ export default function LeaveFormPage() {
                                 {t('leave_date_write', 'วันที่เขียนใบลา')}
                             </Typography>
                             <Typography variant="body2" fontWeight={600} color={config.color}>
-                                {dayjs().locale(locale).format('DD MMMM')} {locale === 'th' ? dayjs().year() + 543 : dayjs().year()}
+                                {mounted ? (
+                                    <>
+                                        {dayjs().locale(locale).format('DD MMMM')} {locale === 'th' ? dayjs().year() + 543 : dayjs().year()}
+                                    </>
+                                ) : (
+                                    <Skeleton variant="text" width={80} />
+                                )}
                             </Typography>
                         </Box>
 
@@ -1892,7 +1903,13 @@ export default function LeaveFormPage() {
                                                 fontWeight={600}
                                                 sx={{ color: '#DC2626' }}
                                             >
-                                                {dayjs().locale(locale).format('DD MMM')} {locale === 'th' ? (dayjs().year() + 543).toString() : dayjs().year()}
+                                                {mounted ? (
+                                                    <>
+                                                        {dayjs().locale(locale).format('DD MMM')} {locale === 'th' ? (dayjs().year() + 543).toString() : dayjs().year()}
+                                                    </>
+                                                ) : (
+                                                    <Skeleton variant="text" width={60} />
+                                                )}
                                             </Typography>
                                             <CloseCircle size={16} variant="Bold" color="#DC2626" />
                                         </Box>
