@@ -257,8 +257,9 @@ const ListItem: React.FC<ListItemProps> = ({
                             variant="caption"
                             sx={{
                                 color: '#F59E0B',
-                                fontSize: '0.75rem',
-                                lineHeight: 1.4,
+                                fontSize: '0.85rem',
+                                lineHeight: 1.5,
+                                fontWeight: 500,
                             }}
                         >
                             {condition}
@@ -287,10 +288,12 @@ export default function TermsAndConditionsPage() {
     const { t, locale } = useLocale();
     const [openSections, setOpenSections] = useState<Record<string, boolean>>({
         'leave-rights': true,
-        'approval-process': false,
+        'approval-process': true,
         'notifications': false,
     });
-    const [openItems, setOpenItems] = useState<Record<string, boolean>>({});
+    const [openItems, setOpenItems] = useState<Record<string, boolean>>({
+        'submit-steps': true
+    });
     const [searchQuery, setSearchQuery] = useState('');
 
     const toggleSection = (id: string) => {
@@ -473,7 +476,7 @@ export default function TermsAndConditionsPage() {
                         border: '1px solid #FED7D7',
                     }}>
                         <Warning2 size={16} color="#E53E3E" style={{ flexShrink: 0, marginTop: 1 }} />
-                        <Typography variant="caption" sx={{ color: '#C53030', fontSize: '0.75rem', lineHeight: 1.5, fontWeight: 600 }}>
+                        <Typography variant="body2" sx={{ color: '#C53030', fontSize: '0.9rem', lineHeight: 1.6, fontWeight: 600 }}>
                             {t('terms_exhausted_leave_rule', "กรณีใช้สิทธิ์ลาป่วย ลากิจ หรือพักร้อนครบกำหนดแล้ว การลาครั้งต่อไปต้องเลือกประเภท 'ลาไม่รับค่าจ้าง' เช่น ลาป่วยไม่รับค่าจ้าง , ลากิจไม่รับค่าจ้าง ")}
                         </Typography>
                     </Box>
@@ -490,7 +493,7 @@ export default function TermsAndConditionsPage() {
                         border: '1px solid #FCD34D',
                     }}>
                         <Warning2 size={16} color="#D97706" style={{ flexShrink: 0, marginTop: 1 }} />
-                        <Typography variant="caption" sx={{ color: '#92400E', fontSize: '0.75rem', lineHeight: 1.5 }}>
+                        <Typography variant="body2" sx={{ color: '#92400E', fontSize: '0.875rem', lineHeight: 1.6, fontWeight: 500 }}>
                             {generalLeaveNote}
                         </Typography>
                     </Box>
@@ -562,7 +565,7 @@ export default function TermsAndConditionsPage() {
                         border: '1px solid rgba(59, 130, 246, 0.2)',
                     }}>
                         <InfoCircle size={14} color="#3B82F6" style={{ flexShrink: 0, marginTop: 2 }} />
-                        <Typography variant="caption" sx={{ color: '#1E40AF', fontSize: '0.75rem', lineHeight: 1.5 }}>
+                        <Typography variant="body2" sx={{ color: '#1E40AF', fontSize: '0.875rem', lineHeight: 1.6, fontWeight: 500 }}>
                             {t('terms_approval_note', 'ลำดับการอนุมัติอาจแตกต่างกันในแต่ละฝ่าย/แผนก ขึ้นอยู่กับนโยบายของหน่วยงาน')}
                         </Typography>
                     </Box>
