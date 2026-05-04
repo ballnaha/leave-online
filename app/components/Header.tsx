@@ -311,68 +311,79 @@ const Header = () => {
                         </Box>
                     </Box>
 
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <IconButton
-                            onClick={() => setOpenLanguage(true)}
-                            sx={{
-                                bgcolor: 'white',
-                                boxShadow: 'none',
-                                width: 40,
-                                height: 40,
-                                '&:hover': { bgcolor: 'rgba(0,0,0,0.04)' }
-                            }}
-                        >
-                            <Global size={20} variant="Outline" color="#64748B" />
-                        </IconButton>
-
-                        <IconButton
-                            component={Link}
-                            href="/notifications"
-                            sx={{
-                                bgcolor: 'white',
-                                boxShadow: 'none',
-                                width: 40,
-                                height: 40,
-                                '&:hover': { bgcolor: 'rgba(0,0,0,0.04)' }
-                            }}
-                        >
-                            <Badge
-                                badgeContent={unreadCount > 0 ? unreadCount : undefined}
-                                color="error"
-                                overlap="circular"
-                                variant={unreadCount > 0 ? "standard" : undefined}
+                    <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
+                        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                            <IconButton
+                                onClick={() => setOpenLanguage(true)}
                                 sx={{
-                                    '& .MuiBadge-badge': {
-                                        fontSize: '0.65rem',
-                                        minWidth: 16,
-                                        height: 16,
-                                        top: -5,
-                                        right: -1,
-                                    }
+                                    bgcolor: 'white',
+                                    boxShadow: 'none',
+                                    width: 40,
+                                    height: 40,
+                                    '&:hover': { bgcolor: 'rgba(0,0,0,0.04)' }
                                 }}
                             >
-                                <Notification size={20} variant="Outline" color="#64748B" />
-                            </Badge>
-                        </IconButton>
+                                <Global size={20} variant="Outline" color="#64748B" />
+                            </IconButton>
+                            <Typography sx={{ fontSize: '0.65rem', color: '#64748B', fontWeight: 600, mt: -0.5 }}>
+                                ภาษา
+                            </Typography>
+                        </Box>
 
-                        <IconButton
-                            onClick={handleLogout}
-                            disabled={isLoggingOut}
-                            sx={{
-                                bgcolor: 'white',
-                                boxShadow: 'none',
-                                width: 40,
-                                height: 40,
-                                '&:hover': { bgcolor: 'rgba(0,0,0,0.04)' },
-                                '&.Mui-disabled': { opacity: 0.7 }
-                            }}
-                        >
-                            {isLoggingOut ? (
-                                <CircularProgress size={20} color="inherit" />
-                            ) : (
-                                <Logout size={20} variant="Outline" color="#EF4444" />
-                            )}
-                        </IconButton>
+                        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                            <IconButton
+                                component={Link}
+                                href="/notifications"
+                                sx={{
+                                    bgcolor: 'white',
+                                    boxShadow: 'none',
+                                    width: 40,
+                                    height: 40,
+                                    '&:hover': { bgcolor: 'rgba(0,0,0,0.04)' }
+                                }}
+                            >
+                                <Badge
+                                    badgeContent={unreadCount > 0 ? unreadCount : undefined}
+                                    color="error"
+                                    overlap="circular"
+                                    variant={unreadCount > 0 ? "standard" : undefined}
+                                    sx={{
+                                        '& .MuiBadge-badge': {
+                                            fontSize: '0.65rem',
+                                            minWidth: 16,
+                                            height: 16,
+                                            top: -5,
+                                            right: -1,
+                                        }
+                                    }}
+                                >
+                                    <Notification size={20} variant="Outline" color="#64748B" />
+                                </Badge>
+                            </IconButton>
+                            <Box sx={{ height: '0.65rem', mt: -0.5 }} /> {/* Spacer to match Language label height */}
+                        </Box>
+
+                        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                            <IconButton
+                                onClick={handleLogout}
+                                disabled={isLoggingOut}
+                                sx={{
+                                    bgcolor: 'white',
+                                    boxShadow: 'none',
+                                    width: 40,
+                                    height: 40,
+                                    '&:hover': { bgcolor: 'rgba(0,0,0,0.04)' },
+                                    '&.Mui-disabled': { opacity: 0.7 }
+                                }}
+                            >
+                                {isLoggingOut ? (
+                                    <CircularProgress size={20} color="inherit" />
+                                ) : (
+                                    <Logout size={20} variant="Outline" color="#EF4444" />
+                                )}
+                            </IconButton>
+                            <Box sx={{ height: '0.65rem', mt: -0.5 }} /> {/* Spacer to match Language label height */}
+                        </Box>
                     </Box>
                 </Box>
             </Box>

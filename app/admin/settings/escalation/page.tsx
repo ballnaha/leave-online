@@ -137,12 +137,12 @@ const roleLabels: Record<string, string> = {
     hr: 'HR',
 };
 
-const statusConfig: Record<string, { label: string; color: 'warning' | 'success' | 'error' | 'default'; icon: React.ReactElement }> = {
-    pending: { label: 'รออนุมัติ', color: 'warning', icon: <ClockIcon size={14} variant="Bold" color="currentColor" /> },
-    approved: { label: 'อนุมัติแล้ว', color: 'success', icon: <TickCircle size={14} variant="Bold" color="currentColor" /> },
-    rejected: { label: 'ไม่อนุมัติ', color: 'error', icon: <CloseCircle size={14} variant="Bold" color="currentColor" /> },
-    cancelled: { label: 'ยกเลิก', color: 'default', icon: <InfoCircle size={14} variant="Bold" color="currentColor" /> },
-    skipped: { label: 'ข้าม', color: 'default', icon: <InfoCircle size={14} variant="Bold" color="currentColor" /> },
+const statusConfig: Record<string, { label: string; color: string; bgcolor: string; icon: React.ReactElement }> = {
+    pending: { label: 'รออนุมัติ', color: '#FFD600', bgcolor: '#FFFDE7', icon: <ClockIcon size={14} variant="Bold" color="currentColor" /> },
+    approved: { label: 'อนุมัติแล้ว', color: '#2E7D32', bgcolor: '#E8F5E9', icon: <TickCircle size={14} variant="Bold" color="currentColor" /> },
+    rejected: { label: 'ไม่อนุมัติ', color: '#D32F2F', bgcolor: '#FFEBEE', icon: <CloseCircle size={14} variant="Bold" color="currentColor" /> },
+    cancelled: { label: 'ยกเลิก', color: '#757575', bgcolor: '#F5F5F5', icon: <InfoCircle size={14} variant="Bold" color="currentColor" /> },
+    skipped: { label: 'ข้าม', color: '#757575', bgcolor: '#F5F5F5', icon: <InfoCircle size={14} variant="Bold" color="currentColor" /> },
 };
 
 const formatDate = (dateStr: string) => dayjs(dateStr).format('DD MMM YYYY');
@@ -873,10 +873,15 @@ export default function EscalationSettingsPage() {
                                         {/* Status */}
                                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                                             <Chip
-                                                icon={statusConfig[selectedLeave.status]?.icon || <InfoCircle size={14} />}
+                                                icon={statusConfig[selectedLeave.status] ? React.cloneElement(statusConfig[selectedLeave.status].icon as React.ReactElement<any>, { color: statusConfig[selectedLeave.status].color }) : <InfoCircle size={14} />}
                                                 label={statusConfig[selectedLeave.status]?.label || selectedLeave.status}
-                                                color={statusConfig[selectedLeave.status]?.color || 'default'}
-                                                sx={{ fontWeight: 600 }}
+                                                sx={{ 
+                                                    fontWeight: 700,
+                                                    bgcolor: statusConfig[selectedLeave.status]?.bgcolor,
+                                                    color: statusConfig[selectedLeave.status]?.color,
+                                                    border: statusConfig[selectedLeave.status] ? `1px solid ${statusConfig[selectedLeave.status].color}40` : 'none',
+                                                    '& .MuiChip-icon': { color: 'inherit' }
+                                                }}
                                             />
                                         </Box>
 

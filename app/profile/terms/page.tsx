@@ -461,6 +461,23 @@ export default function TermsAndConditionsPage() {
                         );
                     })}
 
+                    {/* Exhausted Leave Rule */}
+                    <Box sx={{
+                        display: 'flex',
+                        alignItems: 'flex-start',
+                        gap: 1,
+                        mt: 1.5,
+                        p: 1.5,
+                        bgcolor: '#FFF5F5',
+                        borderRadius: 1.5,
+                        border: '1px solid #FED7D7',
+                    }}>
+                        <Warning2 size={16} color="#E53E3E" style={{ flexShrink: 0, marginTop: 1 }} />
+                        <Typography variant="caption" sx={{ color: '#C53030', fontSize: '0.75rem', lineHeight: 1.5, fontWeight: 600 }}>
+                            {t('terms_exhausted_leave_rule', "กรณีใช้สิทธิ์ลาป่วย ลากิจ หรือพักร้อนครบกำหนดแล้ว การลาครั้งต่อไปต้องเลือกประเภท 'ลาไม่รับค่าจ้าง' เช่น ลาป่วยไม่รับค่าจ้าง , ลากิจไม่รับค่าจ้าง ")}
+                        </Typography>
+                    </Box>
+
                     {/* General Note */}
                     <Box sx={{
                         display: 'flex',
@@ -572,7 +589,7 @@ export default function TermsAndConditionsPage() {
                         icon={<Folder2 size={16} color="#EC4899" variant="Bold" />}
                         iconBgColor="rgba(236, 72, 153, 0.1)"
                         title={t('terms_cancel_leave', 'การยกเลิกใบลา')}
-                        subtitle={t('terms_cancel_condition', 'ยกเลิกได้เฉพาะกรณีที่ยังไม่มีการอนุมัติหรือปฏิเสธ')}
+                        subtitle={t('terms_cancel_condition', 'ยกเลิกได้เฉพาะกรณีที่ยังไม่มีการอนุมัติหรือปฏิเสธ ในกรณีที่ได้รับการอนุมัติแล้ว ให้ติดต่อฝ่ายบุคคลเพื่อทำการยกเลิก')}
                     />
                 </AccordionSection>
 

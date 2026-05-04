@@ -78,12 +78,12 @@ const leaveTypeConfig: Record<string, { icon: any; color: string; lightColor: st
 };
 
 const getStatusConfig = (t: (key: string, fallback?: string) => string): Record<string, { label: string; color: string; bgcolor: string; icon: any }> => ({
-  pending: { label: t('status_pending', 'รออนุมัติ'), color: '#ED6C02', bgcolor: '#FFF3E0', icon: Clock },
+  pending: { label: t('status_pending', 'รออนุมัติ'), color: '#FFD600', bgcolor: '#FFFDE7', icon: Clock },
   approved: { label: t('status_approved', 'อนุมัติแล้ว'), color: '#2E7D32', bgcolor: '#E8F5E9', icon: TickCircle },
   rejected: { label: t('status_rejected', 'ปฏิเสธ'), color: '#D32F2F', bgcolor: '#FFEBEE', icon: CloseCircle },
   cancelled: { label: t('status_cancelled', 'ยกเลิกแล้ว'), color: '#757575', bgcolor: '#F5F5F5', icon: Forbidden2 },
   skipped: { label: t('status_skipped', 'ข้ามขั้น'), color: '#757575', bgcolor: '#F5F5F5', icon: Clock },
-  in_progress: { label: t('status_in_progress', 'กำลังดำเนินการ'), color: '#ED6C02', bgcolor: '#FFF3E0', icon: Clock },
+  in_progress: { label: t('status_in_progress', 'กำลังดำเนินการ'), color: '#FFD600', bgcolor: '#FFFDE7', icon: Clock },
 });
 
 interface LeaveDetail {

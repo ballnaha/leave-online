@@ -181,12 +181,12 @@ interface Stats {
   cancelled: number;
 }
 
-const statusConfig: Record<string, { label: string; color: 'warning' | 'success' | 'error' | 'default'; icon: React.ReactElement }> = {
-  pending: { label: 'รออนุมัติ', color: 'warning', icon: <ClockIcon size={14} variant="Bold" color="currentColor" /> },
-  in_progress: { label: 'กำลังดำเนินการ', color: 'warning', icon: <ClockIcon size={14} variant="Bold" color="currentColor" /> },
-  approved: { label: 'อนุมัติแล้ว', color: 'success', icon: <TickCircle size={14} variant="Bold" color="currentColor" /> },
-  rejected: { label: 'ไม่อนุมัติ', color: 'error', icon: <CloseCircle size={14} variant="Bold" color="currentColor" /> },
-  cancelled: { label: 'ยกเลิก', color: 'default', icon: <InfoCircle size={14} variant="Bold" color="currentColor" /> },
+const statusConfig: Record<string, { label: string; color: string; bgcolor: string; icon: React.ReactElement }> = {
+  pending: { label: 'รออนุมัติ', color: '#FFD600', bgcolor: '#FFFDE7', icon: <ClockIcon size={14} variant="Bold" color="currentColor" /> },
+  in_progress: { label: 'กำลังดำเนินการ', color: '#FFD600', bgcolor: '#FFFDE7', icon: <ClockIcon size={14} variant="Bold" color="currentColor" /> },
+  approved: { label: 'อนุมัติแล้ว', color: '#2E7D32', bgcolor: '#E8F5E9', icon: <TickCircle size={14} variant="Bold" color="currentColor" /> },
+  rejected: { label: 'ไม่อนุมัติ', color: '#D32F2F', bgcolor: '#FFEBEE', icon: <CloseCircle size={14} variant="Bold" color="currentColor" /> },
+  cancelled: { label: 'ยกเลิก', color: '#757575', bgcolor: '#F5F5F5', icon: <InfoCircle size={14} variant="Bold" color="currentColor" /> },
 };
 
 const roleLabels: Record<string, string> = {
@@ -1105,11 +1105,17 @@ export default function AdminLeavesPage() {
                 {/* Card Footer */}
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 1, pt: 2, borderTop: '1px solid', borderColor: 'divider' }}>
                   <Chip
-                    icon={statusInfo.icon}
+                    icon={React.cloneElement(statusInfo.icon as React.ReactElement<any>, { color: statusInfo.color })}
                     label={statusInfo.label}
                     size="small"
-                    color={statusInfo.color}
-                    sx={{ fontWeight: 500, borderRadius: 1 }}
+                    sx={{ 
+                        fontWeight: 600, 
+                        borderRadius: 1,
+                        bgcolor: statusInfo.bgcolor,
+                        color: statusInfo.color,
+                        border: 'none',
+                        '& .MuiChip-icon': { color: 'inherit' }
+                    }}
                   />
 
                   <Button
@@ -1124,9 +1130,9 @@ export default function AdminLeavesPage() {
                 </Box>
 
                 {(leave.status === 'pending' || leave.status === 'in_progress') && currentApprover && (
-                  <Box sx={{ bgcolor: alpha(theme.palette.warning.main, 0.05), p: 1, borderRadius: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <ClockIcon size={14} color={theme.palette.warning.main} variant="Bold" />
-                    <Typography variant="body2" color="text.secondary">
+                  <Box sx={{ bgcolor: '#FFFDE7', p: 1, borderRadius: 1, display: 'flex', alignItems: 'center', gap: 1, border: '1px solid #FFD60040' }}>
+                    <ClockIcon size={14} color="#FFD600" variant="Bold" />
+                    <Typography variant="body2" color="#FFD600" fontWeight={600}>
                       รออนุมัติ: <strong>{currentApprover.firstName} {currentApprover.lastName}</strong> ({roleLabels[currentApprover.role]}) (ขั้นที่ {leave.currentLevel})
                     </Typography>
                   </Box>
@@ -1288,15 +1294,18 @@ export default function AdminLeavesPage() {
                     </TableCell>
                     <TableCell sx={{ py: 2 }}>
                       <Chip
-                        icon={statusInfo.icon}
+                        icon={React.cloneElement(statusInfo.icon as React.ReactElement<any>, { color: statusInfo.color })}
                         label={statusInfo.label}
                         size="small"
-                        color={statusInfo.color}
-                        variant={leave.status === 'pending' || leave.status === 'in_progress' ? 'filled' : 'outlined'}
                         sx={{
-                          fontWeight: 600,
+                          fontWeight: 700,
                           borderRadius: 1,
-                          borderWidth: leave.status === 'pending' || leave.status === 'in_progress' ? 0 : 1,
+                          bgcolor: statusInfo.bgcolor,
+                          color: statusInfo.color,
+                          border: `1px solid ${statusInfo.color}40`,
+                          fontSize: '0.75rem',
+                          height: 24,
+                          '& .MuiChip-icon': { color: 'inherit' }
                         }}
                       />
                     </TableCell>
@@ -1304,7 +1313,7 @@ export default function AdminLeavesPage() {
                       {(leave.status === 'pending' || leave.status === 'in_progress') && currentApprover ? (
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                           <Avatar
-                            sx={{ width: 24, height: 24, fontSize: '0.75rem', bgcolor: alpha(theme.palette.warning.main, 0.2), color: 'warning.main', fontWeight: 'bold' }}
+                            sx={{ width: 24, height: 24, fontSize: '0.75rem', bgcolor: '#FFFDE7', color: '#FFD600', fontWeight: 'bold', border: '1px solid #FFD60040' }}
                           >
                             {leave.currentLevel}
                           </Avatar>
@@ -1444,10 +1453,14 @@ export default function AdminLeavesPage() {
                     {/* Status */}
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                       <Chip
-                        icon={statusConfig[selectedLeave.status]?.icon}
+                        icon={React.cloneElement(statusConfig[selectedLeave.status]?.icon as React.ReactElement<any>, { color: statusConfig[selectedLeave.status]?.color })}
                         label={statusConfig[selectedLeave.status]?.label}
-                        color={statusConfig[selectedLeave.status]?.color}
-                        sx={{ fontWeight: 600 }}
+                        sx={{ 
+                            fontWeight: 700,
+                            bgcolor: statusConfig[selectedLeave.status]?.bgcolor,
+                            color: statusConfig[selectedLeave.status]?.color,
+                            border: `1px solid ${statusConfig[selectedLeave.status]?.color}40`,
+                        }}
                       />
                       {selectedLeave.status === 'rejected' && selectedLeave.rejectReason && (
                         <Typography variant="body2" color="error.main">

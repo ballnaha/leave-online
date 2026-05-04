@@ -229,8 +229,13 @@ export default function LeaveImportPage() {
         ];
 
         worksheet.addRow({ employeeId: '100001', leaveType: 'ลาป่วย', totalDays: 2 });
-        worksheet.addRow({ employeeId: '100002', leaveType: 'ลากิจ', totalDays: 1 });
-        worksheet.addRow({ employeeId: '100003', leaveType: 'พักร้อน', totalDays: 5 });
+        worksheet.addRow({ employeeId: '100001', leaveType: 'ลากิจ', totalDays: 1 });
+        worksheet.addRow({ employeeId: '100001', leaveType: 'ลาพักร้อน', totalDays: 5 });
+        worksheet.addRow({ employeeId: '100001', leaveType: 'ลาบวช', totalDays: 30 });
+        worksheet.addRow({ employeeId: '100001', leaveType: 'ลาคลอด', totalDays: 90 });
+        worksheet.addRow({ employeeId: '100001', leaveType: 'ลาป่วยไม่รับค่าจ้าง', totalDays: 3 });
+        worksheet.addRow({ employeeId: '100001', leaveType: 'ลากิจไม่รับค่าจ้าง', totalDays: 2 });
+        worksheet.addRow({ employeeId: '100001', leaveType: 'ลาเลี้ยงดูบุตร', totalDays: 5 });
 
         workbook.xlsx.writeBuffer().then(buffer => {
             const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
@@ -516,24 +521,56 @@ export default function LeaveImportPage() {
                         </TableContainer>
                     </Paper>
 
-                    {/* Guidelines */}
-                    <Box sx={{ mt: 4, mb: 2 }}>
-                        <Typography variant="subtitle1" fontWeight={700} color="text.primary" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <InfoCircle size={20} color={theme.palette.text.secondary} />
-                            ข้อควรทราบในการนำเข้าข้อมูล:
-                        </Typography>
-                        <Divider sx={{ mb: 2 }} />
-                        <Typography variant="body2" color="text.secondary" component="div">
-                            <ul style={{ paddingLeft: 20, lineHeight: 1.8 }}>
-                                <li>ระบุชื่อประเภทการลาให้ตรงตามที่ตั้งค่าไว้ในระบบ (ตัวอย่าง: <b>ลาป่วย, ลากิจ, พักร้อน</b>)</li>
-                                <li>ระบบจะใช้รหัสพนักงานเป็นตัวระบุตัวตนพนักงานคนหากไม่พบข้อมูลพนักงานระบบจะข้ามรายการนั้น</li>
-                                <li>จำนวนวันที่ลาสามารถใส่เป็นทศนิยมได้ตามสิทธิ์ที่ต้องการให้ (เช่น <b>0.5 วัน</b>)</li>
-                                <li>หากพนักงานมีใบลาที่เคยย้อนหลังไปแล้ว ระบบจะเพิ่มยอดใหม่นี้เข้าไปรวมกับของเดิม</li>
-                            </ul>
-                        </Typography>
-                    </Box>
                 </Box>
             )}
+
+            {/* Guidelines (Always visible) */}
+            <Box sx={{ mt: 4, mb: 2 }}>
+                <Typography variant="subtitle1" fontWeight={700} color="text.primary" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <InfoCircle size={20} color={theme.palette.text.secondary} />
+                    ข้อควรทราบในการนำเข้าข้อมูล:
+                </Typography>
+                <Divider sx={{ mb: 2 }} />
+                <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1.5fr 1fr' }, gap: 4 }}>
+                    <Typography variant="body2" color="text.secondary" component="div">
+                        <ul style={{ paddingLeft: 20, lineHeight: 2 }}>
+                            <li>ระบุชื่อประเภทการลาให้ตรงตามที่ตั้งค่าไว้ในระบบ</li>
+                            <li>ระบบจะใช้รหัสพนักงานเป็นตัวระบุตัวตนพนักงาน หากไม่พบข้อมูลพนักงานระบบจะข้ามรายการนั้น</li>
+                            <li>จำนวนวันที่ลาสามารถใส่เป็นทศนิยมได้ (เช่น <b>0.5 วัน</b>)</li>
+                            <li>รายการที่นำเข้าจะถูกบันทึกเป็นสถานะ <b>"อนุมัติแล้ว"</b> โดยอัตโนมัติ</li>
+                            <li>ระบบจะเจนรหัสใบลาให้ใหม่ตามมาตรฐาน (รหัสย่อ + ปีเดือน + ลำดับ)</li>
+                        </ul>
+                    </Typography>
+
+                    <Paper variant="outlined" sx={{ borderRadius: 1, overflow: 'hidden', bgcolor: alpha(theme.palette.background.paper, 0.5) }}>
+                        <Table size="small">
+                            <TableHead>
+                                <TableRow sx={{ bgcolor: alpha(theme.palette.primary.main, 0.05) }}>
+                                    <TableCell sx={{ fontWeight: 700, py: 1 }}>ชื่อประเภทการลาที่รองรับ</TableCell>
+                                    <TableCell sx={{ fontWeight: 700, py: 1 }} align="center">รหัสย่อ</TableCell>
+                                </TableRow>
+                            </TableHead>
+                            <TableBody>
+                                {[
+                                    { name: 'ลาป่วย', code: 'SK' },
+                                    { name: 'ลากิจ', code: 'PS' },
+                                    { name: 'ลาพักร้อน', code: 'VC' },
+                                    { name: 'ลาบวช', code: 'OR' },
+                                    { name: 'ลาคลอด', code: 'MT' },
+                                    { name: 'ลาป่วยไม่รับค่าจ้าง', code: 'SN' },
+                                    { name: 'ลากิจไม่รับค่าจ้าง', code: 'PN' },
+                                    { name: 'ลาเลี้ยงดูบุตร', code: 'PC' },
+                                ].map((item) => (
+                                    <TableRow key={item.code}>
+                                        <TableCell sx={{ py: 0.5, fontSize: '0.8125rem' }}>{item.name}</TableCell>
+                                        <TableCell sx={{ py: 0.5, fontSize: '0.8125rem', fontWeight: 600, color: 'primary.main' }} align="center">{item.code}</TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </Paper>
+                </Box>
+            </Box>
         </Box>
     );
 }

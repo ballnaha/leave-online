@@ -274,13 +274,13 @@ export default function LeavePage() {
             case 'completed':
                 return { label: t('status_completed', 'เสร็จสิ้นแล้ว'), color: 'success' as const, icon: CheckCircle, bgColor: '#F0FDF4', textColor: '#16A34A' };
             case 'in_progress':
-                return { label: t('status_in_progress', 'กำลังดำเนินการ'), color: 'info' as const, icon: Clock, bgColor: '#EFF6FF', textColor: '#2563EB' };
+                return { label: t('status_in_progress', 'กำลังดำเนินการ'), color: 'warning' as const, icon: Clock, bgColor: '#FFFDE7', textColor: '#FFD600' };
             case 'rejected':
                 return { label: t('status_rejected', 'ไม่อนุมัติ'), color: 'error' as const, icon: XCircle, bgColor: '#FEF2F2', textColor: '#DC2626' };
             case 'cancelled':
                 return { label: t('status_cancelled', 'ยกเลิกแล้ว'), color: 'warning' as const, icon: Ban, bgColor: '#FFF7ED', textColor: '#EA580C' };
             default:
-                return { label: t('status_pending', 'รออนุมัติ'), color: 'warning' as const, icon: Clock, bgColor: '#FFFBEB', textColor: '#D97706' };
+                return { label: t('status_pending', 'รออนุมัติ'), color: 'warning' as const, icon: Clock, bgColor: '#FFFDE7', textColor: '#FFD600' };
         }
     };
 

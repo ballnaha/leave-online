@@ -344,7 +344,7 @@ export default function AdminDashboardPage() {
             label: 'รอดำเนินการ',
             value: data?.stats.pending || 0,
             icon: Timer,
-            color: '#F59E0B',
+            color: '#FFD600',
             description: 'ต้องอนุมัติภายใน SLA'
         },
         {
@@ -1603,12 +1603,12 @@ export default function AdminDashboardPage() {
                                         width: 36,
                                         height: 36,
                                         borderRadius: 1,
-                                        bgcolor: alpha('#F59E0B', 0.15),
+                                        bgcolor: alpha('#FFD600', 0.15),
                                         display: 'flex',
                                         alignItems: 'center',
                                         justifyContent: 'center',
                                     }}>
-                                        <Calendar size={18} color="#F59E0B" variant="Bold" />
+                                        <Calendar size={18} color="#FFD600" variant="Bold" />
                                     </Box>
                                     <Typography variant="subtitle1" fontWeight={700}>ลามากที่สุด</Typography>
                                 </Box>
@@ -1642,14 +1642,14 @@ export default function AdminDashboardPage() {
                                             width: 48,
                                             height: 48,
                                             borderRadius: '50%',
-                                            bgcolor: alpha('#F59E0B', 0.1),
+                                            bgcolor: alpha('#FFD600', 0.1),
                                             display: 'flex',
                                             alignItems: 'center',
                                             justifyContent: 'center',
                                             mx: 'auto',
                                             mb: 1.5,
                                         }}>
-                                            <Calendar size={24} color="#F59E0B" variant="Outline" />
+                                            <Calendar size={24} color="#FFD600" variant="Outline" />
                                         </Box>
                                         <Typography variant="body2" color="text.secondary">ยังไม่มีข้อมูล</Typography>
                                     </Box>
@@ -1659,10 +1659,10 @@ export default function AdminDashboardPage() {
                                             p: 2,
                                             borderRadius: 1,
                                             background: index === 0
-                                                ? `linear-gradient(135deg, ${alpha('#F59E0B', 0.08)} 0%, ${alpha('#F59E0B', 0.15)} 100%)`
+                                                ? `linear-gradient(135deg, ${alpha('#FFD600', 0.08)} 0%, ${alpha('#FFD600', 0.15)} 100%)`
                                                 : 'transparent',
                                             border: '1px solid',
-                                            borderColor: index === 0 ? alpha('#F59E0B', 0.2) : 'divider',
+                                            borderColor: index === 0 ? alpha('#FFD600', 0.2) : 'divider',
                                         }}>
                                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1.5 }}>
                                                 <Typography
@@ -1671,7 +1671,7 @@ export default function AdminDashboardPage() {
                                                         width: 24,
                                                         height: 24,
                                                         borderRadius: '50%',
-                                                        bgcolor: index === 0 ? '#F59E0B' : alpha('#6366F1', 0.1),
+                                                        bgcolor: index === 0 ? '#FFD600' : alpha('#6366F1', 0.1),
                                                         color: index === 0 ? 'white' : '#6366F1',
                                                         display: 'flex',
                                                         alignItems: 'center',
@@ -1686,8 +1686,8 @@ export default function AdminDashboardPage() {
                                                     sx={{
                                                         width: 32,
                                                         height: 32,
-                                                        bgcolor: alpha('#F59E0B', 0.15),
-                                                        color: '#F59E0B',
+                                                        bgcolor: alpha('#FFD600', 0.15),
+                                                        color: '#FFD600',
                                                         fontSize: '0.8rem',
                                                     }}
                                                 >
@@ -1697,7 +1697,7 @@ export default function AdminDashboardPage() {
                                                     <Typography variant="body2" fontWeight={600}>{person.name}</Typography>
                                                     <Typography variant="caption" color="text.secondary">{person.dept}</Typography>
                                                 </Box>
-                                                <Typography variant="body2" fontWeight={700} color="#F59E0B">
+                                                <Typography variant="body2" fontWeight={700} color="#FFD600">
                                                     {person.totalDays} วัน
                                                 </Typography>
                                             </Box>
@@ -1707,9 +1707,9 @@ export default function AdminDashboardPage() {
                                                 sx={{
                                                     height: 6,
                                                     borderRadius: 3,
-                                                    bgcolor: alpha('#F59E0B', 0.1),
+                                                    bgcolor: alpha('#FFD600', 0.1),
                                                     '& .MuiLinearProgress-bar': {
-                                                        bgcolor: '#F59E0B',
+                                                        bgcolor: '#FFD600',
                                                         borderRadius: 3
                                                     }
                                                 }}

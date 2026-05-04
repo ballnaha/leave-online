@@ -42,10 +42,10 @@ const LeaveTimeline = ({ items, displayMode = 'list' }: LeaveTimelineProps) => {
             gradient: 'linear-gradient(135deg, #10B981 0%, #059669 100%)'
         },
         Pending: {
-            color: '#F59E0B',
-            bgColor: 'rgba(245, 158, 11, 0.12)',
+            color: '#FFD600',
+            bgColor: '#FFFDE7',
             label: 'รออนุมัติ',
-            gradient: 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)'
+            gradient: 'linear-gradient(135deg, #FFD600 0%, #FFAB00 100%)'
         },
         Rejected: {
             color: '#EF4444',
@@ -369,16 +369,16 @@ const LeaveTimeline = ({ items, displayMode = 'list' }: LeaveTimelineProps) => {
                                     display: 'flex',
                                     alignItems: 'center',
                                     gap: 0.5,
-                                    bgcolor: 'rgba(245, 158, 11, 0.08)',
+                                    bgcolor: '#FFFDE7',
                                     px: 1,
                                     py: 0.25,
                                     borderRadius: '6px'
                                 }}>
-                                    <Clock size={12} color="#F59E0B" />
+                                    <Clock size={12} color="#FFD600" />
                                     <Typography
                                         sx={{
                                             fontSize: '0.75rem',
-                                            color: '#D97706',
+                                            color: '#FFD600',
                                             fontWeight: 500,
                                             maxWidth: 100,
                                             overflow: 'hidden',

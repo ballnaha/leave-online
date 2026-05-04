@@ -87,6 +87,16 @@ import { PERMISSIONS } from '@/lib/permissions';
 
 const menuGroups: MenuGroup[] = [
     {
+        items: [
+            {
+                text: 'Dashboard',
+                icon: Category2,
+                iconColor: '#6C63FF',
+                path: '/admin',
+            },
+        ],
+    },
+    {
         groupLabel: 'ใบลา',
         items: [
             {

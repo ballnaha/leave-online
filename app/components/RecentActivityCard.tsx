@@ -37,7 +37,7 @@ const RecentActivityCard = ({ title, date, status, image, icon, iconColor = '#5E
 
     const statusColors = {
         Approved: { color: '#00C853', bgcolor: '#E8F5E9', label: t('status_approved', 'อนุมัติแล้ว') },
-        Pending: { color: '#FFAB00', bgcolor: '#FFF8E1', label: t('status_pending', 'รออนุมัติ') },
+        Pending: { color: '#FFD600', bgcolor: '#FFFDE7', label: t('status_pending', 'รออนุมัติ') },
         Rejected: { color: '#FF1744', bgcolor: '#FFEBEE', label: t('status_rejected', 'ไม่อนุมัติ') },
         Cancelled: { color: '#9E9E9E', bgcolor: '#F5F5F5', label: t('status_cancelled', 'ยกเลิก') },
     };

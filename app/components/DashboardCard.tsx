@@ -186,7 +186,7 @@ const DashboardCard: React.FC<DashboardCardProps> = ({ leaveTypes, leaveRequests
                 return { label: t('status_approved', 'อนุมัติแล้ว'), color: '#4CAF50', bgColor: '#E8F5E9', icon: TickCircle };
             case 'pending':
             case 'in_progress':
-                return { label: t('status_pending', 'รออนุมัติ'), color: '#FFC107', bgColor: '#FFF8E1', icon: Timer };
+                return { label: t('status_pending', 'รออนุมัติ'), color: '#FFD600', bgColor: '#FFFDE7', icon: Timer };
             case 'rejected':
                 return { label: t('status_rejected', 'ไม่อนุมัติ'), color: '#FF8FA3', bgColor: '#FCE4EC', icon: Forbidden2 };
             case 'cancelled':

@@ -498,7 +498,8 @@ const LeaveDetailDrawer: React.FC<LeaveDetailDrawerProps> = ({ open, onClose, le
             case 'approved':
                 return { label: t('status_approved', 'อนุมัติแล้ว'), color: '#2DCE89', bgColor: '#E6FFFA', icon: TickCircle, textColor: '#2DCE89' };
             case 'pending':
-                return { label: t('status_pending', 'รออนุมัติ'), color: '#F59E0B', bgColor: '#FFFBEB', icon: Danger, textColor: '#F59E0B' };
+            case 'in_progress':
+                return { label: t('status_pending', 'รออนุมัติ'), color: '#FFD600', bgColor: '#FFFDE7', icon: Danger, textColor: '#FFD600' };
             case 'rejected':
                 return { label: t('status_rejected', 'ไม่อนุมัติ'), color: '#F5365C', bgColor: '#FFF0F3', icon: CloseSquare, textColor: '#F5365C' };
             case 'cancelled':

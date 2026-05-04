@@ -194,12 +194,12 @@ interface ApprovalItem {
 }
 
 const getStatusConfig = (t: (key: string, fallback?: string) => string): Record<string, { label: string; color: string; bgcolor: string; icon: IconComponent }> => ({
-  pending: { label: t('status_pending', 'รออนุมัติ'), color: '#ED6C02', bgcolor: '#FFF3E0', icon: Clock },
+  pending: { label: t('status_pending', 'รออนุมัติ'), color: '#FFD600', bgcolor: '#FFFDE7', icon: Clock },
   approved: { label: t('status_approved', 'อนุมัติแล้ว'), color: '#2E7D32', bgcolor: '#E8F5E9', icon: TickCircle },
   rejected: { label: t('status_rejected', 'ปฏิเสธ'), color: '#D32F2F', bgcolor: '#FFEBEE', icon: CloseCircle },
   cancelled: { label: t('status_cancelled', 'ยกเลิกแล้ว'), color: '#757575', bgcolor: '#F5F5F5', icon: Forbidden2 },
   skipped: { label: t('status_skipped', 'ข้ามขั้น'), color: '#757575', bgcolor: '#F5F5F5', icon: Clock },
-  in_progress: { label: t('status_in_progress', 'กำลังดำเนินการ'), color: '#ED6C02', bgcolor: '#FFF3E0', icon: Clock },
+  in_progress: { label: t('status_in_progress', 'กำลังดำเนินการ'), color: '#FFD600', bgcolor: '#FFFDE7', icon: Clock },
 });
 
 export default function ApprovalPage() {
@@ -963,7 +963,7 @@ export default function ApprovalPage() {
                                 <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
                                   <span>{dept}</span>
                                   {deptPending > 0 && (
-                                    <Chip label={deptPending} size="small" sx={{ height: 18, fontSize: '0.7rem', bgcolor: '#FFF3E0', color: '#E65100', fontWeight: 600, ml: 1 }} />
+                                    <Chip label={deptPending} size="small" sx={{ height: 18, fontSize: '0.7rem', bgcolor: '#FFFDE7', color: '#FFD600', fontWeight: 600, ml: 1 }} />
                                   )}
                                 </Box>
                               </MenuItem>
@@ -1076,7 +1076,7 @@ export default function ApprovalPage() {
                       (filterSection !== 'all' ? 1 : 0)
                     }
                     size="small"
-                    sx={{ ml: 1, height: 20, bgcolor: mobileFilterOpen ? 'rgba(255,255,255,0.3)' : '#FFF3E0', color: mobileFilterOpen ? 'white' : '#E65100', fontWeight: 700 }}
+                    sx={{ ml: 1, height: 20, bgcolor: mobileFilterOpen ? 'rgba(255,255,255,0.3)' : '#FFFDE7', color: mobileFilterOpen ? 'white' : '#FFD600', fontWeight: 700 }}
                   />
                 )}
               </Button>
@@ -1310,14 +1310,14 @@ export default function ApprovalPage() {
                         {dept.department}
                       </Typography>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                        <Clock size={14} color="#E65100" variant="Bold" />
-                        <Typography sx={{ fontSize: '0.85rem', color: '#E65100', fontWeight: 600 }}>
+                        <Clock size={14} color="#FFD600" variant="Bold" />
+                        <Typography sx={{ fontSize: '0.85rem', color: '#FFD600', fontWeight: 600 }}>
                           {dept.pending} รายการรออนุมัติ
                         </Typography>
                       </Box>
                     </Box>
                     <Box sx={{
-                      bgcolor: '#FFF3E0',
+                      bgcolor: '#FFFDE7',
                       borderRadius: '50%',
                       width: 48,
                       height: 48,
@@ -1326,7 +1326,7 @@ export default function ApprovalPage() {
                       justifyContent: 'center',
                       flexShrink: 0,
                     }}>
-                      <Typography sx={{ fontWeight: 800, fontSize: '1.25rem', color: '#E65100' }}>
+                      <Typography sx={{ fontWeight: 800, fontSize: '1.25rem', color: '#FFD600' }}>
                         {dept.pending}
                       </Typography>
                     </Box>
@@ -1492,7 +1492,7 @@ export default function ApprovalPage() {
                   height: 3,
                   borderRadius: '3px 3px 0 0',
                   bgcolor: [
-                    { id: 0, color: '#E65100' },
+                    { id: 0, color: '#FFD600' },
                     { id: 1, color: '#2E7D32' },
                     { id: 2, color: '#D32F2F' },
                     { id: 3, color: '#757575' },
@@ -1518,7 +1518,7 @@ export default function ApprovalPage() {
               }}
             >
               {[
-                { id: 0, label: t('tab_pending', 'รออนุมัติ'), icon: Clock, color: '#E65100', count: derivedCounts.pending, showBadge: true },
+                { id: 0, label: t('tab_pending', 'รออนุมัติ'), icon: Clock, color: '#FFD600', count: derivedCounts.pending, showBadge: true },
                 { id: 1, label: t('tab_approved', 'อนุมัติ'), icon: TickCircle, color: '#2E7D32', count: derivedCounts.approved, showBadge: true },
                 { id: 2, label: t('tab_rejected', 'ปฏิเสธ'), icon: CloseCircle, color: '#D32F2F', count: derivedCounts.rejected, showBadge: true },
                 { id: 3, label: t('tab_cancelled', 'ยกเลิก'), icon: Forbidden2, color: '#757575', count: derivedCounts.cancelled, showBadge: true },
@@ -1675,7 +1675,7 @@ export default function ApprovalPage() {
                   {[
                     { key: 'all', label: t('filter_all', 'ทั้งหมด'), count: teamHistoryCounts.total, color: '#64748B' },
                     { key: 'approved', label: t('status_approved', 'อนุมัติ'), count: teamHistoryCounts.approved, color: '#2E7D32' },
-                    { key: 'pending', label: t('status_pending', 'รออนุมัติ'), count: teamHistoryCounts.pending, color: '#E65100' },
+                    { key: 'pending', label: t('status_pending', 'รออนุมัติ'), count: teamHistoryCounts.pending, color: '#FFD600' },
                     { key: 'rejected', label: t('status_rejected', 'ปฏิเสธ'), count: teamHistoryCounts.rejected, color: '#D32F2F' },
                     { key: 'cancelled', label: t('status_cancelled', 'ยกเลิก'), count: teamHistoryCounts.cancelled, color: '#757575' },
                   ].map((item) => (
@@ -2279,14 +2279,14 @@ export default function ApprovalPage() {
                                     <Chip
                                       label="ส่งต่อ (Escalated)"
                                       size="small"
-                                      icon={<InfoCircle size={14} color="#E65100" variant="Bold" />}
+                                      icon={<InfoCircle size={14} color="#FFD600" variant="Bold" />}
                                       sx={{
                                         height: 20,
                                         fontSize: '0.7rem',
-                                        bgcolor: '#FFF3E0',
-                                        color: '#E65100',
-                                        border: '1px solid #FFCC80',
-                                        '& .MuiChip-icon': { color: '#E65100', ml: 0.5 }
+                                        bgcolor: '#FFFDE7',
+                                        color: '#FFD600',
+                                        border: '1px solid #FFD60040',
+                                        '& .MuiChip-icon': { color: '#FFD600', ml: 0.5 }
                                       }}
                                     />
                                   )}

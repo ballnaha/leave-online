@@ -12,13 +12,22 @@ const leaveTypeCodeMap: Record<string, string> = {
     'ordination': 'OR',
     'work_outside': 'WO',
     'absent': 'AB',
+    'sick_no_pay': 'SN',
+    'personal_no_pay': 'PN',
+    'paternity_care': 'PC',
     'other': 'OT',
     // Thai names support
     'ลาป่วย': 'SK',
     'ลากิจ': 'PS',
     'พักร้อน': 'VC',
+    'ลาพักร้อน': 'VC',
     'ลาคลอด': 'MT',
+    'การคลอด': 'MT',
     'ลาบวช': 'OR',
+    'การบวช': 'OR',
+    'ลาป่วยไม่รับค่าจ้าง': 'SN',
+    'ลากิจไม่รับค่าจ้าง': 'PN',
+    'ลาเลี้ยงดูบุตร': 'PC',
 };
 
 async function generateLeaveCode(leaveType: string, date: Date): Promise<string> {
