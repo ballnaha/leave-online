@@ -2258,10 +2258,9 @@ export function LocaleProvider({ children, initialLocale }: { children: React.Re
       return;
     }
     if (typeof navigator !== "undefined") {
-      const nav = navigator.language.toLowerCase();
-      if (nav.startsWith("th")) setLocaleState("th");
-      else if (nav.startsWith("en")) setLocaleState("en");
-      else setLocaleState(DEFAULT_LOCALE);
+      // Priority changed: ignore browser language and default to Thai (DEFAULT_LOCALE)
+      // to ensure all new users start with the same experience.
+      setLocaleState(DEFAULT_LOCALE);
     }
   }, [initialLocale]);
 
