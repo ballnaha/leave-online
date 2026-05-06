@@ -1027,10 +1027,13 @@ export default function LeaveFormPage() {
             newErrors.totalDays = 'กรุณาระบุจำนวนวันลา';
         } else if (maxLeaveDaysByRange !== null && totalDaysNum > maxLeaveDaysByRange) {
             newErrors.totalDays = `จำนวนวันลาสูงสุด ${maxLeaveDaysByRange} วัน ตามช่วงวันที่เลือก`;
-        } else if (leaveType?.maxDaysPerYear) {
+        } else {
+            const quotaDays = leaveType?.maxDaysPerYear;
             // ตรวจสอบโควต้าคงเหลือ
-            const remainingDays = Math.max(0, leaveType.maxDaysPerYear - usedLeaveDays);
-            if (totalDaysNum > remainingDays) {
+            const remainingDays = typeof quotaDays === 'number' && quotaDays > 0
+                ? Math.max(0, quotaDays - usedLeaveDays)
+                : null;
+            if (remainingDays !== null && totalDaysNum > remainingDays) {
                 newErrors.totalDays = `จำนวนวันลาเกินสิทธิ์คงเหลือ (เหลือ ${remainingDays} วัน)`;
             }
         }
@@ -1311,9 +1314,12 @@ export default function LeaveFormPage() {
     const config = leaveTypeConfig[leaveType.code] || leaveTypeConfig.default;
     const IconComponent = config.icon;
     const totalDaysValue = toSafeNumber(formData.totalDays);
-    const hasLeaveQuota = leaveType.maxDaysPerYear !== null && leaveType.maxDaysPerYear > 0;
-    const remainingLeaveDays = hasLeaveQuota
-        ? Math.max(0, leaveType.maxDaysPerYear - usedLeaveDays)
+    const leaveQuotaDays = typeof leaveType.maxDaysPerYear === 'number' && leaveType.maxDaysPerYear > 0
+        ? leaveType.maxDaysPerYear
+        : null;
+    const hasLeaveQuota = leaveQuotaDays !== null;
+    const remainingLeaveDays = leaveQuotaDays !== null
+        ? Math.max(0, leaveQuotaDays - usedLeaveDays)
         : null;
 
     return (
@@ -1354,7 +1360,7 @@ export default function LeaveFormPage() {
                                     </Typography>
                                 )}
                             </Box>
-                            {leaveType.maxDaysPerYear && (
+                            {leaveQuotaDays !== null && (
                                 <Box sx={{
                                     position: 'absolute',
                                     right: 16,
@@ -1365,7 +1371,7 @@ export default function LeaveFormPage() {
                                 }}>
                                     <Chip
                                         size="small"
-                                        label={`${leaveType.maxDaysPerYear} ${t('leave_days_per_year', 'วัน/ปี')}`}
+                                        label={`${leaveQuotaDays} ${t('leave_days_per_year', 'วัน/ปี')}`}
                                         sx={{
                                             bgcolor: config.lightColor,
                                             color: config.color,
@@ -1414,7 +1420,7 @@ export default function LeaveFormPage() {
                                     icon={<Warning2 size={20} variant="Bold" />}
                                     sx={{ mb: 2, borderRadius: 2, fontWeight: 500 }}
                                 >
-                                    {t('quota_already_full', 'ท่านใช้สิทธิ์การลานี้เต็มโควตาแล้ว (ครบ {{max}} วันแล้ว)').replace('{{max}}', String(leaveType.maxDaysPerYear))}
+                                    {t('quota_already_full', 'ท่านใช้สิทธิ์การลานี้เต็มโควตาแล้ว (ครบ {{max}} วันแล้ว)').replace('{{max}}', String(leaveQuotaDays))}
                                 </Alert>
                             )}
 
@@ -2062,15 +2068,15 @@ export default function LeaveFormPage() {
                             </Typography>
                         )}
 
-                        {hasLeaveQuota && (
+                        {leaveQuotaDays !== null && (
                             <Typography
                                 variant="caption"
-                                color={totalDaysValue > leaveType.maxDaysPerYear ? 'error.main' : 'text.secondary'}
-                                sx={{ mt: 1.5, display: 'block', textAlign: 'center', fontWeight: totalDaysValue > leaveType.maxDaysPerYear ? 'bold' : 'normal' }}
+                                color={totalDaysValue > leaveQuotaDays ? 'error.main' : 'text.secondary'}
+                                sx={{ mt: 1.5, display: 'block', textAlign: 'center', fontWeight: totalDaysValue > leaveQuotaDays ? 'bold' : 'normal' }}
                             >
                                 {leaveType.isPaid
-                                    ? t('leave_max_quota_paid', 'สิทธิ์ลา {days} วัน/ปี (ได้รับค่าจ้าง)').replace('{days}', leaveType.maxDaysPerYear.toString())
-                                    : t('leave_max_quota_unpaid', 'สิทธิ์ลา {days} วัน/ปี (ไม่ได้รับค่าจ้าง)').replace('{days}', leaveType.maxDaysPerYear.toString())
+                                    ? t('leave_max_quota_paid', 'สิทธิ์ลา {days} วัน/ปี (ได้รับค่าจ้าง)').replace('{days}', leaveQuotaDays.toString())
+                                    : t('leave_max_quota_unpaid', 'สิทธิ์ลา {days} วัน/ปี (ไม่ได้รับค่าจ้าง)').replace('{days}', leaveQuotaDays.toString())
                                 }
                             </Typography>
                         )}
