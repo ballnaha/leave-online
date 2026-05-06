@@ -2,7 +2,7 @@
 // This is the main service worker for the app
 importScripts("https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.sw.js");
 
-const APP_VERSION = '1.0.9';
+const APP_VERSION = '1.0.10';
 const CACHE_NAME = `leave-online-v${APP_VERSION}`;
 
 // Assets to cache (minimal - only essential static assets)

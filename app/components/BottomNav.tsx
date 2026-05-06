@@ -46,6 +46,13 @@ interface LeaveType {
     isActive: boolean;
 }
 
+const asArray = <T,>(value: unknown): T[] => Array.isArray(value) ? value : [];
+
+const toSafeNumber = (value: unknown) => {
+    const numericValue = Number(value);
+    return Number.isFinite(numericValue) ? numericValue : 0;
+};
+
 // กำหนด icon และสีสำหรับแต่ละประเภทการลา (สีแบบ balloon เหมือนปฏิทิน)
 const leaveTypeConfig: Record<string, { icon: any; color: string; gradient: string; image?: string }> = {
     sick: { icon: Health, color: '#5E72E4', gradient: 'linear-gradient(135deg, #5E72E4 0%, #825EE4 100%)' },
@@ -95,6 +102,7 @@ const BottomNav: React.FC<BottomNavProps> = ({ activePage = 'home' }) => {
     const getYearsOfService = (startDate: string | null | undefined): number => {
         if (!startDate) return 0;
         const start = new Date(startDate);
+        if (Number.isNaN(start.getTime())) return 0;
         const now = new Date();
         const years = (now.getTime() - start.getTime()) / (1000 * 60 * 60 * 24 * 365.25);
         return years;
@@ -109,7 +117,7 @@ const BottomNav: React.FC<BottomNavProps> = ({ activePage = 'home' }) => {
             return myLeaves
                 .filter(req => (req.leaveType === code || req.leaveCode === code) &&
                     ['approved', 'pending', 'in_progress', 'completed'].includes(req.status))
-                .reduce((sum, req) => sum + (req.totalDays || 0), 0);
+                .reduce((sum, req) => sum + toSafeNumber(req.totalDays), 0);
         };
 
         return leaveTypes.map(leave => {
@@ -192,14 +200,17 @@ const BottomNav: React.FC<BottomNavProps> = ({ activePage = 'home' }) => {
 
             if (typesRes.ok) {
                 const data = await typesRes.json();
-                cachedLeaveTypes = data;
-                setLeaveTypes(data);
+                const safeData = asArray<LeaveType>(data);
+                cachedLeaveTypes = safeData;
+                setLeaveTypes(safeData);
             }
 
             if (leavesRes.ok) {
                 const leavesData = await leavesRes.json();
-                if (leavesData.success && Array.isArray(leavesData.data)) {
+                if (leavesData?.success && Array.isArray(leavesData.data)) {
                     setMyLeaves(leavesData.data);
+                } else {
+                    setMyLeaves([]);
                 }
             }
         } catch (error) {
@@ -312,7 +323,7 @@ const BottomNav: React.FC<BottomNavProps> = ({ activePage = 'home' }) => {
                                     const usedDays = myLeaves
                                         .filter(req => (req.leaveType === leave.code || req.leaveCode === leave.code) &&
                                             ['approved', 'pending', 'in_progress', 'completed'].includes(req.status))
-                                        .reduce((sum, req) => sum + req.totalDays, 0);
+                                        .reduce((sum, req) => sum + toSafeNumber(req.totalDays), 0);
 
                                     const isQuotaFull = maxDays !== null && usedDays >= maxDays;
 

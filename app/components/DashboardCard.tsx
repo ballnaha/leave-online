@@ -58,8 +58,17 @@ const leaveTypeConfig: Record<string, { icon: any; color: string; image?: string
     default: { icon: MessageQuestion, color: '#8898AA' },
 };
 
+const asArray = <T,>(value: unknown): T[] => Array.isArray(value) ? value : [];
+
+const toSafeNumber = (value: unknown) => {
+    const numericValue = Number(value);
+    return Number.isFinite(numericValue) ? numericValue : 0;
+};
+
 const DashboardCard: React.FC<DashboardCardProps> = ({ leaveTypes, leaveRequests, year, onYearChange, loading = false }) => {
     const { t, locale } = useLocale();
+    const safeLeaveTypes = asArray<LeaveType>(leaveTypes);
+    const safeLeaveRequests = asArray<LeaveRequest>(leaveRequests);
     const [selectedCode, setSelectedCode] = useState<string>('');
     const [drilldownOpen, setDrilldownOpen] = useState(false);
     const [drilldownStatus, setDrilldownStatus] = useState<'approved' | 'pending' | 'rejected' | 'cancelled' | null>(null);
@@ -78,45 +87,45 @@ const DashboardCard: React.FC<DashboardCardProps> = ({ leaveTypes, leaveRequests
 
     // Set default selected code when leaveTypes are loaded
     useEffect(() => {
-        if (leaveTypes.length > 0 && !selectedCode) {
+        if (safeLeaveTypes.length > 0 && !selectedCode) {
             // Prefer sick, then vacation, then first available
-            if (leaveTypes.find(l => l.code === 'sick')) setSelectedCode('sick');
-            else if (leaveTypes.find(l => l.code === 'vacation')) setSelectedCode('vacation');
-            else setSelectedCode(leaveTypes[0].code);
+            if (safeLeaveTypes.find(l => l.code === 'sick')) setSelectedCode('sick');
+            else if (safeLeaveTypes.find(l => l.code === 'vacation')) setSelectedCode('vacation');
+            else setSelectedCode(safeLeaveTypes[0].code);
         }
-    }, [leaveTypes, selectedCode]);
+    }, [safeLeaveTypes, selectedCode]);
 
     // Calculate balances for all leave types
     const balances = useMemo(() => {
         const result: Record<string, { total: number; used: number; approved: number; pending: number; rejected: number; cancelled: number; remaining: number; name: string; isPaid: boolean; isUnlimited: boolean }> = {};
 
-        leaveTypes.forEach(type => {
+        safeLeaveTypes.forEach(type => {
             // null = unlimited, 0 = no entitlement, >0 = limited days
             const isUnlimitedType = type.maxDaysPerYear === null;
             const maxDays = type.maxDaysPerYear ?? 0;
 
             // Calculate used days for this type in selected year
             // Use leaveType field (which contains the leave type code like 'personal', 'sick', etc.)
-            const requests = leaveRequests.filter(req => req.leaveType === type.code);
+            const requests = safeLeaveRequests.filter(req => req.leaveType === type.code);
 
             const approved = requests
                 .filter(req => ['approved', 'completed'].includes(req.status))
-                .reduce((sum, req) => sum + req.totalDays, 0);
+                .reduce((sum, req) => sum + toSafeNumber(req.totalDays), 0);
 
             // Include both 'pending' and 'in_progress' as pending status
             const pending = requests
                 .filter(req => ['pending', 'in_progress'].includes(req.status))
-                .reduce((sum, req) => sum + req.totalDays, 0);
+                .reduce((sum, req) => sum + toSafeNumber(req.totalDays), 0);
 
             // Rejected leaves
             const rejected = requests
                 .filter(req => req.status === 'rejected')
-                .reduce((sum, req) => sum + req.totalDays, 0);
+                .reduce((sum, req) => sum + toSafeNumber(req.totalDays), 0);
 
             // Cancelled leaves
             const cancelled = requests
                 .filter(req => req.status === 'cancelled')
-                .reduce((sum, req) => sum + req.totalDays, 0);
+                .reduce((sum, req) => sum + toSafeNumber(req.totalDays), 0);
 
             // Only approved and pending count towards used days
             const totalUsed = approved + pending;
@@ -135,13 +144,13 @@ const DashboardCard: React.FC<DashboardCardProps> = ({ leaveTypes, leaveRequests
             };
         });
         return result;
-    }, [leaveTypes, leaveRequests, year]);
+    }, [safeLeaveTypes, safeLeaveRequests, year]);
 
     // Get filtered requests for drilldown
     const drilldownRequests = useMemo(() => {
         if (!drilldownStatus || !selectedCode) return [];
 
-        return leaveRequests.filter(req => {
+        return safeLeaveRequests.filter(req => {
             const matchType = req.leaveType === selectedCode;
             let matchStatus = false;
 
@@ -153,7 +162,7 @@ const DashboardCard: React.FC<DashboardCardProps> = ({ leaveTypes, leaveRequests
 
             return matchType && matchStatus;
         });
-    }, [leaveRequests, selectedCode, drilldownStatus]);
+    }, [safeLeaveRequests, selectedCode, drilldownStatus]);
 
     // Format date for display
     const formatDate = (startDate: string, endDate: string) => {
@@ -1019,7 +1028,7 @@ const DashboardCard: React.FC<DashboardCardProps> = ({ leaveTypes, leaveRequests
                         msOverflowStyle: 'none',
                         scrollbarWidth: 'none',
                     }}>
-                        {leaveTypes.map((type) => {
+                        {safeLeaveTypes.map((type) => {
                             const typeConfig = leaveTypeConfig[type.code] || leaveTypeConfig.default;
                             const Icon = typeConfig.icon;
                             const isSelected = selectedCode === type.code;

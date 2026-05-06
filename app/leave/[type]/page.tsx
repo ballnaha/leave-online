@@ -151,6 +151,13 @@ interface LeaveFormData {
     attachments: AttachmentItem[];
 }
 
+const asArray = <T,>(value: unknown): T[] => Array.isArray(value) ? value : [];
+
+const toSafeNumber = (value: unknown) => {
+    const numericValue = Number(value);
+    return Number.isFinite(numericValue) ? numericValue : 0;
+};
+
 export default function LeaveFormPage() {
     const router = useRouter();
     const params = useParams();
@@ -158,8 +165,10 @@ export default function LeaveFormPage() {
     const { data: session } = useSession();
     const { t, locale } = useLocale();
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const attachmentPreviewUrlsRef = useRef<string[]>([]);
 
-    const leaveCode = params.type as string;
+    const routeType = params.type;
+    const leaveCode = Array.isArray(routeType) ? routeType[0] : (routeType || '');
 
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
@@ -203,6 +212,20 @@ export default function LeaveFormPage() {
 
     useEffect(() => {
         setMounted(true);
+    }, []);
+
+    useEffect(() => {
+        attachmentPreviewUrlsRef.current = formData.attachments
+            .map(attachment => attachment.previewUrl)
+            .filter(Boolean);
+    }, [formData.attachments]);
+
+    useEffect(() => {
+        return () => {
+            attachmentPreviewUrlsRef.current.forEach((previewUrl) => {
+                URL.revokeObjectURL(previewUrl);
+            });
+        };
     }, []);
 
     // ค่าคงที่สำหรับลาย้อนหลัง
@@ -671,7 +694,7 @@ export default function LeaveFormPage() {
                 const currentYear = new Date().getFullYear();
                 const leaveTypesRes = await fetch(`/api/leave-types?year=${currentYear}`);
                 if (!leaveTypesRes.ok) throw new Error('Failed to fetch leave types');
-                const leaveTypesData = await leaveTypesRes.json();
+                const leaveTypesData = asArray<LeaveTypeData>(await leaveTypesRes.json());
                 const selectedType = leaveTypesData.find((lt: LeaveTypeData) => lt.code === leaveCode);
                 if (selectedType) {
                     setLeaveType(selectedType);
@@ -690,7 +713,7 @@ export default function LeaveFormPage() {
 
                 const holidaysData: HolidayData[] = [];
                 if (holidaysCurrentRes.ok) {
-                    const currentYearHolidays = await holidaysCurrentRes.json();
+                    const currentYearHolidays = asArray<HolidayData>(await holidaysCurrentRes.json());
                     holidaysData.push(...currentYearHolidays);
 
                     // คำนวณจำนวนวันบังคับพักร้อนในปีปัจจุบัน
@@ -701,7 +724,7 @@ export default function LeaveFormPage() {
                     setForcedLeaveDays(forcedHolidays.length);
                 }
                 if (holidaysNextRes.ok) {
-                    const nextYearHolidays = await holidaysNextRes.json();
+                    const nextYearHolidays = asArray<HolidayData>(await holidaysNextRes.json());
                     holidaysData.push(...nextYearHolidays);
                 }
                 setHolidays(holidaysData);
@@ -709,7 +732,7 @@ export default function LeaveFormPage() {
                 // คำนวณวันลาที่ใช้ไปแล้ว (ดึง Logic จาก Backend มาใช้เพื่อให้ตรงกัน)
                 if (myLeavesRes.ok && selectedType) {
                     const myLeavesResult = await myLeavesRes.json();
-                    if (myLeavesResult.success && Array.isArray(myLeavesResult.data)) {
+                    if (myLeavesResult?.success && Array.isArray(myLeavesResult.data)) {
                         // คำนวณวันลาที่ใช้ไปของประเภทปัจจุบัน
                         const used = myLeavesResult.data
                             .filter((req: any) => {
@@ -725,7 +748,7 @@ export default function LeaveFormPage() {
                                     reqType === String(selectedType.name).toLowerCase()
                                 );
                             })
-                            .reduce((sum: number, req: any) => sum + (req.totalDays || 0), 0);
+                            .reduce((sum: number, req: any) => sum + toSafeNumber(req.totalDays), 0);
                         setUsedLeaveDays(used);
 
                         // ตรวจสอบเงื่อนไขพิเศษ: ลาไม่รับค่าจ้าง (sick_no_pay, personal_no_pay)
@@ -747,7 +770,7 @@ export default function LeaveFormPage() {
                                             reqType === String(regularType.code).toLowerCase()
                                         );
                                     })
-                                    .reduce((sum: number, req: any) => sum + (req.totalDays || 0), 0);
+                                    .reduce((sum: number, req: any) => sum + toSafeNumber(req.totalDays), 0);
 
                                 if (usedRegular < regularType.maxDaysPerYear) {
                                     const regularName = t(`leave_${regularCode}`, regularType.name);
@@ -769,7 +792,7 @@ export default function LeaveFormPage() {
                                             reqType === String(vacationType.code).toLowerCase()
                                         );
                                     })
-                                    .reduce((sum: number, req: any) => sum + (req.totalDays || 0), 0);
+                                    .reduce((sum: number, req: any) => sum + toSafeNumber(req.totalDays), 0);
 
                                 if (usedVacation < vacationType.maxDaysPerYear) {
                                     const vacationName = t(`leave_${vacationType.code}`, vacationType.name);
@@ -858,6 +881,8 @@ export default function LeaveFormPage() {
                 }
             };
 
+            const objectUrl = URL.createObjectURL(file);
+
             img.onload = () => {
                 let { width, height } = img;
                 if (width > MAX_IMAGE_WIDTH || height > MAX_IMAGE_HEIGHT) {
@@ -870,11 +895,14 @@ export default function LeaveFormPage() {
                 canvas.height = height;
                 ctx?.drawImage(img, 0, 0, width, height);
                 canvas.toBlob((blob) => finalize(blob), preferredMime, IMAGE_QUALITY);
-                URL.revokeObjectURL(img.src);
+                URL.revokeObjectURL(objectUrl);
             };
 
-            img.onerror = () => resolve(file);
-            img.src = URL.createObjectURL(file);
+            img.onerror = () => {
+                URL.revokeObjectURL(objectUrl);
+                resolve(file);
+            };
+            img.src = objectUrl;
         });
     };
 
@@ -894,6 +922,9 @@ export default function LeaveFormPage() {
         }
 
         const result = await response.json();
+        if (!result?.file?.filePath) {
+            throw new Error('อัปโหลดไฟล์ไม่สำเร็จ');
+        }
         return result.file as UploadedAttachmentMeta;
     };
 
@@ -980,7 +1011,7 @@ export default function LeaveFormPage() {
             newErrors.endDate = 'วันที่สิ้นสุดต้องไม่น้อยกว่าวันที่เริ่มลา';
         }
 
-        const totalDaysNum = parseFloat(formData.totalDays) || 0;
+        const totalDaysNum = toSafeNumber(formData.totalDays);
 
         if (!formData.totalDays || totalDaysNum <= 0) {
             newErrors.totalDays = 'กรุณาระบุจำนวนวันลา';
@@ -1075,7 +1106,7 @@ export default function LeaveFormPage() {
                 startTime: formData.startTime,
                 endDate: formData.endDate,
                 endTime: formData.endTime,
-                totalDays: parseFloat(formData.totalDays) || 0,
+                totalDays: toSafeNumber(formData.totalDays),
                 reason: formData.reason,
                 contactPhone: formData.contactPhone,
                 contactAddress: formData.contactAddress,
@@ -1269,6 +1300,7 @@ export default function LeaveFormPage() {
     // ดึง config สำหรับ icon และสี
     const config = leaveTypeConfig[leaveType.code] || leaveTypeConfig.default;
     const IconComponent = config.icon;
+    const totalDaysValue = toSafeNumber(formData.totalDays);
 
     return (
         <>
@@ -1980,8 +2012,8 @@ export default function LeaveFormPage() {
                         {leaveType && leaveType.maxDaysPerYear && (
                             <Typography
                                 variant="caption"
-                                color={(parseFloat(formData.totalDays) || 0) > leaveType.maxDaysPerYear ? 'error.main' : 'text.secondary'}
-                                sx={{ mt: 1.5, display: 'block', textAlign: 'center', fontWeight: (parseFloat(formData.totalDays) || 0) > leaveType.maxDaysPerYear ? 'bold' : 'normal' }}
+                                color={totalDaysValue > leaveType.maxDaysPerYear ? 'error.main' : 'text.secondary'}
+                                sx={{ mt: 1.5, display: 'block', textAlign: 'center', fontWeight: totalDaysValue > leaveType.maxDaysPerYear ? 'bold' : 'normal' }}
                             >
                                 {leaveType.isPaid
                                     ? t('leave_max_quota_paid', 'สิทธิ์ลา {days} วัน/ปี (ได้รับค่าจ้าง)').replace('{days}', leaveType.maxDaysPerYear.toString())
@@ -2063,8 +2095,8 @@ export default function LeaveFormPage() {
                             <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
                                 {t('leave_attachments', 'ไฟล์แนบ')}
                                 {/* แสดง * บังคับแนบไฟล์ */}
-                                {((leaveCode === 'sick' && parseFloat(formData.totalDays) >= 3) ||
-                                    (leaveCode === 'personal' && parseFloat(formData.totalDays) >= 1) ||
+                                {((leaveCode === 'sick' && totalDaysValue >= 3) ||
+                                    (leaveCode === 'personal' && totalDaysValue >= 1) ||
                                     (leaveCode === 'paternity_care')) && (
                                         <Typography component="span" sx={{ color: 'error.main', ml: 0.5 }}>*</Typography>
                                     )}
@@ -2072,12 +2104,12 @@ export default function LeaveFormPage() {
                         </Box>
 
                         {/* แสดงข้อความแจ้งเตือนบังคับแนบไฟล์ */}
-                        {leaveCode === 'sick' && parseFloat(formData.totalDays) >= 3 && (
+                        {leaveCode === 'sick' && totalDaysValue >= 3 && (
                             <Alert severity="warning" sx={{ mb: 2, py: 0.5 }}>
                                 {t('leave_sick_attachment_required', 'ลาป่วยตั้งแต่ 3 วันขึ้นไป ต้องแนบใบรับรองแพทย์')}
                             </Alert>
                         )}
-                        {leaveCode === 'personal' && parseFloat(formData.totalDays) >= 1 && (
+                        {leaveCode === 'personal' && totalDaysValue >= 1 && (
                             <Alert severity="warning" sx={{ mb: 2, py: 0.5 }}>
                                 {t('leave_personal_attachment_required', 'ลากิจต้องแนบหลักฐานประกอบ')}
                             </Alert>
@@ -2256,7 +2288,7 @@ export default function LeaveFormPage() {
                         </Typography>
 
                         {/* แจ้งเตือนลาป่วยเกิน 3 วัน */}
-                        {leaveCode === 'sick' && (parseFloat(formData.totalDays) || 0) > 3 && formData.attachments.length === 0 && (
+                        {leaveCode === 'sick' && totalDaysValue > 3 && formData.attachments.length === 0 && (
                             <Alert
                                 severity="warning"
                                 icon={<Warning2 size={18} color="#ED6C02" />}

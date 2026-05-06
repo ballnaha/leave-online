@@ -84,6 +84,11 @@ const leaveTypeConfig: Record<string, { icon: any; gradient: string; color: stri
     default: { icon: MessageQuestion, gradient: 'linear-gradient(135deg, #8898AA 0%, #6A7A8A 100%)', color: '#8898AA', glassColor: 'rgba(136, 152, 170, 0.15)' },
 };
 
+const toSafeNumber = (value: unknown) => {
+    const numericValue = Number(value);
+    return Number.isFinite(numericValue) ? numericValue : 0;
+};
+
 export default function ChartsPage() {
     const router = useRouter();
     const { t } = useLocale();
@@ -120,13 +125,15 @@ export default function ChartsPage() {
 
             if (leaveTypesRes.ok) {
                 const typesData = await leaveTypesRes.json();
-                setLeaveTypes(typesData);
+                setLeaveTypes(Array.isArray(typesData) ? typesData : []);
             }
 
             if (leaveRequestsRes.ok) {
                 const requestsData = await leaveRequestsRes.json();
-                if (requestsData.success && requestsData.data) {
+                if (requestsData.success && Array.isArray(requestsData.data)) {
                     setLeaveRequests(requestsData.data);
+                } else {
+                    setLeaveRequests([]);
                 }
             }
         } catch (error) {
@@ -140,6 +147,7 @@ export default function ChartsPage() {
     const getYearsOfService = (startDate: string | null | undefined): number => {
         if (!startDate) return 0;
         const start = new Date(startDate);
+        if (Number.isNaN(start.getTime())) return 0;
         const now = new Date();
         const years = (now.getTime() - start.getTime()) / (1000 * 60 * 60 * 24 * 365.25);
         return years;
@@ -162,14 +170,14 @@ export default function ChartsPage() {
         leaveRequests
             .filter(req => req.status === 'approved')
             .forEach(req => {
-                usedDaysMap[req.leaveType] = (usedDaysMap[req.leaveType] || 0) + req.totalDays;
+                usedDaysMap[req.leaveType] = (usedDaysMap[req.leaveType] || 0) + toSafeNumber(req.totalDays);
             });
 
         // Build stats
         const BAR_FULL_SCALE = 90;
         const stats: LeaveStat[] = filteredTypes.map(type => {
             const used = usedDaysMap[type.code] || 0;
-            const max = type.maxDaysPerYear;
+            const max = type.maxDaysPerYear === null ? null : toSafeNumber(type.maxDaysPerYear);
 
             let percentage = 0;
             let displayPercentage = 0;

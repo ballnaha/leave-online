@@ -37,6 +37,13 @@ interface LeaveType {
   isActive: boolean;
 }
 
+const asArray = <T,>(value: unknown): T[] => Array.isArray(value) ? value : [];
+
+const toSafeNumber = (value: unknown) => {
+  const numericValue = Number(value);
+  return Number.isFinite(numericValue) ? numericValue : 0;
+};
+
 // กำหนด icon และสีสำหรับแต่ละประเภทการลา
 const leaveTypeConfig: Record<string, { icon: any; color: string; gradient: string; image?: string }> = {
   sick: { icon: Health, color: '#5E72E4', gradient: 'linear-gradient(135deg, #5E72E4 0%, #825EE4 100%)', image: '/images/icon-sick1.png' },
@@ -82,6 +89,7 @@ export default function Home() {
   const getYearsOfService = (startDate: string | null | undefined): number => {
     if (!startDate) return 0;
     const start = new Date(startDate);
+    if (Number.isNaN(start.getTime())) return 0;
     const now = new Date();
     const years = (now.getTime() - start.getTime()) / (1000 * 60 * 60 * 24 * 365.25);
     return years;
@@ -98,7 +106,7 @@ export default function Home() {
       return leaveRequests
         .filter(req => (req.leaveType === code || req.leaveCode === code) &&
           ['approved', 'pending', 'in_progress', 'completed'].includes(req.status))
-        .reduce((sum, req) => sum + (req.totalDays || 0), 0);
+        .reduce((sum, req) => sum + toSafeNumber(req.totalDays), 0);
     };
 
     return leaveTypes.map(leave => {
@@ -185,7 +193,7 @@ export default function Home() {
       const response = await fetch(`/api/leave-types?year=${selectedYear}`);
       if (!response.ok) throw new Error('Failed to fetch leave types');
       const data = await response.json();
-      setLeaveTypes(data);
+      setLeaveTypes(asArray<LeaveType>(data));
     } catch (error) {
       console.error('Error fetching leave types:', error);
     }
@@ -196,8 +204,8 @@ export default function Home() {
       const response = await fetch(`/api/my-leaves?year=${selectedYear}`);
       if (!response.ok) throw new Error('Failed to fetch leave requests');
       const data = await response.json();
-      if (data.success && data.data) {
-        setLeaveRequests(data.data);
+      if (data?.success) {
+        setLeaveRequests(asArray<LeaveRequest>(data.data));
       }
     } catch (error) {
       console.error('Error fetching leave requests:', error);
@@ -224,14 +232,24 @@ export default function Home() {
 
     loadData();
 
-    const hasLoaded = sessionStorage.getItem('home_loaded') === 'true';
+    const hasLoaded = (() => {
+      try {
+        return sessionStorage.getItem('home_loaded') === 'true';
+      } catch {
+        return false;
+      }
+    })();
 
     if (hasLoaded) {
       setLoading(false);
     } else {
       const timer = setTimeout(() => {
         setLoading(false);
-        sessionStorage.setItem('home_loaded', 'true');
+        try {
+          sessionStorage.setItem('home_loaded', 'true');
+        } catch {
+          // Ignore storage access failures; this flag only controls the intro skeleton.
+        }
       }, 600);
       return () => clearTimeout(timer);
     }
@@ -250,8 +268,8 @@ export default function Home() {
   }, []);
 
   // Map status to RecentActivityCard format (memoized)
-  const mapStatus = useCallback((status: string): 'Approved' | 'Pending' | 'Rejected' | 'Cancelled' => {
-    const statusLower = status.toLowerCase();
+  const mapStatus = useCallback((status?: string | null): 'Approved' | 'Pending' | 'Rejected' | 'Cancelled' => {
+    const statusLower = (status || '').toLowerCase();
     switch (statusLower) {
       case 'approved':
       case 'completed':
@@ -267,7 +285,7 @@ export default function Home() {
 
   // Get approval status text (memoized)
   const getApprovalStatusText = useCallback((leave: LeaveRequest) => {
-    const status = leave.status.toLowerCase();
+    const status = (leave.status || '').toLowerCase();
     if (status === 'approved') return t('status_approved', 'อนุมัติแล้ว');
     if (status === 'rejected') return t('status_rejected', 'ถูกปฏิเสธ');
     if (status === 'cancelled') return t('status_cancelled', 'ยกเลิกแล้ว');
@@ -483,7 +501,7 @@ export default function Home() {
                     const usedDays = leaveRequests
                       .filter(req => (req.leaveType === type.code || req.leaveCode === type.code) &&
                         ['approved', 'pending', 'in_progress', 'completed'].includes(req.status))
-                      .reduce((sum, req) => sum + (req.totalDays || 0), 0);
+                      .reduce((sum, req) => sum + toSafeNumber(req.totalDays), 0);
 
                     const isQuotaFull = type.maxDaysPerYear !== null && usedDays >= type.maxDaysPerYear;
 

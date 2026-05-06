@@ -99,6 +99,8 @@ interface LeaveType {
     isActive: boolean;
 }
 
+const asArray = <T,>(value: unknown): T[] => Array.isArray(value) ? value : [];
+
 export default function LeavePage() {
     const router = useRouter();
     const { t, locale } = useLocale();
@@ -151,21 +153,21 @@ export default function LeavePage() {
 
             if (typesRes.ok) {
                 const typesData = await typesRes.json();
-                setLeaveTypes(typesData);
+                setLeaveTypes(asArray<LeaveType>(typesData));
             } else {
                 console.error('Failed to fetch leave types');
             }
 
             if (leavesRes.ok) {
                 const leavesData = await leavesRes.json();
-                setMyLeaves(leavesData.data || []);
+                setMyLeaves(asArray<LeaveRequest>(leavesData?.data));
             } else {
                 console.error('Failed to fetch leaves');
             }
 
             if (holidaysRes.ok) {
                 const holidaysData = await holidaysRes.json();
-                setHolidays(holidaysData);
+                setHolidays(asArray<Holiday>(holidaysData));
             } else {
                 console.error('Failed to fetch holidays');
             }
@@ -267,7 +269,7 @@ export default function LeavePage() {
 
     const getLeaveConfig = (code: string) => leaveTypeConfig[code] || leaveTypeConfig.default;
 
-    const getStatusLabel = (status: string) => {
+    const getStatusLabel = (status?: string | null) => {
         switch (status) {
             case 'approved':
                 return { label: t('status_approved', 'อนุมัติแล้ว'), color: 'success' as const, icon: CheckCircle, bgColor: '#ECFDF5', textColor: '#059669' };
@@ -356,8 +358,8 @@ export default function LeavePage() {
         return `${start.toLocaleDateString(locale === 'th' ? 'th-TH' : 'en-US', { day: 'numeric', month: 'short' })} - ${end.toLocaleDateString(locale === 'th' ? 'th-TH' : 'en-US', options)}`;
     };
 
-    const mapStatus = (status: string): 'Approved' | 'Pending' | 'Rejected' | 'Cancelled' => {
-        const statusLower = status.toLowerCase();
+    const mapStatus = (status?: string | null): 'Approved' | 'Pending' | 'Rejected' | 'Cancelled' => {
+        const statusLower = (status || '').toLowerCase();
         switch (statusLower) {
             case 'approved':
             case 'completed':
@@ -372,7 +374,7 @@ export default function LeavePage() {
     };
 
     const getApprovalStatusText = (leave: LeaveRequest) => {
-        const status = leave.status.toLowerCase();
+        const status = (leave.status || '').toLowerCase();
         if (status === 'approved') return t('status_approved', 'อนุมัติแล้ว');
         if (status === 'rejected') return t('status_rejected', 'ถูกปฏิเสธ');
         if (status === 'cancelled') return t('status_cancelled', 'ยกเลิกแล้ว');
@@ -446,8 +448,8 @@ export default function LeavePage() {
         // Sort by professional standard: Pending first, then newest startDate first
         return [...filtered].sort((a, b) => {
             // 1. Pin 'pending' status at the top
-            const aIsPending = a.status.toLowerCase() === 'pending';
-            const bIsPending = b.status.toLowerCase() === 'pending';
+            const aIsPending = (a.status || '').toLowerCase() === 'pending';
+            const bIsPending = (b.status || '').toLowerCase() === 'pending';
             
             if (aIsPending && !bIsPending) return -1;
             if (!aIsPending && bIsPending) return 1;
@@ -668,7 +670,7 @@ export default function LeavePage() {
                             // ถ้ามีใบลาที่ approved/pending/in_progress ใช้สีแดง
                             // ถ้ามีแต่ rejected/cancelled ใช้สีเทาจาง
                             const hasActiveLeave = leavesOnDay.some(l =>
-                                ['approved', 'pending', 'in_progress'].includes(l.status.toLowerCase())
+                                ['approved', 'pending', 'in_progress'].includes((l.status || '').toLowerCase())
                             );
                             const hasOnlyInactiveLeave = hasLeave && !hasActiveLeave;
 

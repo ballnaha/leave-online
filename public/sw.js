@@ -1,6 +1,6 @@
 // Service Worker for Leave Online PWA
 // Version should match APP_VERSION in lib/version.ts
-const APP_VERSION = '1.0.9';
+const APP_VERSION = '1.0.10';
 const CACHE_NAME = `leave-online-v${APP_VERSION}`;
 
 // Assets to cache (minimal - only essential static assets)
