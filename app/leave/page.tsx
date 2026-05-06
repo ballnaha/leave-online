@@ -123,6 +123,7 @@ export default function LeavePage() {
     const [selectedCalendarDate, setSelectedCalendarDate] = useState<string | null>(null);
     const [showAllLegends, setShowAllLegends] = useState(false);
     const [currentTab, setCurrentTab] = useState('all');
+    const [historyScope, setHistoryScope] = useState<'month' | 'year'>('month');
     const [mounted, setMounted] = useState(false);
 
     useEffect(() => {
@@ -140,14 +141,17 @@ export default function LeavePage() {
 
     useEffect(() => {
         fetchData();
-    }, [currentDate]);
+    }, [currentDate, historyScope]);
 
     const fetchData = async () => {
         setLoading(true);
         try {
             const [typesRes, leavesRes, holidaysRes] = await Promise.all([
                 fetch(`/api/leave-types?year=${currentDate.year()}`),
-                fetch(`/api/my-leaves?year=${currentDate.year()}&month=${currentDate.month() + 1}`),
+                fetch(historyScope === 'year'
+                    ? `/api/my-leaves?year=${currentDate.year()}`
+                    : `/api/my-leaves?year=${currentDate.year()}&month=${currentDate.month() + 1}`
+                ),
                 fetch(`/api/holidays?year=${currentDate.year()}`),
             ]);
 
@@ -249,6 +253,12 @@ export default function LeavePage() {
         setCurrentDate(currentDate.year(year));
         setSelectedCalendarDate(null); // Clear filter when changing year
         setYearAnchorEl(null);
+    };
+
+    const handleHistoryScopeChange = (scope: 'month' | 'year') => {
+        setHistoryScope(scope);
+        setSelectedCalendarDate(null);
+        setCurrentTab('all');
     };
 
     // Handle click on calendar date to filter leaves
@@ -459,8 +469,13 @@ export default function LeavePage() {
         });
     }, [myLeaves, searchQuery, selectedCalendarDate, currentTab]);
 
-    const recentLeaves = filteredLeaves.slice(0, 10);
+    const displayedLeaves = historyScope === 'year' ? filteredLeaves : filteredLeaves.slice(0, 10);
     const today = dayjs();
+    const historyPeriodLabel = mounted
+        ? historyScope === 'year'
+            ? `${locale === 'th' ? currentDate.year() + 543 : currentDate.year()}`
+            : `${currentDate.locale(locale).format('MMMM')} ${locale === 'th' ? currentDate.year() + 543 : currentDate.year()}`
+        : '';
 
     return (
         <Box sx={{ minHeight: '100vh', bgcolor: '#F8F9FA', pb: 12 }}>
@@ -784,7 +799,7 @@ export default function LeavePage() {
                                 fontSize: '1rem',
                             }}
                         >
-                            {t('leave_history_title', 'ประวัติการลา')} {mounted && `(${currentDate.locale(locale).format('MMMM')} ${locale === 'th' ? currentDate.year() + 543 : currentDate.year()})`}
+                            {t('leave_history_title', 'ประวัติการลา')} {historyPeriodLabel && `(${historyPeriodLabel})`}
                         </Typography>
                         <Box
                             sx={{
@@ -799,6 +814,47 @@ export default function LeavePage() {
                         >
                             {filteredLeaves.length} {t('leave_items', 'รายการ')}
                         </Box>
+                    </Box>
+
+                    <Box
+                        sx={{
+                            display: 'grid',
+                            gridTemplateColumns: '1fr 1fr',
+                            gap: 0.75,
+                            bgcolor: '#F1F5F9',
+                            borderRadius: 1,
+                            p: 0.5,
+                            mb: 2,
+                        }}
+                    >
+                        {([
+                            { value: 'month' as const, label: t('history_scope_month', 'รายเดือน') },
+                            { value: 'year' as const, label: t('history_scope_year', 'ทั้งปี') },
+                        ]).map((option) => {
+                            const isActive = historyScope === option.value;
+                            return (
+                                <Button
+                                    key={option.value}
+                                    onClick={() => handleHistoryScopeChange(option.value)}
+                                    disableElevation
+                                    sx={{
+                                        minHeight: 34,
+                                        borderRadius: 0.75,
+                                        bgcolor: isActive ? 'white' : 'transparent',
+                                        color: isActive ? '#1E293B' : '#64748B',
+                                        fontWeight: isActive ? 700 : 600,
+                                        fontSize: '0.85rem',
+                                        textTransform: 'none',
+                                        boxShadow: isActive ? '0 1px 3px rgba(15,23,42,0.10)' : 'none',
+                                        '&:hover': {
+                                            bgcolor: isActive ? 'white' : 'rgba(255,255,255,0.45)',
+                                        },
+                                    }}
+                                >
+                                    {option.label}
+                                </Button>
+                            );
+                        })}
                     </Box>
 
                     {/* Date Filter Chip - Show when a calendar date is selected */}
@@ -1004,7 +1060,7 @@ export default function LeavePage() {
                         <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
                             <CircularProgress size={32} />
                         </Box>
-                    ) : recentLeaves.length === 0 ? (
+                    ) : displayedLeaves.length === 0 ? (
                         <Card
                             sx={{
                                 borderRadius: 1,
@@ -1016,12 +1072,16 @@ export default function LeavePage() {
                             }}
                         >
                             <Typography variant="body2" color="text.secondary">
-                                {searchQuery ? t('leave_not_found', 'ไม่พบใบลาที่ตรงกับการค้นหา') : t('leave_no_history', 'ยังไม่มีประวัติการลาในเดือนนี้')}
+                                {searchQuery
+                                    ? t('leave_not_found', 'ไม่พบใบลาที่ตรงกับการค้นหา')
+                                    : historyScope === 'year'
+                                        ? t('leave_no_history_year', 'ยังไม่มีประวัติการลาในปีนี้')
+                                        : t('leave_no_history', 'ยังไม่มีประวัติการลาในเดือนนี้')}
                             </Typography>
                         </Card>
                     ) : (
                         <LeaveTimeline
-                            items={recentLeaves.map((leave) => {
+                            items={displayedLeaves.map((leave) => {
                                 const config = getLeaveConfig(leave.leaveType || leave.leaveCode || 'default');
                                 const IconComponent = config.icon;
                                 const totalLevels = leave.approvals?.length || 0;

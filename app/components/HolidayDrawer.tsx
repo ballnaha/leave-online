@@ -13,6 +13,7 @@ import {
 } from '@mui/material';
 import { CloseCircle, Calendar } from 'iconsax-react';
 import { useLocale } from '@/app/providers/LocaleProvider';
+import { useUser } from '@/app/providers/UserProvider';
 import dayjs from 'dayjs';
 import 'dayjs/locale/th';
 import 'dayjs/locale/en';
@@ -24,6 +25,7 @@ interface Holiday {
     name: string;
     type: string;
     companyId?: number | null;
+    deductFromAnnualLeave?: boolean;
     company?: {
         id: number;
         code: string;
@@ -37,8 +39,11 @@ interface HolidayDrawerProps {
     initialYear?: number;
 }
 
+const asArray = <T,>(value: unknown): T[] => Array.isArray(value) ? value : [];
+
 export default function HolidayDrawer({ open, onClose, initialYear }: HolidayDrawerProps) {
     const { t, locale } = useLocale();
+    const { user } = useUser();
     const [selectedYear, setSelectedYear] = useState(initialYear || dayjs().year());
     const [holidays, setHolidays] = useState<Holiday[]>([]);
     const [loading, setLoading] = useState(false);
@@ -48,6 +53,7 @@ export default function HolidayDrawer({ open, onClose, initialYear }: HolidayDra
     const [isDragging, setIsDragging] = useState(false);
     const [isClosing, setIsClosing] = useState(false);
     const startYRef = useRef(0);
+    const dragYRef = useRef(0);
     const velocityRef = useRef(0);
     const lastYRef = useRef(0);
     const lastTimeRef = useRef(0);
@@ -77,7 +83,7 @@ export default function HolidayDrawer({ open, onClose, initialYear }: HolidayDra
             const res = await fetch(`/api/holidays?year=${selectedYear}&includeCompany=true`);
             if (res.ok) {
                 const data = await res.json();
-                setHolidays(data);
+                setHolidays(asArray<Holiday>(data));
             }
         } catch (error) {
             console.error('Error fetching holidays:', error);
@@ -86,9 +92,15 @@ export default function HolidayDrawer({ open, onClose, initialYear }: HolidayDra
         }
     };
 
+    const visibleHolidays = useMemo(() => {
+        return holidays.filter((holiday) =>
+            holiday.companyId == null || holiday.company?.code === user?.company
+        );
+    }, [holidays, user?.company]);
+
     // Group holidays by month
     const holidaysByMonth = useMemo(() => {
-        return holidays.reduce((acc, holiday) => {
+        return visibleHolidays.reduce((acc, holiday) => {
             const month = dayjs(holiday.date).month();
             if (!acc[month]) {
                 acc[month] = [];
@@ -96,9 +108,14 @@ export default function HolidayDrawer({ open, onClose, initialYear }: HolidayDra
             acc[month].push(holiday);
             return acc;
         }, {} as Record<number, Holiday[]>);
-    }, [holidays]);
+    }, [visibleHolidays]);
 
     const months = Object.keys(holidaysByMonth).map(Number).sort((a, b) => a - b);
+
+    const setDragOffset = (value: number) => {
+        dragYRef.current = value;
+        setDragY(value);
+    };
 
     // Handle touch/swipe to close
     const handleTouchStart = (e: React.TouchEvent) => {
@@ -136,7 +153,7 @@ export default function HolidayDrawer({ open, onClose, initialYear }: HolidayDra
             // Add rubber band effect - resistance increases as you drag further
             const resistance = 0.55;
             const resistedDiff = diff * resistance;
-            setDragY(resistedDiff);
+            setDragOffset(resistedDiff);
             
             // Prevent scroll when dragging
             e.preventDefault();
@@ -148,7 +165,8 @@ export default function HolidayDrawer({ open, onClose, initialYear }: HolidayDra
         setIsDragging(false);
         
         // Use velocity and distance to determine if should close
-        const shouldClose = dragY > 80 || (velocityRef.current > 0.5 && dragY > 30);
+        const currentDragY = dragYRef.current;
+        const shouldClose = currentDragY > 80 || (velocityRef.current > 0.5 && currentDragY > 30);
         
         if (shouldClose) {
             setIsClosing(true);
@@ -158,23 +176,30 @@ export default function HolidayDrawer({ open, onClose, initialYear }: HolidayDra
                 // Reset states after a short delay
                 setTimeout(() => {
                     setIsClosing(false);
-                    setDragY(0);
+                    setDragOffset(0);
                 }, 50);
             });
         } else {
             // Snap back with spring animation
-            setDragY(0);
+            setDragOffset(0);
         }
     };
 
     // Reset drag when drawer closes
     useEffect(() => {
         if (!open) {
-            setDragY(0);
+            setDragOffset(0);
             setIsDragging(false);
             setIsClosing(false);
         }
     }, [open]);
+
+    const handleHandleKeyDown = (e: React.KeyboardEvent) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            onClose();
+        }
+    };
 
     return (
         <Drawer
@@ -219,6 +244,11 @@ export default function HolidayDrawer({ open, onClose, initialYear }: HolidayDra
                 {/* Drag Handle */}
                 <Box
                     data-drag-handle
+                    role="button"
+                    tabIndex={0}
+                    aria-label={t('close', 'ปิด')}
+                    onClick={onClose}
+                    onKeyDown={handleHandleKeyDown}
                     sx={{
                         display: 'flex',
                         justifyContent: 'center',
@@ -301,7 +331,7 @@ export default function HolidayDrawer({ open, onClose, initialYear }: HolidayDra
                     <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center', flexWrap: 'wrap' }}>
                         <Chip
                             icon={<Calendar size={16} color="#DC2626" variant="Bold" />}
-                            label={`${t('holiday_type_company', 'วันหยุดบริษัท')} ${holidays.length} ${t('holiday_days', 'วัน')}`}
+                            label={`${t('holiday_type_company', 'วันหยุดบริษัท')} ${visibleHolidays.length} ${t('holiday_days', 'วัน')}`}
                             sx={{ bgcolor: '#FEE2E2', color: '#DC2626', fontWeight: 500 }}
                         />
                     </Box>
@@ -420,7 +450,7 @@ export default function HolidayDrawer({ open, onClose, initialYear }: HolidayDra
                                                             {isWeekend && ` • ${t('holiday_weekend', 'ตรงวันหยุด')}`}
                                                         </Typography>
                                                         {/* แสดง remark เฉพาะบริษัท ถ้าวันหยุดไม่ใช่ของทุกบริษัท */}
-                                                        {holiday.companyId !== null && holiday.company && (
+                                                        {holiday.companyId != null && holiday.company && (
                                                             <Chip
                                                                 size="small"
                                                                 label={`${t('only_for', 'เฉพาะ')} ${holiday.company.code}`}
