@@ -15,6 +15,7 @@ import {
   FormControl,
   InputAdornment,
   InputLabel,
+  LinearProgress,
   MenuItem,
   Paper,
   Select,
@@ -282,6 +283,8 @@ export default function AdminLeaveReportsPage() {
 
   const [departments, setDepartments] = useState<DeptOption[]>([]);
   const [sections, setSections] = useState<SectionOption[]>([]);
+  const showInitialTableSkeleton = loading && rows.length === 0;
+  const showTableRefreshing = loading && rows.length > 0;
 
   useEffect(() => {
     isMountedRef.current = true;
@@ -426,6 +429,53 @@ export default function AdminLeaveReportsPage() {
       }
     }
   }, [fetchRows, userKey, userLoading, router]);
+
+  const handleRefreshFilters = useCallback(() => {
+    const isDefaultView =
+      search === '' &&
+      debouncedSearch === '' &&
+      month === 0 &&
+      year === now.getFullYear() &&
+      companyFilter === 'all' &&
+      departmentFilter === 'all' &&
+      sectionFilter === 'all' &&
+      status === 'all' &&
+      page === 0;
+
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+
+    setSearch('');
+    setDebouncedSearch('');
+    setMonth(0);
+    setYear(now.getFullYear());
+    setCompanyFilter('all');
+    setDepartmentFilter('all');
+    setSectionFilter('all');
+    setStatus('all');
+    setPage(0);
+
+    if (isDefaultView) fetchRows();
+  }, [
+    search,
+    debouncedSearch,
+    month,
+    year,
+    now,
+    companyFilter,
+    departmentFilter,
+    sectionFilter,
+    status,
+    page,
+    fetchRows,
+  ]);
+
+  const handleSearchKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key !== 'Enter') return;
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    const nextSearch = search.trim();
+    setDebouncedSearch(nextSearch);
+    setPage(0);
+  }, [search]);
 
   const exportRows = useMemo(() => {
     return rows.map((r) => ({
@@ -904,16 +954,7 @@ body{background:#fff}
         <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
           <Button
             variant="outlined"
-            onClick={() => {
-              fetchRows();
-              setSearch('');
-              setMonth(0);
-              setYear(new Date().getFullYear());
-              setCompanyFilter('all');
-              setDepartmentFilter('all');
-              setSectionFilter('all');
-              setStatus('all');
-            }}
+            onClick={handleRefreshFilters}
             startIcon={loading ? <CircularProgress size={18} /> : <Refresh2 size={18} color={theme.palette.primary.main} />}
             disabled={loading}
             sx={{ borderRadius: 1 }}
@@ -967,7 +1008,7 @@ body{background:#fff}
             placeholder="ค้นหาชื่อ/รหัสพนักงาน"
             value={search}
             onChange={(e) => { setSearch(e.target.value); setPage(0); }}
-            onKeyDown={(e) => e.key === 'Enter' && fetchRows()}
+            onKeyDown={handleSearchKeyDown}
             sx={{ gridColumn: { xs: '1 / -1', md: 'auto' } }}
             InputProps={{
               startAdornment: (
@@ -1136,15 +1177,7 @@ body{background:#fff}
             size="small"
             variant="text"
             color="error"
-            onClick={() => {
-              setSearch('');
-              setMonth(0);
-              setYear(now.getFullYear());
-              setCompanyFilter('all');
-              setDepartmentFilter('all');
-              setSectionFilter('all');
-              setStatus('all');
-            }}
+            onClick={handleRefreshFilters}
             startIcon={<CloseSquare size={16} color="#f44336" />}
             sx={{ ml: 1 }}
           >
@@ -1215,7 +1248,17 @@ body{background:#fff}
               mb: 2,
             }}
           >
-            <Box ref={reportRef} sx={{ p: 2 }}>
+            {showTableRefreshing && (
+              <LinearProgress
+                sx={{
+                  height: 2,
+                  '& .MuiLinearProgress-bar': {
+                    transition: 'transform 0.2s linear',
+                  },
+                }}
+              />
+            )}
+            <Box ref={reportRef} sx={{ p: 2, opacity: showTableRefreshing ? 0.72 : 1, transition: 'opacity 0.2s ease' }}>
               <Typography variant="h6" sx={{ fontWeight: 600, mb: 1 }}>
                 รายงานใบลา {month === 0 ? `ปี ${year + 543}` : `${monthOptions.find(m => m.value === month)?.label} ${year + 543}`}
               </Typography>
@@ -1235,7 +1278,7 @@ body{background:#fff}
                   </TableRow>
                 </TableHead>
 
-                {loading ? (
+                {showInitialTableSkeleton ? (
                   <TableSkeleton />
                 ) : rows.length === 0 ? (
                   <TableBody>
