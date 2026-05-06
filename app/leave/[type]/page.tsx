@@ -63,6 +63,7 @@ import 'dayjs/locale/th';
 import 'dayjs/locale/en';
 import 'dayjs/locale/my';
 import { useLocale } from '@/app/providers/LocaleProvider';
+import { isVacationLeaveCode, matchesLeaveQuota } from '@/lib/leave-quota';
 
 // สีหลักของระบบ
 const PRIMARY_COLOR = '#1976d2';
@@ -125,6 +126,10 @@ interface HolidayData {
     type: string;
     companyId: number | null;
     deductFromAnnualLeave?: boolean;
+    company?: {
+        code: string;
+        name: string;
+    } | null;
 }
 
 interface UploadedAttachmentMeta {
@@ -706,22 +711,27 @@ export default function LeaveFormPage() {
                 // ดึงข้อมูลวันหยุดของปีปัจจุบันและปีถัดไป
                 const nextYear = currentYear + 1;
                 const [holidaysCurrentRes, holidaysNextRes, myLeavesRes] = await Promise.all([
-                    fetch(`/api/holidays?year=${currentYear}`),
-                    fetch(`/api/holidays?year=${nextYear}`),
+                    fetch(`/api/holidays?year=${currentYear}&includeCompany=true`),
+                    fetch(`/api/holidays?year=${nextYear}&includeCompany=true`),
                     fetch(`/api/my-leaves?year=${currentYear}`),
                 ]);
 
                 const holidaysData: HolidayData[] = [];
+                let currentYearForcedLeaveDays = 0;
                 if (holidaysCurrentRes.ok) {
                     const currentYearHolidays = asArray<HolidayData>(await holidaysCurrentRes.json());
                     holidaysData.push(...currentYearHolidays);
 
                     // คำนวณจำนวนวันบังคับพักร้อนในปีปัจจุบัน
-                    const forcedHolidays = currentYearHolidays.filter((h: HolidayData) => h.deductFromAnnualLeave);
+                    const forcedHolidays = currentYearHolidays.filter((h: HolidayData) =>
+                        h.deductFromAnnualLeave &&
+                        (h.companyId === null || h.company?.code === profileData.company)
+                    );
+                    currentYearForcedLeaveDays = forcedHolidays.length;
                     console.log('[DEBUG] Current Year:', currentYear);
                     console.log('[DEBUG] Total holidays:', currentYearHolidays.length);
                     console.log('[DEBUG] Forced holidays:', forcedHolidays);
-                    setForcedLeaveDays(forcedHolidays.length);
+                    setForcedLeaveDays(currentYearForcedLeaveDays);
                 }
                 if (holidaysNextRes.ok) {
                     const nextYearHolidays = asArray<HolidayData>(await holidaysNextRes.json());
@@ -734,21 +744,25 @@ export default function LeaveFormPage() {
                     const myLeavesResult = await myLeavesRes.json();
                     if (myLeavesResult?.success && Array.isArray(myLeavesResult.data)) {
                         // คำนวณวันลาที่ใช้ไปของประเภทปัจจุบัน
-                        const used = myLeavesResult.data
+                        const usedFromLeaveRequests = myLeavesResult.data
                             .filter((req: any) => {
                                 // ตรวจสอบสถานะ: approved, pending, in_progress, completed
                                 const isValidStatus = ['approved', 'pending', 'in_progress', 'completed'].includes(req.status);
                                 if (!isValidStatus) return false;
 
-                                // ตรวจสอบประเภทการลา (Robust Matching: ID, Code, Name)
-                                const reqType = String(req.leaveType).toLowerCase();
-                                return (
-                                    reqType === String(selectedType.id) ||
-                                    reqType === String(selectedType.code).toLowerCase() ||
-                                    reqType === String(selectedType.name).toLowerCase()
-                                );
+                                return matchesLeaveQuota(req.leaveType, selectedType);
                             })
                             .reduce((sum: number, req: any) => sum + toSafeNumber(req.totalDays), 0);
+                        const forcedLeaveRequestDays = myLeavesResult.data
+                            .filter((req: any) =>
+                                String(req.leaveCode || '').startsWith('FL') &&
+                                ['approved', 'pending', 'in_progress', 'completed'].includes(req.status)
+                            )
+                            .reduce((sum: number, req: any) => sum + toSafeNumber(req.totalDays), 0);
+                        const missingForcedLeaveDays = isVacationLeaveCode(selectedType.code)
+                            ? Math.max(0, currentYearForcedLeaveDays - forcedLeaveRequestDays)
+                            : 0;
+                        const used = usedFromLeaveRequests + missingForcedLeaveDays;
                         setUsedLeaveDays(used);
 
                         // ตรวจสอบเงื่อนไขพิเศษ: ลาไม่รับค่าจ้าง (sick_no_pay, personal_no_pay)
@@ -756,7 +770,7 @@ export default function LeaveFormPage() {
                         if (selectedType.code === 'sick_no_pay' || selectedType.code === 'personal_no_pay') {
                             const regularCode = selectedType.code === 'sick_no_pay' ? 'sick' : 'personal';
                             const regularType = leaveTypesData.find((lt: LeaveTypeData) => lt.code === regularCode);
-                            const vacationType = leaveTypesData.find((lt: LeaveTypeData) => lt.code === 'annual' || lt.code === 'vacation');
+                            const vacationType = leaveTypesData.find((lt: LeaveTypeData) => isVacationLeaveCode(lt.code));
 
                             // 1. ตรวจสอบลาปกติ
                             if (regularType && regularType.maxDaysPerYear !== null) {
@@ -786,11 +800,7 @@ export default function LeaveFormPage() {
                                     .filter((req: any) => {
                                         const isValidStatus = ['approved', 'pending', 'in_progress', 'completed'].includes(req.status);
                                         if (!isValidStatus) return false;
-                                        const reqType = String(req.leaveType).toLowerCase();
-                                        return (
-                                            reqType === String(vacationType.id) ||
-                                            reqType === String(vacationType.code).toLowerCase()
-                                        );
+                                        return matchesLeaveQuota(req.leaveType, vacationType);
                                     })
                                     .reduce((sum: number, req: any) => sum + toSafeNumber(req.totalDays), 0);
 
@@ -1301,6 +1311,10 @@ export default function LeaveFormPage() {
     const config = leaveTypeConfig[leaveType.code] || leaveTypeConfig.default;
     const IconComponent = config.icon;
     const totalDaysValue = toSafeNumber(formData.totalDays);
+    const hasLeaveQuota = leaveType.maxDaysPerYear !== null && leaveType.maxDaysPerYear > 0;
+    const remainingLeaveDays = hasLeaveQuota
+        ? Math.max(0, leaveType.maxDaysPerYear - usedLeaveDays)
+        : null;
 
     return (
         <>
@@ -1394,7 +1408,7 @@ export default function LeaveFormPage() {
                             </Box>
 
                             {/* แสดง Alert แจ้งเตือนสิทธิ์การลาเต็ม */}
-                            {leaveType.maxDaysPerYear && usedLeaveDays >= leaveType.maxDaysPerYear && (
+                            {hasLeaveQuota && remainingLeaveDays === 0 && (
                                 <Alert
                                     severity="error"
                                     icon={<Warning2 size={20} variant="Bold" />}
@@ -2009,7 +2023,46 @@ export default function LeaveFormPage() {
                             </Box>
                         </Box>
 
-                        {leaveType && leaveType.maxDaysPerYear && (
+                        {hasLeaveQuota ? (
+                            <Box
+                                sx={{
+                                    display: 'flex',
+                                    justifyContent: 'center',
+                                    flexWrap: 'wrap',
+                                    gap: 1,
+                                    mt: 1.5,
+                                }}
+                            >
+                                <Chip
+                                    size="small"
+                                    label={`${t('chart_used_label', 'ใช้ไป')}: ${usedLeaveDays} ${t('days_unit', 'วัน')}`}
+                                    sx={{
+                                        bgcolor: 'rgba(25, 118, 210, 0.08)',
+                                        color: '#1976d2',
+                                        fontWeight: 600,
+                                    }}
+                                />
+                                <Chip
+                                    size="small"
+                                    label={`${t('chart_remaining', 'คงเหลือ')}: ${remainingLeaveDays} ${t('days_unit', 'วัน')}`}
+                                    sx={{
+                                        bgcolor: remainingLeaveDays === 0 ? 'rgba(211, 47, 47, 0.1)' : 'rgba(46, 125, 50, 0.1)',
+                                        color: remainingLeaveDays === 0 ? '#d32f2f' : '#2e7d32',
+                                        fontWeight: 700,
+                                    }}
+                                />
+                            </Box>
+                        ) : (
+                            <Typography
+                                variant="caption"
+                                color="text.secondary"
+                                sx={{ mt: 1.5, display: 'block', textAlign: 'center', fontWeight: 600 }}
+                            >
+                                {t('chart_unlimited', 'ไม่จำกัดสิทธิ์')}
+                            </Typography>
+                        )}
+
+                        {hasLeaveQuota && (
                             <Typography
                                 variant="caption"
                                 color={totalDaysValue > leaveType.maxDaysPerYear ? 'error.main' : 'text.secondary'}
@@ -2023,7 +2076,7 @@ export default function LeaveFormPage() {
                         )}
 
                         {/* แสดง Chip บังคับพักร้อน เฉพาะลาพักร้อนและมีวันบังคับ */}
-                        {leaveType && leaveType.code === 'vacation' && forcedLeaveDays > 0 && (
+                        {leaveType && isVacationLeaveCode(leaveType.code) && forcedLeaveDays > 0 && (
                             <Box sx={{ display: 'flex', justifyContent: 'center', mt: 1.5 }}>
                                 <Chip
                                     size="small"
@@ -2324,7 +2377,7 @@ export default function LeaveFormPage() {
                         fullWidth
                         startIcon={<Send2 size={18} color="#ffffff" />}
                         onClick={handleOpenConfirm}
-                        disabled={submitting || (leaveType?.maxDaysPerYear ? usedLeaveDays >= leaveType.maxDaysPerYear : false)}
+                        disabled={submitting || (hasLeaveQuota ? remainingLeaveDays === 0 : false)}
                         sx={{
                             py: 1.5,
                             borderRadius: 3,
@@ -2342,7 +2395,7 @@ export default function LeaveFormPage() {
                             }
                         }}
                     >
-                        {(leaveType?.maxDaysPerYear && usedLeaveDays >= leaveType.maxDaysPerYear)
+                        {(hasLeaveQuota && remainingLeaveDays === 0)
                             ? t('leave_quota_full', 'สิทธิ์การลาเต็มแล้ว')
                             : submitting ? t('leave_submitting', 'กำลังส่ง...') : t('leave_submit', 'ส่งคำขอลา')}
                     </Button>

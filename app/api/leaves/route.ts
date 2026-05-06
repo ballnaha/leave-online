@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma';
 import { createApprovalSteps, calculateEscalationDeadline } from '@/lib/escalation';
 import { notifyLeaveSubmitted } from '@/lib/onesignal';
 import { calculateVacationDays } from '@/lib/vacationCalculator';
+import { isVacationLeaveCode, matchesLeaveQuota } from '@/lib/leave-quota';
 
 interface AttachmentPayload {
     fileName: string;
@@ -107,7 +108,7 @@ export async function POST(request: Request) {
         // Fetch user for validation
         const user = await prisma.user.findUnique({
             where: { id: Number(session.user.id) },
-            select: { gender: true, startDate: true }
+            select: { gender: true, startDate: true, company: true }
         });
 
         if (!user) {
@@ -168,7 +169,7 @@ export async function POST(request: Request) {
             let maxDays = leaveTypeData.maxDaysPerYear || 0;
 
             // ถ้าเป็นลาพักร้อน ให้คำนวณตามอายุงาน
-            if (leaveTypeData.code === 'vacation') {
+            if (isVacationLeaveCode(leaveTypeData.code)) {
                 maxDays = calculateVacationDays(
                     user.startDate,
                     leaveYear,
@@ -195,21 +196,46 @@ export async function POST(request: Request) {
                             lt: new Date(leaveYear + 1, 0, 1)
                         }
                     },
-                    select: { leaveType: true, totalDays: true }
+                    select: { leaveCode: true, leaveType: true, totalDays: true }
                 });
 
                 // คำนวณวันลาที่ใช้ไปโดยอ้างอิง ID, CODE หรือ NAME (Case-insensitive) เพื่อความแม่นยำ
                 let usedDays = 0;
                 usedLeaves.forEach(req => {
-                    const reqType = String(req.leaveType).toLowerCase();
-                    if (
-                        reqType === String(leaveTypeData.id) ||
-                        reqType === String(leaveTypeData.code).toLowerCase() ||
-                        reqType === String(leaveTypeData.name).toLowerCase()
-                    ) {
+                    if (matchesLeaveQuota(req.leaveType, leaveTypeData)) {
                         usedDays += req.totalDays || 0;
                     }
                 });
+
+                if (isVacationLeaveCode(leaveTypeData.code)) {
+                    const forcedLeaveRequestDays = usedLeaves
+                        .filter(req => String(req.leaveCode || '').startsWith('FL'))
+                        .reduce((sum, req) => sum + (req.totalDays || 0), 0);
+
+                    const company = user.company
+                        ? await prisma.company.findUnique({
+                            where: { code: user.company },
+                            select: { id: true },
+                        })
+                        : null;
+
+                    const forcedHolidayDays = await prisma.holiday.count({
+                        where: {
+                            isActive: true,
+                            deductFromAnnualLeave: true,
+                            date: {
+                                gte: new Date(leaveYear, 0, 1),
+                                lt: new Date(leaveYear + 1, 0, 1),
+                            },
+                            OR: [
+                                { companyId: null },
+                                ...(company ? [{ companyId: company.id }] : []),
+                            ],
+                        },
+                    });
+
+                    usedDays += Math.max(0, forcedHolidayDays - forcedLeaveRequestDays);
+                }
 
                 const remainingDays = maxDays - usedDays;
 

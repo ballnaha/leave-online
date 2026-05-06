@@ -7,6 +7,7 @@ import { useLocale } from '../providers/LocaleProvider';
 import { useUser } from '../providers/UserProvider';
 import { usePWA } from '../providers/PWAProvider';
 import { useOneSignal } from '../providers/OneSignalProvider';
+import { isVacationLeaveCode, matchesLeaveQuota } from '@/lib/leave-quota';
 import {
     Home2,
     Message,
@@ -115,7 +116,7 @@ const BottomNav: React.FC<BottomNavProps> = ({ activePage = 'home' }) => {
         // Function to calculate used days for a specific leave type
         const getUsedDays = (code: string) => {
             return myLeaves
-                .filter(req => (req.leaveType === code || req.leaveCode === code) &&
+                .filter(req => matchesLeaveQuota(req.leaveType || req.leaveCode, { code }) &&
                     ['approved', 'pending', 'in_progress', 'completed'].includes(req.status))
                 .reduce((sum, req) => sum + toSafeNumber(req.totalDays), 0);
         };
@@ -143,7 +144,7 @@ const BottomNav: React.FC<BottomNavProps> = ({ activePage = 'home' }) => {
 
             // ฟังก์ชันสำหรับตรวจสอบว่าลาพักร้อนหมดหรือยัง
             const isVacationExhausted = () => {
-                const vacationType = leaveTypes.find(t => t.code === 'annual' || t.code === 'vacation');
+                const vacationType = leaveTypes.find(t => isVacationLeaveCode(t.code));
                 if (vacationType && vacationType.maxDaysPerYear !== null) {
                     const usedVacationDays = getUsedDays(vacationType.code);
                     return usedVacationDays >= vacationType.maxDaysPerYear;
@@ -321,7 +322,7 @@ const BottomNav: React.FC<BottomNavProps> = ({ activePage = 'home' }) => {
                                     // Check if quota is full
                                     const maxDays = leave.maxDaysPerYear;
                                     const usedDays = myLeaves
-                                        .filter(req => (req.leaveType === leave.code || req.leaveCode === leave.code) &&
+                                        .filter(req => matchesLeaveQuota(req.leaveType || req.leaveCode, leave) &&
                                             ['approved', 'pending', 'in_progress', 'completed'].includes(req.status))
                                         .reduce((sum, req) => sum + toSafeNumber(req.totalDays), 0);
 

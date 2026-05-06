@@ -12,6 +12,7 @@ import 'dayjs/locale/th';
 import LeaveDetailDrawer from './LeaveDetailDrawer';
 import { LeaveRequest } from '@/types/leave';
 import Image from 'next/image';
+import { isVacationLeaveCode, matchesLeaveQuota } from '@/lib/leave-quota';
 
 // Register Chart.js components
 ChartJS.register(ArcElement, Tooltip, Legend);
@@ -90,7 +91,7 @@ const DashboardCard: React.FC<DashboardCardProps> = ({ leaveTypes, leaveRequests
         if (safeLeaveTypes.length > 0 && !selectedCode) {
             // Prefer sick, then vacation, then first available
             if (safeLeaveTypes.find(l => l.code === 'sick')) setSelectedCode('sick');
-            else if (safeLeaveTypes.find(l => l.code === 'vacation')) setSelectedCode('vacation');
+            else if (safeLeaveTypes.find(l => isVacationLeaveCode(l.code))) setSelectedCode(safeLeaveTypes.find(l => isVacationLeaveCode(l.code))!.code);
             else setSelectedCode(safeLeaveTypes[0].code);
         }
     }, [safeLeaveTypes, selectedCode]);
@@ -106,7 +107,7 @@ const DashboardCard: React.FC<DashboardCardProps> = ({ leaveTypes, leaveRequests
 
             // Calculate used days for this type in selected year
             // Use leaveType field (which contains the leave type code like 'personal', 'sick', etc.)
-            const requests = safeLeaveRequests.filter(req => req.leaveType === type.code);
+            const requests = safeLeaveRequests.filter(req => matchesLeaveQuota(req.leaveType, type));
 
             const approved = requests
                 .filter(req => ['approved', 'completed'].includes(req.status))
@@ -151,7 +152,7 @@ const DashboardCard: React.FC<DashboardCardProps> = ({ leaveTypes, leaveRequests
         if (!drilldownStatus || !selectedCode) return [];
 
         return safeLeaveRequests.filter(req => {
-            const matchType = req.leaveType === selectedCode;
+            const matchType = matchesLeaveQuota(req.leaveType, { code: selectedCode });
             let matchStatus = false;
 
             if (drilldownStatus === 'pending') {

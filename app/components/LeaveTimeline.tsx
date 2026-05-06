@@ -391,7 +391,7 @@ const LeaveTimeline = ({ items, displayMode = 'list' }: LeaveTimelineProps) => {
                                 </Box>
                             )}
 
-                            {item.totalLevels && item.totalLevels > 0 && item.status === 'Pending' && (
+                            {(item.totalLevels ?? 0) > 0 && item.status === 'Pending' && (
                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, ml: 'auto' }}>
                                     {Array.from({ length: Math.min(item.totalLevels, 4) }).map((_, i) => (
                                         <Box

@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { calculateVacationDays } from '@/lib/vacationCalculator';
+import { isVacationLeaveCode } from '@/lib/leave-quota';
 
 // GET /api/leave-types - ดึงข้อมูลประเภทการลาทั้งหมด
 export async function GET(request: Request) {
@@ -32,7 +33,7 @@ export async function GET(request: Request) {
             if (user?.startDate) {
                 // คำนวณสิทธิ์ลาพักร้อนตามเงื่อนไข
                 const modifiedLeaveTypes = leaveTypes.map(type => {
-                    if (type.code === 'vacation') {
+                    if (isVacationLeaveCode(type.code)) {
                         const calculatedDays = calculateVacationDays(
                             user.startDate,
                             year,

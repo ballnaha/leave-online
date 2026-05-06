@@ -32,6 +32,7 @@ import {
     MessageQuestion,
     Chart,
 } from 'iconsax-react';
+import { matchesLeaveQuota } from '@/lib/leave-quota';
 
 interface LeaveType {
     id: number;
@@ -166,17 +167,12 @@ export default function ChartsPage() {
         });
 
         // Calculate used days per leave type (only approved leaves)
-        const usedDaysMap: Record<string, number> = {};
-        leaveRequests
-            .filter(req => req.status === 'approved')
-            .forEach(req => {
-                usedDaysMap[req.leaveType] = (usedDaysMap[req.leaveType] || 0) + toSafeNumber(req.totalDays);
-            });
-
         // Build stats
         const BAR_FULL_SCALE = 90;
         const stats: LeaveStat[] = filteredTypes.map(type => {
-            const used = usedDaysMap[type.code] || 0;
+            const used = leaveRequests
+                .filter(req => req.status === 'approved' && matchesLeaveQuota(req.leaveType, type))
+                .reduce((sum, req) => sum + toSafeNumber(req.totalDays), 0);
             const max = type.maxDaysPerYear === null ? null : toSafeNumber(type.maxDaysPerYear);
 
             let percentage = 0;

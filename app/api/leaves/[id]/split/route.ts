@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma';
 import { notifyLeaveApproved, notifyLeaveSubmitted } from '@/lib/onesignal';
 import { createApprovalSteps, calculateEscalationDeadline } from '@/lib/escalation';
 import { calculateVacationDays } from '@/lib/vacationCalculator';
+import { getEquivalentLeaveCodes, isVacationLeaveCode, matchesLeaveQuota } from '@/lib/leave-quota';
 
 // Map leave type to short code
 const leaveTypeCodeMap: Record<string, string> = {
@@ -185,7 +186,8 @@ export async function POST(
         // รวมวันลาที่จะแยกใหม่ตามประเภท
         const newDaysByType: Record<string, number> = {};
         for (const split of splits) {
-            newDaysByType[split.leaveType] = (newDaysByType[split.leaveType] || 0) + split.totalDays;
+            const quotaKey = isVacationLeaveCode(split.leaveType) ? 'vacation' : split.leaveType;
+            newDaysByType[quotaKey] = (newDaysByType[quotaKey] || 0) + split.totalDays;
         }
 
         // ตรวจสอบโควต้าสำหรับแต่ละประเภทที่ไม่ใช่ Unlimited
@@ -195,12 +197,12 @@ export async function POST(
                 continue;
             }
 
-            const leaveTypeInfo = activeLeaveTypes.find(t => t.code === leaveTypeCode);
+            const leaveTypeInfo = activeLeaveTypes.find(t => matchesLeaveQuota(leaveTypeCode, t));
             if (!leaveTypeInfo) continue;
 
             // คำนวณ maxDays (พิเศษสำหรับ vacation)
             let maxDays = leaveTypeInfo.maxDaysPerYear || 0;
-            if (leaveTypeCode === 'vacation' && originalLeave.user.startDate) {
+            if (isVacationLeaveCode(leaveTypeInfo.code) && originalLeave.user.startDate) {
                 maxDays = calculateVacationDays(
                     originalLeave.user.startDate,
                     leaveYear,
@@ -213,7 +215,10 @@ export async function POST(
                 continue;
             }
 
-            const usedDays = usedDaysMap[leaveTypeCode] || 0;
+            const usedDays = getEquivalentLeaveCodes(leaveTypeCode).reduce(
+                (sum, code) => sum + (usedDaysMap[code] || 0),
+                0,
+            );
             const totalAfterSplit = usedDays + newDays;
 
             if (totalAfterSplit > maxDays) {

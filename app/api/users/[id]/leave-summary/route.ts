@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { calculateVacationDays } from '@/lib/vacationCalculator';
+import { isVacationLeaveCode, matchesLeaveQuota } from '@/lib/leave-quota';
 
 // GET /api/users/[id]/leave-summary - ดึงข้อมูลสรุปวันลาคงเหลือของ user
 export async function GET(
@@ -80,19 +81,14 @@ export async function GET(
             // SUM all days that match this type's ID, CODE, or NAME (Case-insensitive)
             let usedDays = 0;
             usedLeaves.forEach(ul => {
-                const ulType = String(ul.leaveType).toLowerCase();
-                if (
-                    ulType === String(type.id) ||
-                    ulType === String(type.code).toLowerCase() ||
-                    ulType === String(type.name).toLowerCase()
-                ) {
+                if (matchesLeaveQuota(ul.leaveType, type)) {
                     usedDays += ul._sum.totalDays || 0;
                 }
             });
 
             let isUnlimited = unlimitedLeaveTypes.includes(type.code) || type.maxDaysPerYear === null || type.maxDaysPerYear === 0;
 
-            if (type.code === 'vacation' && user.startDate) {
+            if (isVacationLeaveCode(type.code) && user.startDate) {
                 maxDays = calculateVacationDays(user.startDate, year, type.maxDaysPerYear || 6);
             }
 

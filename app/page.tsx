@@ -26,6 +26,7 @@ import LeaveDetailDrawer from './components/LeaveDetailDrawer';
 import { HelpCircle, AlertTriangle } from 'lucide-react';
 import { useUser } from './providers/UserProvider';
 import DashboardCard from './components/DashboardCard';
+import { isVacationLeaveCode, matchesLeaveQuota } from '@/lib/leave-quota';
 
 interface LeaveType {
   id: number;
@@ -104,7 +105,7 @@ export default function Home() {
     // Function to calculate used days for a specific leave type
     const getUsedDays = (code: string) => {
       return leaveRequests
-        .filter(req => (req.leaveType === code || req.leaveCode === code) &&
+        .filter(req => matchesLeaveQuota(req.leaveType || req.leaveCode, { code }) &&
           ['approved', 'pending', 'in_progress', 'completed'].includes(req.status))
         .reduce((sum, req) => sum + toSafeNumber(req.totalDays), 0);
     };
@@ -128,7 +129,7 @@ export default function Home() {
 
       // ฟังก์ชันสำหรับตรวจสอบว่าลาพักร้อนหมดหรือยัง
       const isVacationExhausted = () => {
-        const vacationType = leaveTypes.find(t => t.code === 'annual' || t.code === 'vacation');
+        const vacationType = leaveTypes.find(t => isVacationLeaveCode(t.code));
         if (vacationType && vacationType.maxDaysPerYear !== null) {
           const usedVacationDays = getUsedDays(vacationType.code);
           return usedVacationDays >= vacationType.maxDaysPerYear;
@@ -499,7 +500,7 @@ export default function Home() {
                     const IconComponent = config.icon;
 
                     const usedDays = leaveRequests
-                      .filter(req => (req.leaveType === type.code || req.leaveCode === type.code) &&
+                      .filter(req => matchesLeaveQuota(req.leaveType || req.leaveCode, type) &&
                         ['approved', 'pending', 'in_progress', 'completed'].includes(req.status))
                       .reduce((sum, req) => sum + toSafeNumber(req.totalDays), 0);
 
