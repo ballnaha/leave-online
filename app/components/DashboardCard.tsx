@@ -610,7 +610,8 @@ const DashboardCard: React.FC<DashboardCardProps> = ({ leaveTypes, leaveRequests
                                                     {t('dashboard_approved_title', 'อนุมัติแล้ว')}
                                                 </Typography>
                                                 <Typography sx={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.9)' }}>
-                                                    {currentBalance.approved} {t('days', 'วัน')} ({Math.round(calculatePercentage.approved)}%)
+                                                    {currentBalance.approved} {t('days', 'วัน')}
+                                                    {!isUnlimited && ` (${Math.round(calculatePercentage.approved)}%)`}
                                                 </Typography>
                                             </Box>
                                         }
@@ -661,7 +662,8 @@ const DashboardCard: React.FC<DashboardCardProps> = ({ leaveTypes, leaveRequests
                                                     {t('dashboard_pending_title', 'รออนุมัติ')}
                                                 </Typography>
                                                 <Typography sx={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.9)' }}>
-                                                    {currentBalance.pending} {t('days', 'วัน')} ({Math.round(calculatePercentage.pending)}%)
+                                                    {currentBalance.pending} {t('days', 'วัน')}
+                                                    {!isUnlimited && ` (${Math.round(calculatePercentage.pending)}%)`}
                                                 </Typography>
                                             </Box>
                                         }
@@ -712,7 +714,8 @@ const DashboardCard: React.FC<DashboardCardProps> = ({ leaveTypes, leaveRequests
                                                     {isOverLimit ? t('dashboard_exceeded_title', 'เกินสิทธิ์') : t('dashboard_remaining_title', 'คงเหลือ')}
                                                 </Typography>
                                                 <Typography sx={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.9)' }}>
-                                                    {isOverLimit ? Math.abs(currentBalance.remaining) : (isUnlimited ? '∞' : currentBalance.remaining)} {t('days', 'วัน')} ({Math.round(calculatePercentage.remaining)}%)
+                                                    {isOverLimit ? Math.abs(currentBalance.remaining) : (isUnlimited ? '∞' : currentBalance.remaining)} {t('days', 'วัน')}
+                                                    {isUnlimited ? ` (${t('dashboard_unlimited', 'ไม่จำกัด')})` : ` (${Math.round(calculatePercentage.remaining)}%)`}
                                                 </Typography>
                                             </Box>
                                         }

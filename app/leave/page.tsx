@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useEffect, useMemo } from 'react';
-import { motion } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 import {
     Box,
     Typography,
@@ -455,17 +455,29 @@ export default function LeavePage() {
             });
         }
 
-        // Sort by professional standard: Pending first, then newest startDate first
+        // Timeline order: regular leave first, newest leave date first, then newest request first.
+        // System-generated forced annual leave (FL) stays at the end of the list.
+        // Status only breaks ties so old pending requests do not jump above recent history.
         return [...filtered].sort((a, b) => {
-            // 1. Pin 'pending' status at the top
+            const aIsForcedLeave = String(a.leaveCode || '').startsWith('FL');
+            const bIsForcedLeave = String(b.leaveCode || '').startsWith('FL');
+
+            if (aIsForcedLeave && !bIsForcedLeave) return 1;
+            if (!aIsForcedLeave && bIsForcedLeave) return -1;
+
+            const startDateDiff = dayjs(b.startDate).valueOf() - dayjs(a.startDate).valueOf();
+            if (startDateDiff !== 0) return startDateDiff;
+
+            const createdAtDiff = dayjs(b.createdAt).valueOf() - dayjs(a.createdAt).valueOf();
+            if (createdAtDiff !== 0) return createdAtDiff;
+
             const aIsPending = (a.status || '').toLowerCase() === 'pending';
             const bIsPending = (b.status || '').toLowerCase() === 'pending';
-            
+
             if (aIsPending && !bIsPending) return -1;
             if (!aIsPending && bIsPending) return 1;
-            
-            // 2. Otherwise sort by startDate descending (newest first)
-            return dayjs(b.startDate).valueOf() - dayjs(a.startDate).valueOf();
+
+            return b.id - a.id;
         });
     }, [myLeaves, searchQuery, selectedCalendarDate, currentTab]);
 
@@ -846,6 +858,8 @@ export default function LeavePage() {
                                         fontSize: '0.85rem',
                                         textTransform: 'none',
                                         boxShadow: isActive ? '0 1px 3px rgba(15,23,42,0.10)' : 'none',
+                                        transform: isActive ? 'scale(1.01)' : 'scale(1)',
+                                        transition: 'background-color 0.22s ease, color 0.22s ease, box-shadow 0.22s ease, transform 0.22s ease',
                                         '&:hover': {
                                             bgcolor: isActive ? 'white' : 'rgba(255,255,255,0.45)',
                                         },
@@ -905,7 +919,7 @@ export default function LeavePage() {
                                         : (leaveTypeConfig[currentTab]?.color || '#667eea'),
                                     // NOTE: overriding `transition` replaces MUI's default left/width animations.
                                     // Keep the underline movement smooth when switching tabs.
-                                    transition: 'left 0.25s ease, width 0.25s ease, background-color 0.3s ease',
+                                    transition: 'left 0.32s cubic-bezier(0.22, 1, 0.36, 1), width 0.32s cubic-bezier(0.22, 1, 0.36, 1), background-color 0.25s ease',
                                 },
                                 '& .MuiTabs-scroller': {
                                     scrollBehavior: 'smooth',
@@ -945,6 +959,8 @@ export default function LeavePage() {
                                                 fontWeight: 600,
                                                 minWidth: 20,
                                                 textAlign: 'center',
+                                                transition: 'background-color 0.22s ease, color 0.22s ease, transform 0.22s ease',
+                                                transform: currentTab === 'all' ? 'scale(1.04)' : 'scale(1)',
                                             }}
                                         >
                                             {leaveCounts['all'] || 0}
@@ -995,6 +1011,8 @@ export default function LeavePage() {
                                                         fontWeight: 600,
                                                         minWidth: 20,
                                                         textAlign: 'center',
+                                                        transition: 'background-color 0.22s ease, color 0.22s ease, transform 0.22s ease',
+                                                        transform: isSelected ? 'scale(1.04)' : 'scale(1)',
                                                     }}
                                                 >
                                                     {count}
@@ -1056,65 +1074,74 @@ export default function LeavePage() {
                         sx={{ mb: 2 }}
                     />
 
-                    {loading ? (
-                        <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-                            <CircularProgress size={32} />
-                        </Box>
-                    ) : displayedLeaves.length === 0 ? (
-                        <Card
-                            sx={{
-                                borderRadius: 1,
-                                p: 3,
-                                textAlign: 'center',
-                                bgcolor: 'grey.50',
-                                border: '1px dashed',
-                                borderColor: 'grey.200',
-                            }}
+                    <AnimatePresence mode="wait" initial={false}>
+                        <motion.div
+                            key={`${historyScope}-${currentTab}`}
+                            initial={{ opacity: 0, y: 8 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -6 }}
+                            transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
                         >
-                            <Typography variant="body2" color="text.secondary">
-                                {searchQuery
-                                    ? t('leave_not_found', 'ไม่พบใบลาที่ตรงกับการค้นหา')
-                                    : historyScope === 'year'
-                                        ? t('leave_no_history_year', 'ยังไม่มีประวัติการลาในปีนี้')
-                                        : t('leave_no_history', 'ยังไม่มีประวัติการลาในเดือนนี้')}
-                            </Typography>
-                        </Card>
-                    ) : (
-                        <LeaveTimeline
-                            items={displayedLeaves.map((leave) => {
-                                const config = getLeaveConfig(leave.leaveType || leave.leaveCode || 'default');
-                                const IconComponent = config.icon;
-                                const totalLevels = leave.approvals?.length || 0;
-                                const approvedCount = leave.approvals?.filter(a => a.status === 'approved').length || 0;
+                            {loading ? (
+                                <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+                                    <CircularProgress size={32} />
+                                </Box>
+                            ) : displayedLeaves.length === 0 ? (
+                                <Card
+                                    sx={{
+                                        borderRadius: 1,
+                                        p: 3,
+                                        textAlign: 'center',
+                                        bgcolor: 'grey.50',
+                                        border: '1px dashed',
+                                        borderColor: 'grey.200',
+                                    }}
+                                >
+                                    <Typography variant="body2" color="text.secondary">
+                                        {searchQuery
+                                            ? t('leave_not_found', 'ไม่พบใบลาที่ตรงกับการค้นหา')
+                                            : historyScope === 'year'
+                                                ? t('leave_no_history_year', 'ยังไม่มีประวัติการลาในปีนี้')
+                                                : t('leave_no_history', 'ยังไม่มีประวัติการลาในเดือนนี้')}
+                                    </Typography>
+                                </Card>
+                            ) : (
+                                <LeaveTimeline
+                                    items={displayedLeaves.map((leave) => {
+                                        const config = getLeaveConfig(leave.leaveType || leave.leaveCode || 'default');
+                                        const IconComponent = config.icon;
+                                        const totalLevels = leave.approvals?.length || 0;
+                                        const approvedCount = leave.approvals?.filter(a => a.status === 'approved').length || 0;
 
-                                // หา approver ที่กำลังรออนุมัติ
-                                const pendingApproval = leave.approvals?.find(a => a.status === 'pending');
-                                const waitingForApprover = pendingApproval?.approver?.firstName || undefined;
+                                        // หา approver ที่กำลังรออนุมัติ
+                                        const pendingApproval = leave.approvals?.find(a => a.status === 'pending');
+                                        const waitingForApprover = pendingApproval?.approver?.firstName || undefined;
 
-                                return {
-                                    id: leave.id,
-                                    leaveCode: leave.leaveCode || undefined,
-                                    title: t(`leave_${leave.leaveType || leave.leaveCode}`, leave.leaveTypeInfo?.name || config.label),
-                                    date: formatDate(leave.startDate, leave.endDate),
-                                    startDate: leave.startDate,
-                                    endDate: leave.endDate,
-                                    totalDays: leave.totalDays || 1,
-                                    reason: leave.reason || undefined,
-                                    createdAt: leave.createdAt || undefined,
-                                    status: mapStatus(leave.status),
-                                    icon: <IconComponent size={22} color={config.color} />,
-                                    iconColor: config.color,
-                                    approvalStatus: getApprovalStatusText(leave),
-                                    waitingForApprover: waitingForApprover,
-                                    currentLevel: approvedCount,
-                                    totalLevels: totalLevels,
-                                    onClick: () => handleOpenDetail(leave),
-                                };
-                            })}
-                        />
+                                        return {
+                                            id: leave.id,
+                                            leaveCode: leave.leaveCode || undefined,
+                                            title: t(`leave_${leave.leaveType || leave.leaveCode}`, leave.leaveTypeInfo?.name || config.label),
+                                            date: formatDate(leave.startDate, leave.endDate),
+                                            startDate: leave.startDate,
+                                            endDate: leave.endDate,
+                                            totalDays: leave.totalDays || 1,
+                                            reason: leave.reason || undefined,
+                                            createdAt: leave.createdAt || undefined,
+                                            status: mapStatus(leave.status),
+                                            icon: <IconComponent size={22} color={config.color} />,
+                                            iconColor: config.color,
+                                            approvalStatus: getApprovalStatusText(leave),
+                                            waitingForApprover: waitingForApprover,
+                                            currentLevel: approvedCount,
+                                            totalLevels: totalLevels,
+                                            onClick: () => handleOpenDetail(leave),
+                                        };
+                                    })}
+                                />
 
-                    )
-                    }
+                            )}
+                        </motion.div>
+                    </AnimatePresence>
                 </Box >
             </Box >
 

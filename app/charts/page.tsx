@@ -168,7 +168,7 @@ export default function ChartsPage() {
 
         // Calculate used days per leave type (only approved leaves)
         // Build stats
-        const BAR_FULL_SCALE = 90;
+        const BAR_FULL_SCALE = 95;
         const stats: LeaveStat[] = filteredTypes.map(type => {
             const used = leaveRequests
                 .filter(req => req.status === 'approved' && matchesLeaveQuota(req.leaveType, type))
@@ -452,25 +452,25 @@ export default function ChartsPage() {
                                                 </Typography>
                                             </Box>
 
-                                            {/* Percentage Badge - Liquid Glass Style */}
+                                            {/* Usage badge */}
                                             <Box
                                                 sx={{
                                                     px: 1.75,
                                                     py: 0.6,
                                                     borderRadius: 1.5,
-                                                    bgcolor: 'rgba(220, 38, 38, 0.12)',
+                                                    bgcolor: stat.max === null ? 'rgba(100, 116, 139, 0.12)' : 'rgba(220, 38, 38, 0.12)',
                                                     backdropFilter: 'blur(8px)',
-                                                    border: '1px solid rgba(220, 38, 38, 0.2)',
+                                                    border: stat.max === null ? '1px solid rgba(100, 116, 139, 0.2)' : '1px solid rgba(220, 38, 38, 0.2)',
                                                 }}
                                             >
                                                 <Typography
                                                     sx={{
                                                         fontWeight: 700,
-                                                        color: '#DC2626',
-                                                        fontSize: '1rem',
+                                                        color: stat.max === null ? '#64748B' : '#DC2626',
+                                                        fontSize: stat.max === null ? '0.82rem' : '1rem',
                                                     }}
                                                 >
-                                                    {Math.round(stat.displayPercentage)}%
+                                                    {stat.max === null ? t('chart_unlimited', 'ไม่จำกัดสิทธิ์') : `${Math.round(stat.displayPercentage)}%`}
                                                 </Typography>
                                             </Box>
                                         </Box>
@@ -504,41 +504,41 @@ export default function ChartsPage() {
                                         </Box>
 
                                         {/* Progress Bar - Enhanced Liquid Glass Style */}
-                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                                            <Box sx={{ flex: 1, position: 'relative' }}>
-                                                {/* Background Track */}
-                                                <Box
-                                                    sx={{
-                                                        height: 12,
-                                                        borderRadius: 6,
-                                                        bgcolor: 'rgba(0, 0, 0, 0.04)',
-                                                        overflow: 'hidden',
-                                                        boxShadow: `
-                                                            inset 0 2px 4px rgba(0, 0, 0, 0.06),
-                                                            inset 0 -1px 0 rgba(255, 255, 255, 0.8),
-                                                            0 1px 0 rgba(255, 255, 255, 0.5)
-                                                        `,
-                                                        border: '1px solid rgba(0, 0, 0, 0.03)',
-                                                    }}
-                                                >
-                                                    {/* Fill Bar - Minimal Red */}
+                                        {stat.max !== null && (
+                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                                                <Box sx={{ flex: 1, position: 'relative' }}>
+                                                    {/* Background Track */}
                                                     <Box
                                                         sx={{
-                                                            width: `${Math.min(stat.percentage, 100)}%`,
-                                                            height: '100%',
+                                                            height: 12,
                                                             borderRadius: 6,
-                                                            bgcolor: '#DC2626',
-                                                            transition: 'width 1s cubic-bezier(0.4, 0, 0.2, 1)',
+                                                            bgcolor: 'rgba(0, 0, 0, 0.04)',
+                                                            overflow: 'hidden',
+                                                            boxShadow: `
+                                                                inset 0 2px 4px rgba(0, 0, 0, 0.06),
+                                                                inset 0 -1px 0 rgba(255, 255, 255, 0.8),
+                                                                0 1px 0 rgba(255, 255, 255, 0.5)
+                                                            `,
+                                                            border: '1px solid rgba(0, 0, 0, 0.03)',
                                                         }}
-                                                    />
-                                                </Box>
+                                                    >
+                                                        {/* Fill Bar - Minimal Red */}
+                                                        <Box
+                                                            sx={{
+                                                                width: `${Math.min(stat.percentage, 100)}%`,
+                                                                height: '100%',
+                                                                borderRadius: 6,
+                                                                bgcolor: '#DC2626',
+                                                                transition: 'width 1s cubic-bezier(0.4, 0, 0.2, 1)',
+                                                            }}
+                                                        />
+                                                    </Box>
 
-                                                {/* MAX Marker at 90% */}
-                                                {stat.max !== null && (
+                                                    {/* MAX Marker at 95% */}
                                                     <Box
                                                         sx={{
                                                             position: 'absolute',
-                                                            left: '90%',
+                                                            left: '95%',
                                                             top: '50%',
                                                             transform: 'translate(-50%, -50%)',
                                                             zIndex: 2,
@@ -590,9 +590,9 @@ export default function ChartsPage() {
                                                             MAX
                                                         </Box>
                                                     </Box>
-                                                )}
+                                                </Box>
                                             </Box>
-                                        </Box>
+                                        )}
 
                                         {/* Footer */}
                                         <Box sx={{ mt: 2, pt: 1.5, borderTop: '1px solid rgba(0, 0, 0, 0.05)' }}>
