@@ -550,28 +550,51 @@ export default function LeavePage() {
                 <Card
                     sx={{
                         borderRadius: 1,
-                        p: { xs: 2, sm: 3 },
-                        boxShadow: '0 2px 12px rgba(0,0,0,0.04)',
-                        border: '1px solid #F1F5F9',
+                        p: 0,
+                        overflow: 'hidden',
+                        bgcolor: 'rgba(255,255,255,0.96)',
+                        boxShadow: '0 18px 45px rgba(15,23,42,0.10)',
+                        border: '1px solid rgba(226,232,240,0.9)',
                         mb: 3,
                     }}
                 >
                     {/* Month & Year Navigation */}
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2.5 }}>
+                    <Box
+                        sx={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            px: { xs: 1.5, sm: 2 },
+                            py: { xs: 1.5, sm: 2 },
+                            background: 'linear-gradient(180deg, #FFFFFF 0%, #F8FAFC 100%)',
+                            borderBottom: '1px solid #EEF2F7',
+                        }}
+                    >
                         <IconButton
                             onClick={handlePrevMonth}
                             size="small"
-                            sx={{ color: '#94A3B8' }}
+                            sx={{
+                                width: 38,
+                                height: 38,
+                                color: '#475569',
+                                bgcolor: '#F1F5F9',
+                                border: '1px solid #E2E8F0',
+                                '&:hover': {
+                                    bgcolor: '#E8EAF6',
+                                    color: '#5E72E4',
+                                },
+                            }}
                         >
                             <ChevronLeft size={22} />
                         </IconButton>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, minWidth: 0 }}>
                             <Typography
                                 variant="h6"
                                 sx={{
-                                    fontWeight: 600,
+                                    fontWeight: 700,
                                     color: '#1E293B',
-                                    fontSize: '1.1rem',
+                                    fontSize: { xs: '1.15rem', sm: '1.35rem' },
+                                    lineHeight: 1.2,
                                 }}
                             >
                                 {mounted && currentDate.locale(locale).format('MMMM')}
@@ -581,13 +604,17 @@ export default function LeavePage() {
                                 size="small"
                                 endIcon={<ChevronDown size={16} />}
                                 sx={{
-                                    color: '#667eea',
-                                    fontWeight: 600,
-                                    fontSize: '1rem',
+                                    color: '#5E72E4',
+                                    bgcolor: '#EEF2FF',
+                                    fontWeight: 700,
+                                    fontSize: { xs: '0.9rem', sm: '1rem' },
                                     textTransform: 'none',
                                     minWidth: 'auto',
-                                    px: 1,
-                                    '&:hover': { bgcolor: 'rgba(102, 126, 234, 0.08)' },
+                                    px: 1.25,
+                                    height: 32,
+                                    borderRadius: 1,
+                                    '& .MuiButton-endIcon': { ml: 0.25 },
+                                    '&:hover': { bgcolor: '#E0E7FF' },
                                 }}
                             >
                                 {locale === 'th' ? currentDate.year() + 543 : currentDate.year()}
@@ -622,7 +649,17 @@ export default function LeavePage() {
                         <IconButton
                             onClick={handleNextMonth}
                             size="small"
-                            sx={{ color: '#94A3B8' }}
+                            sx={{
+                                width: 38,
+                                height: 38,
+                                color: '#475569',
+                                bgcolor: '#F1F5F9',
+                                border: '1px solid #E2E8F0',
+                                '&:hover': {
+                                    bgcolor: '#E8EAF6',
+                                    color: '#5E72E4',
+                                },
+                            }}
                         >
                             <ChevronRight size={22} />
                         </IconButton>
@@ -633,8 +670,10 @@ export default function LeavePage() {
                         sx={{
                             display: 'grid',
                             gridTemplateColumns: 'repeat(7, 1fr)',
-                            gap: 0.5,
-                            mb: 1.5,
+                            gap: { xs: 0.5, sm: 0.75 },
+                            px: { xs: 1.5, sm: 2 },
+                            mt: 1.5,
+                            mb: 0.75,
                         }}
                     >
                         {daysOfWeek.map((day, index) => {
@@ -646,10 +685,10 @@ export default function LeavePage() {
                                     variant="caption"
                                     sx={{
                                         textAlign: 'center',
-                                        fontWeight: isCurrentDay ? 600 : 500,
-                                        color: isCurrentDay ? '#6366F1' : '#94A3B8',
-                                        py: 0.5,
-                                        fontSize: '0.75rem',
+                                        fontWeight: 700,
+                                        color: isCurrentDay ? '#5E72E4' : '#94A3B8',
+                                        py: 0.75,
+                                        fontSize: { xs: '0.68rem', sm: '0.75rem' },
                                     }}
                                 >
                                     {isCurrentDay ? day : day}
@@ -663,7 +702,9 @@ export default function LeavePage() {
                         sx={{
                             display: 'grid',
                             gridTemplateColumns: 'repeat(7, 1fr)',
-                            gap: { xs: 0.5, sm: 1 },
+                            gap: { xs: 0.5, sm: 0.75 },
+                            px: { xs: 1.5, sm: 2 },
+                            pb: { xs: 1.5, sm: 2 },
                         }}
                     >
                         {calendarDays.map((day, idx) => {
@@ -676,9 +717,11 @@ export default function LeavePage() {
                                             display: 'flex',
                                             alignItems: 'center',
                                             justifyContent: 'center',
+                                            borderRadius: 1,
+                                            bgcolor: '#F8FAFC',
                                         }}
                                     >
-                                        <Typography sx={{ color: '#E2E8F0', fontSize: '0.85rem' }}>
+                                        <Typography sx={{ color: '#CBD5E1', fontSize: '0.78rem', fontWeight: 600 }}>
                                             {startOfMonth.subtract(startDayOfWeek - idx, 'day').date()}
                                         </Typography>
                                     </Box>
@@ -692,6 +735,7 @@ export default function LeavePage() {
                             const holiday = holidaysMap[dateKey];
                             const isHoliday = !!holiday;
                             const isSelected = selectedCalendarDate === dateKey;
+                            const isWeekend = day.day() === 0 || day.day() === 6;
 
                             // ตรวจสอบสถานะของใบลาในวันนั้น
                             // ถ้ามีใบลาที่ approved/pending/in_progress ใช้สีแดง
@@ -726,32 +770,43 @@ export default function LeavePage() {
                                             flexDirection: 'column',
                                             alignItems: 'center',
                                             justifyContent: 'center',
-                                            borderRadius: 2.5,
+                                            borderRadius: 1,
                                             position: 'relative',
                                             bgcolor: isSelected
                                                 ? primaryColor
                                                 : isToday
-                                                    ? '#667eea'
+                                                    ? '#5E72E4'
                                                     : hasLeave
-                                                        ? 'white'
-                                                        : 'transparent',
+                                                        ? '#FFF7F7'
+                                                        : isHoliday
+                                                            ? '#FFFBEB'
+                                                            : '#FFFFFF',
                                             border: isSelected
-                                                ? `2px solid ${primaryColor}`
+                                                ? `1px solid ${primaryColor}`
                                                 : hasLeave && !isToday
-                                                    ? `2px solid ${primaryColor}`
-                                                    : 'none',
+                                                    ? `1px solid ${primaryColor}`
+                                                    : isHoliday
+                                                        ? '1px solid #FDE68A'
+                                                        : '1px solid #EEF2F7',
                                             cursor: hasLeave ? 'pointer' : 'default',
-                                            transition: 'all 0.15s ease',
-                                            boxShadow: isSelected ? `0 4px 12px ${primaryColor}60` : 'none',
+                                            transition: 'transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease, background-color 0.18s ease',
+                                            boxShadow: isSelected
+                                                ? `0 8px 18px ${primaryColor}35`
+                                                : isToday
+                                                    ? '0 8px 18px rgba(94,114,228,0.26)'
+                                                    : 'none',
                                             '&:hover': hasLeave || isToday || isHoliday
-                                                ? { transform: 'scale(1.08)', boxShadow: `0 4px 12px ${hasLeave ? `${primaryColor}40` : isHoliday ? 'rgba(220,38,38,0.2)' : 'rgba(102,126,234,0.3)'}` }
+                                                ? {
+                                                    transform: 'translateY(-2px)',
+                                                    boxShadow: `0 8px 18px ${hasLeave ? `${primaryColor}30` : isHoliday ? 'rgba(245,158,11,0.22)' : 'rgba(94,114,228,0.28)'}`,
+                                                }
                                                 : {},
                                         }}
                                     >
                                         <Typography
                                             sx={{
                                                 fontWeight: isToday || hasLeave || isSelected ? 600 : 400,
-                                                color: isSelected ? 'white' : isToday ? 'white' : hasLeave ? primaryColor : '#475569',
+                                                color: isSelected ? 'white' : isToday ? 'white' : hasLeave ? primaryColor : isHoliday ? '#B45309' : isWeekend ? '#94A3B8' : '#475569',
                                                 fontSize: { xs: '0.8rem', sm: '0.9rem' },
                                             }}
                                         >
@@ -762,11 +817,23 @@ export default function LeavePage() {
                                             <Box
                                                 sx={{
                                                     position: 'absolute',
-                                                    bottom: 2,
-                                                    width: 4,
-                                                    height: 4,
+                                                    bottom: 5,
+                                                    width: 5,
+                                                    height: 5,
                                                     borderRadius: '50%',
-                                                    bgcolor: '#DC2626',
+                                                    bgcolor: '#F59E0B',
+                                                }}
+                                            />
+                                        )}
+                                        {hasLeave && (
+                                            <Box
+                                                sx={{
+                                                    position: 'absolute',
+                                                    bottom: 5,
+                                                    width: { xs: 16, sm: 20 },
+                                                    height: 3,
+                                                    borderRadius: 999,
+                                                    bgcolor: isSelected ? 'rgba(255,255,255,0.85)' : primaryColor,
                                                 }}
                                             />
                                         )}
@@ -775,18 +842,19 @@ export default function LeavePage() {
                                             <Box
                                                 sx={{
                                                     position: 'absolute',
-                                                    top: -8,
-                                                    right: 0,
-                                                    width: 20,
-                                                    height: 20,
+                                                    top: -6,
+                                                    right: -4,
+                                                    minWidth: 18,
+                                                    height: 18,
+                                                    px: 0.4,
                                                     borderRadius: '50%',
-                                                    bgcolor: '#FF6B6B',
+                                                    bgcolor: '#EF4444',
                                                     color: 'white',
-                                                    fontSize: '0.6rem',
+                                                    fontSize: '0.58rem',
                                                     display: 'flex',
                                                     alignItems: 'center',
                                                     justifyContent: 'center',
-                                                    fontWeight: 600,
+                                                    fontWeight: 700,
                                                     border: '2px solid white',
                                                 }}
                                             >

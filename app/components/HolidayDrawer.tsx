@@ -41,6 +41,16 @@ interface HolidayDrawerProps {
 
 const asArray = <T,>(value: unknown): T[] => Array.isArray(value) ? value : [];
 
+const drawerEasing = {
+    enter: 'cubic-bezier(0.22, 1, 0.36, 1)',
+    exit: 'cubic-bezier(0.4, 0, 1, 1)',
+};
+
+const drawerTimeout = {
+    enter: 420,
+    exit: 240,
+};
+
 export default function HolidayDrawer({ open, onClose, initialYear }: HolidayDrawerProps) {
     const { t, locale } = useLocale();
     const { user } = useUser();
@@ -206,17 +216,21 @@ export default function HolidayDrawer({ open, onClose, initialYear }: HolidayDra
             anchor="bottom"
             open={open && !isClosing}
             onClose={onClose}
-            transitionDuration={{
-                enter: 300,
-                exit: 200,
+            transitionDuration={drawerTimeout}
+            ModalProps={{
+                keepMounted: true,
             }}
             slotProps={{
                 backdrop: {
                     sx: {
                         bgcolor: 'rgba(0, 0, 0, 0.5)',
                         opacity: dragY > 0 ? `${Math.max(0, 1 - dragY / 300)} !important` : undefined,
-                        transition: isDragging ? 'none' : 'opacity 0.2s ease-out',
+                        transition: isDragging ? 'none' : `opacity ${drawerTimeout.exit}ms ${drawerEasing.exit}`,
                     },
+                },
+                transition: {
+                    easing: drawerEasing,
+                    timeout: drawerTimeout,
                 },
             }}
             PaperProps={{
@@ -227,8 +241,9 @@ export default function HolidayDrawer({ open, onClose, initialYear }: HolidayDra
                     transform: dragY > 0 ? `translateY(${dragY}px) !important` : undefined,
                     transition: isDragging 
                         ? 'none' 
-                        : 'transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
+                        : `transform ${drawerTimeout.enter}ms ${drawerEasing.enter}`,
                     willChange: 'transform',
+                    overflow: 'hidden',
                 },
             }}
         >
@@ -236,6 +251,12 @@ export default function HolidayDrawer({ open, onClose, initialYear }: HolidayDra
                 sx={{ 
                     width: '100%',
                     touchAction: isDragging ? 'none' : 'auto',
+                    opacity: open && !isClosing ? 1 : 0,
+                    transform: open && !isClosing ? 'translateY(0)' : 'translateY(10px)',
+                    transition: isDragging
+                        ? 'none'
+                        : `opacity 240ms ${drawerEasing.enter} 80ms, transform 300ms ${drawerEasing.enter} 80ms`,
+                    willChange: 'opacity, transform',
                 }}
                 onTouchStart={handleTouchStart}
                 onTouchMove={handleTouchMove}
@@ -396,12 +417,13 @@ export default function HolidayDrawer({ open, onClose, initialYear }: HolidayDra
                                                     gap: 2,
                                                     p: 1.5,
                                                     borderRadius: 1,
-                                                    bgcolor: isPast ? '#F9FAFB' : 'white',
-                                                    border: '1px solid #E5E7EB',
-                                                    opacity: isPast ? 0.7 : 1,
+                                                    bgcolor: isPast ? '#F8FAFC' : 'white',
+                                                    border: isPast ? '1px solid #EEF2F7' : '1px solid #E5E7EB',
+                                                    opacity: isPast ? 0.55 : 1,
+                                                    filter: isPast ? 'grayscale(35%)' : 'none',
                                                     transition: 'all 0.2s',
                                                     '&:hover': {
-                                                        boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+                                                        boxShadow: isPast ? 'none' : '0 2px 8px rgba(0,0,0,0.08)',
                                                     },
                                                 }}
                                             >
@@ -411,7 +433,7 @@ export default function HolidayDrawer({ open, onClose, initialYear }: HolidayDra
                                                         minWidth: 50,
                                                         height: 50,
                                                         borderRadius: 1,
-                                                        bgcolor: '#FEE2E2',
+                                                        bgcolor: isPast ? '#F1F5F9' : '#FEE2E2',
                                                         display: 'flex',
                                                         flexDirection: 'column',
                                                         alignItems: 'center',
@@ -420,13 +442,13 @@ export default function HolidayDrawer({ open, onClose, initialYear }: HolidayDra
                                                 >
                                                     <Typography
                                                         variant="h6"
-                                                        sx={{ fontWeight: 700, color: '#DC2626', lineHeight: 1 }}
+                                                        sx={{ fontWeight: 700, color: isPast ? '#94A3B8' : '#DC2626', lineHeight: 1 }}
                                                     >
                                                         {holidayDate.format('D')}
                                                     </Typography>
                                                     <Typography
                                                         variant="caption"
-                                                        sx={{ color: '#DC2626', fontSize: '0.65rem', fontWeight: 500 }}
+                                                        sx={{ color: isPast ? '#94A3B8' : '#DC2626', fontSize: '0.65rem', fontWeight: 500 }}
                                                     >
                                                         {holidayDate.locale(locale).format('ddd')}
                                                     </Typography>
@@ -438,14 +460,14 @@ export default function HolidayDrawer({ open, onClose, initialYear }: HolidayDra
                                                         variant="body1"
                                                         sx={{
                                                             fontWeight: 500,
-                                                            color: '#1F2937',
+                                                            color: isPast ? '#94A3B8' : '#1F2937',
                                                             fontSize: '0.95rem',
                                                         }}
                                                     >
                                                         {holidayName}
                                                     </Typography>
                                                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
-                                                        <Typography variant="caption" sx={{ color: '#9CA3AF' }}>
+                                                        <Typography variant="caption" sx={{ color: isPast ? '#CBD5E1' : '#9CA3AF' }}>
                                                             {t('holiday_type_company', 'วันหยุดบริษัท')}
                                                             {isWeekend && ` • ${t('holiday_weekend', 'ตรงวันหยุด')}`}
                                                         </Typography>
